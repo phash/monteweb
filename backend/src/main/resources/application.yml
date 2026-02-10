@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: monteweb
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:monteweb}
+    username: ${DB_USER:monteweb}
+    password: ${DB_PASSWORD:changeme}
+    hikari:
+      maximum-pool-size: 20
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:changeme}
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    default-property-inclusion: non_null
+
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+server:
+  port: ${APP_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    redis:
+      enabled: true
+    db:
+      enabled: true
+
+monteweb:
+  jwt:
+    secret: ${JWT_SECRET:dev-only-secret-change-in-production-must-be-at-least-64-characters-long}
+    access-token-expiration: 15m
+    refresh-token-expiration: 7d
+  cors:
+    allowed-origins: ${FRONTEND_URL:http://localhost:5173}
+  storage:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:monteweb}
+  modules:
+    messaging:
+      enabled: false
+    files:
+      enabled: false
+    jobboard:
+      enabled: false
+    cleaning:
+      enabled: false

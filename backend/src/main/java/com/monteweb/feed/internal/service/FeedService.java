@@ -1,0 +1,224 @@
+package com.monteweb.feed.internal.service;
+
+import com.monteweb.feed.*;
+import com.monteweb.feed.internal.model.FeedPost;
+import com.monteweb.feed.internal.model.FeedPostComment;
+import com.monteweb.feed.internal.repository.FeedPostCommentRepository;
+import com.monteweb.feed.internal.repository.FeedPostRepository;
+import com.monteweb.room.RoomInfo;
+import com.monteweb.room.RoomModuleApi;
+import com.monteweb.shared.exception.BusinessException;
+import com.monteweb.shared.exception.ForbiddenException;
+import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.user.UserInfo;
+import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional(readOnly = true)
+public class FeedService implements FeedModuleApi {
+
+    private final FeedPostRepository postRepository;
+    private final FeedPostCommentRepository commentRepository;
+    private final UserModuleApi userModuleApi;
+    private final RoomModuleApi roomModuleApi;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public FeedService(FeedPostRepository postRepository,
+                       FeedPostCommentRepository commentRepository,
+                       UserModuleApi userModuleApi,
+                       RoomModuleApi roomModuleApi,
+                       ApplicationEventPublisher eventPublisher) {
+        this.postRepository = postRepository;
+        this.commentRepository = commentRepository;
+        this.userModuleApi = userModuleApi;
+        this.roomModuleApi = roomModuleApi;
+        this.eventPublisher = eventPublisher;
+    }
+
+    // --- Public API (FeedModuleApi) ---
+
+    @Override
+    @Transactional
+    public FeedPostInfo createSystemPost(String title, String content, SourceType sourceType, UUID sourceId) {
+        var post = new FeedPost();
+        post.setAuthorId(UUID.fromString("00000000-0000-0000-0000-000000000000")); // system user
+        post.setTitle(title);
+        post.setContent(content);
+        post.setSourceType(sourceType);
+        post.setSourceId(sourceId);
+        post.setPinned(true);
+        return toPostInfo(postRepository.save(post));
+    }
+
+    @Override
+    public Optional<FeedPostInfo> findPostById(UUID postId) {
+        return postRepository.findById(postId).map(this::toPostInfo);
+    }
+
+    @Override
+    public Page<FeedPostInfo> getPersonalFeed(UUID userId, Pageable pageable) {
+        var userInfo = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        // Gather the user's room IDs and section IDs
+        var rooms = roomModuleApi.findByUserId(userId);
+        var roomIds = rooms.stream().map(RoomInfo::id).collect(Collectors.toSet());
+        var sectionIds = rooms.stream()
+                .map(RoomInfo::sectionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        // Ensure non-empty collections for the IN clause
+        if (roomIds.isEmpty()) roomIds.add(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        if (sectionIds.isEmpty()) sectionIds.add(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+
+        boolean isParent = userInfo.role() == UserRole.PARENT;
+
+        return postRepository.findPersonalFeed(roomIds, sectionIds, isParent, pageable)
+                .map(this::toPostInfo);
+    }
+
+    // --- Internal service methods ---
+
+    @Transactional
+    public FeedPostInfo createPost(UUID authorId, String title, String content,
+                                   SourceType sourceType, UUID sourceId, boolean parentOnly) {
+        // Validate author can post to this source
+        if (sourceType == SourceType.ROOM && sourceId != null) {
+            if (!roomModuleApi.isUserInRoom(authorId, sourceId)) {
+                throw new ForbiddenException("Not a member of this room");
+            }
+        }
+        if (sourceType == SourceType.SCHOOL || sourceType == SourceType.SECTION) {
+            var user = userModuleApi.findById(authorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
+            if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN && user.role() != UserRole.TEACHER) {
+                throw new ForbiddenException("Only staff can create school-wide or section posts");
+            }
+        }
+
+        var post = new FeedPost();
+        post.setAuthorId(authorId);
+        post.setTitle(title);
+        post.setContent(content);
+        post.setSourceType(sourceType);
+        post.setSourceId(sourceId);
+        post.setParentOnly(parentOnly);
+
+        post = postRepository.save(post);
+
+        String authorName = userModuleApi.findById(authorId).map(UserInfo::displayName).orElse("Unknown");
+        eventPublisher.publishEvent(new FeedPostCreatedEvent(
+                post.getId(), authorId, authorName, title, sourceType, sourceId
+        ));
+
+        return toPostInfo(post);
+    }
+
+    @Transactional
+    public FeedPostInfo updatePost(UUID postId, UUID userId, String title, String content, Boolean parentOnly) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        if (!post.getAuthorId().equals(userId)) {
+            throw new ForbiddenException("Only the author can edit this post");
+        }
+        if (title != null) post.setTitle(title);
+        if (content != null) post.setContent(content);
+        if (parentOnly != null) post.setParentOnly(parentOnly);
+        return toPostInfo(postRepository.save(post));
+    }
+
+    @Transactional
+    public void deletePost(UUID postId, UUID userId) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        if (!post.getAuthorId().equals(userId) && user.role() != UserRole.SUPERADMIN) {
+            throw new ForbiddenException("Only the author or admin can delete this post");
+        }
+        postRepository.delete(post);
+    }
+
+    @Transactional
+    public FeedPostInfo togglePin(UUID postId, UUID userId) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        // Only room leaders or admins can pin
+        post.setPinned(!post.isPinned());
+        return toPostInfo(postRepository.save(post));
+    }
+
+    @Transactional
+    public void addComment(UUID postId, UUID authorId, String content) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        var comment = new FeedPostComment();
+        comment.setPost(post);
+        comment.setAuthorId(authorId);
+        comment.setContent(content);
+        commentRepository.save(comment);
+    }
+
+    public Page<FeedPostInfo> getPostsBySource(SourceType sourceType, UUID sourceId, Pageable pageable) {
+        return postRepository
+                .findBySourceTypeAndSourceIdOrderByPinnedDescPublishedAtDesc(sourceType, sourceId, pageable)
+                .map(this::toPostInfo);
+    }
+
+    public List<FeedPostInfo> getActiveSystemBanners() {
+        return postRepository.findActiveSystemBanners().stream()
+                .map(this::toPostInfo)
+                .toList();
+    }
+
+    private FeedPostInfo toPostInfo(FeedPost post) {
+        String authorName = userModuleApi.findById(post.getAuthorId())
+                .map(UserInfo::displayName)
+                .orElse("System");
+
+        String sourceName = resolveSourceName(post.getSourceType(), post.getSourceId());
+
+        var attachments = post.getAttachments().stream()
+                .map(a -> new FeedPostInfo.AttachmentInfo(
+                        a.getId(), a.getFileName(), a.getFileUrl(), a.getFileType(),
+                        a.getFileSize() != null ? a.getFileSize() : 0
+                ))
+                .toList();
+
+        return new FeedPostInfo(
+                post.getId(),
+                post.getAuthorId(),
+                authorName,
+                post.getTitle(),
+                post.getContent(),
+                post.getSourceType(),
+                post.getSourceId(),
+                sourceName,
+                post.isPinned(),
+                post.isParentOnly(),
+                post.getComments().size(),
+                attachments,
+                post.getPublishedAt(),
+                post.getCreatedAt()
+        );
+    }
+
+    private String resolveSourceName(SourceType type, UUID sourceId) {
+        if (sourceId == null) return null;
+        return switch (type) {
+            case ROOM -> roomModuleApi.findById(sourceId).map(RoomInfo::name).orElse(null);
+            case SECTION, SCHOOL, BOARD, SYSTEM -> null;
+        };
+    }
+}

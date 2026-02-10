@@ -1,0 +1,109 @@
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
+import { useRoute } from 'vue-router'
+import { computed } from 'vue'
+
+const { t } = useI18n()
+const auth = useAuthStore()
+const admin = useAdminStore()
+const route = useRoute()
+
+const navItems = computed(() => {
+  const items = [
+    { to: '/', icon: 'pi pi-home', label: t('nav.dashboard'), name: 'dashboard' },
+    { to: '/rooms', icon: 'pi pi-th-large', label: t('nav.rooms'), name: 'rooms' },
+    { to: '/rooms/discover', icon: 'pi pi-compass', label: t('nav.discover'), name: 'discover-rooms' },
+    { to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' },
+  ]
+
+  if (admin.isModuleEnabled('messaging')) {
+    items.push({ to: '/messages', icon: 'pi pi-comments', label: t('nav.messages'), name: 'messages' })
+  }
+  if (admin.isModuleEnabled('jobboard')) {
+    items.push({ to: '/jobs', icon: 'pi pi-briefcase', label: t('nav.jobs'), name: 'jobs' })
+  }
+  if (admin.isModuleEnabled('cleaning')) {
+    items.push({ to: '/cleaning', icon: 'pi pi-calendar', label: t('nav.cleaning'), name: 'cleaning' })
+  }
+
+  if (auth.isAdmin) {
+    items.push({ to: '/admin', icon: 'pi pi-cog', label: t('nav.admin'), name: 'admin' })
+  }
+
+  return items
+})
+
+function isActive(item: { to: string; name: string }) {
+  if (item.to === '/') return route.name === 'dashboard'
+  return route.path.startsWith(item.to)
+}
+</script>
+
+<template>
+  <aside class="app-sidebar">
+    <nav class="sidebar-nav">
+      <router-link
+        v-for="item in navItems"
+        :key="item.name"
+        :to="item.to"
+        class="nav-item"
+        :class="{ active: isActive(item) }"
+      >
+        <i :class="item.icon" />
+        <span>{{ item.label }}</span>
+      </router-link>
+    </nav>
+  </aside>
+</template>
+
+<style scoped>
+.app-sidebar {
+  width: var(--mw-sidebar-width);
+  background: var(--mw-bg-sidebar);
+  border-right: 1px solid var(--mw-border-light);
+  height: calc(100vh - var(--mw-header-height));
+  position: sticky;
+  top: var(--mw-header-height);
+  overflow-y: auto;
+  padding: 1rem 0;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  color: var(--mw-text-secondary);
+  text-decoration: none;
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
+  border-radius: 0;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-item:hover {
+  background-color: var(--mw-border-light);
+  color: var(--mw-text);
+  text-decoration: none;
+}
+
+.nav-item.active {
+  color: var(--mw-primary);
+  background-color: color-mix(in srgb, var(--mw-primary) 8%, transparent);
+  border-right: 3px solid var(--mw-primary);
+}
+
+.nav-item i {
+  font-size: 1.125rem;
+  width: 1.25rem;
+  text-align: center;
+}
+</style>

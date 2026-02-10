@@ -1,0 +1,22 @@
+package com.monteweb.cleaning;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Public API: Facade interface for the cleaning module.
+ * Other modules interact with cleaning exclusively through this interface.
+ */
+public interface CleaningModuleApi {
+
+    List<CleaningSlotInfo> getUpcomingSlotsForSection(UUID sectionId, int limit);
+
+    BigDecimal getCleaningHoursForFamily(UUID familyId);
+
+    /**
+     * Returns slots needing more registrations (for feed banners).
+     */
+    List<CleaningSlotInfo> getSlotsNeedingParticipants(LocalDate from, LocalDate to);
+}

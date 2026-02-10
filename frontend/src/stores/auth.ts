@@ -1,0 +1,86 @@
+import { defineStore } from 'pinia'
+import { ref, computed } from 'vue'
+import { authApi } from '@/api/auth.api'
+import { usersApi } from '@/api/users.api'
+import type { UserInfo, LoginRequest, RegisterRequest } from '@/types/user'
+
+export const useAuthStore = defineStore('auth', () => {
+  const user = ref<UserInfo | null>(null)
+  const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
+  const loading = ref(false)
+
+  const isAuthenticated = computed(() => !!accessToken.value)
+  const isAdmin = computed(() => user.value?.role === 'SUPERADMIN')
+  const isTeacher = computed(() =>
+    user.value?.role === 'TEACHER' || user.value?.role === 'SUPERADMIN' || user.value?.role === 'SECTION_ADMIN'
+  )
+
+  async function login(data: LoginRequest) {
+    loading.value = true
+    try {
+      const res = await authApi.login(data)
+      const { accessToken: token, refreshToken } = res.data.data
+      setTokens(token, refreshToken)
+      await fetchUser()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function register(data: RegisterRequest) {
+    loading.value = true
+    try {
+      const res = await authApi.register(data)
+      const { accessToken: token, refreshToken } = res.data.data
+      setTokens(token, refreshToken)
+      await fetchUser()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function logout() {
+    const refreshToken = localStorage.getItem('refreshToken')
+    try {
+      await authApi.logout(refreshToken)
+    } finally {
+      clearTokens()
+      user.value = null
+    }
+  }
+
+  async function fetchUser() {
+    if (!accessToken.value) return
+    try {
+      const res = await usersApi.getMe()
+      user.value = res.data.data
+    } catch {
+      clearTokens()
+      user.value = null
+    }
+  }
+
+  function setTokens(access: string, refresh: string) {
+    accessToken.value = access
+    localStorage.setItem('accessToken', access)
+    localStorage.setItem('refreshToken', refresh)
+  }
+
+  function clearTokens() {
+    accessToken.value = null
+    localStorage.removeItem('accessToken')
+    localStorage.removeItem('refreshToken')
+  }
+
+  return {
+    user,
+    loading,
+    isAuthenticated,
+    isAdmin,
+    isTeacher,
+    login,
+    register,
+    logout,
+    fetchUser,
+  }
+})
