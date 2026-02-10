@@ -5,6 +5,7 @@ import io.minio.errors.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,6 +19,7 @@ import java.util.UUID;
  * Low-level storage operations against MinIO (S3-compatible).
  */
 @Service
+@ConditionalOnProperty(prefix = "monteweb.modules.files", name = "enabled", havingValue = "true")
 public class FileStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);

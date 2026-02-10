@@ -4,6 +4,7 @@ import com.monteweb.cleaning.CleaningConfigInfo;
 import com.monteweb.cleaning.CleaningSlotInfo;
 import com.monteweb.cleaning.internal.service.CleaningService;
 import com.monteweb.shared.dto.ApiResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/cleaning")
+@ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
 public class CleaningAdminController {

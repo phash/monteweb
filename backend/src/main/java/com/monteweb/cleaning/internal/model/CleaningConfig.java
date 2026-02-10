@@ -44,7 +44,7 @@ public class CleaningConfig {
     @Column(name = "max_participants", nullable = false)
     private int maxParticipants;
 
-    @Column(name = "hours_credit", nullable = false, precision = 4, scale = 2)
+    @Column(name = "hours_credit", nullable = false, precision = 5, scale = 2)
     private BigDecimal hoursCredit;
 
     @Column(nullable = false)

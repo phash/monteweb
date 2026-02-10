@@ -8,5 +8,7 @@ public enum NotificationType {
     COMMENT,
     MESSAGE,
     SYSTEM,
-    REMINDER
+    REMINDER,
+    CLEANING_COMPLETED,
+    JOB_COMPLETED
 }

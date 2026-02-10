@@ -16,11 +16,6 @@ const feed = useFeedStore()
 const showComments = ref(false)
 const commentText = ref('')
 
-function sourceLabel(type: string): string {
-  const key = `feed.sourceLabels.${type}`
-  return t(key)
-}
-
 function formatDate(date: string) {
   return new Date(date).toLocaleString('de-DE', {
     day: '2-digit',

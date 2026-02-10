@@ -5,6 +5,7 @@ import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.MessageSentEvent;
 import com.monteweb.messaging.MessagingModuleApi;
 import com.monteweb.messaging.internal.model.Conversation;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.messaging.internal.model.ConversationParticipant;
 import com.monteweb.messaging.internal.model.Message;
 import com.monteweb.messaging.internal.repository.ConversationParticipantRepository;
@@ -28,6 +29,7 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@ConditionalOnProperty(prefix = "monteweb.modules.messaging", name = "enabled", havingValue = "true")
 public class MessagingService implements MessagingModuleApi {
 
     private final ConversationRepository conversationRepository;

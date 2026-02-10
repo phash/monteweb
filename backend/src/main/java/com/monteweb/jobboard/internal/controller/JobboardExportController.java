@@ -2,6 +2,7 @@ package com.monteweb.jobboard.internal.controller;
 
 import com.monteweb.jobboard.FamilyHoursInfo;
 import com.monteweb.jobboard.internal.service.JobboardService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/jobs/report")
+@ConditionalOnProperty(prefix = "monteweb.modules.jobboard", name = "enabled", havingValue = "true")
 public class JobboardExportController {
 
     private final JobboardService jobboardService;

@@ -2,6 +2,7 @@ package com.monteweb.cleaning.internal.service;
 
 import com.monteweb.cleaning.*;
 import com.monteweb.cleaning.internal.model.CleaningConfig;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.cleaning.internal.model.CleaningRegistration;
 import com.monteweb.cleaning.internal.model.CleaningSlot;
 import com.monteweb.cleaning.internal.repository.CleaningConfigRepository;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 @Transactional
 public class CleaningService implements CleaningModuleApi {
 

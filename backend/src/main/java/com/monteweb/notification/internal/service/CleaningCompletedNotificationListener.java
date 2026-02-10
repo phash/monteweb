@@ -1,28 +1,34 @@
 package com.monteweb.notification.internal.service;
 
 import com.monteweb.cleaning.CleaningCompletedEvent;
-import com.monteweb.notification.internal.model.Notification;
-import com.monteweb.notification.internal.repository.NotificationRepository;
-import lombok.RequiredArgsConstructor;
+import com.monteweb.notification.NotificationType;
 import org.springframework.modulith.events.ApplicationModuleListener;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Service
-@RequiredArgsConstructor
+@Component
 public class CleaningCompletedNotificationListener {
 
-    private final NotificationRepository notificationRepository;
+    private final NotificationService notificationService;
+
+    public CleaningCompletedNotificationListener(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
 
     @ApplicationModuleListener
     public void onCleaningCompleted(CleaningCompletedEvent event) {
-        Notification notification = new Notification();
-        notification.setUserId(event.userId());
-        notification.setType("CLEANING_COMPLETED");
-        notification.setTitle("Putzstunden gutgeschrieben");
-        notification.setMessage(String.format(
-                "Dir wurden %s Stunden für den Putzdienst gutgeschrieben (%d Minuten).",
-                event.hoursCredit().toPlainString(), event.actualMinutes()));
-        notification.setLink("/cleaning/mine");
-        notificationRepository.save(notification);
+        String title = "Putzstunden gutgeschrieben";
+        String message = String.format(
+                "Dir wurden %s Stunden fuer den Putzdienst gutgeschrieben (%d Minuten).",
+                event.hoursCredit().toPlainString(), event.actualMinutes());
+
+        notificationService.sendNotification(
+                event.userId(),
+                NotificationType.CLEANING_COMPLETED,
+                title,
+                message,
+                "/cleaning/mine",
+                "cleaning",
+                null
+        );
     }
 }

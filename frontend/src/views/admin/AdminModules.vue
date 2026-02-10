@@ -41,7 +41,7 @@ async function save() {
     </Message>
 
     <div class="modules-list card">
-      <div v-for="(enabled, name) in modules" :key="name" class="module-item">
+      <div v-for="(_, name) in modules" :key="name" class="module-item">
         <div class="module-info">
           <h3>{{ name }}</h3>
           <p>{{ moduleDescription(name as string) }}</p>

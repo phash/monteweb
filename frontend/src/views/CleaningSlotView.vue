@@ -21,7 +21,6 @@ const toast = useToast()
 
 const slotId = route.params.id as string
 const showQrDialog = ref(false)
-const qrToken = ref('')
 const scannerInput = ref('')
 
 onMounted(() => {

@@ -6,6 +6,7 @@ import com.monteweb.room.internal.service.RoomChatService.RoomChatChannelInfo;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/rooms/{roomId}/chat")
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "monteweb.modules.messaging", name = "enabled", havingValue = "true")
 public class RoomChatController {
 
     private final RoomChatService roomChatService;

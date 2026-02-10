@@ -11,7 +11,6 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Tag from 'primevue/tag'
-import Card from 'primevue/card'
 import { useToast } from 'primevue/usetoast'
 import type { CleaningConfigInfo } from '@/types/cleaning'
 import * as cleaningApi from '@/api/cleaning.api'
@@ -23,7 +22,6 @@ const toast = useToast()
 const showCreateDialog = ref(false)
 const showGenerateDialog = ref(false)
 const selectedConfig = ref<CleaningConfigInfo | null>(null)
-const dashboard = ref<{ totalSlots: number; completedSlots: number; noShows: number; slotsNeedingParticipants: number } | null>(null)
 
 const dayOptions = [
   { label: t('cleaning.days.monday'), value: 1 },
@@ -76,9 +74,9 @@ function openGenerate(config: CleaningConfigInfo) {
 async function generateSlots() {
   if (!selectedConfig.value || !generateRange.value.from || !generateRange.value.to) return
   try {
-    const from = generateRange.value.from.toISOString().split('T')[0]
-    const to = generateRange.value.to.toISOString().split('T')[0]
-    const slots = await cleaningStore.generateSlots(selectedConfig.value.id, from, to)
+    const from = generateRange.value.from!.toISOString().split('T')[0]
+    const to = generateRange.value.to!.toISOString().split('T')[0]
+    const slots = await cleaningStore.generateSlots(selectedConfig.value!.id, from!, to!)
     showGenerateDialog.value = false
     toast.add({
       severity: 'success',

@@ -43,6 +43,7 @@ async function openFolder(folder: FolderInfo) {
 
 async function navigateTo(index: number) {
   const target = folderPath.value[index]
+  if (!target) return
   currentFolderId.value = target.id
   folderPath.value = folderPath.value.slice(0, index + 1)
   await loadContent()
