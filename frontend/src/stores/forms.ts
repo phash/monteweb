@@ -106,10 +106,11 @@ export const useFormsStore = defineStore('forms', () => {
     // Update the responded flag in available list
     const idx = availableForms.value.findIndex(f => f.id === id)
     if (idx !== -1) {
+      const existing = availableForms.value[idx]!
       availableForms.value[idx] = {
-        ...availableForms.value[idx],
+        ...existing,
         hasUserResponded: true,
-        responseCount: availableForms.value[idx].responseCount + 1,
+        responseCount: existing.responseCount + 1,
       }
     }
     if (currentForm.value?.form.id === id) {

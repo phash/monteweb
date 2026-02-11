@@ -17,7 +17,7 @@ const items = computed(() => {
   const result: { label: string; command?: () => void }[] = []
 
   for (let i = 0; i < route.matched.length; i++) {
-    const matched = route.matched[i]
+    const matched = route.matched[i]!
     const label = matched.meta?.breadcrumbLabel as string | undefined
     if (!label) continue
 

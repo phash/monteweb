@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
 import { computed, ref, watch } from 'vue'
 
 const { t } = useI18n()
 const admin = useAdminStore()
+const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 

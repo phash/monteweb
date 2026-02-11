@@ -23,7 +23,11 @@ const isLeader = (() => {
 })()
 
 onMounted(async () => {
-  await calendar.fetchRoomEvents(props.roomId)
+  try {
+    await calendar.fetchRoomEvents(props.roomId)
+  } catch {
+    // Calendar events not available
+  }
 })
 
 function formatEventDate(event: { allDay: boolean; startDate: string; startTime: string | null; endDate: string }) {

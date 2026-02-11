@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
@@ -37,6 +37,13 @@ const scopeId = ref<string | undefined>(undefined)
 const recurrence = ref<EventRecurrence>('NONE')
 const recurrenceEnd = ref<Date | null>(null)
 const saving = ref(false)
+
+// Auto-adjust end date when start date moves past it
+watch(startDate, (newStart) => {
+  if (newStart && endDate.value && newStart > endDate.value) {
+    endDate.value = new Date(newStart)
+  }
+})
 
 const scopeOptions = computed(() => {
   const options = [
@@ -104,6 +111,11 @@ function formatDateToISO(d: Date): string {
   return `${year}-${month}-${day}`
 }
 
+function formatTimeWithSeconds(time: string): string {
+  if (time.length === 5) return time + ':00'
+  return time
+}
+
 async function handleSubmit() {
   if (!canSubmit.value) return
   saving.value = true
@@ -115,9 +127,9 @@ async function handleSubmit() {
       location: location.value.trim() || undefined,
       allDay: allDay.value,
       startDate: formatDateToISO(startDate.value),
-      startTime: allDay.value ? undefined : startTime.value || undefined,
+      startTime: allDay.value ? undefined : (startTime.value ? formatTimeWithSeconds(startTime.value) : undefined),
       endDate: formatDateToISO(endDate.value),
-      endTime: allDay.value ? undefined : endTime.value || undefined,
+      endTime: allDay.value ? undefined : (endTime.value ? formatTimeWithSeconds(endTime.value) : undefined),
       scope: scope.value,
       scopeId: scope.value === 'SCHOOL' ? undefined : scopeId.value,
       recurrence: recurrence.value,

@@ -135,8 +135,8 @@ function removeQuestion(idx: number) {
 function moveQuestion(idx: number, direction: -1 | 1) {
   const newIdx = idx + direction
   if (newIdx < 0 || newIdx >= questions.value.length) return
-  const temp = questions.value[idx]
-  questions.value[idx] = questions.value[newIdx]
+  const temp = questions.value[idx]!
+  questions.value[idx] = questions.value[newIdx]!
   questions.value[newIdx] = temp
 }
 
@@ -351,7 +351,7 @@ async function handleSubmit(publish: boolean) {
             <!-- Options for choice questions -->
             <div v-if="q.type === 'SINGLE_CHOICE' || q.type === 'MULTIPLE_CHOICE'" class="options-section">
               <label>{{ t('forms.options') }}</label>
-              <div v-for="(opt, optIdx) in q.options" :key="optIdx" class="option-row">
+              <div v-for="(_opt, optIdx) in q.options" :key="optIdx" class="option-row">
                 <InputText v-model="q.options[optIdx]" class="w-full" :placeholder="`${t('forms.option')} ${optIdx + 1}`" />
                 <Button icon="pi pi-times" text size="small" severity="danger" @click="removeOption(q, optIdx)" />
               </div>
@@ -362,11 +362,11 @@ async function handleSubmit(publish: boolean) {
             <div v-if="q.type === 'RATING'" class="field-row">
               <div class="field">
                 <label>Min</label>
-                <InputText v-model.number="q.ratingMin" type="number" class="w-full" />
+                <InputText :modelValue="String(q.ratingMin)" @update:modelValue="q.ratingMin = Number($event)" type="number" class="w-full" />
               </div>
               <div class="field">
                 <label>Max</label>
-                <InputText v-model.number="q.ratingMax" type="number" class="w-full" />
+                <InputText :modelValue="String(q.ratingMax)" @update:modelValue="q.ratingMax = Number($event)" type="number" class="w-full" />
               </div>
             </div>
           </div>

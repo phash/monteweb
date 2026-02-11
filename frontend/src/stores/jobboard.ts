@@ -108,8 +108,12 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function fetchFamilyHours(familyId: string) {
-    const res = await jobboardApi.getFamilyHours(familyId)
-    familyHours.value = res.data.data
+    try {
+      const res = await jobboardApi.getFamilyHours(familyId)
+      familyHours.value = res.data.data
+    } catch {
+      familyHours.value = null
+    }
   }
 
   async function fetchReport() {

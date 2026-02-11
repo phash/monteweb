@@ -10,7 +10,6 @@ import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import RadioButton from 'primevue/radiobutton'
 import Checkbox from 'primevue/checkbox'
@@ -26,6 +25,10 @@ const toast = useToast()
 const formId = computed(() => route.params.id as string)
 const submitting = ref(false)
 const answers = ref<Record<string, AnswerRequest>>({})
+
+function getAnswer(questionId: string): AnswerRequest {
+  return answers.value[questionId]!
+}
 
 const isCreator = computed(() =>
   forms.currentForm?.form.createdBy === auth.user?.id
@@ -108,22 +111,24 @@ function statusSeverity(status: string): 'info' | 'success' | 'warn' | 'danger' 
 }
 
 function onRadioSelect(questionId: string, option: string) {
+  const existing = answers.value[questionId]!
   answers.value[questionId] = {
-    ...answers.value[questionId],
+    ...existing,
     selectedOptions: [option],
   }
 }
 
 function onCheckboxToggle(questionId: string, option: string, checked: boolean) {
-  const current = answers.value[questionId].selectedOptions || []
+  const existing = answers.value[questionId]!
+  const current = existing.selectedOptions || []
   if (checked) {
     answers.value[questionId] = {
-      ...answers.value[questionId],
+      ...existing,
       selectedOptions: [...current, option],
     }
   } else {
     answers.value[questionId] = {
-      ...answers.value[questionId],
+      ...existing,
       selectedOptions: current.filter(o => o !== option),
     }
   }
@@ -230,7 +235,7 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           <!-- TEXT -->
           <Textarea
             v-if="q.type === 'TEXT'"
-            v-model="answers[q.id].text"
+            v-model="getAnswer(q.id).text"
             :autoResize="true"
             rows="3"
             class="w-full"
@@ -240,7 +245,7 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           <div v-if="q.type === 'SINGLE_CHOICE' && q.options" class="radio-group">
             <div v-for="opt in q.options" :key="opt" class="radio-item">
               <RadioButton
-                :modelValue="answers[q.id].selectedOptions?.[0]"
+                :modelValue="getAnswer(q.id).selectedOptions?.[0]"
                 :value="opt"
                 :name="`q-${q.id}`"
                 :inputId="`q-${q.id}-${opt}`"
@@ -254,7 +259,7 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           <div v-if="q.type === 'MULTIPLE_CHOICE' && q.options" class="checkbox-group">
             <div v-for="opt in q.options" :key="opt" class="checkbox-item">
               <Checkbox
-                :modelValue="(answers[q.id].selectedOptions || []).includes(opt)"
+                :modelValue="(getAnswer(q.id).selectedOptions || []).includes(opt)"
                 :binary="true"
                 :inputId="`q-${q.id}-${opt}`"
                 @update:modelValue="(val: boolean) => onCheckboxToggle(q.id, opt, val)"
@@ -266,7 +271,7 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           <!-- RATING -->
           <Rating
             v-if="q.type === 'RATING'"
-            v-model="answers[q.id].rating"
+            v-model="getAnswer(q.id).rating"
             :stars="q.ratingConfig?.max || 5"
           />
 
@@ -274,17 +279,17 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           <div v-if="q.type === 'YES_NO'" class="yesno-group">
             <Button
               :label="t('forms.yes')"
-              :severity="answers[q.id].text === 'yes' ? 'success' : 'secondary'"
-              :outlined="answers[q.id].text !== 'yes'"
+              :severity="getAnswer(q.id).text === 'yes' ? 'success' : 'secondary'"
+              :outlined="getAnswer(q.id).text !== 'yes'"
               size="small"
-              @click="answers[q.id] = { ...answers[q.id], text: 'yes' }"
+              @click="getAnswer(q.id).text = 'yes'"
             />
             <Button
               :label="t('forms.no')"
-              :severity="answers[q.id].text === 'no' ? 'danger' : 'secondary'"
-              :outlined="answers[q.id].text !== 'no'"
+              :severity="getAnswer(q.id).text === 'no' ? 'danger' : 'secondary'"
+              :outlined="getAnswer(q.id).text !== 'no'"
               size="small"
-              @click="answers[q.id] = { ...answers[q.id], text: 'no' }"
+              @click="getAnswer(q.id).text = 'no'"
             />
           </div>
         </div>

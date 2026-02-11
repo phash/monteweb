@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
@@ -48,9 +48,8 @@ const editActive = ref(true)
 // Rooms tab
 const userRooms = ref<RoomInfo[]>([])
 const roomsLoading = ref(false)
-const roomSearchQuery = ref('')
-const roomSearchResults = ref<UserInfo[]>([])
-const addRoomId = ref('')
+const roomSearchResults = ref<RoomInfo[]>([])
+const selectedRoom = ref<RoomInfo | null>(null)
 const addRoomRole = ref<RoomRole>('MEMBER')
 
 // Family tab
@@ -58,7 +57,6 @@ const userFamilies = ref<FamilyInfo[]>([])
 const allFamilies = ref<FamilyInfo[]>([])
 const familiesLoading = ref(false)
 const addFamilyId = ref('')
-const addFamilyRole = ref('PARENT')
 
 const roleOptions: { label: string; value: UserRole }[] = [
   { label: 'Superadmin', value: 'SUPERADMIN' },
@@ -68,17 +66,12 @@ const roleOptions: { label: string; value: UserRole }[] = [
   { label: 'Student', value: 'STUDENT' },
 ]
 
-const roomRoleOptions: { label: string; value: RoomRole }[] = [
-  { label: 'Leader', value: 'LEADER' },
-  { label: 'Member', value: 'MEMBER' },
-  { label: 'Parent', value: 'PARENT_MEMBER' },
-  { label: 'Guest', value: 'GUEST' },
-]
-
-const familyRoleOptions = [
-  { label: 'Parent', value: 'PARENT' },
-  { label: 'Child', value: 'CHILD' },
-]
+const roomRoleOptions = computed(() => [
+  { label: t('rooms.roles.LEADER'), value: 'LEADER' as RoomRole },
+  { label: t('rooms.roles.MEMBER'), value: 'MEMBER' as RoomRole },
+  { label: t('rooms.roles.PARENT_MEMBER'), value: 'PARENT_MEMBER' as RoomRole },
+  { label: t('rooms.roles.GUEST'), value: 'GUEST' as RoomRole },
+])
 
 async function loadUsers() {
   loading.value = true
@@ -121,6 +114,7 @@ function openEdit(user: UserInfo) {
   editActive.value = user.active
   userRooms.value = []
   userFamilies.value = []
+  selectedRoom.value = null
   showEdit.value = true
 }
 
@@ -157,11 +151,11 @@ async function loadUserRooms() {
 }
 
 async function addMemberToRoom() {
-  if (!editUser.value || !addRoomId.value) return
+  if (!editUser.value || !selectedRoom.value) return
   try {
-    await roomsApi.addMember(addRoomId.value, editUser.value.id, addRoomRole.value)
+    await roomsApi.addMember(selectedRoom.value.id, editUser.value.id, addRoomRole.value)
     toast.add({ severity: 'success', summary: t('admin.memberAdded'), life: 3000 })
-    addRoomId.value = ''
+    selectedRoom.value = null
     await loadUserRooms()
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
@@ -196,8 +190,9 @@ async function loadUserFamilies() {
 
 async function addToFamily() {
   if (!editUser.value || !addFamilyId.value) return
+  const autoRole = editUser.value.role === 'STUDENT' ? 'CHILD' : 'PARENT'
   try {
-    await usersApi.addUserToFamily(editUser.value.id, addFamilyId.value, addFamilyRole.value)
+    await usersApi.addUserToFamily(editUser.value.id, addFamilyId.value, autoRole)
     toast.add({ severity: 'success', summary: t('admin.familyMemberAdded'), life: 3000 })
     addFamilyId.value = ''
     await loadUserFamilies()
@@ -239,7 +234,7 @@ async function searchRooms(event: { query: string }) {
   const q = event.query.toLowerCase()
   roomSearchResults.value = allRooms.value
     .filter((r: RoomInfo) => r.name.toLowerCase().includes(q))
-    .filter((r: RoomInfo) => !userRooms.value.some(ur => ur.id === r.id)) as any
+    .filter((r: RoomInfo) => !userRooms.value.some(ur => ur.id === r.id))
 }
 
 onMounted(loadUsers)
@@ -340,16 +335,15 @@ onMounted(loadUsers)
             <template v-else>
               <div class="add-row">
                 <AutoComplete
-                  v-model="addRoomId"
+                  v-model="selectedRoom"
                   :suggestions="roomSearchResults"
                   optionLabel="name"
                   :placeholder="t('admin.searchRoom')"
                   @complete="searchRooms"
-                  @item-select="(e: any) => { addRoomId = e.value.id }"
-                  class="flex-grow"
+                  class="room-autocomplete"
                 />
-                <Select v-model="addRoomRole" :options="roomRoleOptions" optionLabel="label" optionValue="value" style="width: 140px" />
-                <Button icon="pi pi-plus" :label="t('admin.addMember')" size="small" @click="addMemberToRoom" :disabled="!addRoomId" />
+                <Select v-model="addRoomRole" :options="roomRoleOptions" optionLabel="label" optionValue="value" style="width: 160px" />
+                <Button icon="pi pi-plus" :label="t('admin.addMember')" size="small" @click="addMemberToRoom" :disabled="!selectedRoom" />
               </div>
               <div v-if="userRooms.length === 0" class="empty-tab">{{ t('admin.noRoomMemberships') }}</div>
               <div v-else class="item-list">
@@ -378,7 +372,6 @@ onMounted(loadUsers)
                   class="flex-grow"
                   showClear
                 />
-                <Select v-model="addFamilyRole" :options="familyRoleOptions" optionLabel="label" optionValue="value" style="width: 120px" />
                 <Button icon="pi pi-plus" :label="t('admin.addToFamily')" size="small" @click="addToFamily" :disabled="!addFamilyId" />
               </div>
               <div v-if="userFamilies.length === 0" class="empty-tab">{{ t('admin.noFamilyMemberships') }}</div>
@@ -449,6 +442,11 @@ onMounted(loadUsers)
 .flex-grow {
   flex: 1;
   min-width: 150px;
+}
+
+.room-autocomplete {
+  flex: 2;
+  min-width: 200px;
 }
 
 .item-list {

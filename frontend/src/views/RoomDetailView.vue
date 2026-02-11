@@ -59,7 +59,6 @@ const chatEnabled = computed(() =>
   messagingEnabled && rooms.currentRoom?.settings?.chatEnabled !== false
 )
 
-const isMember = computed(() => rooms.currentRoom?.members != null)
 const isLeader = computed(() => {
   if (!rooms.currentRoom?.members) return false
   return rooms.currentRoom.members.some(

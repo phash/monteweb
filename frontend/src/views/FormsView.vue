@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useFormsStore } from '@/stores/forms'
-import { useAuthStore } from '@/stores/auth'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -19,8 +18,6 @@ import ProgressBar from 'primevue/progressbar'
 const { t } = useI18n()
 const router = useRouter()
 const forms = useFormsStore()
-const auth = useAuthStore()
-
 const activeTab = ref('0')
 
 onMounted(() => {

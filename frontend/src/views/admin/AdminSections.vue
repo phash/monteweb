@@ -196,7 +196,7 @@ onMounted(loadData)
               <div class="section-header-info">
                 <span class="section-name">{{ section.name }}</span>
                 <Tag
-                  :value="t('admin.roomCount', roomCountForSection(section.id), { count: roomCountForSection(section.id) })"
+                  :value="t('admin.roomCount', { count: roomCountForSection(section.id) })"
                   severity="secondary"
                   class="room-count-tag"
                 />

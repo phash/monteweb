@@ -30,6 +30,9 @@ async function loadContent() {
     ])
     files.value = filesRes.data.data
     folders.value = foldersRes.data.data
+  } catch {
+    files.value = []
+    folders.value = []
   } finally {
     loading.value = false
   }

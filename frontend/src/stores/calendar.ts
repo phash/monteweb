@@ -74,6 +74,10 @@ export const useCalendarStore = defineStore('calendar', () => {
       events.value = res.data.data.content
       totalEvents.value = res.data.data.totalElements
       hasMore.value = !res.data.data.last
+    } catch {
+      events.value = []
+      totalEvents.value = 0
+      hasMore.value = false
     } finally {
       loading.value = false
     }
