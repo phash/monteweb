@@ -13,6 +13,7 @@ import FeedPostComponent from '@/components/feed/FeedPost.vue'
 import RoomFiles from '@/components/rooms/RoomFiles.vue'
 import RoomChat from '@/components/rooms/RoomChat.vue'
 import RoomDiscussions from '@/components/rooms/RoomDiscussions.vue'
+import RoomEvents from '@/components/rooms/RoomEvents.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
@@ -34,6 +35,7 @@ const postsLoading = ref(false)
 const activeTab = ref('0')
 
 const filesEnabled = admin.config?.modules?.files ?? false
+const calendarEnabled = admin.config?.modules?.calendar ?? false
 const messagingEnabled = admin.config?.modules?.messaging ?? false
 const chatEnabled = computed(() =>
   messagingEnabled && rooms.currentRoom?.settings?.chatEnabled !== false
@@ -93,6 +95,7 @@ async function handlePost(data: { title?: string; content: string }) {
           <Tab value="2">{{ t('discussions.title') }}</Tab>
           <Tab v-if="chatEnabled" value="3">{{ t('chat.title') }}</Tab>
           <Tab v-if="filesEnabled" value="4">{{ t('files.title') }}</Tab>
+          <Tab v-if="calendarEnabled" value="5">{{ t('calendar.title') }}</Tab>
         </TabList>
         <TabPanels>
           <!-- Info-Board Tab -->
@@ -137,6 +140,11 @@ async function handlePost(data: { title?: string; content: string }) {
           <!-- Files Tab -->
           <TabPanel v-if="filesEnabled" value="4">
             <RoomFiles :roomId="id" />
+          </TabPanel>
+
+          <!-- Events Tab -->
+          <TabPanel v-if="calendarEnabled" value="5">
+            <RoomEvents :roomId="id" />
           </TabPanel>
         </TabPanels>
       </Tabs>

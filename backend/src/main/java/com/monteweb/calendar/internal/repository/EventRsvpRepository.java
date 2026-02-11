@@ -1,0 +1,15 @@
+package com.monteweb.calendar.internal.repository;
+
+import com.monteweb.calendar.RsvpStatus;
+import com.monteweb.calendar.internal.model.EventRsvp;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.Optional;
+import java.util.UUID;
+
+public interface EventRsvpRepository extends JpaRepository<EventRsvp, UUID> {
+
+    Optional<EventRsvp> findByEventIdAndUserId(UUID eventId, UUID userId);
+
+    long countByEventIdAndStatus(UUID eventId, RsvpStatus status);
+}

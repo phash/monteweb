@@ -75,6 +75,28 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'calendar',
+          name: 'calendar',
+          component: () => import('@/views/CalendarView.vue'),
+        },
+        {
+          path: 'calendar/create',
+          name: 'calendar-create',
+          component: () => import('@/views/EventCreateView.vue'),
+        },
+        {
+          path: 'calendar/events/:id',
+          name: 'event-detail',
+          component: () => import('@/views/EventDetailView.vue'),
+          props: true,
+        },
+        {
+          path: 'calendar/events/:id/edit',
+          name: 'event-edit',
+          component: () => import('@/views/EventCreateView.vue'),
+          props: true,
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),

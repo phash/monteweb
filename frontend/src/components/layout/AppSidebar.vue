@@ -27,6 +27,9 @@ const navItems = computed(() => {
   if (admin.isModuleEnabled('cleaning')) {
     items.push({ to: '/cleaning', icon: 'pi pi-calendar', label: t('nav.cleaning'), name: 'cleaning' })
   }
+  if (admin.isModuleEnabled('calendar')) {
+    items.push({ to: '/calendar', icon: 'pi pi-calendar-plus', label: t('nav.calendar'), name: 'calendar' })
+  }
 
   if (auth.isAdmin) {
     items.push({ to: '/admin', icon: 'pi pi-cog', label: t('nav.admin'), name: 'admin' })

@@ -110,3 +110,5 @@ monteweb:
       enabled: false
     cleaning:
       enabled: false
+    calendar:
+      enabled: false
