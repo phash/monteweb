@@ -1,6 +1,7 @@
 package com.monteweb.cleaning.internal.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -17,6 +18,7 @@ import java.util.UUID;
  * Tokens are valid for the duration of the cleaning slot.
  */
 @Service
+@ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 public class QrTokenService {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";

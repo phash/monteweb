@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoomsStore } from '@/stores/rooms'
-import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
@@ -14,7 +13,6 @@ import { useToast } from 'primevue/usetoast'
 const { t } = useI18n()
 const router = useRouter()
 const roomsStore = useRoomsStore()
-const authStore = useAuthStore()
 const toast = useToast()
 
 const searchQuery = ref('')

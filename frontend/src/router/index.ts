@@ -42,9 +42,10 @@ const router = createRouter({
           component: () => import('@/views/FamilyView.vue'),
         },
         {
-          path: 'messages',
+          path: 'messages/:conversationId?',
           name: 'messages',
           component: () => import('@/views/MessagesView.vue'),
+          props: true,
         },
         {
           path: 'jobs',

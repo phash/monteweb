@@ -17,4 +17,9 @@ public interface RoomModuleApi {
     boolean isUserInRoom(UUID userId, UUID roomId);
 
     Optional<RoomRole> getUserRoleInRoom(UUID userId, UUID roomId);
+
+    /**
+     * Returns all member user IDs of a room.
+     */
+    List<UUID> getMemberUserIds(UUID roomId);
 }

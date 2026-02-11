@@ -40,6 +40,12 @@ public class TenantConfig {
     @Column(name = "target_hours_per_family", nullable = false)
     private BigDecimal targetHoursPerFamily = new BigDecimal("20.0");
 
+    @Column(name = "parent_to_parent_messaging", nullable = false)
+    private boolean parentToParentMessaging = false;
+
+    @Column(name = "student_to_student_messaging", nullable = false)
+    private boolean studentToStudentMessaging = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

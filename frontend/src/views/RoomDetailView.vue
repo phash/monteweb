@@ -5,13 +5,14 @@ import { useRoomsStore } from '@/stores/rooms'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { feedApi } from '@/api/feed.api'
-import type { FeedPost, CreatePostRequest } from '@/types/feed'
+import type { FeedPost } from '@/types/feed'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import PostComposer from '@/components/feed/PostComposer.vue'
 import FeedPostComponent from '@/components/feed/FeedPost.vue'
 import RoomFiles from '@/components/rooms/RoomFiles.vue'
 import RoomChat from '@/components/rooms/RoomChat.vue'
+import RoomDiscussions from '@/components/rooms/RoomDiscussions.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
@@ -89,8 +90,9 @@ async function handlePost(data: { title?: string; content: string }) {
         <TabList>
           <Tab value="0">{{ t('rooms.infoBoard') }}</Tab>
           <Tab value="1">{{ t('rooms.members') }} ({{ rooms.currentRoom.members?.length ?? 0 }})</Tab>
-          <Tab v-if="chatEnabled" value="2">{{ t('chat.title') }}</Tab>
-          <Tab v-if="filesEnabled" value="3">{{ t('files.title') }}</Tab>
+          <Tab value="2">{{ t('discussions.title') }}</Tab>
+          <Tab v-if="chatEnabled" value="3">{{ t('chat.title') }}</Tab>
+          <Tab v-if="filesEnabled" value="4">{{ t('files.title') }}</Tab>
         </TabList>
         <TabPanels>
           <!-- Info-Board Tab -->
@@ -122,13 +124,18 @@ async function handlePost(data: { title?: string; content: string }) {
             <p v-else class="text-muted">{{ t('rooms.noMembers') }}</p>
           </TabPanel>
 
+          <!-- Discussions Tab -->
+          <TabPanel value="2">
+            <RoomDiscussions :roomId="id" />
+          </TabPanel>
+
           <!-- Chat Tab -->
-          <TabPanel v-if="chatEnabled" value="2">
+          <TabPanel v-if="chatEnabled" value="3">
             <RoomChat :roomId="id" />
           </TabPanel>
 
           <!-- Files Tab -->
-          <TabPanel v-if="filesEnabled" value="3">
+          <TabPanel v-if="filesEnabled" value="4">
             <RoomFiles :roomId="id" />
           </TabPanel>
         </TabPanels>

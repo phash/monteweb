@@ -1,7 +1,10 @@
 package com.monteweb.jobboard.internal.controller;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.jobboard.FamilyHoursInfo;
 import com.monteweb.jobboard.internal.service.JobboardService;
+import com.monteweb.shared.util.PdfService;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -14,12 +17,19 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/jobs/report")
+@ConditionalOnProperty(prefix = "monteweb.modules.jobboard", name = "enabled", havingValue = "true")
 public class JobboardExportController {
 
     private final JobboardService jobboardService;
+    private final PdfService pdfService;
+    private final AdminModuleApi adminModuleApi;
 
-    public JobboardExportController(JobboardService jobboardService) {
+    public JobboardExportController(JobboardService jobboardService,
+                                    PdfService pdfService,
+                                    AdminModuleApi adminModuleApi) {
         this.jobboardService = jobboardService;
+        this.pdfService = pdfService;
+        this.adminModuleApi = adminModuleApi;
     }
 
     @GetMapping(value = "/export", produces = "text/csv")
@@ -49,6 +59,29 @@ public class JobboardExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"elternstunden-report.csv\"")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .body(result);
+    }
+
+    @GetMapping(value = "/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf() {
+        List<FamilyHoursInfo> report = jobboardService.getAllFamilyHoursReport();
+        String schoolName = adminModuleApi.getTenantConfig().schoolName();
+
+        var rows = report.stream()
+                .map(e -> new PdfService.HoursReportRow(
+                        e.familyName(),
+                        e.completedHours().toString(),
+                        e.completedHours().toString(),
+                        e.pendingHours().toString(),
+                        e.remainingHours().toString()
+                ))
+                .toList();
+
+        byte[] pdf = pdfService.generateHoursReport(schoolName, rows);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"elternstunden-report.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     private String escapeCsv(String value) {

@@ -5,6 +5,7 @@ import com.monteweb.files.FolderInfo;
 import com.monteweb.files.internal.service.FileService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.util.SecurityUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,6 +18,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/rooms/{roomId}/files")
+@ConditionalOnProperty(prefix = "monteweb.modules.files", name = "enabled", havingValue = "true")
 public class FileController {
 
     private final FileService fileService;

@@ -2,6 +2,7 @@ package com.monteweb.cleaning.internal.service;
 
 import com.monteweb.cleaning.*;
 import com.monteweb.cleaning.internal.model.CleaningConfig;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.cleaning.internal.model.CleaningRegistration;
 import com.monteweb.cleaning.internal.model.CleaningSlot;
 import com.monteweb.cleaning.internal.repository.CleaningConfigRepository;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 @Transactional
 public class CleaningService implements CleaningModuleApi {
 
@@ -410,6 +412,23 @@ public class CleaningService implements CleaningModuleApi {
         return slot.getQrToken();
     }
 
+    // ── Config / Slot queries for PDF export ─────────────────────────────
+
+    @Transactional(readOnly = true)
+    public CleaningConfigInfo getConfigById(UUID configId) {
+        CleaningConfig config = configRepository.findById(configId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", configId));
+        return toConfigInfo(config);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SlotWithToken> getSlotsByConfigAndDateRange(UUID configId, LocalDate from, LocalDate to) {
+        List<CleaningSlot> slots = slotRepository.findByConfigIdAndSlotDateBetween(configId, from, to);
+        return slots.stream()
+                .map(s -> new SlotWithToken(s.getSlotDate(), s.getStartTime(), s.getEndTime(), s.getQrToken()))
+                .toList();
+    }
+
     // ── Mapping ─────────────────────────────────────────────────────────
 
     private CleaningConfigInfo toConfigInfo(CleaningConfig config) {
@@ -485,5 +504,8 @@ public class CleaningService implements CleaningModuleApi {
 
     public record DashboardInfo(
             long totalSlots, long completedSlots, long noShows, int slotsNeedingParticipants) {
+    }
+
+    public record SlotWithToken(LocalDate date, LocalTime startTime, LocalTime endTime, String qrToken) {
     }
 }

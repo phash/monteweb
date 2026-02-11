@@ -5,6 +5,7 @@ import com.monteweb.cleaning.internal.service.CleaningService;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/cleaning")
+@ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class CleaningController {
 

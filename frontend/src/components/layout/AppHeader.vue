@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import NotificationBell from '@/components/common/NotificationBell.vue'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import { ref } from 'vue'
 
 const { t } = useI18n()
@@ -45,6 +46,7 @@ function toggleUserMenu(event: Event) {
     </div>
 
     <div class="header-right">
+      <LanguageSwitcher />
       <NotificationBell />
       <Button
         :label="auth.user?.displayName ?? ''"

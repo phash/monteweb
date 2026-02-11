@@ -5,7 +5,6 @@ import { adminApi } from '@/api/admin.api'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import ColorPicker from 'primevue/colorpicker'
 import FileUpload from 'primevue/fileupload'
 import { useToast } from 'primevue/usetoast'
 
@@ -76,9 +75,6 @@ async function uploadLogo(event: { files: File[] }) {
   }
 }
 
-function hexFromPicker(value: string) {
-  return value.startsWith('#') ? value : '#' + value
-}
 </script>
 
 <template>

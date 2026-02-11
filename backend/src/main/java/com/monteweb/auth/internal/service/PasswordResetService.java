@@ -2,6 +2,7 @@ package com.monteweb.auth.internal.service;
 
 import com.monteweb.auth.internal.model.PasswordResetToken;
 import com.monteweb.auth.internal.repository.PasswordResetTokenRepository;
+import com.monteweb.shared.config.EmailService;
 import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.user.UserModuleApi;
 import org.slf4j.Logger;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -23,13 +25,16 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokenRepository;
     private final UserModuleApi userModule;
     private final PasswordEncoder passwordEncoder;
+    private final Optional<EmailService> emailService;
 
     public PasswordResetService(PasswordResetTokenRepository tokenRepository,
                                 UserModuleApi userModule,
-                                PasswordEncoder passwordEncoder) {
+                                PasswordEncoder passwordEncoder,
+                                Optional<EmailService> emailService) {
         this.tokenRepository = tokenRepository;
         this.userModule = userModule;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     /**
@@ -52,8 +57,12 @@ public class PasswordResetService {
         resetToken.setExpiresAt(Instant.now().plus(TOKEN_EXPIRY_HOURS, ChronoUnit.HOURS));
         tokenRepository.save(resetToken);
 
-        // Log the reset URL (in production, send via email)
-        log.info("Password reset token generated for user {}: {}", email, resetToken.getToken());
+        // Send via email if available, otherwise log
+        if (emailService.isPresent()) {
+            emailService.get().sendPasswordResetEmail(email, resetToken.getToken());
+        } else {
+            log.info("Password reset token generated for user {}: {}", email, resetToken.getToken());
+        }
     }
 
     /**

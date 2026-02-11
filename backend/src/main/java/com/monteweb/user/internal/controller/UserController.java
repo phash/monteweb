@@ -1,12 +1,15 @@
 package com.monteweb.user.internal.controller;
 
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.internal.dto.UpdateProfileRequest;
 import com.monteweb.user.internal.service.UserService;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -36,6 +39,14 @@ public class UserController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userService.updateProfile(userId, request.firstName(), request.lastName(), request.phone());
         return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<PageResponse<UserInfo>>> searchUsers(
+            @RequestParam(defaultValue = "") String q,
+            @PageableDefault(size = 20) Pageable pageable) {
+        var page = userService.searchUsers(q, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
     @GetMapping("/{id}")

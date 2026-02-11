@@ -100,7 +100,9 @@ public class AdminService implements AdminModuleApi {
                 config.getLogoUrl(),
                 config.getTheme(),
                 config.getModules(),
-                config.getTargetHoursPerFamily()
+                config.getTargetHoursPerFamily(),
+                config.isParentToParentMessaging(),
+                config.isStudentToStudentMessaging()
         );
     }
 }

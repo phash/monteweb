@@ -48,7 +48,10 @@ public class CleaningSlot {
     @Column(nullable = false)
     private boolean cancelled = false;
 
-    @Column(name = "qr_token")
+    @Column(name = "cancel_reason", length = 500)
+    private String cancelReason;
+
+    @Column(name = "qr_token", length = 500)
     private String qrToken;
 
     @Column(name = "created_at", nullable = false, updatable = false)

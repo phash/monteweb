@@ -15,6 +15,12 @@ export const usersApi = {
     return client.get<ApiResponse<UserInfo>>(`/users/${id}`)
   },
 
+  search(query: string, page = 0, size = 20) {
+    return client.get<ApiResponse<PageResponse<UserInfo>>>('/users/search', {
+      params: { q: query, page, size },
+    })
+  },
+
   // Admin
   list(params?: { page?: number; size?: number }) {
     return client.get<ApiResponse<PageResponse<UserInfo>>>('/admin/users', { params })

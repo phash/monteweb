@@ -126,6 +126,16 @@ export const useJobboardStore = defineStore('jobboard', () => {
     window.URL.revokeObjectURL(url)
   }
 
+  async function exportPdf() {
+    const res = await jobboardApi.exportPdf()
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'elternstunden-report.pdf'
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   function updateAssignmentInList(updated: JobAssignmentInfo) {
     const idx = myAssignments.value.findIndex(a => a.id === updated.id)
     if (idx >= 0) myAssignments.value[idx] = updated
@@ -157,5 +167,6 @@ export const useJobboardStore = defineStore('jobboard', () => {
     fetchFamilyHours,
     fetchReport,
     exportCsv,
+    exportPdf,
   }
 })

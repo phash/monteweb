@@ -11,20 +11,24 @@ CREATE TABLE cleaning_slots (
     qr_token        VARCHAR(500),
     cancelled       BOOLEAN NOT NULL DEFAULT false,
     cancel_reason   VARCHAR(500),
-    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 CREATE TABLE cleaning_registrations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slot_id         UUID NOT NULL REFERENCES cleaning_slots(id) ON DELETE CASCADE,
     user_id         UUID NOT NULL REFERENCES users(id),
+    user_name       VARCHAR(200) NOT NULL DEFAULT '',
     family_id       UUID NOT NULL REFERENCES families(id),
-    checked_in_at   TIMESTAMP WITH TIME ZONE,
-    checked_out_at  TIMESTAMP WITH TIME ZONE,
+    checked_in      BOOLEAN NOT NULL DEFAULT false,
+    check_in_at     TIMESTAMP WITH TIME ZONE,
+    checked_out     BOOLEAN NOT NULL DEFAULT false,
+    check_out_at    TIMESTAMP WITH TIME ZONE,
     actual_minutes  INTEGER,
     no_show         BOOLEAN NOT NULL DEFAULT false,
     swap_offered    BOOLEAN NOT NULL DEFAULT false,
-    registered_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+    created_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 CREATE INDEX idx_cleaning_slots_date ON cleaning_slots(slot_date);

@@ -60,6 +60,13 @@ public class RoomService implements RoomModuleApi {
                 .map(RoomMember::getRole);
     }
 
+    @Override
+    public List<UUID> getMemberUserIds(UUID roomId) {
+        return memberRepository.findByIdRoomId(roomId).stream()
+                .map(RoomMember::getUserId)
+                .toList();
+    }
+
     // --- Internal service methods ---
 
     public Page<RoomInfo> findAll(Pageable pageable) {

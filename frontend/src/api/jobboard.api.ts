@@ -88,4 +88,8 @@ export const jobboardApi = {
   exportCsv() {
     return client.get('/jobs/report/export', { responseType: 'blob' })
   },
+
+  exportPdf() {
+    return client.get('/jobs/report/pdf', { responseType: 'blob' })
+  },
 }

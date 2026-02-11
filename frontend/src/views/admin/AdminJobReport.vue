@@ -44,12 +44,20 @@ function progressPercent(completed: number, target: number) {
   <div>
     <div class="page-header">
       <PageTitle :title="t('jobboard.report')" :subtitle="t('admin.reportSubtitle')" />
-      <Button
-        :label="t('admin.csvExport')"
-        icon="pi pi-download"
-        severity="secondary"
-        @click="jobboard.exportCsv()"
-      />
+      <div class="flex gap-2">
+        <Button
+          :label="t('admin.pdfExport')"
+          icon="pi pi-file-pdf"
+          severity="secondary"
+          @click="jobboard.exportPdf()"
+        />
+        <Button
+          :label="t('admin.csvExport')"
+          icon="pi pi-download"
+          severity="secondary"
+          @click="jobboard.exportCsv()"
+        />
+      </div>
     </div>
 
     <!-- Summary Cards -->

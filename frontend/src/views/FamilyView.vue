@@ -43,6 +43,10 @@ async function generateCode(familyId: string) {
   const res = await familyApi.generateInviteCode(familyId)
   generatedCode.value = res.data.data.inviteCode
 }
+
+function copyCode() {
+  window.navigator.clipboard.writeText(generatedCode.value)
+}
 </script>
 
 <template>
@@ -72,7 +76,7 @@ async function generateCode(familyId: string) {
             severity="secondary"
             text
             size="small"
-            @click="navigator.clipboard.writeText(generatedCode)"
+            @click="copyCode"
           />
         </div>
 

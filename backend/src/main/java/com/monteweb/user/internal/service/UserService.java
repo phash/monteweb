@@ -75,6 +75,14 @@ public class UserService implements UserModuleApi {
         });
     }
 
+    @Override
+    public Page<UserInfo> searchUsers(String query, Pageable pageable) {
+        if (query == null || query.isBlank()) {
+            return userRepository.findByActiveTrue(pageable).map(this::toUserInfo);
+        }
+        return userRepository.searchByDisplayNameOrEmail(query.trim(), pageable).map(this::toUserInfo);
+    }
+
     public Page<UserInfo> findAll(Pageable pageable) {
         return userRepository.findByActiveTrue(pageable).map(this::toUserInfo);
     }
@@ -99,6 +107,43 @@ public class UserService implements UserModuleApi {
     public void updatePasswordHash(UUID userId, String passwordHash) {
         var user = findEntityById(userId);
         user.setPasswordHash(passwordHash);
+        userRepository.save(user);
+    }
+
+    @Override
+    public Optional<UserInfo> findByOidcProviderAndSubject(String provider, String subject) {
+        return userRepository.findByOidcProviderAndOidcSubject(provider, subject)
+                .map(this::toUserInfo);
+    }
+
+    @Override
+    @Transactional
+    public UserInfo createOidcUser(String email, String firstName, String lastName,
+                                    String oidcProvider, String oidcSubject, UserRole role) {
+        var user = new User();
+        user.setEmail(email.toLowerCase().trim());
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setDisplayName(firstName + " " + lastName);
+        user.setRole(role);
+        user.setOidcProvider(oidcProvider);
+        user.setOidcSubject(oidcSubject);
+        user.setEmailVerified(true); // OIDC provider already verified email
+        user = userRepository.save(user);
+
+        eventPublisher.publishEvent(new UserRegisteredEvent(
+                user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole()
+        ));
+
+        return toUserInfo(user);
+    }
+
+    @Override
+    @Transactional
+    public void linkOidcProvider(UUID userId, String oidcProvider, String oidcSubject) {
+        var user = findEntityById(userId);
+        user.setOidcProvider(oidcProvider);
+        user.setOidcSubject(oidcSubject);
         userRepository.save(user);
     }
 

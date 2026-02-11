@@ -5,6 +5,7 @@ import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.*;
 import com.monteweb.jobboard.internal.model.Job;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.jobboard.internal.model.JobAssignment;
 import com.monteweb.jobboard.internal.repository.JobAssignmentRepository;
 import com.monteweb.jobboard.internal.repository.JobRepository;
@@ -28,6 +29,7 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@ConditionalOnProperty(prefix = "monteweb.modules.jobboard", name = "enabled", havingValue = "true")
 public class JobboardService implements JobboardModuleApi {
 
     private final JobRepository jobRepository;

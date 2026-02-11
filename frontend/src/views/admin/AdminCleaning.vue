@@ -11,7 +11,6 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Tag from 'primevue/tag'
-import Card from 'primevue/card'
 import { useToast } from 'primevue/usetoast'
 import type { CleaningConfigInfo } from '@/types/cleaning'
 import * as cleaningApi from '@/api/cleaning.api'
@@ -22,8 +21,8 @@ const toast = useToast()
 
 const showCreateDialog = ref(false)
 const showGenerateDialog = ref(false)
+const showQrExportDialog = ref(false)
 const selectedConfig = ref<CleaningConfigInfo | null>(null)
-const dashboard = ref<{ totalSlots: number; completedSlots: number; noShows: number; slotsNeedingParticipants: number } | null>(null)
 
 const dayOptions = [
   { label: t('cleaning.days.monday'), value: 1 },
@@ -46,6 +45,11 @@ const newConfig = ref({
 })
 
 const generateRange = ref({
+  from: null as Date | null,
+  to: null as Date | null
+})
+
+const qrExportRange = ref({
   from: null as Date | null,
   to: null as Date | null
 })
@@ -73,12 +77,36 @@ function openGenerate(config: CleaningConfigInfo) {
   showGenerateDialog.value = true
 }
 
+function openQrExport(config: CleaningConfigInfo) {
+  selectedConfig.value = config
+  qrExportRange.value = { from: null, to: null }
+  showQrExportDialog.value = true
+}
+
+async function exportQrCodes() {
+  if (!selectedConfig.value || !qrExportRange.value.from || !qrExportRange.value.to) return
+  try {
+    const from = qrExportRange.value.from!.toISOString().split('T')[0]
+    const to = qrExportRange.value.to!.toISOString().split('T')[0]
+    const res = await cleaningApi.exportQrCodesPdf(selectedConfig.value!.id, from!, to!)
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `qr-codes-${selectedConfig.value!.title}.pdf`
+    a.click()
+    window.URL.revokeObjectURL(url)
+    showQrExportDialog.value = false
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
 async function generateSlots() {
   if (!selectedConfig.value || !generateRange.value.from || !generateRange.value.to) return
   try {
-    const from = generateRange.value.from.toISOString().split('T')[0]
-    const to = generateRange.value.to.toISOString().split('T')[0]
-    const slots = await cleaningStore.generateSlots(selectedConfig.value.id, from, to)
+    const from = generateRange.value.from!.toISOString().split('T')[0]
+    const to = generateRange.value.to!.toISOString().split('T')[0]
+    const slots = await cleaningStore.generateSlots(selectedConfig.value!.id, from!, to!)
     showGenerateDialog.value = false
     toast.add({
       severity: 'success',
@@ -137,6 +165,9 @@ function getDayName(day: number) {
             <Button icon="pi pi-calendar-plus" text rounded size="small"
                     v-tooltip="t('cleaning.admin.generate')"
                     @click="openGenerate(data)" :disabled="!data.active" />
+            <Button icon="pi pi-file-pdf" text rounded size="small"
+                    v-tooltip="t('cleaning.admin.exportQrCodes')"
+                    @click="openQrExport(data)" />
             <Button :icon="data.active ? 'pi pi-ban' : 'pi pi-check'"
                     text rounded size="small"
                     :severity="data.active ? 'danger' : 'success'"
@@ -215,6 +246,27 @@ function getDayName(day: number) {
         <Button :label="t('common.cancel')" text @click="showGenerateDialog = false" />
         <Button :label="t('cleaning.admin.generate')" icon="pi pi-calendar-plus" @click="generateSlots"
                 :disabled="!generateRange.from || !generateRange.to" />
+      </template>
+    </Dialog>
+
+    <!-- QR Code PDF Export Dialog -->
+    <Dialog v-model:visible="showQrExportDialog" :header="t('cleaning.admin.exportQrCodesTitle')" modal
+            style="width: 400px">
+      <p class="mb-3">{{ t('cleaning.admin.exportQrCodesHint', { title: selectedConfig?.title }) }}</p>
+      <div class="flex flex-col gap-3">
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
+          <DatePicker v-model="qrExportRange.from" dateFormat="dd.mm.yy" class="w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
+          <DatePicker v-model="qrExportRange.to" dateFormat="dd.mm.yy" class="w-full" />
+        </div>
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" text @click="showQrExportDialog = false" />
+        <Button :label="t('cleaning.admin.exportQrCodes')" icon="pi pi-file-pdf" @click="exportQrCodes"
+                :disabled="!qrExportRange.from || !qrExportRange.to" />
       </template>
     </Dialog>
   </div>

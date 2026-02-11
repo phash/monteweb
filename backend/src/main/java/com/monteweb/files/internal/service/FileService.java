@@ -8,6 +8,7 @@ import com.monteweb.files.internal.model.RoomFolder;
 import com.monteweb.files.internal.repository.RoomFileRepository;
 import com.monteweb.files.internal.repository.RoomFolderRepository;
 import com.monteweb.room.RoomModuleApi;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
@@ -22,6 +23,7 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@ConditionalOnProperty(prefix = "monteweb.modules.files", name = "enabled", havingValue = "true")
 public class FileService implements FilesModuleApi {
 
     private final RoomFileRepository fileRepository;

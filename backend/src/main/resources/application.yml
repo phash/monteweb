@@ -29,6 +29,18 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:changeme}
 
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -45,15 +57,22 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
   endpoint:
     health:
       show-details: when-authorized
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: monteweb
   health:
     redis:
       enabled: true
     db:
       enabled: true
+    mail:
+      enabled: false
 
 monteweb:
   jwt:
@@ -67,6 +86,21 @@ monteweb:
     access-key: ${MINIO_ACCESS_KEY:minioadmin}
     secret-key: ${MINIO_SECRET_KEY:minioadmin}
     bucket: ${MINIO_BUCKET:monteweb}
+  email:
+    enabled: ${EMAIL_ENABLED:false}
+    from: ${EMAIL_FROM:noreply@monteweb.local}
+    base-url: ${FRONTEND_URL:http://localhost:5173}
+  oidc:
+    enabled: ${OIDC_ENABLED:false}
+    provider-name: ${OIDC_PROVIDER_NAME:oidc}
+    client-id: ${OIDC_CLIENT_ID:unused}
+    client-secret: ${OIDC_CLIENT_SECRET:unused}
+    issuer-uri: ${OIDC_ISSUER_URI:https://accounts.google.com}
+  push:
+    enabled: ${PUSH_ENABLED:false}
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
+    subject: ${VAPID_SUBJECT:mailto:admin@monteweb.local}
   modules:
     messaging:
       enabled: false

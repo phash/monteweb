@@ -3,13 +3,19 @@ import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { usersApi } from '@/api/users.api'
+import { usePushNotifications } from '@/composables/usePushNotifications'
 import PageTitle from '@/components/common/PageTitle.vue'
 import InputText from 'primevue/inputtext'
+import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const { isSupported: pushSupported, isSubscribed: pushSubscribed, permission: pushPermission,
+        checkSubscription, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications()
+
+const pushEnabled = ref(false)
 
 const form = ref({
   firstName: '',
@@ -18,12 +24,14 @@ const form = ref({
 })
 const saved = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   if (auth.user) {
     form.value.firstName = auth.user.firstName
     form.value.lastName = auth.user.lastName
     form.value.phone = auth.user.phone ?? ''
   }
+  await checkSubscription()
+  pushEnabled.value = pushSubscribed.value
 })
 
 async function save() {
@@ -31,6 +39,15 @@ async function save() {
   await auth.fetchUser()
   saved.value = true
   setTimeout(() => { saved.value = false }, 3000)
+}
+
+async function togglePush() {
+  if (pushEnabled.value) {
+    const ok = await pushSubscribe()
+    if (!ok) pushEnabled.value = false
+  } else {
+    await pushUnsubscribe()
+  }
 }
 </script>
 
@@ -68,6 +85,18 @@ async function save() {
         <Button type="submit" :label="t('common.save')" />
       </form>
     </div>
+
+    <!-- Push Notifications -->
+    <div v-if="pushSupported" class="card profile-card push-card">
+      <h3>{{ t('profile.pushNotifications') }}</h3>
+      <div class="push-toggle">
+        <span>{{ t('profile.enablePush') }}</span>
+        <ToggleSwitch v-model="pushEnabled" @update:model-value="togglePush" />
+      </div>
+      <p v-if="pushPermission === 'denied'" class="push-denied">
+        {{ t('profile.pushDenied') }}
+      </p>
+    </div>
   </div>
 </template>
 
@@ -102,6 +131,27 @@ async function save() {
 
 .w-full {
   width: 100%;
+}
+
+.push-card {
+  margin-top: 1rem;
+}
+
+.push-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.push-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.push-denied {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 640px) {

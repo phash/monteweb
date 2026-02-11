@@ -1,10 +1,12 @@
 package com.monteweb.messaging.internal.service;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.messaging.ConversationInfo;
 import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.MessageSentEvent;
 import com.monteweb.messaging.MessagingModuleApi;
 import com.monteweb.messaging.internal.model.Conversation;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.messaging.internal.model.ConversationParticipant;
 import com.monteweb.messaging.internal.model.Message;
 import com.monteweb.messaging.internal.repository.ConversationParticipantRepository;
@@ -14,6 +16,7 @@ import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,12 +31,14 @@ import java.util.UUID;
 
 @Service
 @Transactional
+@ConditionalOnProperty(prefix = "monteweb.modules.messaging", name = "enabled", havingValue = "true")
 public class MessagingService implements MessagingModuleApi {
 
     private final ConversationRepository conversationRepository;
     private final ConversationParticipantRepository participantRepository;
     private final MessageRepository messageRepository;
     private final UserModuleApi userModuleApi;
+    private final AdminModuleApi adminModuleApi;
     private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
 
@@ -41,12 +46,14 @@ public class MessagingService implements MessagingModuleApi {
                             ConversationParticipantRepository participantRepository,
                             MessageRepository messageRepository,
                             UserModuleApi userModuleApi,
+                            AdminModuleApi adminModuleApi,
                             SimpMessagingTemplate messagingTemplate,
                             ApplicationEventPublisher eventPublisher) {
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
         this.userModuleApi = userModuleApi;
+        this.adminModuleApi = adminModuleApi;
         this.messagingTemplate = messagingTemplate;
         this.eventPublisher = eventPublisher;
     }
@@ -87,6 +94,9 @@ public class MessagingService implements MessagingModuleApi {
         if (userId.equals(otherUserId)) {
             throw new BusinessException("Cannot start a conversation with yourself");
         }
+
+        // Enforce communication rules
+        enforceCommRules(userId, otherUserId);
 
         // Check if direct conversation already exists
         var existing = conversationRepository.findDirectConversation(userId, otherUserId);
@@ -187,6 +197,45 @@ public class MessagingService implements MessagingModuleApi {
     public void markConversationAsRead(UUID conversationId, UUID userId) {
         requireParticipant(conversationId, userId);
         participantRepository.markAsRead(conversationId, userId, Instant.now());
+    }
+
+    // ---- Communication Rules ----
+
+    private void enforceCommRules(UUID userId, UUID otherUserId) {
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        var other = userModuleApi.findById(otherUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", otherUserId));
+
+        // Teacher/Admin can always message anyone
+        if (isStaffRole(user.role()) || isStaffRole(other.role())) {
+            return;
+        }
+
+        var config = adminModuleApi.getTenantConfig();
+
+        // Parent-to-Parent
+        if (user.role() == UserRole.PARENT && other.role() == UserRole.PARENT) {
+            if (!config.parentToParentMessaging()) {
+                throw new ForbiddenException("Parent-to-parent messaging is not enabled");
+            }
+            return;
+        }
+
+        // Student-to-Student
+        if (user.role() == UserRole.STUDENT && other.role() == UserRole.STUDENT) {
+            if (!config.studentToStudentMessaging()) {
+                throw new ForbiddenException("Student-to-student messaging is not enabled");
+            }
+            return;
+        }
+
+        // Other combinations (parent-student etc.) are not allowed by default
+        throw new ForbiddenException("Messaging between these user roles is not allowed");
+    }
+
+    private boolean isStaffRole(UserRole role) {
+        return role == UserRole.SUPERADMIN || role == UserRole.SECTION_ADMIN || role == UserRole.TEACHER;
     }
 
     // ---- Helpers ----

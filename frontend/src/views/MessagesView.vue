@@ -1,23 +1,39 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import NewMessageDialog from '@/components/messaging/NewMessageDialog.vue'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 
 const { t } = useI18n()
+const route = useRoute()
 const auth = useAuthStore()
 const messaging = useMessagingStore()
 
 const selectedConversationId = ref<string | null>(null)
 const messageText = ref('')
+const showNewMessage = ref(false)
 
-onMounted(() => {
-  messaging.fetchConversations()
+onMounted(async () => {
+  await messaging.fetchConversations()
+  // Deep-link support: open conversation from route param
+  const convId = route.params.conversationId as string | undefined
+  if (convId) {
+    await selectConversation(convId)
+  }
+})
+
+// Watch for route param changes
+watch(() => route.params.conversationId, async (newId) => {
+  if (newId && typeof newId === 'string') {
+    await selectConversation(newId)
+  }
 })
 
 const selectedConversation = computed(() =>
@@ -42,6 +58,10 @@ async function sendMessage() {
   messageText.value = ''
 }
 
+function onConversationStarted(conversationId: string) {
+  selectConversation(conversationId)
+}
+
 function formatTime(date: string | null) {
   if (!date) return ''
   return new Date(date).toLocaleString('de-DE', {
@@ -55,7 +75,14 @@ function formatTime(date: string | null) {
 
 <template>
   <div>
-    <PageTitle :title="t('nav.messages')" />
+    <div class="page-header">
+      <PageTitle :title="t('nav.messages')" />
+      <Button
+        :label="t('messages.newMessage')"
+        icon="pi pi-plus"
+        @click="showNewMessage = true"
+      />
+    </div>
 
     <div class="messages-layout">
       <!-- Conversation list -->
@@ -132,10 +159,22 @@ function formatTime(date: string | null) {
         />
       </div>
     </div>
+
+    <NewMessageDialog
+      v-model:visible="showNewMessage"
+      @conversation-started="onConversationStarted"
+    />
   </div>
 </template>
 
 <style scoped>
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
 .messages-layout {
   display: grid;
   grid-template-columns: 320px 1fr;
