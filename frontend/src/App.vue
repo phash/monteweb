@@ -3,6 +3,7 @@ import { onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useTheme } from '@/composables/useTheme'
+import Toast from 'primevue/toast'
 
 const auth = useAuthStore()
 const admin = useAdminStore()
@@ -22,5 +23,6 @@ onMounted(async () => {
 </script>
 
 <template>
+  <Toast />
   <router-view />
 </template>
