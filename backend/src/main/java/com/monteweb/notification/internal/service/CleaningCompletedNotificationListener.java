@@ -26,7 +26,7 @@ public class CleaningCompletedNotificationListener {
                 NotificationType.CLEANING_COMPLETED,
                 title,
                 message,
-                "/cleaning/mine",
+                "/family",
                 "cleaning",
                 null
         );

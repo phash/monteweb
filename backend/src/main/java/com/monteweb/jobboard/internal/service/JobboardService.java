@@ -407,8 +407,11 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     private FamilyHoursInfo buildFamilyHoursInfo(FamilyInfo family) {
-        BigDecimal targetHours = adminModuleApi.getTenantConfig().targetHoursPerFamily();
+        var tenantConfig = adminModuleApi.getTenantConfig();
+        BigDecimal targetHours = tenantConfig.targetHoursPerFamily();
         if (targetHours == null) targetHours = BigDecimal.ZERO;
+        BigDecimal targetCleaningHrs = tenantConfig.targetCleaningHours();
+        if (targetCleaningHrs == null) targetCleaningHrs = BigDecimal.ZERO;
 
         BigDecimal confirmed = assignmentRepository.sumConfirmedHoursByFamilyId(family.id());
         BigDecimal pending = assignmentRepository.sumPendingHoursByFamilyId(family.id());
@@ -420,8 +423,10 @@ public class JobboardService implements JobboardModuleApi {
 
         BigDecimal totalHours = confirmed.add(cleaningHrs);
         BigDecimal remaining = targetHours.subtract(totalHours).max(BigDecimal.ZERO);
+        BigDecimal remainingCleaningHrs = targetCleaningHrs.subtract(cleaningHrs).max(BigDecimal.ZERO);
 
         String trafficLight = calculateTrafficLight(totalHours, targetHours);
+        String cleaningTrafficLight = calculateTrafficLight(cleaningHrs, targetCleaningHrs);
 
         return new FamilyHoursInfo(
                 family.id(),
@@ -432,7 +437,10 @@ public class JobboardService implements JobboardModuleApi {
                 cleaningHrs,
                 totalHours,
                 remaining,
-                trafficLight
+                trafficLight,
+                targetCleaningHrs,
+                remainingCleaningHrs,
+                cleaningTrafficLight
         );
     }
 

@@ -26,4 +26,5 @@ export interface TenantConfig {
   theme: Record<string, string>
   modules: Record<string, boolean>
   targetHoursPerFamily: number
+  targetCleaningHours: number
 }

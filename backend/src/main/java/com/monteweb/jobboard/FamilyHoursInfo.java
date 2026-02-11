@@ -15,6 +15,9 @@ public record FamilyHoursInfo(
         BigDecimal cleaningHours,
         BigDecimal totalHours,
         BigDecimal remainingHours,
-        String trafficLight
+        String trafficLight,
+        BigDecimal targetCleaningHours,
+        BigDecimal remainingCleaningHours,
+        String cleaningTrafficLight
 ) {
 }

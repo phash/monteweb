@@ -14,6 +14,7 @@ public record TenantConfigInfo(
         Map<String, Object> theme,
         Map<String, Boolean> modules,
         BigDecimal targetHoursPerFamily,
+        BigDecimal targetCleaningHours,
         boolean parentToParentMessaging,
         boolean studentToStudentMessaging
 ) {

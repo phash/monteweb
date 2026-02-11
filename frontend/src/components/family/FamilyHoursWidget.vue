@@ -65,6 +65,28 @@ function progressPercent(completed: number, target: number) {
       </div>
     </div>
 
+    <!-- Cleaning hours sub-progress -->
+    <div v-if="jobboard.familyHours.targetCleaningHours > 0" class="cleaning-progress">
+      <div class="cleaning-header">
+        <span class="cleaning-label">{{ t('family.cleaningProgress') }}</span>
+        <Tag
+          :value="trafficLightLabel(jobboard.familyHours.cleaningTrafficLight)"
+          :severity="trafficLightSeverity(jobboard.familyHours.cleaningTrafficLight)"
+          class="cleaning-tag"
+        />
+      </div>
+      <div class="progress-bg progress-bg-sm">
+        <div
+          class="progress-fill"
+          :class="jobboard.familyHours.cleaningTrafficLight.toLowerCase()"
+          :style="{ width: progressPercent(jobboard.familyHours.cleaningHours, jobboard.familyHours.targetCleaningHours) + '%' }"
+        />
+      </div>
+      <div class="progress-label">
+        {{ jobboard.familyHours.cleaningHours }}/{{ jobboard.familyHours.targetCleaningHours }} {{ t('family.hoursUnit') }}
+      </div>
+    </div>
+
     <div class="hours-details">
       <div class="detail">
         <span class="detail-label">{{ t('family.jobHours') }}</span>
@@ -128,6 +150,31 @@ function progressPercent(completed: number, target: number) {
   font-size: var(--mw-font-size-xs);
   color: var(--mw-text-secondary);
   text-align: center;
+}
+
+.cleaning-progress {
+  margin-bottom: 0.75rem;
+}
+
+.cleaning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.cleaning-label {
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-secondary);
+}
+
+.cleaning-tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.progress-bg-sm {
+  height: 8px;
 }
 
 .hours-details {
