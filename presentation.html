@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1e293b; }
+
+  .page {
+    width: 297mm;
+    height: 210mm;
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    padding: 20mm 25mm;
+    position: relative;
+    overflow: hidden;
+  }
+  .page:last-child { page-break-after: avoid; }
+
+  /* Title slide */
+  .title-slide {
+    background: linear-gradient(135deg, #059669, #10b981, #34d399);
+    color: white;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .title-slide h1 { font-size: 52pt; font-weight: 800; margin-bottom: 12mm; letter-spacing: -1px; }
+  .title-slide .subtitle { font-size: 22pt; font-weight: 300; opacity: 0.95; margin-bottom: 8mm; }
+  .title-slide .meta { font-size: 14pt; opacity: 0.8; }
+
+  /* Section slide */
+  .section-slide {
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .section-slide .section-number { font-size: 14pt; color: #059669; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 5mm; }
+  .section-slide h2 { font-size: 38pt; font-weight: 700; color: #064e3b; margin-bottom: 8mm; }
+  .section-slide .section-desc { font-size: 16pt; color: #065f46; max-width: 200mm; line-height: 1.5; }
+
+  /* Screenshot slide */
+  .screenshot-slide {
+    background: #ffffff;
+    padding: 12mm 18mm;
+  }
+  .screenshot-slide .slide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8mm;
+  }
+  .screenshot-slide h3 { font-size: 20pt; font-weight: 700; color: #064e3b; }
+  .screenshot-slide .slide-tag { background: #059669; color: white; padding: 2mm 5mm; border-radius: 3mm; font-size: 10pt; font-weight: 600; }
+  .screenshot-slide .slide-desc { font-size: 11pt; color: #475569; margin-bottom: 6mm; line-height: 1.4; }
+  .screenshot-slide .screenshot-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4mm;
+    overflow: hidden;
+    padding: 3mm;
+  }
+  .screenshot-slide .screenshot-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 2mm;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  /* Two-column screenshot slide */
+  .dual-slide .screenshots-row {
+    flex: 1;
+    display: flex;
+    gap: 5mm;
+  }
+  .dual-slide .screenshot-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .dual-slide .screenshot-col .label { font-size: 10pt; font-weight: 600; color: #059669; margin-bottom: 3mm; }
+  .dual-slide .screenshot-col .screenshot-container { flex: 1; }
+
+  /* Feature list slide */
+  .feature-slide {
+    background: #ffffff;
+    padding: 15mm 25mm;
+  }
+  .feature-slide h2 { font-size: 28pt; font-weight: 700; color: #064e3b; margin-bottom: 10mm; }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm 15mm;
+    flex: 1;
+  }
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 4mm;
+  }
+  .feature-icon {
+    width: 10mm;
+    height: 10mm;
+    min-width: 10mm;
+    background: #d1fae5;
+    color: #059669;
+    border-radius: 2mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14pt;
+    font-weight: bold;
+  }
+  .feature-text h4 { font-size: 13pt; font-weight: 700; color: #1e293b; }
+  .feature-text p { font-size: 10pt; color: #64748b; line-height: 1.3; margin-top: 1mm; }
+
+  /* Tech slide */
+  .tech-slide { background: #f8fafc; padding: 15mm 25mm; }
+  .tech-slide h2 { font-size: 28pt; font-weight: 700; color: #064e3b; margin-bottom: 8mm; }
+  .tech-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8mm; flex: 1; }
+  .tech-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 3mm;
+    padding: 6mm;
+  }
+  .tech-card h4 { font-size: 13pt; color: #059669; font-weight: 700; margin-bottom: 3mm; }
+  .tech-card ul { list-style: none; }
+  .tech-card li { font-size: 10pt; color: #475569; padding: 1mm 0; }
+  .tech-card li::before { content: ""; color: #10b981; margin-right: 2mm; }
+
+  /* Footer */
+  .page-footer {
+    position: absolute;
+    bottom: 8mm;
+    left: 25mm;
+    right: 25mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 8pt;
+    color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<div class="page title-slide">
+  <h1>MonteWeb</h1>
+  <div class="subtitle">Modulares Schul-Intranet fuer Montessori-Schulen</div>
+  <div class="meta">Produktpraesentation  |  Februar 2026  |  Version 1.0</div>
+</div>
+
+<!-- SLIDE 2: Features Overview -->
+<div class="page feature-slide">
+  <h2>Funktionsuebersicht</h2>
+  <div class="feature-grid">
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F4F0;</div>
+      <div class="feature-text">
+        <h4>Dashboard & Feed</h4>
+        <p>Zentraler Nachrichten-Feed mit Posts, Kommentaren und System-Bannern fuer die gesamte Schulgemeinschaft.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F3E0;</div>
+      <div class="feature-text">
+        <h4>Raeume & Gruppen</h4>
+        <p>Flexible Raumstruktur fuer Klassen, AGs und Projekte mit Diskussionen, Chat und Dateiablage.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F468;&#x200D;&#x1F469;&#x200D;&#x1F467;</div>
+      <div class="feature-text">
+        <h4>Familienverbund</h4>
+        <p>Zentrale Familienverwaltung mit Einladungscodes und gemeinsamen Stundenkonten.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F4AC;</div>
+      <div class="feature-text">
+        <h4>Nachrichten & Chat</h4>
+        <p>Direktnachrichten zwischen Eltern und Lehrern mit konfigurierbaren Kommunikationsregeln.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F4BC;</div>
+      <div class="feature-text">
+        <h4>Jobboerse</h4>
+        <p>Elternstunden-Verwaltung mit automatischer Stundenerfassung und PDF-Berichten.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F9F9;</div>
+      <div class="feature-text">
+        <h4>Putz-Organisation</h4>
+        <p>Putztermin-Planung mit QR-Check-in, freiwilliger Anmeldung und Stundenkonto-Gutschrift.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x1F4C5;</div>
+      <div class="feature-text">
+        <h4>Kalender & Events</h4>
+        <p>Schulweite, bereichs- und raumbezogene Termine mit RSVP und Wiederholungen.</p>
+      </div>
+    </div>
+    <div class="feature-item">
+      <div class="feature-icon">&#x2699;&#xFE0F;</div>
+      <div class="feature-text">
+        <h4>Administration</h4>
+        <p>Modulare Konfiguration, Benutzerverwaltung, Theme-Anpassung und Audit-Log.</p>
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>2 / 14</span></div>
+</div>
+
+<!-- SLIDE 3: Dashboard -->
+<div class="page screenshot-slide">
+  <div class="slide-header">
+    <h3>Dashboard & Feed</h3>
+    <span class="slide-tag">Kern-Modul</span>
+  </div>
+  <div class="slide-desc">Personalisierter Nachrichten-Feed mit Beitraegen aus den eigenen Raeumen. Eltern und Lehrer koennen Posts veroeffentlichen, kommentieren und wichtige Beitraege anheften.</div>
+  <div class="screenshot-container">
+    <img src="screenshots/02-dashboard.png" alt="Dashboard">
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>3 / 14</span></div>
+</div>
+
+<!-- SLIDE 4: Rooms -->
+<div class="page screenshot-slide dual-slide">
+  <div class="slide-header">
+    <h3>Raeume & Gruppen</h3>
+    <span class="slide-tag">Kern-Modul</span>
+  </div>
+  <div class="slide-desc">Raeume sind der zentrale Organisationspunkt: Klassen, AGs oder Projekte. Jeder Raum bietet Diskussionen, Chat, Dateiablage und jetzt auch einen Event-Kalender.</div>
+  <div class="screenshots-row">
+    <div class="screenshot-col">
+      <div class="label">Meine Raeume</div>
+      <div class="screenshot-container">
+        <img src="screenshots/03-rooms.png" alt="Rooms">
+      </div>
+    </div>
+    <div class="screenshot-col">
+      <div class="label">Raum-Detail</div>
+      <div class="screenshot-container">
+        <img src="screenshots/05-room-detail.png" alt="Room Detail">
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>4 / 14</span></div>
+</div>
+
+<!-- SLIDE 5: Discover & Family -->
+<div class="page screenshot-slide dual-slide">
+  <div class="slide-header">
+    <h3>Entdecken & Familie</h3>
+    <span class="slide-tag">Kern-Modul</span>
+  </div>
+  <div class="slide-desc">Uebersicht aller verfuegbaren Raeume zum Beitreten. Familienverbund als zentrale Abrechnungseinheit fuer Elternstunden und Putz-Gutschriften.</div>
+  <div class="screenshots-row">
+    <div class="screenshot-col">
+      <div class="label">Raeume entdecken</div>
+      <div class="screenshot-container">
+        <img src="screenshots/04-discover.png" alt="Discover">
+      </div>
+    </div>
+    <div class="screenshot-col">
+      <div class="label">Familienverbund</div>
+      <div class="screenshot-container">
+        <img src="screenshots/06-family.png" alt="Family">
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>5 / 14</span></div>
+</div>
+
+<!-- SLIDE 6: Messages -->
+<div class="page screenshot-slide dual-slide">
+  <div class="slide-header">
+    <h3>Nachrichten & Jobboerse</h3>
+    <span class="slide-tag">Optionale Module</span>
+  </div>
+  <div class="slide-desc">Sichere Direktnachrichten mit konfigurierbaren Kommunikationsregeln (Eltern-Eltern, Schueler-Schueler). Jobboerse fuer die Verwaltung von Elternstunden mit automatischer Erfassung.</div>
+  <div class="screenshots-row">
+    <div class="screenshot-col">
+      <div class="label">Nachrichten-Inbox</div>
+      <div class="screenshot-container">
+        <img src="screenshots/07-messages.png" alt="Messages">
+      </div>
+    </div>
+    <div class="screenshot-col">
+      <div class="label">Jobboerse</div>
+      <div class="screenshot-container">
+        <img src="screenshots/08-jobs.png" alt="Jobs">
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>6 / 14</span></div>
+</div>
+
+<!-- SLIDE 7: Cleaning -->
+<div class="page screenshot-slide">
+  <div class="slide-header">
+    <h3>Putz-Organisation</h3>
+    <span class="slide-tag">Optionales Modul</span>
+  </div>
+  <div class="slide-desc">Freiwillige Putztermin-Anmeldung (Opt-in) mit QR-Code-Check-in vor Ort. Geleistete Stunden werden automatisch dem Familien-Stundenkonto gutgeschrieben. Admins koennen QR-Codes als PDF exportieren.</div>
+  <div class="screenshot-container">
+    <img src="screenshots/09-cleaning.png" alt="Cleaning">
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>7 / 14</span></div>
+</div>
+
+<!-- SLIDE 8: Calendar Section -->
+<div class="page section-slide">
+  <div class="section-number">Neues Feature</div>
+  <h2>Kalender & Events</h2>
+  <div class="section-desc">Schulweite Terminverwaltung mit Raum-, Bereichs- und Schulebene. RSVP-Funktionalitaet fuer Zusagen, Wiederholungsoptionen und Push-Benachrichtigungen.</div>
+</div>
+
+<!-- SLIDE 9: Calendar Overview -->
+<div class="page screenshot-slide">
+  <div class="slide-header">
+    <h3>Kalender - Monatsuebersicht</h3>
+    <span class="slide-tag">NEU: Phase 17</span>
+  </div>
+  <div class="slide-desc">Agenda-Ansicht mit Monatsnavigation. Termine werden nach Datum sortiert mit Scope-Badges (Raum/Bereich/Schulweit), Ort und Uhrzeiten. Lehrer und Admins koennen direkt neue Termine erstellen.</div>
+  <div class="screenshot-container">
+    <img src="screenshots/10-calendar.png" alt="Calendar">
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>9 / 14</span></div>
+</div>
+
+<!-- SLIDE 10: Calendar Create + Detail -->
+<div class="page screenshot-slide dual-slide">
+  <div class="slide-header">
+    <h3>Termin erstellen & Detail</h3>
+    <span class="slide-tag">NEU: Phase 17</span>
+  </div>
+  <div class="slide-desc">Neuer Termin mit Scope-Auswahl (Raum/Bereich/Schule), optionaler Wiederholung und Ganztags-Option. Event-Detailansicht mit RSVP-Buttons (Zusage/Vielleicht/Absage) und Verwaltungsoptionen.</div>
+  <div class="screenshots-row">
+    <div class="screenshot-col">
+      <div class="label">Termin erstellen</div>
+      <div class="screenshot-container">
+        <img src="screenshots/11-calendar-create.png" alt="Calendar Create">
+      </div>
+    </div>
+    <div class="screenshot-col">
+      <div class="label">Event-Detail mit RSVP</div>
+      <div class="screenshot-container">
+        <img src="screenshots/12-event-detail.png" alt="Event Detail">
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>10 / 14</span></div>
+</div>
+
+<!-- SLIDE 11: Admin -->
+<div class="page screenshot-slide dual-slide">
+  <div class="slide-header">
+    <h3>Administration</h3>
+    <span class="slide-tag">Kern-Modul</span>
+  </div>
+  <div class="slide-desc">Umfassende Verwaltungsoberflaeche: Modulare Aktivierung einzelner Features, Benutzerverwaltung mit Rollenzuweisung, Schulbereichs-Konfiguration und individuelles Theme-Branding.</div>
+  <div class="screenshots-row">
+    <div class="screenshot-col">
+      <div class="label">Module verwalten</div>
+      <div class="screenshot-container">
+        <img src="screenshots/18-admin-modules.png" alt="Admin Modules">
+      </div>
+    </div>
+    <div class="screenshot-col">
+      <div class="label">Benutzer verwalten</div>
+      <div class="screenshot-container">
+        <img src="screenshots/15-admin-users.png" alt="Admin Users">
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>11 / 14</span></div>
+</div>
+
+<!-- SLIDE 12: Mobile -->
+<div class="page screenshot-slide dual-slide">
+  <div class="slide-header">
+    <h3>Mobil-optimiert (PWA)</h3>
+    <span class="slide-tag">Responsive</span>
+  </div>
+  <div class="slide-desc">Vollstaendig responsive Oberflaeche als Progressive Web App. Bottom Navigation auf Mobilgeraeten, installierbar ohne App Store. Push-Benachrichtigungen fuer Echtzeit-Updates.</div>
+  <div class="screenshots-row">
+    <div class="screenshot-col">
+      <div class="label">Mobile Dashboard</div>
+      <div class="screenshot-container" style="max-width: 60mm; margin: 0 auto;">
+        <img src="screenshots/20-mobile-dashboard.png" alt="Mobile Dashboard">
+      </div>
+    </div>
+    <div class="screenshot-col">
+      <div class="label">Mobile Kalender</div>
+      <div class="screenshot-container" style="max-width: 60mm; margin: 0 auto;">
+        <img src="screenshots/21-mobile-calendar.png" alt="Mobile Calendar">
+      </div>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>12 / 14</span></div>
+</div>
+
+<!-- SLIDE 13: Tech Stack -->
+<div class="page tech-slide">
+  <h2>Technologie & Architektur</h2>
+  <div class="tech-grid">
+    <div class="tech-card">
+      <h4>Backend</h4>
+      <ul>
+        <li>Java 21 + Spring Boot 3.4</li>
+        <li>Spring Modulith (modular)</li>
+        <li>PostgreSQL 16 + Redis 7</li>
+        <li>JWT-Authentifizierung</li>
+        <li>OIDC/SSO (optional)</li>
+        <li>WebSocket Echtzeit</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>Frontend</h4>
+      <ul>
+        <li>Vue 3.5 + TypeScript 5.9</li>
+        <li>PrimeVue 4.5 (Aura)</li>
+        <li>Pinia State Management</li>
+        <li>vue-i18n (DE + EN)</li>
+        <li>PWA mit Push Notifications</li>
+        <li>Vitest (87+ Tests)</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>Infrastruktur</h4>
+      <ul>
+        <li>Docker Compose</li>
+        <li>MinIO Dateispeicher (S3)</li>
+        <li>GitHub Actions CI/CD</li>
+        <li>Prometheus + Grafana</li>
+        <li>nginx Reverse Proxy</li>
+        <li>DSGVO-konform</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>Sicherheit</h4>
+      <ul>
+        <li>HSTS, CSP, X-Frame</li>
+        <li>Rate Limiting</li>
+        <li>DSGVO: Datenexport/-loeschung</li>
+        <li>Audit-Log</li>
+        <li>Kommunikationsregeln</li>
+        <li>End-to-End-Verschluesselung*</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>17 Module</h4>
+      <ul>
+        <li>Auth, Users, Family</li>
+        <li>School, Rooms, Feed</li>
+        <li>Messaging, Files</li>
+        <li>Jobboard, Cleaning</li>
+        <li>Kalender (NEU)</li>
+        <li>Notifications, Admin</li>
+      </ul>
+    </div>
+    <div class="tech-card">
+      <h4>Self-Hosted</h4>
+      <ul>
+        <li>Eigener Server oder Cloud</li>
+        <li>Volle Datenkontrolle</li>
+        <li>Keine Abhaengigkeit</li>
+        <li>Open Source Basis</li>
+        <li>Multi-Tenant faehig</li>
+        <li>Einfaches Deployment</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer"><span>MonteWeb</span><span>13 / 14</span></div>
+</div>
+
+<!-- SLIDE 14: Closing -->
+<div class="page title-slide" style="background: linear-gradient(135deg, #064e3b, #059669, #34d399);">
+  <h1 style="font-size: 44pt;">MonteWeb</h1>
+  <div class="subtitle">Ein modulares, selbst-gehostetes Schul-Intranet<br>fuer Montessori-Schulkomplexe</div>
+  <div class="meta" style="margin-top: 15mm;">
+    Krippe  &bull;  Kindergarten  &bull;  Grundstufe  &bull;  Mittelstufe  &bull;  Oberstufe<br><br>
+    github.com/phash/monteweb
+  </div>
+</div>
+
+</body>
+</html>
