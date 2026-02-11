@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
-import type { FamilyInfo } from '@/types/family'
+import type { FamilyInfo, FamilyInvitationInfo } from '@/types/family'
 
 export const familyApi = {
   getMine() {
@@ -41,5 +41,26 @@ export const familyApi = {
 
   removeAvatar(familyId: string) {
     return client.delete<ApiResponse<void>>(`/families/${familyId}/avatar`)
+  },
+
+  // Invitations
+  inviteMember(familyId: string, inviteeId: string, role: string) {
+    return client.post<ApiResponse<FamilyInvitationInfo>>(`/families/${familyId}/invitations`, { inviteeId, role })
+  },
+
+  getMyInvitations() {
+    return client.get<ApiResponse<FamilyInvitationInfo[]>>('/families/my-invitations')
+  },
+
+  acceptInvitation(invitationId: string) {
+    return client.post<ApiResponse<FamilyInvitationInfo>>(`/families/invitations/${invitationId}/accept`)
+  },
+
+  declineInvitation(invitationId: string) {
+    return client.post<ApiResponse<FamilyInvitationInfo>>(`/families/invitations/${invitationId}/decline`)
+  },
+
+  getFamilyInvitations(familyId: string) {
+    return client.get<ApiResponse<FamilyInvitationInfo[]>>(`/families/${familyId}/invitations`)
   },
 }

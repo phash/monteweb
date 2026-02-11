@@ -3,11 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRoomsStore } from '@/stores/rooms'
 import { useI18n } from 'vue-i18n'
+import { roomsApi } from '@/api/rooms.api'
+import type { RoomInfo } from '@/types/room'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import Chips from 'primevue/chips'
+import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
 
 const { t } = useI18n()
@@ -19,12 +22,41 @@ const searchQuery = ref('')
 const showCreateDialog = ref(false)
 const newRoom = ref({ name: '', description: '', tags: [] as string[] })
 
+// Browse (all non-member rooms)
+const browseRooms = ref<RoomInfo[]>([])
+const browseTotalPages = ref(0)
+const browsePage = ref(0)
+const browseLoading = ref(false)
+
+// Join request dialog
+const showJoinRequestDialog = ref(false)
+const joinRequestRoomId = ref('')
+const joinRequestRoomName = ref('')
+const joinRequestMessage = ref('')
+const joinRequestLoading = ref(false)
+
 onMounted(() => {
   roomsStore.discoverRooms()
+  loadBrowseRooms()
 })
 
 function search() {
   roomsStore.discoverRooms(searchQuery.value || undefined)
+  loadBrowseRooms(searchQuery.value || undefined)
+}
+
+async function loadBrowseRooms(query?: string, page = 0) {
+  browseLoading.value = true
+  try {
+    const res = await roomsApi.browse({ q: query, page, size: 20 })
+    browseRooms.value = res.data.data.content
+    browseTotalPages.value = res.data.data.totalPages
+    browsePage.value = page
+  } catch {
+    browseRooms.value = []
+  } finally {
+    browseLoading.value = false
+  }
 }
 
 async function joinRoom(roomId: string) {
@@ -32,8 +64,30 @@ async function joinRoom(roomId: string) {
     await roomsStore.joinRoom(roomId)
     toast.add({ severity: 'success', summary: t('discover.joined'), life: 3000 })
     await roomsStore.discoverRooms(searchQuery.value || undefined)
+    await loadBrowseRooms(searchQuery.value || undefined)
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
+function openJoinRequestDialog(room: RoomInfo) {
+  joinRequestRoomId.value = room.id
+  joinRequestRoomName.value = room.name
+  joinRequestMessage.value = ''
+  showJoinRequestDialog.value = true
+}
+
+async function submitJoinRequest() {
+  joinRequestLoading.value = true
+  try {
+    await roomsApi.requestJoin(joinRequestRoomId.value, joinRequestMessage.value || undefined)
+    toast.add({ severity: 'success', summary: t('rooms.joinRequestSent'), life: 3000 })
+    showJoinRequestDialog.value = false
+    await loadBrowseRooms(searchQuery.value || undefined)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    joinRequestLoading.value = false
   }
 }
 
@@ -68,57 +122,107 @@ async function createInterestRoom() {
       <Button icon="pi pi-search" @click="search" />
     </div>
 
-    <!-- Room Grid -->
+    <!-- Discoverable Rooms (open join) -->
     <div v-if="roomsStore.loading" class="text-center p-8">
       <i class="pi pi-spin pi-spinner text-2xl"></i>
     </div>
 
-    <div v-else-if="roomsStore.discoverableRooms.length === 0" class="text-center p-8 text-gray-500">
+    <div v-else-if="roomsStore.discoverableRooms.length === 0 && browseRooms.length === 0" class="text-center p-8 text-gray-500">
       {{ t('discover.noRooms') }}
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <div v-for="room in roomsStore.discoverableRooms" :key="room.id"
-           class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-        <div class="flex justify-between items-start mb-2">
-          <div class="flex items-center gap-2">
-            <div class="discover-avatar">
-              <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="discover-avatar-img" />
-              <i v-else class="pi pi-home" />
+    <template v-else>
+      <!-- Open rooms (discoverable) -->
+      <div v-if="roomsStore.discoverableRooms.length > 0" class="mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div v-for="room in roomsStore.discoverableRooms" :key="room.id"
+               class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex items-center gap-2">
+                <div class="discover-avatar">
+                  <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="discover-avatar-img" />
+                  <i v-else class="pi pi-home" />
+                </div>
+                <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
+                    @click="router.push({ name: 'room-detail', params: { id: room.id } })">
+                  {{ room.name }}
+                </h3>
+              </div>
+              <Tag :value="t('rooms.types.' + room.type)" severity="info" />
             </div>
-            <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
-                @click="router.push({ name: 'room-detail', params: { id: room.id } })">
-              {{ room.name }}
-            </h3>
+
+            <p v-if="room.publicDescription || room.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
+              {{ room.publicDescription || room.description }}
+            </p>
+
+            <div v-if="room.tags && room.tags.length > 0" class="flex flex-wrap gap-1 mb-3">
+              <Tag v-for="tag in room.tags" :key="tag" :value="tag" severity="secondary" class="text-xs" />
+            </div>
+
+            <div class="flex justify-between items-center text-sm text-gray-500">
+              <span><i class="pi pi-users mr-1"></i>{{ room.memberCount }} {{ t('discover.members') }}</span>
+              <Button :label="t('discover.join')" icon="pi pi-sign-in" size="small"
+                      @click="joinRoom(room.id)" />
+            </div>
           </div>
-          <Tag :value="t('rooms.types.' + room.type)" severity="info" />
-        </div>
-
-        <p v-if="room.publicDescription || room.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
-          {{ room.publicDescription || room.description }}
-        </p>
-
-        <div v-if="room.tags && room.tags.length > 0" class="flex flex-wrap gap-1 mb-3">
-          <Tag v-for="tag in room.tags" :key="tag" :value="tag" severity="secondary" class="text-xs" />
-        </div>
-
-        <div class="flex justify-between items-center text-sm text-gray-500">
-          <span><i class="pi pi-users mr-1"></i>{{ room.memberCount }} {{ t('discover.members') }}</span>
-          <Button :label="t('discover.join')" icon="pi pi-sign-in" size="small"
-                  @click="joinRoom(room.id)" />
         </div>
       </div>
-    </div>
 
-    <!-- Pagination -->
-    <div v-if="roomsStore.discoverTotalPages > 1" class="flex justify-center gap-2 mt-4">
-      <Button :label="t('common.previous')" icon="pi pi-chevron-left" text
-              :disabled="roomsStore.discoverPage === 0"
-              @click="roomsStore.discoverRooms(searchQuery || undefined, roomsStore.discoverPage - 1)" />
-      <Button :label="t('common.next')" icon="pi pi-chevron-right" iconPos="right" text
-              :disabled="roomsStore.discoverPage >= roomsStore.discoverTotalPages - 1"
-              @click="roomsStore.discoverRooms(searchQuery || undefined, roomsStore.discoverPage + 1)" />
-    </div>
+      <!-- Pagination for discoverable rooms -->
+      <div v-if="roomsStore.discoverTotalPages > 1" class="flex justify-center gap-2 mt-4 mb-6">
+        <Button :label="t('common.previous')" icon="pi pi-chevron-left" text
+                :disabled="roomsStore.discoverPage === 0"
+                @click="roomsStore.discoverRooms(searchQuery || undefined, roomsStore.discoverPage - 1)" />
+        <Button :label="t('common.next')" icon="pi pi-chevron-right" iconPos="right" text
+                :disabled="roomsStore.discoverPage >= roomsStore.discoverTotalPages - 1"
+                @click="roomsStore.discoverRooms(searchQuery || undefined, roomsStore.discoverPage + 1)" />
+      </div>
+
+      <!-- Closed rooms (non-discoverable, non-member) -->
+      <div v-if="browseRooms.length > 0">
+        <h2 class="text-xl font-semibold mb-3">{{ t('rooms.closedRooms') }}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div v-for="room in browseRooms" :key="room.id"
+               class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex justify-between items-start mb-2">
+              <div class="flex items-center gap-2">
+                <div class="discover-avatar">
+                  <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="discover-avatar-img" />
+                  <i v-else class="pi pi-home" />
+                </div>
+                <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
+                    @click="router.push({ name: 'room-detail', params: { id: room.id } })">
+                  {{ room.name }}
+                </h3>
+              </div>
+              <Tag :value="t('rooms.types.' + room.type)" severity="info" />
+            </div>
+
+            <p v-if="room.publicDescription" class="text-sm text-gray-600 mb-3 line-clamp-2">
+              {{ room.publicDescription }}
+            </p>
+
+            <div class="flex justify-between items-center text-sm text-gray-500">
+              <span><i class="pi pi-users mr-1"></i>{{ room.memberCount }} {{ t('discover.members') }}</span>
+              <Button v-if="room.discoverable" :label="t('discover.join')" icon="pi pi-sign-in" size="small"
+                      @click="joinRoom(room.id)" />
+              <Button v-else :label="t('rooms.requestJoin')" icon="pi pi-send" size="small" severity="secondary"
+                      @click="openJoinRequestDialog(room)" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Pagination for browse rooms -->
+        <div v-if="browseTotalPages > 1" class="flex justify-center gap-2 mt-4">
+          <Button :label="t('common.previous')" icon="pi pi-chevron-left" text
+                  :disabled="browsePage === 0"
+                  @click="loadBrowseRooms(searchQuery || undefined, browsePage - 1)" />
+          <Button :label="t('common.next')" icon="pi pi-chevron-right" iconPos="right" text
+                  :disabled="browsePage >= browseTotalPages - 1"
+                  @click="loadBrowseRooms(searchQuery || undefined, browsePage + 1)" />
+        </div>
+      </div>
+    </template>
 
     <!-- Create Interest Room Dialog -->
     <Dialog v-model:visible="showCreateDialog" :header="t('discover.createRoom')" modal :style="{ width: '500px', maxWidth: '90vw' }">
@@ -140,6 +244,20 @@ async function createInterestRoom() {
         <Button :label="t('common.cancel')" text @click="showCreateDialog = false" />
         <Button :label="t('common.create')" icon="pi pi-check" @click="createInterestRoom"
                 :disabled="!newRoom.name" />
+      </template>
+    </Dialog>
+
+    <!-- Join Request Dialog -->
+    <Dialog v-model:visible="showJoinRequestDialog" :header="t('rooms.requestJoin')" modal :style="{ width: '450px', maxWidth: '90vw' }">
+      <div class="flex flex-col gap-3">
+        <p>{{ t('rooms.joinRequestMessage', { room: joinRequestRoomName }) }}</p>
+        <Textarea v-model="joinRequestMessage" :placeholder="t('rooms.joinRequestPlaceholder')"
+                  class="w-full" rows="3" />
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" text @click="showJoinRequestDialog = false" />
+        <Button :label="t('rooms.requestJoin')" icon="pi pi-send"
+                :loading="joinRequestLoading" @click="submitJoinRequest" />
       </template>
     </Dialog>
   </div>

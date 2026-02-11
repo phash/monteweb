@@ -103,12 +103,14 @@ monteweb:
     subject: ${VAPID_SUBJECT:mailto:admin@monteweb.local}
   modules:
     messaging:
-      enabled: false
+      enabled: true
     files:
-      enabled: false
+      enabled: true
     jobboard:
-      enabled: false
+      enabled: true
     cleaning:
-      enabled: false
+      enabled: true
     calendar:
-      enabled: false
+      enabled: true
+    forms:
+      enabled: true

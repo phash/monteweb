@@ -73,3 +73,15 @@ export interface RoomChatChannelInfo {
   lastMessage: string | null
   unreadCount: number
 }
+
+export interface JoinRequestInfo {
+  id: string
+  roomId: string
+  roomName: string
+  userId: string
+  userName: string
+  message: string | null
+  status: 'PENDING' | 'APPROVED' | 'DENIED'
+  createdAt: string
+  resolvedAt: string | null
+}

@@ -2,7 +2,7 @@ import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
 import type {
   RoomInfo, RoomDetail, CreateRoomRequest, CreateInterestRoomRequest,
-  RoomSettings, RoomRole, RoomChatChannelInfo
+  RoomSettings, RoomRole, RoomChatChannelInfo, JoinRequestInfo
 } from '@/types/room'
 
 export const roomsApi = {
@@ -81,6 +81,32 @@ export const roomsApi = {
 
   updateMemberRole(roomId: string, userId: string, role: RoomRole) {
     return client.put<ApiResponse<void>>(`/rooms/${roomId}/members/${userId}/role`, { role })
+  },
+
+  // Browse all rooms (non-member)
+  browse(params?: { q?: string; page?: number; size?: number }) {
+    return client.get<ApiResponse<PageResponse<RoomInfo>>>('/rooms/browse', { params })
+  },
+
+  // Join requests
+  requestJoin(roomId: string, message?: string) {
+    return client.post<ApiResponse<JoinRequestInfo>>(`/rooms/${roomId}/join-request`, { message })
+  },
+
+  getJoinRequests(roomId: string) {
+    return client.get<ApiResponse<JoinRequestInfo[]>>(`/rooms/${roomId}/join-requests`)
+  },
+
+  approveJoinRequest(roomId: string, requestId: string) {
+    return client.post<ApiResponse<JoinRequestInfo>>(`/rooms/${roomId}/join-requests/${requestId}/approve`)
+  },
+
+  denyJoinRequest(roomId: string, requestId: string) {
+    return client.post<ApiResponse<JoinRequestInfo>>(`/rooms/${roomId}/join-requests/${requestId}/deny`)
+  },
+
+  getMyJoinRequests() {
+    return client.get<ApiResponse<JoinRequestInfo[]>>('/rooms/my-join-requests')
   },
 
   // Room Chat

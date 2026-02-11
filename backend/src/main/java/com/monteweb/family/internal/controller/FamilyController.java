@@ -1,9 +1,7 @@
 package com.monteweb.family.internal.controller;
 
 import com.monteweb.family.FamilyInfo;
-import com.monteweb.family.internal.dto.AddChildRequest;
-import com.monteweb.family.internal.dto.CreateFamilyRequest;
-import com.monteweb.family.internal.dto.JoinFamilyRequest;
+import com.monteweb.family.internal.dto.*;
 import com.monteweb.family.internal.service.FamilyService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.exception.BusinessException;
@@ -104,5 +102,43 @@ public class FamilyController {
         }
         familyService.updateAvatarUrl(id, null);
         return ResponseEntity.ok(ApiResponse.ok(null, "Avatar removed"));
+    }
+
+    // ── Invitations ──────────────────────────────────────────────────────
+
+    @PostMapping("/{id}/invitations")
+    public ResponseEntity<ApiResponse<FamilyInvitationInfo>> inviteMember(
+            @PathVariable UUID id,
+            @Valid @RequestBody InviteMemberRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var invitation = familyService.inviteMember(id, request.inviteeId(), request.role(), userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(invitation));
+    }
+
+    @GetMapping("/my-invitations")
+    public ResponseEntity<ApiResponse<List<FamilyInvitationInfo>>> getMyInvitations() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(familyService.getMyPendingInvitations(userId)));
+    }
+
+    @PostMapping("/invitations/{id}/accept")
+    public ResponseEntity<ApiResponse<FamilyInvitationInfo>> acceptInvitation(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(familyService.acceptInvitation(id, userId)));
+    }
+
+    @PostMapping("/invitations/{id}/decline")
+    public ResponseEntity<ApiResponse<FamilyInvitationInfo>> declineInvitation(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(familyService.declineInvitation(id, userId)));
+    }
+
+    @GetMapping("/{id}/invitations")
+    public ResponseEntity<ApiResponse<List<FamilyInvitationInfo>>> getFamilyInvitations(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        if (!familyService.isUserInFamily(userId, id)) {
+            throw new BusinessException("Not a member of this family");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(familyService.getFamilyInvitations(id)));
     }
 }

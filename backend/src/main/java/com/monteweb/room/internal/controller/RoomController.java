@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -53,6 +54,59 @@ public class RoomController {
             return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(roomService.findAllIncludingArchived(pageable))));
         }
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(roomService.findAll(pageable))));
+    }
+
+    // ── Browse all rooms (non-member) ───────────────────────────────────
+
+    @GetMapping("/browse")
+    public ResponseEntity<ApiResponse<PageResponse<RoomInfo>>> browseRooms(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 20) Pageable pageable) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var page = (q != null && !q.isBlank())
+                ? roomService.searchAllRooms(userId, q, pageable)
+                : roomService.browseAllRooms(userId, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+    }
+
+    // ── Join requests ────────────────────────────────────────────────────
+
+    @PostMapping("/{id}/join-request")
+    public ResponseEntity<ApiResponse<JoinRequestInfo>> createJoinRequest(
+            @PathVariable UUID id,
+            @RequestBody(required = false) Map<String, String> body) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        String message = body != null ? body.get("message") : null;
+        var request = roomService.createJoinRequest(id, userId, message);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(request));
+    }
+
+    @GetMapping("/{id}/join-requests")
+    public ResponseEntity<ApiResponse<List<JoinRequestInfo>>> getJoinRequests(@PathVariable UUID id) {
+        requireLeaderOrAdmin(id);
+        return ResponseEntity.ok(ApiResponse.ok(roomService.getPendingJoinRequests(id)));
+    }
+
+    @PostMapping("/{id}/join-requests/{rid}/approve")
+    public ResponseEntity<ApiResponse<JoinRequestInfo>> approveJoinRequest(
+            @PathVariable UUID id, @PathVariable UUID rid) {
+        requireLeaderOrAdmin(id);
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(roomService.approveJoinRequest(rid, userId)));
+    }
+
+    @PostMapping("/{id}/join-requests/{rid}/deny")
+    public ResponseEntity<ApiResponse<JoinRequestInfo>> denyJoinRequest(
+            @PathVariable UUID id, @PathVariable UUID rid) {
+        requireLeaderOrAdmin(id);
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(roomService.denyJoinRequest(rid, userId)));
+    }
+
+    @GetMapping("/my-join-requests")
+    public ResponseEntity<ApiResponse<List<JoinRequestInfo>>> getMyJoinRequests() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(roomService.getMyJoinRequests(userId)));
     }
 
     // ── Interest rooms: browse & search ─────────────────────────────────

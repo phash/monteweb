@@ -1,16 +1,16 @@
 package com.monteweb.room.internal.service;
 
-import com.monteweb.room.RoomInfo;
-import com.monteweb.room.RoomModuleApi;
-import com.monteweb.room.RoomRole;
-import com.monteweb.room.internal.model.Room;
-import com.monteweb.room.internal.model.RoomMember;
-import com.monteweb.room.internal.model.RoomSettings;
-import com.monteweb.room.internal.model.RoomType;
+import com.monteweb.room.*;
+import com.monteweb.room.internal.dto.JoinRequestInfo;
+import com.monteweb.room.internal.model.*;
+import com.monteweb.room.internal.repository.RoomJoinRequestRepository;
 import com.monteweb.room.internal.repository.RoomMemberRepository;
 import com.monteweb.room.internal.repository.RoomRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.user.UserInfo;
+import com.monteweb.user.UserModuleApi;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -29,10 +29,18 @@ public class RoomService implements RoomModuleApi {
 
     private final RoomRepository roomRepository;
     private final RoomMemberRepository memberRepository;
+    private final RoomJoinRequestRepository joinRequestRepository;
+    private final UserModuleApi userModuleApi;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public RoomService(RoomRepository roomRepository, RoomMemberRepository memberRepository) {
+    public RoomService(RoomRepository roomRepository, RoomMemberRepository memberRepository,
+                       RoomJoinRequestRepository joinRequestRepository, UserModuleApi userModuleApi,
+                       ApplicationEventPublisher eventPublisher) {
         this.roomRepository = roomRepository;
         this.memberRepository = memberRepository;
+        this.joinRequestRepository = joinRequestRepository;
+        this.userModuleApi = userModuleApi;
+        this.eventPublisher = eventPublisher;
     }
 
     // --- Public API (RoomModuleApi) ---
@@ -280,6 +288,111 @@ public class RoomService implements RoomModuleApi {
         if (!expired.isEmpty()) {
             roomRepository.saveAll(expired);
         }
+    }
+
+    // --- Browse all rooms (not just discoverable) ---
+
+    public Page<RoomInfo> browseAllRooms(UUID userId, Pageable pageable) {
+        return roomRepository.findBrowsableRooms(userId, pageable).map(this::toRoomInfo);
+    }
+
+    public Page<RoomInfo> searchAllRooms(UUID userId, String query, Pageable pageable) {
+        return roomRepository.searchBrowsableRooms(userId, query, pageable).map(this::toRoomInfo);
+    }
+
+    // --- Join requests ---
+
+    @Transactional
+    public JoinRequestInfo createJoinRequest(UUID roomId, UUID userId, String message) {
+        var room = findEntityById(roomId);
+        if (room.isArchived()) {
+            throw new BusinessException("Room is archived");
+        }
+        if (memberRepository.existsByIdRoomIdAndIdUserId(roomId, userId)) {
+            throw new BusinessException("Already a member of this room");
+        }
+        if (joinRequestRepository.existsByRoomIdAndUserIdAndStatus(roomId, userId, RoomJoinRequestStatus.PENDING)) {
+            throw new BusinessException("A pending request already exists");
+        }
+
+        var request = new RoomJoinRequest(roomId, userId, message);
+        request = joinRequestRepository.save(request);
+
+        String userName = userModuleApi.findById(userId).map(UserInfo::displayName).orElse("Unknown");
+        eventPublisher.publishEvent(new RoomJoinRequestEvent(
+                request.getId(), roomId, userId, userName, room.getName()));
+
+        return toJoinRequestInfo(request);
+    }
+
+    public List<JoinRequestInfo> getPendingJoinRequests(UUID roomId) {
+        return joinRequestRepository.findByRoomIdAndStatus(roomId, RoomJoinRequestStatus.PENDING).stream()
+                .map(this::toJoinRequestInfo)
+                .toList();
+    }
+
+    public List<JoinRequestInfo> getMyJoinRequests(UUID userId) {
+        return joinRequestRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .map(this::toJoinRequestInfo)
+                .toList();
+    }
+
+    @Transactional
+    public JoinRequestInfo approveJoinRequest(UUID requestId, UUID resolvedBy) {
+        var request = joinRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Join request", requestId));
+        if (request.getStatus() != RoomJoinRequestStatus.PENDING) {
+            throw new BusinessException("Request is not pending");
+        }
+
+        request.setStatus(RoomJoinRequestStatus.APPROVED);
+        request.setResolvedBy(resolvedBy);
+        request.setResolvedAt(Instant.now());
+        joinRequestRepository.save(request);
+
+        // Add user as member
+        var room = findEntityById(request.getRoomId());
+        if (!memberRepository.existsByIdRoomIdAndIdUserId(request.getRoomId(), request.getUserId())) {
+            var member = new RoomMember(room, request.getUserId(), RoomRole.MEMBER);
+            room.getMembers().add(member);
+            roomRepository.save(room);
+        }
+
+        eventPublisher.publishEvent(new RoomJoinRequestResolvedEvent(
+                requestId, request.getRoomId(), request.getUserId(), room.getName(), true));
+
+        return toJoinRequestInfo(request);
+    }
+
+    @Transactional
+    public JoinRequestInfo denyJoinRequest(UUID requestId, UUID resolvedBy) {
+        var request = joinRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Join request", requestId));
+        if (request.getStatus() != RoomJoinRequestStatus.PENDING) {
+            throw new BusinessException("Request is not pending");
+        }
+
+        request.setStatus(RoomJoinRequestStatus.DENIED);
+        request.setResolvedBy(resolvedBy);
+        request.setResolvedAt(Instant.now());
+        joinRequestRepository.save(request);
+
+        var room = findEntityById(request.getRoomId());
+        eventPublisher.publishEvent(new RoomJoinRequestResolvedEvent(
+                requestId, request.getRoomId(), request.getUserId(), room.getName(), false));
+
+        return toJoinRequestInfo(request);
+    }
+
+    private JoinRequestInfo toJoinRequestInfo(RoomJoinRequest request) {
+        String userName = userModuleApi.findById(request.getUserId())
+                .map(UserInfo::displayName).orElse("Unknown");
+        String roomName = roomRepository.findById(request.getRoomId())
+                .map(Room::getName).orElse("Unknown");
+        return new JoinRequestInfo(
+                request.getId(), request.getRoomId(), roomName,
+                request.getUserId(), userName, request.getMessage(),
+                request.getStatus().name(), request.getCreatedAt(), request.getResolvedAt());
     }
 
     // --- Internal helpers ---
