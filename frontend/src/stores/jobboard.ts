@@ -131,7 +131,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a')
     a.href = url
-    a.download = 'elternstunden-report.csv'
+    a.download = 'familien-stundenbericht.csv'
     a.click()
     window.URL.revokeObjectURL(url)
   }
@@ -141,7 +141,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
     const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
     const a = document.createElement('a')
     a.href = url
-    a.download = 'elternstunden-report.pdf'
+    a.download = 'familien-stundenbericht.pdf'
     a.click()
     window.URL.revokeObjectURL(url)
   }

@@ -44,6 +44,8 @@ export interface FamilyHoursInfo {
   targetHours: number
   completedHours: number
   pendingHours: number
+  cleaningHours: number
+  totalHours: number
   remainingHours: number
   trafficLight: 'GREEN' | 'YELLOW' | 'RED'
 }

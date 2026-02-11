@@ -13,6 +13,11 @@ public interface FamilyModuleApi {
     Optional<FamilyInfo> findById(UUID familyId);
 
     /**
+     * Returns all families in the system.
+     */
+    List<FamilyInfo> findAll();
+
+    /**
      * Returns all families that a user belongs to.
      * A parent belongs to exactly one family; a child may belong to multiple (separated parents).
      */

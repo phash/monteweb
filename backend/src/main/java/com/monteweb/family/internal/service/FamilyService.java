@@ -41,6 +41,13 @@ public class FamilyService implements FamilyModuleApi {
     }
 
     @Override
+    public List<FamilyInfo> findAll() {
+        return familyRepository.findAll().stream()
+                .map(this::toFamilyInfo)
+                .toList();
+    }
+
+    @Override
     public List<FamilyInfo> findByUserId(UUID userId) {
         return familyRepository.findByMemberUserId(userId).stream()
                 .map(this::toFamilyInfo)

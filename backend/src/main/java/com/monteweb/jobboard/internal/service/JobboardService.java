@@ -1,10 +1,12 @@
 package com.monteweb.jobboard.internal.service;
 
 import com.monteweb.admin.AdminModuleApi;
+import com.monteweb.cleaning.CleaningModuleApi;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.*;
 import com.monteweb.jobboard.internal.model.Job;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.jobboard.internal.model.JobAssignment;
 import com.monteweb.jobboard.internal.repository.JobAssignmentRepository;
@@ -22,10 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Transactional
@@ -38,19 +37,22 @@ public class JobboardService implements JobboardModuleApi {
     private final FamilyModuleApi familyModuleApi;
     private final AdminModuleApi adminModuleApi;
     private final ApplicationEventPublisher eventPublisher;
+    private final CleaningModuleApi cleaningModuleApi;
 
     public JobboardService(JobRepository jobRepository,
                            JobAssignmentRepository assignmentRepository,
                            UserModuleApi userModuleApi,
                            FamilyModuleApi familyModuleApi,
                            AdminModuleApi adminModuleApi,
-                           ApplicationEventPublisher eventPublisher) {
+                           ApplicationEventPublisher eventPublisher,
+                           @Autowired(required = false) CleaningModuleApi cleaningModuleApi) {
         this.jobRepository = jobRepository;
         this.assignmentRepository = assignmentRepository;
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.eventPublisher = eventPublisher;
+        this.cleaningModuleApi = cleaningModuleApi;
     }
 
     // ---- Public API (JobboardModuleApi) ----
@@ -315,9 +317,15 @@ public class JobboardService implements JobboardModuleApi {
 
     @Transactional(readOnly = true)
     public List<FamilyHoursInfo> getAllFamilyHoursReport() {
-        var familyIds = assignmentRepository.findAllFamilyIdsWithAssignments();
-        List<FamilyHoursInfo> report = new ArrayList<>();
+        // Collect family IDs from job assignments
+        Set<UUID> familyIds = new LinkedHashSet<>(assignmentRepository.findAllFamilyIdsWithAssignments());
 
+        // Also include all families (they may have cleaning hours only)
+        for (FamilyInfo family : familyModuleApi.findAll()) {
+            familyIds.add(family.id());
+        }
+
+        List<FamilyHoursInfo> report = new ArrayList<>();
         for (UUID familyId : familyIds) {
             familyModuleApi.findById(familyId)
                     .map(this::buildFamilyHoursInfo)
@@ -370,9 +378,16 @@ public class JobboardService implements JobboardModuleApi {
 
         BigDecimal confirmed = assignmentRepository.sumConfirmedHoursByFamilyId(family.id());
         BigDecimal pending = assignmentRepository.sumPendingHoursByFamilyId(family.id());
-        BigDecimal remaining = targetHours.subtract(confirmed).max(BigDecimal.ZERO);
 
-        String trafficLight = calculateTrafficLight(confirmed, targetHours);
+        BigDecimal cleaningHrs = BigDecimal.ZERO;
+        if (cleaningModuleApi != null) {
+            cleaningHrs = cleaningModuleApi.getCleaningHoursForFamily(family.id());
+        }
+
+        BigDecimal totalHours = confirmed.add(cleaningHrs);
+        BigDecimal remaining = targetHours.subtract(totalHours).max(BigDecimal.ZERO);
+
+        String trafficLight = calculateTrafficLight(totalHours, targetHours);
 
         return new FamilyHoursInfo(
                 family.id(),
@@ -380,6 +395,8 @@ public class JobboardService implements JobboardModuleApi {
                 targetHours,
                 confirmed,
                 pending,
+                cleaningHrs,
+                totalHours,
                 remaining,
                 trafficLight
         );

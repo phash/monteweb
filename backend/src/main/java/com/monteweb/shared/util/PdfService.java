@@ -56,15 +56,16 @@ public class PdfService {
                 <body>
                 """);
         sb.append("<h1>").append(escapeXml(schoolName)).append("</h1>\n");
-        sb.append("<h2>Elternstunden-Bericht</h2>\n");
+        sb.append("<h2>Familien-Stundenbericht</h2>\n");
         sb.append("<table>\n");
-        sb.append("<tr><th>Familie</th><th class=\"right\">Geleistet</th><th class=\"right\">Bestaetigt</th><th class=\"right\">Ausstehend</th><th class=\"right\">Verbleibend</th></tr>\n");
+        sb.append("<tr><th>Familie</th><th class=\"right\">Elternstunden</th><th class=\"right\">Putzstunden</th><th class=\"right\">Gesamt</th><th class=\"right\">Ausstehend</th><th class=\"right\">Verbleibend</th></tr>\n");
 
         for (var row : rows) {
             sb.append("<tr>");
             sb.append("<td>").append(escapeXml(row.familyName())).append("</td>");
+            sb.append("<td class=\"right\">").append(row.jobHours()).append("</td>");
+            sb.append("<td class=\"right\">").append(row.cleaningHours()).append("</td>");
             sb.append("<td class=\"right\">").append(row.totalHours()).append("</td>");
-            sb.append("<td class=\"right\">").append(row.confirmedHours()).append("</td>");
             sb.append("<td class=\"right\">").append(row.pendingHours()).append("</td>");
             sb.append("<td class=\"right\">").append(row.remainingHours()).append("</td>");
             sb.append("</tr>\n");
@@ -125,8 +126,9 @@ public class PdfService {
 
     public record HoursReportRow(
             String familyName,
+            String jobHours,
+            String cleaningHours,
             String totalHours,
-            String confirmedHours,
             String pendingHours,
             String remainingHours
     ) {}

@@ -57,18 +57,22 @@ function progressPercent(completed: number, target: number) {
         <div
           class="progress-fill"
           :class="jobboard.familyHours.trafficLight.toLowerCase()"
-          :style="{ width: progressPercent(jobboard.familyHours.completedHours, jobboard.familyHours.targetHours) + '%' }"
+          :style="{ width: progressPercent(jobboard.familyHours.totalHours, jobboard.familyHours.targetHours) + '%' }"
         />
       </div>
       <div class="progress-label">
-        {{ jobboard.familyHours.completedHours }}/{{ jobboard.familyHours.targetHours }} Stunden
+        {{ jobboard.familyHours.totalHours }}/{{ jobboard.familyHours.targetHours }} {{ t('family.hoursUnit') }}
       </div>
     </div>
 
     <div class="hours-details">
       <div class="detail">
-        <span class="detail-label">{{ t('family.confirmed') }}</span>
+        <span class="detail-label">{{ t('family.jobHours') }}</span>
         <span class="detail-value">{{ jobboard.familyHours.completedHours }}h</span>
+      </div>
+      <div class="detail">
+        <span class="detail-label">{{ t('family.cleaningHours') }}</span>
+        <span class="detail-value">{{ jobboard.familyHours.cleaningHours }}h</span>
       </div>
       <div class="detail">
         <span class="detail-label">{{ t('family.pending') }}</span>
@@ -128,7 +132,7 @@ function progressPercent(completed: number, target: number) {
 
 .hours-details {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
   text-align: center;
 }
