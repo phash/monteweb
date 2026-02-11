@@ -12,6 +12,7 @@ import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,7 +42,7 @@ public class CalendarService implements CalendarModuleApi {
                            SchoolModuleApi schoolModule,
                            UserModuleApi userModule,
                            ApplicationEventPublisher eventPublisher,
-                           @Autowired(required = false) JobboardModuleApi jobboardModuleApi) {
+                           @Lazy @Autowired(required = false) JobboardModuleApi jobboardModuleApi) {
         this.eventRepository = eventRepository;
         this.rsvpRepository = rsvpRepository;
         this.roomModule = roomModule;
