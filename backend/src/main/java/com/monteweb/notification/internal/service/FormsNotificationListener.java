@@ -35,9 +35,9 @@ public class FormsNotificationListener {
                 : NotificationType.FORM_PUBLISHED;
 
         String title = event.type() == FormType.CONSENT
-                ? "Einverstaendniserklaerung: " + event.title()
+                ? "Einverständniserklärung: " + event.title()
                 : "Neue Umfrage: " + event.title();
-        String message = event.publisherName() + " hat ein neues Formular veroeffentlicht";
+        String message = event.publisherName() + " hat ein neues Formular veröffentlicht";
         String link = "/forms/" + event.formId();
 
         List<UUID> memberIds = roomModule.getMemberUserIds(event.scopeId());

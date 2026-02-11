@@ -27,15 +27,15 @@ public class EmailService {
         var message = new SimpleMailMessage();
         message.setFrom(properties.from());
         message.setTo(toEmail);
-        message.setSubject("MonteWeb - Passwort zuruecksetzen");
+        message.setSubject("MonteWeb - Passwort zurücksetzen");
         message.setText(
                 "Hallo,\n\n" +
-                "Sie haben eine Passwort-Zuruecksetzung angefordert.\n" +
-                "Klicken Sie auf folgenden Link, um Ihr Passwort zu aendern:\n\n" +
+                "Sie haben eine Passwort-Zurücksetzung angefordert.\n" +
+                "Klicken Sie auf folgenden Link, um Ihr Passwort zu ändern:\n\n" +
                 resetUrl + "\n\n" +
-                "Der Link ist 24 Stunden gueltig.\n\n" +
-                "Falls Sie diese Anfrage nicht gestellt haben, koennen Sie diese E-Mail ignorieren.\n\n" +
-                "Mit freundlichen Gruessen,\nIhr MonteWeb-Team"
+                "Der Link ist 24 Stunden gültig.\n\n" +
+                "Falls Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren.\n\n" +
+                "Mit freundlichen Grüßen,\nIhr MonteWeb-Team"
         );
 
         try {
@@ -54,9 +54,9 @@ public class EmailService {
         message.setText(
                 "Hallo " + firstName + ",\n\n" +
                 "willkommen bei MonteWeb! Ihr Konto wurde erfolgreich erstellt.\n\n" +
-                "Sie koennen sich jetzt unter folgendem Link anmelden:\n" +
+                "Sie können sich jetzt unter folgendem Link anmelden:\n" +
                 properties.baseUrl() + "/login\n\n" +
-                "Mit freundlichen Gruessen,\nIhr MonteWeb-Team"
+                "Mit freundlichen Grüßen,\nIhr MonteWeb-Team"
         );
 
         try {
