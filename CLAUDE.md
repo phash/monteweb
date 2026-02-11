@@ -10,7 +10,7 @@ MonteWeb ist ein modulares, selbst-gehostetes Schul-Intranet für Montessori-Sch
 
 ## Projektstatus
 
-Alle 16 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 27 Frontend-Tests bestehen, und der volle Docker-Stack läuft.
+Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 87 Frontend-Tests bestehen, und der volle Docker-Stack läuft.
 
 ### Kern-Phasen (1–6)
 
@@ -23,7 +23,7 @@ Alle 16 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 27 Frontend-Test
 | 5 | Messaging & Chat | COMPLETE |
 | 6 | i18n, Security-Hardening, DSGVO, Production-Setup | COMPLETE |
 
-### Erweiterungs-Phasen (7–16)
+### Erweiterungs-Phasen (7–17)
 
 | Phase | Inhalt | Status |
 |-------|--------|--------|
@@ -37,6 +37,7 @@ Alle 16 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 27 Frontend-Test
 | 14 | PDF-Export (Stundenbericht, QR-Codes) | COMPLETE |
 | 15 | Web Push Notifications (VAPID) | COMPLETE |
 | 16 | Monitoring (Prometheus + Grafana) | COMPLETE |
+| 17 | Kalender/Events (Raum/Bereich/Schulweit, RSVP) | COMPLETE |
 
 ---
 
@@ -47,7 +48,7 @@ Alle 16 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 27 Frontend-Test
 - **Spring Modulith 1.3.2** für modulare Architektur
 - **Spring Security** mit JWT + Redis Sessions
 - **Spring OAuth2 Client** für OIDC/SSO (conditional via `monteweb.oidc.enabled`)
-- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V024)
+- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V026)
 - **Spring WebSocket** + Redis Pub/Sub für Echtzeit
 - **Spring Boot Actuator** für Health/Info/Prometheus-Endpoints
 - **Spring Boot Mail** für E-Mail-Versand (conditional via `monteweb.email.enabled`)
@@ -69,7 +70,7 @@ Alle 16 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 27 Frontend-Test
 - **Vue Router 4.6** für Routing
 - **vue-i18n 11** für Internationalisierung (Deutsch + Englisch)
 - **Axios 1.13** als HTTP-Client
-- **Vitest 4** + **@vue/test-utils** für Unit/Component-Tests (27 Tests)
+- **Vitest 4** + **@vue/test-utils** für Unit/Component-Tests (87 Tests)
 - **PWA** via vite-plugin-pwa
 
 ### Infrastruktur
@@ -136,13 +137,29 @@ monteweb/
 │       │   │   ├── FeedPostInfo.java
 │       │   │   └── internal/
 │       │   │
+│       │   ├── calendar/             # [Optional] Kalender & Events mit RSVP
+│       │   │   ├── CalendarModuleApi.java       # Public Facade
+│       │   │   ├── EventInfo.java               # Public DTO (inkl. RSVP-Counts)
+│       │   │   ├── EventScope.java              # Enum: ROOM, SECTION, SCHOOL
+│       │   │   ├── EventRecurrence.java         # Enum: NONE, DAILY, WEEKLY, MONTHLY, YEARLY
+│       │   │   ├── RsvpStatus.java              # Enum: ATTENDING, MAYBE, DECLINED
+│       │   │   ├── CreateEventRequest.java, UpdateEventRequest.java
+│       │   │   ├── EventCreatedEvent.java, EventCancelledEvent.java  # Spring Events
+│       │   │   └── internal/
+│       │   │       ├── config/CalendarModuleConfig.java
+│       │   │       ├── model/CalendarEvent.java, EventRsvp.java
+│       │   │       ├── repository/CalendarEventRepository.java, EventRsvpRepository.java
+│       │   │       ├── service/CalendarService.java
+│       │   │       └── controller/CalendarController.java
+│       │   │
 │       │   ├── notification/       # In-App + Push Benachrichtigungen
 │       │   │   ├── NotificationModuleApi.java
-│       │   │   ├── NotificationType.java       # inkl. DISCUSSION_THREAD, DISCUSSION_REPLY
+│       │   │   ├── NotificationType.java       # inkl. DISCUSSION_*, EVENT_*
 │       │   │   └── internal/
 │       │   │       ├── model/PushSubscription.java
 │       │   │       ├── service/WebPushService.java             # VAPID Push
 │       │   │       ├── service/DiscussionNotificationListener.java
+│       │   │       ├── service/CalendarNotificationListener.java
 │       │   │       └── controller/PushNotificationController.java
 │       │   │
 │       │   ├── admin/              # System-Config, Audit-Log, Modul-Verwaltung
@@ -190,21 +207,24 @@ monteweb/
 │       │   ├── index.ts        # Browser-Locale-Detection
 │       │   ├── de.ts           # Deutsche Übersetzungen (~350+ Keys)
 │       │   └── en.ts           # Englische Übersetzungen
-│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, ...)
+│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, ...)
 │       │   ├── discussions.ts  # Diskussions-Threads Store
-│       │   └── __tests__/      # Store Unit Tests
+│       │   ├── calendar.ts     # Kalender/Events Store
+│       │   └── __tests__/      # Store Unit Tests (87 Tests)
 │       │       ├── auth.test.ts        # 5 Tests
 │       │       ├── messaging.test.ts   # 8 Tests
-│       │       └── feed.test.ts        # 9 Tests
+│       │       ├── feed.test.ts        # 9 Tests
+│       │       └── calendar.test.ts    # 9 Tests
 │       ├── api/                # Axios-Wrapper pro Modul (client.ts + *.api.ts)
-│       │   └── discussions.api.ts      # Diskussions-Thread API
-│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, ...)
+│       │   ├── discussions.api.ts      # Diskussions-Thread API
+│       │   └── calendar.api.ts         # Kalender/Events API
+│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, calendar, ...)
 │       ├── composables/        # useAuth, useNotifications, useWebSocket, usePushNotifications
 │       ├── components/
 │       │   ├── common/         # PageTitle, LoadingSpinner, EmptyState, ErrorBoundary, LanguageSwitcher
 │       │   ├── layout/         # AppHeader (+ LanguageSwitcher), AppSidebar, BottomNav
 │       │   ├── feed/           # FeedList, FeedPost, PostComposer
-│       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView
+│       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView, RoomEvents
 │       │   ├── messaging/      # NewMessageDialog (User-Picker)
 │       │   ├── family/         # FamilyHoursWidget
 │       │   └── __tests__/      # Component Tests
@@ -213,7 +233,7 @@ monteweb/
 │       │   ├── LoginView.vue           # + SSO-Button (conditional)
 │       │   ├── DashboardView.vue       # = Feed-Ansicht
 │       │   ├── RoomsView.vue
-│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members, Discussions, Chat, Files
+│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members, Discussions, Chat, Files, Events
 │       │   ├── DiscoverRoomsView.vue
 │       │   ├── MessagesView.vue        # + NewMessageDialog, Deep-Link via conversationId
 │       │   ├── JobBoardView.vue
@@ -221,6 +241,9 @@ monteweb/
 │       │   ├── JobDetailView.vue
 │       │   ├── CleaningView.vue
 │       │   ├── CleaningSlotView.vue
+│       │   ├── CalendarView.vue        # Agenda-Liste mit Monatsnavigation
+│       │   ├── EventDetailView.vue     # Event-Info + RSVP + Aktionen
+│       │   ├── EventCreateView.vue     # Erstellen/Bearbeiten mit Scope-Picker
 │       │   ├── FamilyView.vue
 │       │   ├── ProfileView.vue         # + Push Notification Toggle
 │       │   ├── NotFoundView.vue        # 404
@@ -269,7 +292,7 @@ monteweb/
 
 4. **Optionale Module:** Werden über `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` aktiviert. ALLE Beans (Services, Controllers, Components) brauchen diese Annotation, nicht nur Config-Klassen.
 
-5. **Flyway-Migrationen:** V001–V024 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
+5. **Flyway-Migrationen:** V001–V026 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
 
 6. **Security:** Alle Endpunkte gesichert. JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Security-Headers (HSTS, X-Frame-Options, CSP).
 
@@ -320,6 +343,8 @@ V021  communication_rules (tenant_config: parent_to_parent, student_to_student m
 V022  discussion_threads + discussion_replies
 V023  push_subscriptions
 V024  OIDC-Felder (users: oidc_provider, oidc_subject, password_hash nullable)
+V025  calendar_events + calendar_event_rsvps
+V026  calendar-Modul zu default-modules
 ```
 
 ---
@@ -452,6 +477,18 @@ POST   /slots/{id}/checkout    Check-out
 GET    /dashboard              Admin-Dashboard
 ```
 
+### Calendar (`/api/v1/calendar`) [Modul: calendar]
+```
+GET    /events?from=&to=       Persönlicher Kalender (paginiert)
+POST   /events                 Event erstellen
+GET    /events/{id}            Event-Detail
+PUT    /events/{id}            Event bearbeiten
+DELETE /events/{id}            Event löschen
+POST   /events/{id}/cancel     Event absagen
+POST   /events/{id}/rsvp       RSVP (ATTENDING/MAYBE/DECLINED)
+GET    /rooms/{roomId}/events  Raum-Events
+```
+
 ### Notifications (`/api/v1/notifications`)
 ```
 GET    /                       Meine Benachrichtigungen
@@ -498,6 +535,8 @@ GET    /actuator/metrics       Micrometer Metriken
 6. **Module sind abschaltbar.** `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` im Backend. Im Frontend: Menüpunkte nur sichtbar, wenn Modul aktiv (via `/api/v1/admin/config`).
 
 7. **Kommunikationsregeln:** Lehrer-Eltern immer erlaubt. Eltern-Eltern und Schüler-Schüler standardmäßig deaktiviert, konfigurierbar.
+
+8. **Kalender-Berechtigungen:** ROOM-Events: nur LEADER oder SUPERADMIN. SECTION-Events: TEACHER oder SUPERADMIN. SCHOOL-Events: nur SUPERADMIN. RSVP steht allen authentifizierten Nutzern offen.
 
 ---
 
@@ -574,7 +613,7 @@ docker compose --profile monitoring up -d   # + Prometheus + Grafana
 
 **Tests:**
 ```bash
-# Frontend (27 Tests, ~1s)
+# Frontend (87 Tests, ~1.5s)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker required)
@@ -587,7 +626,7 @@ cd backend && mvn test
 
 - [x] E-Mail-Versand (SMTP, conditional via `monteweb.email.enabled`)
 - [x] Englische Übersetzung (`de.ts` + `en.ts`, LanguageSwitcher, Browser-Locale-Detection)
-- [x] Testabdeckung (27 Frontend-Tests via Vitest, Backend Integration Tests via Testcontainers)
+- [x] Testabdeckung (87 Frontend-Tests via Vitest, Backend Integration Tests via Testcontainers)
 - [x] CI/CD Pipeline (`.github/workflows/ci.yml` — Backend, Frontend, Docker Jobs)
 - [x] OIDC/SSO (OAuth2 Client, conditional via `monteweb.oidc.enabled`, SSO-Button in Login)
 - [x] PDF-Export (Stundenbericht + QR-Codes via OpenHTMLToPDF)
@@ -596,6 +635,7 @@ cd backend && mvn test
 - [x] Messaging User-Picker (NewMessageDialog mit AutoComplete-Suche)
 - [x] Kommunikationsregeln (Eltern-Eltern, Schüler-Schüler konfigurierbar)
 - [x] Raum-Diskussions-Threads (LEADER erstellt/archiviert/löscht, Mitglieder antworten)
+- [x] Kalender/Events (Raum/Bereich/Schulweit, RSVP, Monatsnavigation, conditional via `monteweb.modules.calendar.enabled`)
 
 ## Conditional Features
 
@@ -610,3 +650,4 @@ Folgende Features sind über Konfiguration aktivierbar:
 | Files-Modul | `monteweb.modules.files.enabled` | `true` |
 | Jobboard-Modul | `monteweb.modules.jobboard.enabled` | `true` |
 | Cleaning-Modul | `monteweb.modules.cleaning.enabled` | `true` |
+| Calendar-Modul | `monteweb.modules.calendar.enabled` | `false` |
