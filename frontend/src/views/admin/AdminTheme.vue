@@ -5,6 +5,7 @@ import { adminApi } from '@/api/admin.api'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import InputNumber from 'primevue/inputnumber'
 import FileUpload from 'primevue/fileupload'
 import { useToast } from 'primevue/usetoast'
 
@@ -25,6 +26,9 @@ const theme = ref<Record<string, string>>({
 
 const schoolName = ref('')
 const saving = ref(false)
+const savingHours = ref(false)
+const targetHoursPerFamily = ref(30)
+const targetCleaningHours = ref(3)
 
 const themeFields = [
   { key: 'primaryColor', labelKey: 'admin.theme.primaryColor' },
@@ -43,6 +47,8 @@ onMounted(async () => {
   }
   if (adminStore.config) {
     schoolName.value = adminStore.config.schoolName || ''
+    targetHoursPerFamily.value = adminStore.config.targetHoursPerFamily ?? 30
+    targetCleaningHours.value = adminStore.config.targetCleaningHours ?? 3
     if (adminStore.config.theme) {
       theme.value = { ...theme.value, ...(adminStore.config.theme as Record<string, string>) }
     }
@@ -58,6 +64,22 @@ async function saveTheme() {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   } finally {
     saving.value = false
+  }
+}
+
+async function saveHoursConfig() {
+  savingHours.value = true
+  try {
+    const res = await adminApi.updateConfig({
+      targetHoursPerFamily: targetHoursPerFamily.value,
+      targetCleaningHours: targetCleaningHours.value,
+    })
+    adminStore.config = res.data.data
+    toast.add({ severity: 'success', summary: t('admin.hoursConfigSaved'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    savingHours.value = false
   }
 }
 
@@ -95,6 +117,23 @@ async function uploadLogo(event: { files: File[] }) {
                     :auto="true" :chooseLabel="t('admin.theme.uploadLogo')"
                     @select="uploadLogo" />
       </div>
+    </div>
+
+    <!-- Hours Configuration -->
+    <div class="mb-6">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.hoursConfig') }}</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.totalHoursTarget') }}</label>
+          <InputNumber v-model="targetHoursPerFamily" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.cleaningHoursTarget') }}</label>
+          <InputNumber v-model="targetCleaningHours" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
+        </div>
+      </div>
+      <Button :label="t('admin.saveHoursConfig')" icon="pi pi-check" :loading="savingHours"
+              @click="saveHoursConfig" />
     </div>
 
     <!-- Color Scheme -->

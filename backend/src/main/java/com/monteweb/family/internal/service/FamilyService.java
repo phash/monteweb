@@ -1,15 +1,17 @@
 package com.monteweb.family.internal.service;
 
 import com.monteweb.family.FamilyInfo;
+import com.monteweb.family.FamilyInvitationEvent;
 import com.monteweb.family.FamilyModuleApi;
-import com.monteweb.family.internal.model.Family;
-import com.monteweb.family.internal.model.FamilyMember;
-import com.monteweb.family.internal.model.FamilyMemberRole;
+import com.monteweb.family.internal.dto.FamilyInvitationInfo;
+import com.monteweb.family.internal.model.*;
+import com.monteweb.family.internal.repository.FamilyInvitationRepository;
 import com.monteweb.family.internal.repository.FamilyRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,20 +26,33 @@ import java.util.UUID;
 public class FamilyService implements FamilyModuleApi {
 
     private final FamilyRepository familyRepository;
+    private final FamilyInvitationRepository invitationRepository;
     private final InviteCodeService inviteCodeService;
     private final UserModuleApi userModuleApi;
+    private final ApplicationEventPublisher eventPublisher;
 
     public FamilyService(FamilyRepository familyRepository,
+                         FamilyInvitationRepository invitationRepository,
                          InviteCodeService inviteCodeService,
-                         UserModuleApi userModuleApi) {
+                         UserModuleApi userModuleApi,
+                         ApplicationEventPublisher eventPublisher) {
         this.familyRepository = familyRepository;
+        this.invitationRepository = invitationRepository;
         this.inviteCodeService = inviteCodeService;
         this.userModuleApi = userModuleApi;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
     public Optional<FamilyInfo> findById(UUID familyId) {
         return familyRepository.findById(familyId).map(this::toFamilyInfo);
+    }
+
+    @Override
+    public List<FamilyInfo> findAll() {
+        return familyRepository.findAll().stream()
+                .map(this::toFamilyInfo)
+                .toList();
     }
 
     @Override
@@ -141,6 +156,145 @@ public class FamilyService implements FamilyModuleApi {
         familyRepository.save(family);
     }
 
+    @Override
+    @Transactional
+    public void adminAddMember(UUID familyId, UUID userId, String role) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        if (familyRepository.isMember(userId, familyId)) {
+            throw new BusinessException("User is already a member of this family");
+        }
+
+        var memberRole = FamilyMemberRole.valueOf(role);
+        var member = new FamilyMember(family, userId, memberRole);
+        family.getMembers().add(member);
+        familyRepository.save(family);
+    }
+
+    @Override
+    @Transactional
+    public void adminRemoveMember(UUID familyId, UUID userId) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        family.getMembers().removeIf(m -> m.getUserId().equals(userId));
+        familyRepository.save(family);
+    }
+
+    @Transactional
+    public void updateAvatarUrl(UUID familyId, String avatarUrl) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+        family.setAvatarUrl(avatarUrl);
+        familyRepository.save(family);
+    }
+
+    // --- Invitations ---
+
+    @Transactional
+    public FamilyInvitationInfo inviteMember(UUID familyId, UUID inviteeId, String role, UUID inviterId) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        if (!familyRepository.isMember(inviterId, familyId)) {
+            throw new BusinessException("Not a member of this family");
+        }
+        if (familyRepository.isMember(inviteeId, familyId)) {
+            throw new BusinessException("User is already a member of this family");
+        }
+        if (invitationRepository.existsByFamilyIdAndInviteeIdAndStatus(familyId, inviteeId, FamilyInvitationStatus.PENDING)) {
+            throw new BusinessException("A pending invitation already exists");
+        }
+
+        var memberRole = FamilyMemberRole.valueOf(role);
+        var invitation = new FamilyInvitation(familyId, inviterId, inviteeId, memberRole);
+        invitation = invitationRepository.save(invitation);
+
+        String inviterName = userModuleApi.findById(inviterId).map(UserInfo::displayName).orElse("Unknown");
+        eventPublisher.publishEvent(new FamilyInvitationEvent(
+                invitation.getId(), familyId, family.getName(),
+                inviterId, inviterName, inviteeId, false));
+
+        return toInvitationInfo(invitation);
+    }
+
+    public List<FamilyInvitationInfo> getMyPendingInvitations(UUID userId) {
+        return invitationRepository.findByInviteeIdAndStatusOrderByCreatedAtDesc(userId, FamilyInvitationStatus.PENDING)
+                .stream().map(this::toInvitationInfo).toList();
+    }
+
+    public List<FamilyInvitationInfo> getFamilyInvitations(UUID familyId) {
+        return invitationRepository.findByFamilyIdAndStatusOrderByCreatedAtDesc(familyId, FamilyInvitationStatus.PENDING)
+                .stream().map(this::toInvitationInfo).toList();
+    }
+
+    @Transactional
+    public FamilyInvitationInfo acceptInvitation(UUID invitationId, UUID userId) {
+        var invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation", invitationId));
+        if (!invitation.getInviteeId().equals(userId)) {
+            throw new BusinessException("Not your invitation");
+        }
+        if (invitation.getStatus() != FamilyInvitationStatus.PENDING) {
+            throw new BusinessException("Invitation is not pending");
+        }
+
+        invitation.setStatus(FamilyInvitationStatus.ACCEPTED);
+        invitation.setResolvedAt(Instant.now());
+        invitationRepository.save(invitation);
+
+        // Add user to family
+        var family = familyRepository.findById(invitation.getFamilyId())
+                .orElseThrow(() -> new ResourceNotFoundException("Family", invitation.getFamilyId()));
+        if (!familyRepository.isMember(userId, family.getId())) {
+            var member = new FamilyMember(family, userId, invitation.getRole());
+            family.getMembers().add(member);
+            familyRepository.save(family);
+        }
+
+        String inviterName = userModuleApi.findById(invitation.getInviterId())
+                .map(UserInfo::displayName).orElse("Unknown");
+        eventPublisher.publishEvent(new FamilyInvitationEvent(
+                invitationId, invitation.getFamilyId(), family.getName(),
+                invitation.getInviterId(), inviterName, userId, true));
+
+        return toInvitationInfo(invitation);
+    }
+
+    @Transactional
+    public FamilyInvitationInfo declineInvitation(UUID invitationId, UUID userId) {
+        var invitation = invitationRepository.findById(invitationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Invitation", invitationId));
+        if (!invitation.getInviteeId().equals(userId)) {
+            throw new BusinessException("Not your invitation");
+        }
+        if (invitation.getStatus() != FamilyInvitationStatus.PENDING) {
+            throw new BusinessException("Invitation is not pending");
+        }
+
+        invitation.setStatus(FamilyInvitationStatus.DECLINED);
+        invitation.setResolvedAt(Instant.now());
+        invitationRepository.save(invitation);
+
+        return toInvitationInfo(invitation);
+    }
+
+    private FamilyInvitationInfo toInvitationInfo(FamilyInvitation invitation) {
+        String familyName = familyRepository.findById(invitation.getFamilyId())
+                .map(Family::getName).orElse("Unknown");
+        String inviterName = userModuleApi.findById(invitation.getInviterId())
+                .map(UserInfo::displayName).orElse("Unknown");
+        String inviteeName = userModuleApi.findById(invitation.getInviteeId())
+                .map(UserInfo::displayName).orElse("Unknown");
+        return new FamilyInvitationInfo(
+                invitation.getId(), invitation.getFamilyId(), familyName,
+                invitation.getInviterId(), inviterName,
+                invitation.getInviteeId(), inviteeName,
+                invitation.getRole().name(), invitation.getStatus().name(),
+                invitation.getCreatedAt(), invitation.getResolvedAt());
+    }
+
     private FamilyInfo toFamilyInfo(Family family) {
         var members = family.getMembers().stream()
                 .map(m -> {
@@ -150,6 +304,6 @@ public class FamilyService implements FamilyModuleApi {
                     return new FamilyInfo.FamilyMemberInfo(m.getUserId(), displayName, m.getRole().name());
                 })
                 .toList();
-        return new FamilyInfo(family.getId(), family.getName(), members);
+        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), members);
     }
 }

@@ -85,6 +85,15 @@ export function getQrToken(slotId: string) {
   return client.get<ApiResponse<{ qrToken: string }>>(`/cleaning/slots/${slotId}/qr`)
 }
 
+// ── Admin: QR Code PDF Export ─────────────────────────────────────────
+
+export function exportQrCodesPdf(configId: string, from: string, to: string) {
+  return client.get(`/cleaning/configs/${configId}/qr-codes`, {
+    params: { from, to },
+    responseType: 'blob',
+  })
+}
+
 // ── Admin: Dashboard ──────────────────────────────────────────────────
 
 export function getDashboard(sectionId: string, from: string, to: string) {

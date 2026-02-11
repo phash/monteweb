@@ -36,7 +36,7 @@ public class AdminConfigController {
 
     @PutMapping("/config")
     public ResponseEntity<ApiResponse<TenantConfigInfo>> updateConfig(@RequestBody UpdateConfigRequest request) {
-        var config = adminService.updateConfig(request.schoolName(), request.logoUrl(), request.targetHoursPerFamily());
+        var config = adminService.updateConfig(request.schoolName(), request.logoUrl(), request.targetHoursPerFamily(), request.targetCleaningHours());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 

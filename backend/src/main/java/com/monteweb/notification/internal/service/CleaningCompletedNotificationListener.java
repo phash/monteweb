@@ -18,7 +18,7 @@ public class CleaningCompletedNotificationListener {
     public void onCleaningCompleted(CleaningCompletedEvent event) {
         String title = "Putzstunden gutgeschrieben";
         String message = String.format(
-                "Dir wurden %s Stunden fuer den Putzdienst gutgeschrieben (%d Minuten).",
+                "Dir wurden %s Stunden für den Putzdienst gutgeschrieben (%d Minuten).",
                 event.hoursCredit().toPlainString(), event.actualMinutes());
 
         notificationService.sendNotification(
@@ -26,7 +26,7 @@ public class CleaningCompletedNotificationListener {
                 NotificationType.CLEANING_COMPLETED,
                 title,
                 message,
-                "/cleaning/mine",
+                "/family",
                 "cleaning",
                 null
         );

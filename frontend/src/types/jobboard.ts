@@ -17,6 +17,8 @@ export interface JobInfo {
   createdBy: string
   creatorName: string
   contactInfo: string | null
+  eventId: string | null
+  eventTitle: string | null
   createdAt: string
 }
 
@@ -44,8 +46,13 @@ export interface FamilyHoursInfo {
   targetHours: number
   completedHours: number
   pendingHours: number
+  cleaningHours: number
+  totalHours: number
   remainingHours: number
   trafficLight: 'GREEN' | 'YELLOW' | 'RED'
+  targetCleaningHours: number
+  remainingCleaningHours: number
+  cleaningTrafficLight: 'GREEN' | 'YELLOW' | 'RED'
 }
 
 export interface ReportSummary {
@@ -68,4 +75,5 @@ export interface CreateJobRequest {
   scheduledDate?: string
   scheduledTime?: string
   contactInfo?: string
+  eventId?: string
 }

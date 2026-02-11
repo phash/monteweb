@@ -12,6 +12,8 @@ export const useAdminStore = defineStore('admin', () => {
     try {
       const res = await adminApi.getPublicConfig()
       config.value = res.data.data
+    } catch {
+      // Config not available (not authenticated) - use defaults
     } finally {
       loading.value = false
     }

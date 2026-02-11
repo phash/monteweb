@@ -13,6 +13,9 @@ public record TenantConfigInfo(
         String logoUrl,
         Map<String, Object> theme,
         Map<String, Boolean> modules,
-        BigDecimal targetHoursPerFamily
+        BigDecimal targetHoursPerFamily,
+        BigDecimal targetCleaningHours,
+        boolean parentToParentMessaging,
+        boolean studentToStudentMessaging
 ) {
 }

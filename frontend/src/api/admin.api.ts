@@ -7,7 +7,7 @@ export const adminApi = {
     return client.get<ApiResponse<TenantConfig>>('/admin/config')
   },
 
-  updateConfig(data: { schoolName?: string; logoUrl?: string; targetHoursPerFamily?: number }) {
+  updateConfig(data: { schoolName?: string; logoUrl?: string; targetHoursPerFamily?: number; targetCleaningHours?: number }) {
     return client.put<ApiResponse<TenantConfig>>('/admin/config', data)
   },
 

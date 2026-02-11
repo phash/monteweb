@@ -15,6 +15,7 @@ const feed = useFeedStore()
 
 const showComments = ref(false)
 const commentText = ref('')
+const showDeleteConfirm = ref(false)
 
 function formatDate(date: string) {
   return new Date(date).toLocaleString('de-DE', {
@@ -39,7 +40,12 @@ async function submitComment() {
   commentText.value = ''
 }
 
+function confirmDelete() {
+  showDeleteConfirm.value = true
+}
+
 function handleDelete() {
+  showDeleteConfirm.value = false
   feed.deletePost(props.post.id)
 }
 </script>
@@ -75,7 +81,8 @@ function handleDelete() {
         text
         severity="danger"
         size="small"
-        @click="handleDelete"
+        :aria-label="t('common.delete')"
+        @click="confirmDelete"
       />
     </div>
 
@@ -102,6 +109,15 @@ function handleDelete() {
           @click="submitComment"
           size="small"
         />
+      </div>
+    </div>
+
+    <!-- Delete confirmation -->
+    <div v-if="showDeleteConfirm" class="delete-confirm" role="alertdialog" :aria-label="t('feed.confirmDeleteTitle')">
+      <p>{{ t('feed.confirmDeleteMessage') }}</p>
+      <div class="delete-confirm-actions">
+        <Button :label="t('common.cancel')" text size="small" @click="showDeleteConfirm = false" />
+        <Button :label="t('common.delete')" severity="danger" size="small" @click="handleDelete" />
       </div>
     </div>
   </div>
@@ -197,5 +213,24 @@ function handleDelete() {
 
 .comment-textarea {
   flex: 1;
+}
+
+.delete-confirm {
+  background: var(--mw-bg-highlight, rgba(239, 68, 68, 0.05));
+  border: 1px solid var(--mw-danger, #ef4444);
+  border-radius: var(--mw-border-radius);
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.delete-confirm p {
+  font-size: var(--mw-font-size-sm);
+  margin-bottom: 0.5rem;
+}
+
+.delete-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 </style>

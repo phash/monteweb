@@ -2,6 +2,8 @@ package com.monteweb;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration;
+import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import org.springframework.modulith.Modulithic;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -10,7 +12,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     sharedModules = "shared"
 )
 @EnableScheduling
-@SpringBootApplication
+@ConfigurationPropertiesScan
+@SpringBootApplication(exclude = {OAuth2ClientAutoConfiguration.class})
 public class MonteWebApplication {
 
     public static void main(String[] args) {

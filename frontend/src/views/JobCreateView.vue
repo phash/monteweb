@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useJobboardStore } from '@/stores/jobboard'
+import { useAdminStore } from '@/stores/admin'
+import { useCalendarStore } from '@/stores/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
+import Select from 'primevue/select'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const jobboard = useJobboardStore()
+const admin = useAdminStore()
+const calendar = useCalendarStore()
 
 const title = ref('')
 const description = ref('')
@@ -23,10 +29,22 @@ const maxAssignees = ref(1)
 const scheduledDate = ref<Date | null>(null)
 const scheduledTime = ref('')
 const contactInfo = ref('')
+const selectedEventId = ref<string | null>(null)
 const submitting = ref(false)
+const calendarEnabled = admin.isModuleEnabled('calendar')
 
-onMounted(() => {
+onMounted(async () => {
   jobboard.fetchCategories()
+  if (calendarEnabled) {
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const to = new Date(now.getFullYear(), now.getMonth() + 6, 0)
+    const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    await calendar.fetchEvents(formatDate(from), formatDate(to))
+  }
+  if (route.query.eventId) {
+    selectedEventId.value = route.query.eventId as string
+  }
 })
 
 async function submit() {
@@ -43,6 +61,7 @@ async function submit() {
       scheduledDate: scheduledDate.value?.toISOString().split('T')[0],
       scheduledTime: scheduledTime.value.trim() || undefined,
       contactInfo: contactInfo.value.trim() || undefined,
+      eventId: selectedEventId.value || undefined,
     })
     router.push({ name: 'job-detail', params: { id: job.id } })
   } finally {
@@ -66,53 +85,66 @@ async function submit() {
 
     <div class="create-form card">
       <div class="form-field">
-        <label>{{ t('jobboard.titleLabel') }} *</label>
-        <InputText v-model="title" :placeholder="t('jobboard.create_form.titlePlaceholder')" class="full-width" />
+        <label for="job-title">{{ t('jobboard.titleLabel') }} *</label>
+        <InputText id="job-title" v-model="title" :placeholder="t('jobboard.create_form.titlePlaceholder')" class="full-width" />
       </div>
 
       <div class="form-field">
-        <label>{{ t('jobboard.category') }} *</label>
-        <InputText v-model="category" :placeholder="t('jobboard.create_form.categoryPlaceholder')" class="full-width" list="category-suggestions" />
+        <label for="job-category">{{ t('jobboard.category') }} *</label>
+        <InputText id="job-category" v-model="category" :placeholder="t('jobboard.create_form.categoryPlaceholder')" class="full-width" list="category-suggestions" />
         <datalist id="category-suggestions">
           <option v-for="cat in jobboard.categories" :key="cat" :value="cat" />
         </datalist>
       </div>
 
       <div class="form-field">
-        <label>{{ t('common.description') }}</label>
-        <Textarea v-model="description" :autoResize="true" rows="4" class="full-width" />
+        <label for="job-description">{{ t('common.description') }}</label>
+        <Textarea id="job-description" v-model="description" :autoResize="true" rows="4" class="full-width" />
       </div>
 
       <div class="form-row">
         <div class="form-field">
-          <label>{{ t('jobboard.estimatedHours') }}</label>
-          <InputNumber v-model="estimatedHours" :minFractionDigits="1" :maxFractionDigits="2" :min="0.5" :step="0.5" />
+          <label for="job-hours">{{ t('jobboard.estimatedHours') }}</label>
+          <InputNumber id="job-hours" v-model="estimatedHours" :minFractionDigits="1" :maxFractionDigits="2" :min="0.5" :step="0.5" />
         </div>
         <div class="form-field">
-          <label>{{ t('jobboard.maxHelpers') }}</label>
-          <InputNumber v-model="maxAssignees" :min="1" :max="20" />
+          <label for="job-max-helpers">{{ t('jobboard.maxHelpers') }}</label>
+          <InputNumber id="job-max-helpers" v-model="maxAssignees" :min="1" :max="20" />
         </div>
       </div>
 
       <div class="form-field">
-        <label>{{ t('jobboard.location') }}</label>
-        <InputText v-model="location" :placeholder="t('jobboard.create_form.locationPlaceholder')" class="full-width" />
+        <label for="job-location">{{ t('jobboard.location') }}</label>
+        <InputText id="job-location" v-model="location" :placeholder="t('jobboard.create_form.locationPlaceholder')" class="full-width" />
       </div>
 
       <div class="form-row">
         <div class="form-field">
-          <label>{{ t('jobboard.date') }}</label>
-          <DatePicker v-model="scheduledDate" dateFormat="dd.mm.yy" />
+          <label for="job-date">{{ t('jobboard.date') }}</label>
+          <DatePicker id="job-date" v-model="scheduledDate" dateFormat="dd.mm.yy" />
         </div>
         <div class="form-field">
-          <label>{{ t('jobboard.time') }}</label>
-          <InputText v-model="scheduledTime" :placeholder="t('jobboard.create_form.timePlaceholder')" />
+          <label for="job-time">{{ t('jobboard.time') }}</label>
+          <InputText id="job-time" v-model="scheduledTime" :placeholder="t('jobboard.create_form.timePlaceholder')" />
         </div>
       </div>
 
       <div class="form-field">
-        <label>{{ t('jobboard.contact') }}</label>
-        <InputText v-model="contactInfo" :placeholder="t('jobboard.create_form.contactPlaceholder')" class="full-width" />
+        <label for="job-contact">{{ t('jobboard.contact') }}</label>
+        <InputText id="job-contact" v-model="contactInfo" :placeholder="t('jobboard.create_form.contactPlaceholder')" class="full-width" />
+      </div>
+
+      <div v-if="calendarEnabled && calendar.events.length" class="form-field">
+        <label for="job-event">{{ t('jobboard.linkedEvent') }}</label>
+        <Select
+          id="job-event"
+          v-model="selectedEventId"
+          :options="[{ label: t('jobboard.noLinkedEvent'), value: null }, ...calendar.events.map(e => ({ label: e.title, value: e.id }))]"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('jobboard.selectEvent')"
+          class="full-width"
+        />
       </div>
 
       <div class="form-actions">
@@ -130,10 +162,6 @@ async function submit() {
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .create-form {
   display: flex;
   flex-direction: column;
@@ -156,6 +184,12 @@ async function submit() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .form-actions {

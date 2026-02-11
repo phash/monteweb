@@ -22,7 +22,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
   const hasMore = ref(true)
   const page = ref(0)
 
-  async function fetchJobs(reset = false, category?: string) {
+  async function fetchJobs(reset = false, category?: string, eventId?: string) {
     if (reset) {
       page.value = 0
       hasMore.value = true
@@ -32,19 +32,25 @@ export const useJobboardStore = defineStore('jobboard', () => {
 
     loading.value = true
     try {
-      const res = await jobboardApi.listJobs(page.value, 20, category)
+      const res = await jobboardApi.listJobs(page.value, 20, category, undefined, eventId)
       const data = res.data.data
       jobs.value = reset ? data.content : [...jobs.value, ...data.content]
       hasMore.value = !data.last
       page.value++
+    } catch {
+      // Jobs not available
     } finally {
       loading.value = false
     }
   }
 
   async function fetchCategories() {
-    const res = await jobboardApi.getCategories()
-    categories.value = res.data.data
+    try {
+      const res = await jobboardApi.getCategories()
+      categories.value = res.data.data
+    } catch {
+      categories.value = []
+    }
   }
 
   async function fetchJob(id: string) {
@@ -78,8 +84,12 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function fetchMyAssignments() {
-    const res = await jobboardApi.getMyAssignments()
-    myAssignments.value = res.data.data
+    try {
+      const res = await jobboardApi.getMyAssignments()
+      myAssignments.value = res.data.data
+    } catch {
+      myAssignments.value = []
+    }
   }
 
   async function startAssignment(assignmentId: string) {
@@ -121,7 +131,17 @@ export const useJobboardStore = defineStore('jobboard', () => {
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a')
     a.href = url
-    a.download = 'elternstunden-report.csv'
+    a.download = 'familien-stundenbericht.csv'
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+
+  async function exportPdf() {
+    const res = await jobboardApi.exportPdf()
+    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'familien-stundenbericht.pdf'
     a.click()
     window.URL.revokeObjectURL(url)
   }
@@ -157,5 +177,6 @@ export const useJobboardStore = defineStore('jobboard', () => {
     fetchFamilyHours,
     fetchReport,
     exportCsv,
+    exportPdf,
   }
 })

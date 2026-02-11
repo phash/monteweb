@@ -75,6 +75,14 @@ public class UserService implements UserModuleApi {
         });
     }
 
+    @Override
+    public Page<UserInfo> searchUsers(String query, Pageable pageable) {
+        if (query == null || query.isBlank()) {
+            return userRepository.findByActiveTrue(pageable).map(this::toUserInfo);
+        }
+        return userRepository.searchByDisplayNameOrEmail(query.trim(), pageable).map(this::toUserInfo);
+    }
+
     public Page<UserInfo> findAll(Pageable pageable) {
         return userRepository.findByActiveTrue(pageable).map(this::toUserInfo);
     }
@@ -82,6 +90,13 @@ public class UserService implements UserModuleApi {
     public User findEntityById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
+    }
+
+    @Transactional
+    public UserInfo updateAvatarUrl(UUID userId, String avatarUrl) {
+        var user = findEntityById(userId);
+        user.setAvatarUrl(avatarUrl);
+        return toUserInfo(userRepository.save(user));
     }
 
     @Transactional
@@ -100,6 +115,86 @@ public class UserService implements UserModuleApi {
         var user = findEntityById(userId);
         user.setPasswordHash(passwordHash);
         userRepository.save(user);
+    }
+
+    @Override
+    public Optional<UserInfo> findByOidcProviderAndSubject(String provider, String subject) {
+        return userRepository.findByOidcProviderAndOidcSubject(provider, subject)
+                .map(this::toUserInfo);
+    }
+
+    @Override
+    @Transactional
+    public UserInfo createOidcUser(String email, String firstName, String lastName,
+                                    String oidcProvider, String oidcSubject, UserRole role) {
+        var user = new User();
+        user.setEmail(email.toLowerCase().trim());
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+        user.setDisplayName(firstName + " " + lastName);
+        user.setRole(role);
+        user.setOidcProvider(oidcProvider);
+        user.setOidcSubject(oidcSubject);
+        user.setEmailVerified(true); // OIDC provider already verified email
+        user = userRepository.save(user);
+
+        eventPublisher.publishEvent(new UserRegisteredEvent(
+                user.getId(), user.getEmail(), user.getFirstName(), user.getLastName(), user.getRole()
+        ));
+
+        return toUserInfo(user);
+    }
+
+    @Override
+    @Transactional
+    public void linkOidcProvider(UUID userId, String oidcProvider, String oidcSubject) {
+        var user = findEntityById(userId);
+        user.setOidcProvider(oidcProvider);
+        user.setOidcSubject(oidcSubject);
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public UserInfo adminUpdateProfile(UUID userId, String email, String firstName, String lastName, String phone) {
+        var user = findEntityById(userId);
+        if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmail(email.toLowerCase().trim())) {
+                throw new com.monteweb.shared.exception.BusinessException("Email already in use");
+            }
+            user.setEmail(email.toLowerCase().trim());
+        }
+        if (firstName != null) user.setFirstName(firstName);
+        if (lastName != null) user.setLastName(lastName);
+        if (phone != null) user.setPhone(phone);
+        user.setDisplayName(user.getFirstName() + " " + user.getLastName());
+        return toUserInfo(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserInfo addSpecialRole(UUID userId, String role) {
+        var user = findEntityById(userId);
+        var roles = new java.util.ArrayList<>(java.util.Arrays.asList(user.getSpecialRoles() != null ? user.getSpecialRoles() : new String[0]));
+        if (!roles.contains(role)) {
+            roles.add(role);
+            user.setSpecialRoles(roles.toArray(new String[0]));
+            userRepository.save(user);
+        }
+        return toUserInfo(user);
+    }
+
+    @Transactional
+    public UserInfo removeSpecialRole(UUID userId, String role) {
+        var user = findEntityById(userId);
+        var roles = new java.util.ArrayList<>(java.util.Arrays.asList(user.getSpecialRoles() != null ? user.getSpecialRoles() : new String[0]));
+        roles.remove(role);
+        user.setSpecialRoles(roles.toArray(new String[0]));
+        return toUserInfo(userRepository.save(user));
+    }
+
+    public List<UserInfo> findBySpecialRoleContaining(String rolePrefix) {
+        return userRepository.findBySpecialRoleContaining(rolePrefix).stream()
+                .map(this::toUserInfo)
+                .toList();
     }
 
     @Transactional

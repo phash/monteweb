@@ -6,6 +6,8 @@ export interface RoomInfo {
   id: string
   name: string
   description: string | null
+  publicDescription: string | null
+  avatarUrl: string | null
   type: RoomType
   sectionId: string | null
   archived: boolean
@@ -29,9 +31,22 @@ export interface RoomDetail extends RoomInfo {
   members: RoomMember[]
 }
 
+export interface RoomPublicInfo {
+  id: string
+  name: string
+  publicDescription: string | null
+  avatarUrl: string | null
+  type: RoomType
+  sectionId: string | null
+  memberCount: number
+  discoverable: boolean
+  tags: string[]
+}
+
 export interface RoomMember {
   userId: string
   displayName: string
+  avatarUrl: string | null
   role: RoomRole
   joinedAt: string
 }
@@ -57,4 +72,16 @@ export interface RoomChatChannelInfo {
   channelType: ChannelType
   lastMessage: string | null
   unreadCount: number
+}
+
+export interface JoinRequestInfo {
+  id: string
+  roomId: string
+  roomName: string
+  userId: string
+  userName: string
+  message: string | null
+  status: 'PENDING' | 'APPROVED' | 'DENIED'
+  createdAt: string
+  resolvedAt: string | null
 }

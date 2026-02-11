@@ -11,6 +11,8 @@ public record RoomInfo(
         UUID id,
         String name,
         String description,
+        String publicDescription,
+        String avatarUrl,
         String type,
         UUID sectionId,
         boolean archived,

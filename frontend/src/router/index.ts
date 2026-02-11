@@ -35,6 +35,7 @@ const router = createRouter({
           name: 'room-detail',
           component: () => import('@/views/RoomDetailView.vue'),
           props: true,
+          meta: { breadcrumbLabel: 'rooms.title' },
         },
         {
           path: 'family',
@@ -42,9 +43,10 @@ const router = createRouter({
           component: () => import('@/views/FamilyView.vue'),
         },
         {
-          path: 'messages',
+          path: 'messages/:conversationId?',
           name: 'messages',
           component: () => import('@/views/MessagesView.vue'),
+          props: true,
         },
         {
           path: 'jobs',
@@ -61,6 +63,7 @@ const router = createRouter({
           name: 'job-detail',
           component: () => import('@/views/JobDetailView.vue'),
           props: true,
+          meta: { breadcrumbLabel: 'jobboard.title' },
         },
         {
           path: 'cleaning',
@@ -74,6 +77,57 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'calendar',
+          name: 'calendar',
+          component: () => import('@/views/CalendarView.vue'),
+        },
+        {
+          path: 'calendar/create',
+          name: 'calendar-create',
+          component: () => import('@/views/EventCreateView.vue'),
+        },
+        {
+          path: 'calendar/events/:id',
+          name: 'event-detail',
+          component: () => import('@/views/EventDetailView.vue'),
+          props: true,
+          meta: { breadcrumbLabel: 'calendar.title' },
+        },
+        {
+          path: 'calendar/events/:id/edit',
+          name: 'event-edit',
+          component: () => import('@/views/EventCreateView.vue'),
+          props: true,
+        },
+        {
+          path: 'forms',
+          name: 'forms',
+          component: () => import('@/views/FormsView.vue'),
+        },
+        {
+          path: 'forms/create',
+          name: 'form-create',
+          component: () => import('@/views/FormCreateView.vue'),
+        },
+        {
+          path: 'forms/:id',
+          name: 'form-detail',
+          component: () => import('@/views/FormDetailView.vue'),
+          props: true,
+        },
+        {
+          path: 'forms/:id/edit',
+          name: 'form-edit',
+          component: () => import('@/views/FormCreateView.vue'),
+          props: true,
+        },
+        {
+          path: 'forms/:id/results',
+          name: 'form-results',
+          component: () => import('@/views/FormResultsView.vue'),
+          props: true,
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),
@@ -81,7 +135,7 @@ const router = createRouter({
         // Admin routes
         {
           path: 'admin',
-          meta: { requiresAdmin: true },
+          meta: { requiresAdmin: true, breadcrumbLabel: 'nav.admin' },
           children: [
             {
               path: '',
@@ -92,36 +146,43 @@ const router = createRouter({
               path: 'users',
               name: 'admin-users',
               component: () => import('@/views/admin/AdminUsers.vue'),
+              meta: { breadcrumbLabel: 'admin.users' },
             },
             {
               path: 'rooms',
               name: 'admin-rooms',
               component: () => import('@/views/admin/AdminRooms.vue'),
+              meta: { breadcrumbLabel: 'admin.rooms' },
             },
             {
               path: 'sections',
               name: 'admin-sections',
               component: () => import('@/views/admin/AdminSections.vue'),
+              meta: { breadcrumbLabel: 'admin.sections' },
             },
             {
               path: 'modules',
               name: 'admin-modules',
               component: () => import('@/views/admin/AdminModules.vue'),
+              meta: { breadcrumbLabel: 'admin.modules' },
             },
             {
               path: 'job-report',
               name: 'admin-job-report',
               component: () => import('@/views/admin/AdminJobReport.vue'),
+              meta: { breadcrumbLabel: 'admin.jobReport' },
             },
             {
               path: 'cleaning',
               name: 'admin-cleaning',
               component: () => import('@/views/admin/AdminCleaning.vue'),
+              meta: { breadcrumbLabel: 'cleaning.title' },
             },
             {
               path: 'theme',
               name: 'admin-theme',
               component: () => import('@/views/admin/AdminTheme.vue'),
+              meta: { breadcrumbLabel: 'admin.themeTitle' },
             },
           ],
         },

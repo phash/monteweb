@@ -4,9 +4,12 @@ import com.monteweb.cleaning.CleaningConfigInfo;
 import com.monteweb.cleaning.CleaningSlotInfo;
 import com.monteweb.cleaning.internal.service.CleaningService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.util.PdfService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +26,7 @@ import java.util.UUID;
 public class CleaningAdminController {
 
     private final CleaningService cleaningService;
+    private final PdfService pdfService;
 
     // ── Config endpoints ────────────────────────────────────────────────
 
@@ -79,6 +83,32 @@ public class CleaningAdminController {
     public ResponseEntity<ApiResponse<QrTokenResponse>> getQrToken(@PathVariable UUID id) {
         String token = cleaningService.getQrToken(id);
         return ResponseEntity.ok(ApiResponse.ok(new QrTokenResponse(token)));
+    }
+
+    // ── QR Code PDF Export ──────────────────────────────────────────────
+
+    @GetMapping(value = "/configs/{id}/qr-codes", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportQrCodesPdf(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        var config = cleaningService.getConfigById(id);
+        var slots = cleaningService.getSlotsByConfigAndDateRange(id, from, to);
+
+        var entries = slots.stream()
+                .map(s -> new PdfService.QrCodeEntry(
+                        s.date().toString(),
+                        s.startTime() + " - " + s.endTime(),
+                        s.qrToken() != null ? s.qrToken() : "N/A"))
+                .toList();
+
+        byte[] pdf = pdfService.generateCleaningQrCodes(config.title(), entries);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"qr-codes-" + config.title() + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     // ── Dashboard ───────────────────────────────────────────────────────

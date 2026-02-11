@@ -57,18 +57,44 @@ function progressPercent(completed: number, target: number) {
         <div
           class="progress-fill"
           :class="jobboard.familyHours.trafficLight.toLowerCase()"
-          :style="{ width: progressPercent(jobboard.familyHours.completedHours, jobboard.familyHours.targetHours) + '%' }"
+          :style="{ width: progressPercent(jobboard.familyHours.totalHours, jobboard.familyHours.targetHours) + '%' }"
         />
       </div>
       <div class="progress-label">
-        {{ jobboard.familyHours.completedHours }}/{{ jobboard.familyHours.targetHours }} Stunden
+        {{ jobboard.familyHours.totalHours }}/{{ jobboard.familyHours.targetHours }} {{ t('family.hoursUnit') }}
+      </div>
+    </div>
+
+    <!-- Cleaning hours sub-progress -->
+    <div v-if="jobboard.familyHours.targetCleaningHours > 0" class="cleaning-progress">
+      <div class="cleaning-header">
+        <span class="cleaning-label">{{ t('family.cleaningProgress') }}</span>
+        <Tag
+          :value="trafficLightLabel(jobboard.familyHours.cleaningTrafficLight)"
+          :severity="trafficLightSeverity(jobboard.familyHours.cleaningTrafficLight)"
+          class="cleaning-tag"
+        />
+      </div>
+      <div class="progress-bg progress-bg-sm">
+        <div
+          class="progress-fill"
+          :class="jobboard.familyHours.cleaningTrafficLight.toLowerCase()"
+          :style="{ width: progressPercent(jobboard.familyHours.cleaningHours, jobboard.familyHours.targetCleaningHours) + '%' }"
+        />
+      </div>
+      <div class="progress-label">
+        {{ jobboard.familyHours.cleaningHours }}/{{ jobboard.familyHours.targetCleaningHours }} {{ t('family.hoursUnit') }}
       </div>
     </div>
 
     <div class="hours-details">
       <div class="detail">
-        <span class="detail-label">{{ t('family.confirmed') }}</span>
+        <span class="detail-label">{{ t('family.jobHours') }}</span>
         <span class="detail-value">{{ jobboard.familyHours.completedHours }}h</span>
+      </div>
+      <div class="detail">
+        <span class="detail-label">{{ t('family.cleaningHours') }}</span>
+        <span class="detail-value">{{ jobboard.familyHours.cleaningHours }}h</span>
       </div>
       <div class="detail">
         <span class="detail-label">{{ t('family.pending') }}</span>
@@ -126,9 +152,34 @@ function progressPercent(completed: number, target: number) {
   text-align: center;
 }
 
+.cleaning-progress {
+  margin-bottom: 0.75rem;
+}
+
+.cleaning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.cleaning-label {
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-secondary);
+}
+
+.cleaning-tag {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+}
+
+.progress-bg-sm {
+  height: 8px;
+}
+
 .hours-details {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 0.5rem;
   text-align: center;
 }

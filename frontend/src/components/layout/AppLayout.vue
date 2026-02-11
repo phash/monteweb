@@ -2,15 +2,18 @@
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import BottomNav from './BottomNav.vue'
+import AppBreadcrumb from '@/components/common/AppBreadcrumb.vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 </script>
 
 <template>
   <div class="app-layout">
+    <a href="#main-content" class="skip-link">{{ $t('common.skipToContent', 'Zum Inhalt springen') }}</a>
     <AppHeader />
     <div class="app-body">
       <AppSidebar class="hide-mobile" />
-      <main class="app-main">
+      <main id="main-content" class="app-main" tabindex="-1">
+        <AppBreadcrumb />
         <ErrorBoundary>
           <router-view />
         </ErrorBoundary>
@@ -21,6 +24,29 @@ import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 </template>
 
 <style scoped>
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.skip-link:focus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  padding: 0.75rem 1.5rem;
+  background: var(--mw-primary);
+  color: white;
+  z-index: 9999;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 .app-layout {
   min-height: 100vh;
   display: flex;
@@ -37,6 +63,12 @@ import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
   padding: 1.5rem;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+@media (min-width: 768px) and (max-width: 1400px) {
+  .app-main {
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 767px) {

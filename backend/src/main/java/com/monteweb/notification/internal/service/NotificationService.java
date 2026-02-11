@@ -11,6 +11,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -19,11 +20,14 @@ public class NotificationService implements NotificationModuleApi {
 
     private final NotificationRepository repository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final Optional<WebPushService> webPushService;
 
     public NotificationService(NotificationRepository repository,
-                               SimpMessagingTemplate messagingTemplate) {
+                               SimpMessagingTemplate messagingTemplate,
+                               Optional<WebPushService> webPushService) {
         this.repository = repository;
         this.messagingTemplate = messagingTemplate;
+        this.webPushService = webPushService;
     }
 
     @Override
@@ -48,6 +52,10 @@ public class NotificationService implements NotificationModuleApi {
                 "/queue/notifications",
                 info
         );
+
+        // Also send Web Push for offline users
+        webPushService.ifPresent(push ->
+                push.sendPushToUser(userId, title, message, link));
     }
 
     @Override

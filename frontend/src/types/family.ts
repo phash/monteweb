@@ -1,6 +1,7 @@
 export interface FamilyInfo {
   id: string
   name: string
+  avatarUrl: string | null
   members: FamilyMemberInfo[]
 }
 
@@ -19,6 +20,20 @@ export interface SchoolSectionInfo {
   active: boolean
 }
 
+export interface FamilyInvitationInfo {
+  id: string
+  familyId: string
+  familyName: string
+  inviterId: string
+  inviterName: string
+  inviteeId: string
+  inviteeName: string
+  role: 'PARENT' | 'CHILD'
+  status: 'PENDING' | 'ACCEPTED' | 'DECLINED'
+  createdAt: string
+  resolvedAt: string | null
+}
+
 export interface TenantConfig {
   id: string
   schoolName: string
@@ -26,4 +41,5 @@ export interface TenantConfig {
   theme: Record<string, string>
   modules: Record<string, boolean>
   targetHoursPerFamily: number
+  targetCleaningHours: number
 }

@@ -13,10 +13,25 @@ public interface FamilyModuleApi {
     Optional<FamilyInfo> findById(UUID familyId);
 
     /**
+     * Returns all families in the system.
+     */
+    List<FamilyInfo> findAll();
+
+    /**
      * Returns all families that a user belongs to.
      * A parent belongs to exactly one family; a child may belong to multiple (separated parents).
      */
     List<FamilyInfo> findByUserId(UUID userId);
 
     boolean isUserInFamily(UUID userId, UUID familyId);
+
+    /**
+     * Admin: Add a user to a family without auth checks.
+     */
+    void adminAddMember(UUID familyId, UUID userId, String role);
+
+    /**
+     * Admin: Remove a user from a family without auth checks.
+     */
+    void adminRemoveMember(UUID familyId, UUID userId);
 }

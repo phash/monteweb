@@ -1,22 +1,84 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
-import type { UserInfo } from '@/types/user'
+import { roomsApi } from '@/api/rooms.api'
+import { familyApi } from '@/api/family.api'
+import type { UserInfo, UserRole } from '@/types/user'
+import type { RoomInfo, RoomRole } from '@/types/room'
+import type { FamilyInfo } from '@/types/family'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
+import ToggleSwitch from 'primevue/toggleswitch'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
+import TabPanel from 'primevue/tabpanel'
+import AutoComplete from 'primevue/autocomplete'
 
 const { t } = useI18n()
+const toast = useToast()
 
 const users = ref<UserInfo[]>([])
 const totalRecords = ref(0)
 const loading = ref(false)
 const page = ref(0)
 const rows = ref(20)
+
+// Edit dialog
+const showEdit = ref(false)
+const editUser = ref<UserInfo | null>(null)
+const editTab = ref('0')
+const editLoading = ref(false)
+
+// Profile form
+const profileForm = ref({ email: '', firstName: '', lastName: '', phone: '' })
+const editRole = ref<UserRole>('PARENT')
+const editActive = ref(true)
+
+// Rooms tab
+const userRooms = ref<RoomInfo[]>([])
+const roomsLoading = ref(false)
+const roomSearchQuery = ref('')
+const roomSearchResults = ref<UserInfo[]>([])
+const addRoomId = ref('')
+const addRoomRole = ref<RoomRole>('MEMBER')
+
+// Family tab
+const userFamilies = ref<FamilyInfo[]>([])
+const allFamilies = ref<FamilyInfo[]>([])
+const familiesLoading = ref(false)
+const addFamilyId = ref('')
+const addFamilyRole = ref('PARENT')
+
+const roleOptions: { label: string; value: UserRole }[] = [
+  { label: 'Superadmin', value: 'SUPERADMIN' },
+  { label: 'Section Admin', value: 'SECTION_ADMIN' },
+  { label: 'Teacher', value: 'TEACHER' },
+  { label: 'Parent', value: 'PARENT' },
+  { label: 'Student', value: 'STUDENT' },
+]
+
+const roomRoleOptions: { label: string; value: RoomRole }[] = [
+  { label: 'Leader', value: 'LEADER' },
+  { label: 'Member', value: 'MEMBER' },
+  { label: 'Parent', value: 'PARENT_MEMBER' },
+  { label: 'Guest', value: 'GUEST' },
+]
+
+const familyRoleOptions = [
+  { label: 'Parent', value: 'PARENT' },
+  { label: 'Child', value: 'CHILD' },
+]
 
 async function loadUsers() {
   loading.value = true
@@ -46,6 +108,140 @@ function roleSeverity(role: string): string {
   return map[role] ?? 'secondary'
 }
 
+function openEdit(user: UserInfo) {
+  editUser.value = user
+  editTab.value = '0'
+  profileForm.value = {
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phone: user.phone || '',
+  }
+  editRole.value = user.role
+  editActive.value = user.active
+  userRooms.value = []
+  userFamilies.value = []
+  showEdit.value = true
+}
+
+async function saveProfile() {
+  if (!editUser.value) return
+  editLoading.value = true
+  try {
+    await usersApi.adminUpdateProfile(editUser.value.id, profileForm.value)
+    if (editRole.value !== editUser.value.role) {
+      await usersApi.updateRole(editUser.value.id, editRole.value)
+    }
+    if (editActive.value !== editUser.value.active) {
+      await usersApi.setActive(editUser.value.id, editActive.value)
+    }
+    toast.add({ severity: 'success', summary: t('admin.userSaved'), life: 3000 })
+    showEdit.value = false
+    await loadUsers()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  } finally {
+    editLoading.value = false
+  }
+}
+
+async function loadUserRooms() {
+  if (!editUser.value) return
+  roomsLoading.value = true
+  try {
+    const res = await usersApi.getUserRooms(editUser.value.id)
+    userRooms.value = res.data.data
+  } finally {
+    roomsLoading.value = false
+  }
+}
+
+async function addMemberToRoom() {
+  if (!editUser.value || !addRoomId.value) return
+  try {
+    await roomsApi.addMember(addRoomId.value, editUser.value.id, addRoomRole.value)
+    toast.add({ severity: 'success', summary: t('admin.memberAdded'), life: 3000 })
+    addRoomId.value = ''
+    await loadUserRooms()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
+}
+
+async function removeFromRoom(roomId: string) {
+  if (!editUser.value) return
+  try {
+    await roomsApi.removeMember(roomId, editUser.value.id)
+    toast.add({ severity: 'success', summary: t('admin.memberRemoved'), life: 3000 })
+    await loadUserRooms()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
+}
+
+async function loadUserFamilies() {
+  if (!editUser.value) return
+  familiesLoading.value = true
+  try {
+    const [famRes, allFamRes] = await Promise.all([
+      usersApi.getUserFamilies(editUser.value.id),
+      familyApi.getAll(),
+    ])
+    userFamilies.value = famRes.data.data
+    allFamilies.value = allFamRes.data.data
+  } finally {
+    familiesLoading.value = false
+  }
+}
+
+async function addToFamily() {
+  if (!editUser.value || !addFamilyId.value) return
+  try {
+    await usersApi.addUserToFamily(editUser.value.id, addFamilyId.value, addFamilyRole.value)
+    toast.add({ severity: 'success', summary: t('admin.familyMemberAdded'), life: 3000 })
+    addFamilyId.value = ''
+    await loadUserFamilies()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
+}
+
+async function removeFromFamily(familyId: string) {
+  if (!editUser.value) return
+  try {
+    await usersApi.removeUserFromFamily(editUser.value.id, familyId)
+    toast.add({ severity: 'success', summary: t('admin.familyMemberRemoved'), life: 3000 })
+    await loadUserFamilies()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
+}
+
+function onTabChange(val: string | number) {
+  const tab = String(val)
+  if (tab === '1' && userRooms.value.length === 0) {
+    loadUserRooms()
+  } else if (tab === '2' && userFamilies.value.length === 0) {
+    loadUserFamilies()
+  }
+}
+
+// Room search (for adding user to room from rooms tab)
+const allRooms = ref<RoomInfo[]>([])
+const allRoomsLoaded = ref(false)
+
+async function searchRooms(event: { query: string }) {
+  if (!allRoomsLoaded.value) {
+    const res = await roomsApi.getAll({ page: 0, size: 200 })
+    allRooms.value = res.data.data.content
+    allRoomsLoaded.value = true
+  }
+  const q = event.query.toLowerCase()
+  roomSearchResults.value = allRooms.value
+    .filter((r: RoomInfo) => r.name.toLowerCase().includes(q))
+    .filter((r: RoomInfo) => !userRooms.value.some(ur => ur.id === r.id)) as any
+}
+
 onMounted(loadUsers)
 </script>
 
@@ -65,6 +261,7 @@ onMounted(loadUsers)
       :lazy="true"
       @page="onPage"
       stripedRows
+      scrollable
       class="card"
     >
       <Column field="displayName" :header="t('common.name')" />
@@ -80,10 +277,221 @@ onMounted(loadUsers)
         </template>
       </Column>
       <Column :header="t('common.actions')" style="width: 100px">
-        <template #body>
-          <Button icon="pi pi-pencil" severity="secondary" text size="small" />
+        <template #body="{ data }">
+          <Button icon="pi pi-pencil" severity="secondary" text size="small" @click="openEdit(data)" :aria-label="t('common.edit')" />
         </template>
       </Column>
     </DataTable>
+
+    <!-- Edit Dialog -->
+    <Dialog
+      v-model:visible="showEdit"
+      :header="t('admin.editUser')"
+      modal
+      :style="{ width: '650px', maxWidth: '95vw' }"
+    >
+      <Tabs :value="editTab" @update:value="onTabChange">
+        <TabList>
+          <Tab value="0">{{ t('admin.tabProfile') }}</Tab>
+          <Tab value="1">{{ t('admin.tabRooms') }}</Tab>
+          <Tab value="2">{{ t('admin.tabFamily') }}</Tab>
+        </TabList>
+        <TabPanels>
+          <!-- Profile Tab -->
+          <TabPanel value="0">
+            <form @submit.prevent="saveProfile" class="dialog-form">
+              <div class="form-field">
+                <label>{{ t('auth.email') }}</label>
+                <InputText v-model="profileForm.email" type="email" class="w-full" />
+              </div>
+              <div class="form-row">
+                <div class="form-field">
+                  <label>{{ t('auth.firstName') }}</label>
+                  <InputText v-model="profileForm.firstName" class="w-full" />
+                </div>
+                <div class="form-field">
+                  <label>{{ t('auth.lastName') }}</label>
+                  <InputText v-model="profileForm.lastName" class="w-full" />
+                </div>
+              </div>
+              <div class="form-field">
+                <label>{{ t('auth.phone') }}</label>
+                <InputText v-model="profileForm.phone" class="w-full" />
+              </div>
+              <div class="form-field">
+                <label>{{ t('admin.columnRole') }}</label>
+                <Select v-model="editRole" :options="roleOptions" optionLabel="label" optionValue="value" class="w-full" />
+              </div>
+              <div class="form-field toggle-field">
+                <label>{{ t('common.active') }}</label>
+                <ToggleSwitch v-model="editActive" />
+              </div>
+              <div class="form-actions">
+                <Button :label="t('common.save')" type="submit" :loading="editLoading" />
+              </div>
+            </form>
+          </TabPanel>
+
+          <!-- Rooms Tab -->
+          <TabPanel value="1">
+            <div v-if="roomsLoading" class="tab-loading">
+              <i class="pi pi-spin pi-spinner" />
+            </div>
+            <template v-else>
+              <div class="add-row">
+                <AutoComplete
+                  v-model="addRoomId"
+                  :suggestions="roomSearchResults"
+                  optionLabel="name"
+                  :placeholder="t('admin.searchRoom')"
+                  @complete="searchRooms"
+                  @item-select="(e: any) => { addRoomId = e.value.id }"
+                  class="flex-grow"
+                />
+                <Select v-model="addRoomRole" :options="roomRoleOptions" optionLabel="label" optionValue="value" style="width: 140px" />
+                <Button icon="pi pi-plus" :label="t('admin.addMember')" size="small" @click="addMemberToRoom" :disabled="!addRoomId" />
+              </div>
+              <div v-if="userRooms.length === 0" class="empty-tab">{{ t('admin.noRoomMemberships') }}</div>
+              <div v-else class="item-list">
+                <div v-for="room in userRooms" :key="room.id" class="item-row">
+                  <span class="item-name">{{ room.name }}</span>
+                  <Tag :value="t(`rooms.types.${room.type}`)" severity="info" />
+                  <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeFromRoom(room.id)" :aria-label="t('common.delete')" />
+                </div>
+              </div>
+            </template>
+          </TabPanel>
+
+          <!-- Family Tab -->
+          <TabPanel value="2">
+            <div v-if="familiesLoading" class="tab-loading">
+              <i class="pi pi-spin pi-spinner" />
+            </div>
+            <template v-else>
+              <div class="add-row">
+                <Select
+                  v-model="addFamilyId"
+                  :options="allFamilies.filter(f => !userFamilies.some(uf => uf.id === f.id))"
+                  optionLabel="name"
+                  optionValue="id"
+                  :placeholder="t('admin.selectFamily')"
+                  class="flex-grow"
+                  showClear
+                />
+                <Select v-model="addFamilyRole" :options="familyRoleOptions" optionLabel="label" optionValue="value" style="width: 120px" />
+                <Button icon="pi pi-plus" :label="t('admin.addToFamily')" size="small" @click="addToFamily" :disabled="!addFamilyId" />
+              </div>
+              <div v-if="userFamilies.length === 0" class="empty-tab">{{ t('admin.noFamilyMemberships') }}</div>
+              <div v-else class="item-list">
+                <div v-for="fam in userFamilies" :key="fam.id" class="item-row">
+                  <span class="item-name">{{ fam.name }}</span>
+                  <span class="item-members">{{ fam.members.length }} {{ t('family.members') }}</span>
+                  <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeFromFamily(fam.id)" :aria-label="t('common.delete')" />
+                </div>
+              </div>
+            </template>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
+    </Dialog>
   </div>
 </template>
+
+<style scoped>
+.dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding-top: 0.5rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.form-field label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row .form-field {
+  flex: 1;
+}
+
+.toggle-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+}
+
+.add-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.flex-grow {
+  flex: 1;
+  min-width: 150px;
+}
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.5rem;
+  border-radius: var(--p-border-radius);
+}
+
+.item-row:hover {
+  background-color: var(--p-surface-100);
+}
+
+.item-name {
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+}
+
+.item-members {
+  color: var(--p-text-muted-color);
+  font-size: var(--mw-font-size-sm);
+  white-space: nowrap;
+}
+
+.empty-tab {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--p-text-muted-color);
+}
+
+.tab-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+  font-size: 1.5rem;
+  color: var(--p-text-muted-color);
+}
+</style>

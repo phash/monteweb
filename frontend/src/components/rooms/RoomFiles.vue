@@ -157,7 +157,7 @@ function formatDate(date: string) {
     </p>
 
     <!-- New Folder Dialog -->
-    <Dialog v-model:visible="showNewFolder" :header="t('files.newFolder')" modal :style="{ width: '400px' }">
+    <Dialog v-model:visible="showNewFolder" :header="t('files.newFolder')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <InputText v-model="newFolderName" :placeholder="t('files.folderName')" class="folder-input" />
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" text @click="showNewFolder = false" />

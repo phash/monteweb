@@ -27,8 +27,14 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
+
+    @Column(name = "oidc_provider", length = 50)
+    private String oidcProvider;
+
+    @Column(name = "oidc_subject", length = 255)
+    private String oidcSubject;
 
     @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;

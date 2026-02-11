@@ -43,13 +43,21 @@ function progressPercent(completed: number, target: number) {
 <template>
   <div>
     <div class="page-header">
-      <PageTitle :title="t('jobboard.report')" :subtitle="t('admin.reportSubtitle')" />
-      <Button
-        :label="t('admin.csvExport')"
-        icon="pi pi-download"
-        severity="secondary"
-        @click="jobboard.exportCsv()"
-      />
+      <PageTitle :title="t('admin.familyReport')" :subtitle="t('admin.reportSubtitle')" />
+      <div class="flex gap-2">
+        <Button
+          :label="t('admin.pdfExport')"
+          icon="pi pi-file-pdf"
+          severity="secondary"
+          @click="jobboard.exportPdf()"
+        />
+        <Button
+          :label="t('admin.csvExport')"
+          icon="pi pi-download"
+          severity="secondary"
+          @click="jobboard.exportCsv()"
+        />
+      </div>
     </div>
 
     <!-- Summary Cards -->
@@ -84,19 +92,29 @@ function progressPercent(completed: number, target: number) {
 
     <DataTable v-else :value="jobboard.report" stripedRows class="report-table">
       <Column field="familyName" :header="t('admin.familyCol')" sortable />
-      <Column :header="t('admin.progressCol')" sortable sortField="completedHours">
+      <Column :header="t('admin.progressCol')" sortable sortField="totalHours">
         <template #body="{ data }">
           <div class="progress-bar-container">
             <div
               class="progress-bar"
               :class="data.trafficLight.toLowerCase()"
-              :style="{ width: progressPercent(data.completedHours, data.targetHours) + '%' }"
+              :style="{ width: progressPercent(data.totalHours, data.targetHours) + '%' }"
             />
             <span class="progress-text">
-              {{ data.completedHours }}/{{ data.targetHours }}h
-              ({{ progressPercent(data.completedHours, data.targetHours) }}%)
+              {{ data.totalHours }}/{{ data.targetHours }}h
+              ({{ progressPercent(data.totalHours, data.targetHours) }}%)
             </span>
           </div>
+        </template>
+      </Column>
+      <Column field="completedHours" :header="t('admin.jobHoursCol')" sortable>
+        <template #body="{ data }">
+          {{ data.completedHours }}h
+        </template>
+      </Column>
+      <Column field="cleaningHours" :header="t('admin.cleaningHoursCol')" sortable>
+        <template #body="{ data }">
+          {{ data.cleaningHours }}h
         </template>
       </Column>
       <Column field="pendingHours" :header="t('admin.pendingCol')" sortable>

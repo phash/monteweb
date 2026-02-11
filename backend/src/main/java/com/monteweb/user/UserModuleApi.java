@@ -1,5 +1,9 @@
 package com.monteweb.user;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +18,11 @@ public interface UserModuleApi {
     Optional<UserInfo> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    /**
+     * Search users by display name or email. Used by the messaging module for user picker.
+     */
+    Page<UserInfo> searchUsers(String query, Pageable pageable);
 
     /**
      * Creates a new user. Used by the auth module during registration.
@@ -37,4 +46,26 @@ public interface UserModuleApi {
      * Updates the user's password hash. Used by auth module for password reset.
      */
     void updatePasswordHash(UUID userId, String passwordHash);
+
+    /**
+     * Finds a user by OIDC provider and subject. Used for SSO login.
+     */
+    Optional<UserInfo> findByOidcProviderAndSubject(String provider, String subject);
+
+    /**
+     * Creates a user from OIDC claims (no password). Used by the auth module during SSO login.
+     */
+    UserInfo createOidcUser(String email, String firstName, String lastName,
+                            String oidcProvider, String oidcSubject, UserRole role);
+
+    /**
+     * Links an existing user to an OIDC provider. Used when a user logs in via SSO
+     * and their email matches an existing account.
+     */
+    void linkOidcProvider(UUID userId, String oidcProvider, String oidcSubject);
+
+    /**
+     * Finds users that have a specific special role (e.g. "SECTION_ADMIN:uuid").
+     */
+    List<UserInfo> findBySpecialRoleContaining(String role);
 }

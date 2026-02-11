@@ -65,6 +65,9 @@ public class Job {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "event_id")
+    private UUID eventId;
+
     @Column(name = "closed_at")
     private Instant closedAt;
 

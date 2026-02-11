@@ -21,6 +21,19 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     Page<Job> findByCreatedByOrderByCreatedAtDesc(UUID createdBy, Pageable pageable);
 
+    Page<Job> findByEventIdAndStatusInOrderByScheduledDateAscCreatedAtDesc(
+            UUID eventId, List<JobStatus> statuses, Pageable pageable);
+
+    Page<Job> findByCategoryAndEventIdAndStatusInOrderByScheduledDateAscCreatedAtDesc(
+            String category, UUID eventId, List<JobStatus> statuses, Pageable pageable);
+
+    Page<Job> findByEventIdAndCategoryAndStatusInOrderByScheduledDateAscCreatedAtDesc(
+            UUID eventId, String category, List<JobStatus> statuses, Pageable pageable);
+
+    List<Job> findByEventId(UUID eventId);
+
+    int countByEventId(UUID eventId);
+
     @Query("SELECT DISTINCT j.category FROM Job j ORDER BY j.category")
     List<String> findAllCategories();
 

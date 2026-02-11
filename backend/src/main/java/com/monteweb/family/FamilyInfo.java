@@ -9,6 +9,7 @@ import java.util.UUID;
 public record FamilyInfo(
         UUID id,
         String name,
+        String avatarUrl,
         List<FamilyMemberInfo> members
 ) {
     public record FamilyMemberInfo(

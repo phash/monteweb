@@ -38,7 +38,16 @@ public class TenantConfig {
     private Map<String, Boolean> modules;
 
     @Column(name = "target_hours_per_family", nullable = false)
-    private BigDecimal targetHoursPerFamily = new BigDecimal("20.0");
+    private BigDecimal targetHoursPerFamily = new BigDecimal("30.0");
+
+    @Column(name = "target_cleaning_hours", nullable = false)
+    private BigDecimal targetCleaningHours = new BigDecimal("3.0");
+
+    @Column(name = "parent_to_parent_messaging", nullable = false)
+    private boolean parentToParentMessaging = false;
+
+    @Column(name = "student_to_student_messaging", nullable = false)
+    private boolean studentToStudentMessaging = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

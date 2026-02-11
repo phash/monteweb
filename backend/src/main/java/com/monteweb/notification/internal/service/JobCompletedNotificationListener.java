@@ -16,13 +16,13 @@ public class JobCompletedNotificationListener {
 
     @ApplicationModuleListener
     public void onJobCompleted(JobCompletedEvent event) {
-        String title = "Elternstunden bestaetigt";
-        String message = event.hours() + " Stunden fuer \"" + event.jobTitle() + "\" wurden bestaetigt.";
-        String link = "/family";
+        String title = "Elternstunden bestätigt";
+        String message = event.hours() + " Stunden für \"" + event.jobTitle() + "\" wurden bestätigt.";
+        String link = "/jobs/" + event.jobId();
 
         notificationService.sendNotification(
                 event.userId(),
-                NotificationType.SYSTEM,
+                NotificationType.JOB_COMPLETED,
                 title,
                 message,
                 link,

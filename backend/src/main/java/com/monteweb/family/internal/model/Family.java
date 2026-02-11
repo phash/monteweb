@@ -30,6 +30,9 @@ public class Family {
     @Column(name = "invite_expires")
     private Instant inviteExpires;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @OneToMany(mappedBy = "family", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FamilyMember> members = new ArrayList<>();
 

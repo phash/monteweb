@@ -143,6 +143,12 @@ function formatDate(date: string | null) {
             <label>{{ t('common.slots') }}</label>
             <span>{{ jobboard.currentJob.currentAssignees }}/{{ jobboard.currentJob.maxAssignees }}</span>
           </div>
+          <div v-if="jobboard.currentJob.eventTitle" class="detail-item">
+            <label>{{ t('jobboard.linkedEvent') }}</label>
+            <a class="event-link" @click.stop="router.push({ name: 'event-detail', params: { id: jobboard.currentJob.eventId! } })">
+              <i class="pi pi-calendar-plus" /> {{ jobboard.currentJob.eventTitle }}
+            </a>
+          </div>
         </div>
 
         <p v-if="jobboard.currentJob.description" class="job-description">
@@ -203,7 +209,7 @@ function formatDate(date: string | null) {
     </template>
 
     <!-- Complete Dialog -->
-    <Dialog v-model:visible="showCompleteDialog" :header="t('jobboard.completeTask')" modal :style="{ width: '450px' }">
+    <Dialog v-model:visible="showCompleteDialog" :header="t('jobboard.completeTask')" modal :style="{ width: '450px', maxWidth: '90vw' }">
       <div class="complete-form">
         <div class="form-field">
           <label>{{ t('jobboard.actualHours') }}</label>
@@ -223,10 +229,6 @@ function formatDate(date: string | null) {
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .job-header {
   display: flex;
   justify-content: space-between;
@@ -309,6 +311,20 @@ function formatDate(date: string | null) {
 .hours {
   font-weight: 600;
   font-size: var(--mw-font-size-sm);
+}
+
+.event-link {
+  color: var(--mw-primary);
+  cursor: pointer;
+  font-size: var(--mw-font-size-sm);
+}
+
+.event-link:hover {
+  text-decoration: underline;
+}
+
+.event-link i {
+  margin-right: 0.25rem;
 }
 
 .text-muted {

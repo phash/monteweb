@@ -10,7 +10,9 @@ MonteWeb ist ein modulares, selbst-gehostetes Schul-Intranet für Montessori-Sch
 
 ## Projektstatus
 
-Alle 6 Phasen sind abgeschlossen. Das Projekt kompiliert, alle Tests bestehen, und der volle Docker-Stack (5 Container) läuft.
+Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 98 Frontend-Tests bestehen, und der volle Docker-Stack läuft.
+
+### Kern-Phasen (1–6)
 
 | Phase | Inhalt | Status |
 |-------|--------|--------|
@@ -21,6 +23,22 @@ Alle 6 Phasen sind abgeschlossen. Das Projekt kompiliert, alle Tests bestehen, u
 | 5 | Messaging & Chat | COMPLETE |
 | 6 | i18n, Security-Hardening, DSGVO, Production-Setup | COMPLETE |
 
+### Erweiterungs-Phasen (7–17)
+
+| Phase | Inhalt | Status |
+|-------|--------|--------|
+| 7 | Messaging-Inbox mit User-Picker & Kommunikationsregeln | COMPLETE |
+| 8 | Raum-Diskussions-Threads (LEADER-Berechtigungen) | COMPLETE |
+| 9 | E-Mail-Versand (SMTP, conditional) | COMPLETE |
+| 10 | Englische Übersetzung (i18n DE+EN) + Language-Switcher | COMPLETE |
+| 11 | Testabdeckung (Vitest 27 Tests + Backend Integration Tests) | COMPLETE |
+| 12 | CI/CD Pipeline (GitHub Actions) | COMPLETE |
+| 13 | OIDC/SSO (OAuth2 Client, conditional) | COMPLETE |
+| 14 | PDF-Export (Stundenbericht, QR-Codes) | COMPLETE |
+| 15 | Web Push Notifications (VAPID) | COMPLETE |
+| 16 | Monitoring (Prometheus + Grafana) | COMPLETE |
+| 17 | Kalender/Events (Raum/Bereich/Schulweit, RSVP) | COMPLETE |
+
 ---
 
 ## Tech-Stack
@@ -29,9 +47,15 @@ Alle 6 Phasen sind abgeschlossen. Das Projekt kompiliert, alle Tests bestehen, u
 - **Java 21** mit **Spring Boot 3.4.2**
 - **Spring Modulith 1.3.2** für modulare Architektur
 - **Spring Security** mit JWT + Redis Sessions
-- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V020)
+- **Spring OAuth2 Client** für OIDC/SSO (conditional via `monteweb.oidc.enabled`)
+- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V035)
 - **Spring WebSocket** + Redis Pub/Sub für Echtzeit
-- **Spring Boot Actuator** für Health/Info-Endpoints
+- **Spring Boot Actuator** für Health/Info/Prometheus-Endpoints
+- **Spring Boot Mail** für E-Mail-Versand (conditional via `monteweb.email.enabled`)
+- **OpenHTMLToPDF** für PDF-Generierung (Stundenberichte, QR-Codes)
+- **web-push** (VAPID) für Push Notifications (conditional via `monteweb.push.enabled`)
+- **Micrometer + Prometheus** für Metriken
+- **Testcontainers** (PostgreSQL + Redis) für Integration Tests
 - **PostgreSQL 16** als Hauptdatenbank
 - **Redis 7** für Cache, Sessions, Pub/Sub
 - **MinIO** für Dateispeicher (S3-kompatibel)
@@ -44,14 +68,17 @@ Alle 6 Phasen sind abgeschlossen. Das Projekt kompiliert, alle Tests bestehen, u
 - **PrimeVue 4.5** mit Aura-Theme (+ PrimeIcons 7)
 - **Pinia 3** für State Management
 - **Vue Router 4.6** für Routing
-- **vue-i18n 11** für Internationalisierung (aktuell: Deutsch)
+- **vue-i18n 11** für Internationalisierung (Deutsch + Englisch)
 - **Axios 1.13** als HTTP-Client
+- **Vitest 4** + **@vue/test-utils** für Unit/Component-Tests (98 Tests)
 - **PWA** via vite-plugin-pwa
 
 ### Infrastruktur
 - **Docker Compose** für Entwicklung (`docker-compose.dev.yml`) und Produktion (`docker-compose.yml`)
 - **nginx** als Reverse Proxy + SPA-Server (Production)
 - Multi-Stage Dockerfiles für Backend und Frontend
+- **GitHub Actions** CI/CD Pipeline (`.github/workflows/ci.yml`)
+- **Prometheus + Grafana** Monitoring (optional, via `docker compose --profile monitoring`)
 
 ---
 
@@ -59,110 +86,177 @@ Alle 6 Phasen sind abgeschlossen. Das Projekt kompiliert, alle Tests bestehen, u
 
 ```
 monteweb/
-├── docker-compose.yml          # Production (5 Services)
+├── docker-compose.yml          # Production (5+ Services, optional monitoring profile)
 ├── docker-compose.dev.yml      # Dev (Postgres, Redis, MinIO)
 ├── .env.example
+├── .github/workflows/ci.yml   # CI/CD: backend, frontend, docker jobs
 ├── docs/
 │
 ├── backend/
 │   ├── pom.xml
 │   ├── Dockerfile              # Multi-Stage: maven → temurin-21-jre
-│   └── src/main/java/com/monteweb/
-│       ├── MonteWebApplication.java
+│   └── src/
+│       ├── main/java/com/monteweb/
+│       │   ├── MonteWebApplication.java
+│       │   │
+│       │   ├── auth/               # Authentifizierung, JWT, Password-Reset, OIDC
+│       │   │   ├── AuthModuleApi.java          # Public Facade
+│       │   │   ├── AuthInfo.java               # Public DTO
+│       │   │   └── internal/
+│       │   │       ├── config/OidcConfig.java          # Conditional OAuth2 Client
+│       │   │       ├── controller/OidcAuthController.java  # SSO endpoints
+│       │   │       └── service/OidcUserService.java    # OIDC user resolution
+│       │   │
+│       │   ├── user/               # User-Management, Profil, Rollen, OIDC-Felder
+│       │   │   ├── UserModuleApi.java          # inkl. OIDC + Search Methoden
+│       │   │   ├── UserInfo.java
+│       │   │   └── internal/
+│       │   │
+│       │   ├── family/             # Familienverbund, Einladungscodes, Stundenkonto, Einladungen
+│       │   │   ├── FamilyModuleApi.java
+│       │   │   ├── FamilyInfo.java
+│       │   │   ├── FamilyInvitationEvent.java     # Spring Event
+│       │   │   └── internal/
+│       │   │       ├── model/FamilyInvitation.java, FamilyInvitationStatus.java
+│       │   │       ├── repository/FamilyInvitationRepository.java
+│       │   │       ├── dto/FamilyInvitationInfo.java, InviteMemberRequest.java
+│       │   │
+│       │   ├── school/             # Schulbereiche (Krippe, KiGa, GS, MS, OS)
+│       │   │   ├── SchoolModuleApi.java
+│       │   │   ├── SectionInfo.java
+│       │   │   └── internal/
+│       │   │
+│       │   ├── room/               # Räume + Diskussions-Threads + Beitrittsanfragen
+│       │   │   ├── RoomModuleApi.java
+│       │   │   ├── RoomInfo.java
+│       │   │   ├── DiscussionThreadCreatedEvent.java   # Spring Event
+│       │   │   ├── RoomJoinRequestEvent.java           # Spring Event
+│       │   │   ├── RoomJoinRequestResolvedEvent.java   # Spring Event
+│       │   │   └── internal/
+│       │   │       ├── model/DiscussionThread.java, DiscussionReply.java, ThreadStatus.java
+│       │   │       ├── model/RoomJoinRequest.java, RoomJoinRequestStatus.java
+│       │   │       ├── repository/DiscussionThreadRepository.java, DiscussionReplyRepository.java
+│       │   │       ├── repository/RoomJoinRequestRepository.java
+│       │   │       ├── dto/JoinRequestInfo.java
+│       │   │       ├── service/DiscussionThreadService.java
+│       │   │       └── controller/DiscussionThreadController.java
+│       │   │
+│       │   ├── feed/               # Unified Feed, Posts, Kommentare, Banner
+│       │   │   ├── FeedModuleApi.java
+│       │   │   ├── FeedPostInfo.java
+│       │   │   └── internal/
+│       │   │
+│       │   ├── calendar/             # [Optional] Kalender & Events mit RSVP
+│       │   │   ├── CalendarModuleApi.java       # Public Facade
+│       │   │   ├── EventInfo.java               # Public DTO (inkl. RSVP-Counts)
+│       │   │   ├── EventScope.java              # Enum: ROOM, SECTION, SCHOOL
+│       │   │   ├── EventRecurrence.java         # Enum: NONE, DAILY, WEEKLY, MONTHLY, YEARLY
+│       │   │   ├── RsvpStatus.java              # Enum: ATTENDING, MAYBE, DECLINED
+│       │   │   ├── CreateEventRequest.java, UpdateEventRequest.java
+│       │   │   ├── EventCreatedEvent.java, EventCancelledEvent.java  # Spring Events
+│       │   │   └── internal/
+│       │   │       ├── config/CalendarModuleConfig.java
+│       │   │       ├── model/CalendarEvent.java, EventRsvp.java
+│       │   │       ├── repository/CalendarEventRepository.java, EventRsvpRepository.java
+│       │   │       ├── service/CalendarService.java
+│       │   │       └── controller/CalendarController.java
+│       │   │
+│       │   ├── notification/       # In-App + Push Benachrichtigungen
+│       │   │   ├── NotificationModuleApi.java
+│       │   │   ├── NotificationType.java       # inkl. DISCUSSION_*, EVENT_*, ROOM_JOIN_*, FAMILY_INVITATION_*
+│       │   │   └── internal/
+│       │   │       ├── model/PushSubscription.java
+│       │   │       ├── service/WebPushService.java             # VAPID Push
+│       │   │       ├── service/DiscussionNotificationListener.java
+│       │   │       ├── service/CalendarNotificationListener.java
+│       │   │       ├── service/RoomJoinRequestNotificationListener.java
+│       │   │       ├── service/FamilyInvitationNotificationListener.java
+│       │   │       └── controller/PushNotificationController.java
+│       │   │
+│       │   ├── admin/              # System-Config, Audit-Log, Modul-Verwaltung
+│       │   │   └── internal/
+│       │   │
+│       │   ├── messaging/          # [Optional] Direktnachrichten & Chat + Kommunikationsregeln
+│       │   │   ├── MessagingModuleApi.java
+│       │   │   └── internal/
+│       │   │
+│       │   ├── files/              # [Optional] Dateiablage via MinIO
+│       │   │   └── internal/
+│       │   │
+│       │   ├── jobboard/           # [Optional] Jobbörse & Elternstunden + PDF-Export
+│       │   │   ├── JobboardModuleApi.java
+│       │   │   └── internal/
+│       │   │
+│       │   ├── cleaning/           # [Optional] Putz-Orga mit QR-Check-in + QR-PDF-Export
+│       │   │   └── internal/
+│       │   │
+│       │   └── shared/             # Querschnittsthemen (kein Modul, via @NamedInterface exponiert)
+│       │       ├── config/         # CORS, SecurityConfig, RateLimitFilter, WebSocketConfig, EmailProperties, EmailService
+│       │       ├── dto/            # ApiResponse, ErrorResponse, PageResponse
+│       │       ├── exception/      # GlobalExceptionHandler, Custom Exceptions
+│       │       └── util/           # SecurityUtils, PdfService
 │       │
-│       ├── auth/               # Authentifizierung, JWT, Password-Reset
-│       │   ├── AuthModuleApi.java          # Public Facade
-│       │   ├── AuthInfo.java               # Public DTO
-│       │   └── internal/                   # Service, Controller, Model, Repo
-│       │
-│       ├── user/               # User-Management, Profil, Rollen
-│       │   ├── UserModuleApi.java
-│       │   ├── UserInfo.java
-│       │   └── internal/
-│       │
-│       ├── family/             # Familienverbund, Einladungscodes, Stundenkonto
-│       │   ├── FamilyModuleApi.java
-│       │   ├── FamilyInfo.java
-│       │   └── internal/
-│       │
-│       ├── school/             # Schulbereiche (Krippe, KiGa, GS, MS, OS)
-│       │   ├── SchoolModuleApi.java
-│       │   ├── SectionInfo.java
-│       │   └── internal/
-│       │
-│       ├── room/               # Räume (Klasse, Gruppe, Projekt, AG)
-│       │   ├── RoomModuleApi.java
-│       │   ├── RoomInfo.java
-│       │   └── internal/
-│       │
-│       ├── feed/               # Unified Feed, Posts, Kommentare, Banner
-│       │   ├── FeedModuleApi.java
-│       │   ├── FeedPostInfo.java
-│       │   └── internal/
-│       │
-│       ├── notification/       # In-App Benachrichtigungen, Event-Listener
-│       │   ├── NotificationModuleApi.java
-│       │   ├── NotificationType.java
-│       │   └── internal/
-│       │
-│       ├── admin/              # System-Config, Audit-Log, Modul-Verwaltung
-│       │   └── internal/
-│       │
-│       ├── messaging/          # [Optional] Direktnachrichten & Chat
-│       │   ├── MessagingModuleApi.java
-│       │   └── internal/
-│       │
-│       ├── files/              # [Optional] Dateiablage via MinIO
-│       │   └── internal/
-│       │
-│       ├── jobboard/           # [Optional] Jobbörse & Elternstunden
-│       │   ├── JobboardModuleApi.java
-│       │   └── internal/
-│       │
-│       ├── cleaning/           # [Optional] Putz-Orga mit QR-Check-in
-│       │   └── internal/
-│       │
-│       └── shared/             # Querschnittsthemen (kein Modul, via @NamedInterface exponiert)
-│           ├── config/         # CORS, SecurityConfig, RateLimitFilter, WebSocketConfig
-│           ├── dto/            # ApiResponse, ErrorResponse, PageResponse
-│           ├── exception/      # GlobalExceptionHandler, Custom Exceptions
-│           └── util/           # SecurityUtils
+│       └── test/java/com/monteweb/
+│           ├── TestContainerConfig.java            # Shared Testcontainers (PostgreSQL + Redis)
+│           ├── auth/AuthControllerIntegrationTest.java
+│           └── user/UserServiceIntegrationTest.java
 │
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
+│   ├── vitest.config.ts        # Test-Konfiguration (jsdom, setup file)
 │   ├── tsconfig.json
+│   ├── tsconfig.app.json       # Excludes test files
 │   ├── nginx.conf              # SPA-Config für Docker-Runtime
 │   ├── Dockerfile              # Multi-Stage: node:22 → nginx:alpine
 │   └── src/
 │       ├── main.ts
 │       ├── App.vue
+│       ├── test/setup.ts       # localStorage Mock für Vitest
 │       ├── router/index.ts     # Lazy-loaded Routes + Auth-Guards
-│       ├── i18n/de.ts          # Deutsche Übersetzungen (~300 Keys)
-│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, ...)
+│       ├── i18n/
+│       │   ├── index.ts        # Browser-Locale-Detection
+│       │   ├── de.ts           # Deutsche Übersetzungen (~375+ Keys)
+│       │   └── en.ts           # Englische Übersetzungen
+│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, ...)
+│       │   ├── discussions.ts  # Diskussions-Threads Store
+│       │   ├── calendar.ts     # Kalender/Events Store
+│       │   └── __tests__/      # Store Unit Tests (98 Tests)
+│       │       ├── auth.test.ts        # 5 Tests
+│       │       ├── messaging.test.ts   # 8 Tests
+│       │       ├── feed.test.ts        # 9 Tests
+│       │       └── calendar.test.ts    # 9 Tests
 │       ├── api/                # Axios-Wrapper pro Modul (client.ts + *.api.ts)
-│       ├── types/              # TypeScript Interfaces (user, room, feed, family, ...)
-│       ├── composables/        # useAuth, useNotifications, useWebSocket
+│       │   ├── discussions.api.ts      # Diskussions-Thread API
+│       │   └── calendar.api.ts         # Kalender/Events API
+│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, calendar, ...)
+│       ├── composables/        # useAuth, useNotifications, useWebSocket, usePushNotifications
 │       ├── components/
-│       │   ├── common/         # PageTitle, LoadingSpinner, EmptyState, ErrorBoundary
-│       │   ├── layout/         # AppHeader, AppSidebar, BottomNav
+│       │   ├── common/         # PageTitle, LoadingSpinner, EmptyState, ErrorBoundary, LanguageSwitcher
+│       │   ├── layout/         # AppHeader (+ LanguageSwitcher), AppSidebar, BottomNav
 │       │   ├── feed/           # FeedList, FeedPost, PostComposer
-│       │   ├── rooms/          # RoomFiles, RoomChat
-│       │   └── family/         # FamilyHoursWidget
+│       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView, RoomEvents
+│       │   ├── messaging/      # NewMessageDialog (User-Picker)
+│       │   ├── family/         # FamilyHoursWidget, InviteMemberDialog
+│       │   └── __tests__/      # Component Tests
+│       │       └── NewMessageDialog.test.ts  # 5 Tests
 │       ├── views/
-│       │   ├── LoginView.vue
+│       │   ├── LoginView.vue           # + SSO-Button (conditional)
 │       │   ├── DashboardView.vue       # = Feed-Ansicht
 │       │   ├── RoomsView.vue
-│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members, Chat, Files
-│       │   ├── DiscoverRoomsView.vue
-│       │   ├── MessagesView.vue
+│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members (+Join Requests), Discussions, Chat, Files, Events
+│       │   ├── DiscoverRoomsView.vue   # + Browse alle Räume + Beitrittsanfragen
+│       │   ├── MessagesView.vue        # + NewMessageDialog, Deep-Link via conversationId
 │       │   ├── JobBoardView.vue
 │       │   ├── JobCreateView.vue
 │       │   ├── JobDetailView.vue
 │       │   ├── CleaningView.vue
 │       │   ├── CleaningSlotView.vue
-│       │   ├── FamilyView.vue
-│       │   ├── ProfileView.vue
+│       │   ├── CalendarView.vue        # Agenda-Liste mit Monatsnavigation
+│       │   ├── EventDetailView.vue     # Event-Info + RSVP + Aktionen
+│       │   ├── EventCreateView.vue     # Erstellen/Bearbeiten mit Scope-Picker
+│       │   ├── FamilyView.vue          # + Einladungen senden/empfangen
+│       │   ├── ProfileView.vue         # + Push Notification Toggle
 │       │   ├── NotFoundView.vue        # 404
 │       │   └── admin/
 │       │       ├── AdminDashboard.vue
@@ -171,11 +265,19 @@ monteweb/
 │       │       ├── AdminSections.vue
 │       │       ├── AdminModules.vue
 │       │       ├── AdminTheme.vue
-│       │       ├── AdminCleaning.vue
-│       │       └── AdminJobReport.vue
+│       │       ├── AdminCleaning.vue   # + QR-PDF-Export
+│       │       └── AdminJobReport.vue  # + PDF-Export
 │       └── assets/styles/
 │           ├── variables.css   # CSS Custom Properties (Theming)
 │           └── global.css
+│
+├── monitoring/
+│   ├── prometheus.yml                              # Scrape-Config
+│   └── grafana/
+│       ├── dashboards/monteweb-overview.json       # 7-Panel Dashboard
+│       └── provisioning/
+│           ├── datasources/prometheus.yml
+│           └── dashboards/dashboards.yml
 │
 └── nginx/
     └── nginx.conf              # Production: Reverse Proxy + Security Headers
@@ -201,7 +303,7 @@ monteweb/
 
 4. **Optionale Module:** Werden über `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` aktiviert. ALLE Beans (Services, Controllers, Components) brauchen diese Annotation, nicht nur Config-Klassen.
 
-5. **Flyway-Migrationen:** V001–V020 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
+5. **Flyway-Migrationen:** V001–V035 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
 
 6. **Security:** Alle Endpunkte gesichert. JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Security-Headers (HSTS, X-Frame-Options, CSP).
 
@@ -209,11 +311,11 @@ monteweb/
 
 1. **Composition API + `<script setup>`:** Kein Options API. TypeScript in allen Dateien.
 
-2. **PrimeVue 4:** Aura-Theme. Komponenten einzeln importieren (kein globales Plugin).
+2. **PrimeVue 4:** Aura-Theme. Komponenten einzeln importieren (kein globales Plugin). `ToastService` ist global registriert (`main.ts`), `<Toast />` liegt in `App.vue`. Views nutzen `useToast()` für Feedback.
 
 3. **Pinia Stores:** Ein Store pro Domäne. Stores rufen API-Funktionen auf, halten den State.
 
-4. **i18n:** Alle UI-Texte als Keys via `vue-i18n`. Zentrale Datei: `src/i18n/de.ts`. Keine hardcodierten deutschen Strings in `.vue`-Dateien.
+4. **i18n:** Alle UI-Texte als Keys via `vue-i18n`. Sprachen: `src/i18n/de.ts` (Deutsch) + `src/i18n/en.ts` (Englisch). Browser-Locale-Detection in `src/i18n/index.ts`. LanguageSwitcher im Header. Keine hardcodierten Strings in `.vue`-Dateien.
 
 5. **API-Client:** Zentraler Axios-Client (`api/client.ts`) mit JWT-Interceptor (auto-refresh), Error-Handling.
 
@@ -248,6 +350,16 @@ V017  room_interest_fields
 V018  room_chat_channels
 V019  user_deletion_fields (DSGVO)
 V020  password_reset_tokens
+V021  communication_rules (tenant_config: parent_to_parent, student_to_student messaging)
+V022  discussion_threads + discussion_replies
+V023  push_subscriptions
+V024  OIDC-Felder (users: oidc_provider, oidc_subject, password_hash nullable)
+V025  calendar_events + calendar_event_rsvps
+V026  calendar-Modul zu default-modules
+V027–V032  (diverse Schema-Erweiterungen: Avatare, öffentliche Raumbeschreibungen, Admin-Seed)
+V033  seed_test_users (Testdaten für alle Rollen)
+V034  room_join_requests (Beitrittsanfragen für Räume)
+V035  family_invitations (Familien-Einladungen per User-Suche)
 ```
 
 ---
@@ -262,6 +374,8 @@ POST   /logout                Logout
 POST   /refresh               Token Refresh
 POST   /password-reset        Passwort-Reset anfordern
 POST   /password-reset/confirm  Passwort-Reset bestätigen
+GET    /oidc/config            OIDC-Verfügbarkeit + Authorization-URI
+POST   /oidc/token             OIDC-Claims → JWT-Token-Austausch
 ```
 
 ### Users (`/api/v1/users`)
@@ -272,6 +386,7 @@ GET    /me/data-export        DSGVO: Alle eigenen Daten als JSON
 DELETE /me                    DSGVO: Account anonymisieren/löschen
 GET    /{id}                  User-Profil (eingeschränkt)
 GET    /                      User-Liste (Admin)
+GET    /search?q={query}      User-Suche (für Messaging User-Picker)
 PUT    /{id}/roles            Rollen ändern (Admin)
 ```
 
@@ -284,6 +399,11 @@ POST   /{id}/invite            Einladungscode generieren
 POST   /{id}/children          Kind verknüpfen
 DELETE /{id}/members/{userId}  Mitglied entfernen
 GET    /{id}/hours             Stundenkonto
+POST   /{id}/invitations       Mitglied per User-Suche einladen
+GET    /{id}/invitations       Offene Einladungen einer Familie
+GET    /my-invitations         Meine empfangenen Einladungen
+POST   /invitations/{id}/accept   Einladung annehmen
+POST   /invitations/{id}/decline  Einladung ablehnen
 ```
 
 ### School Sections (`/api/v1/sections`)
@@ -298,6 +418,7 @@ DELETE /{id}                   Deaktivieren
 ```
 GET    /mine                   Meine Räume
 GET    /                       Alle sichtbaren Räume
+GET    /browse?q=&page=&size=  Alle Räume wo User nicht Mitglied (für Beitrittsanfragen)
 POST   /                       Raum erstellen
 GET    /{id}                   Raum-Details
 PUT    /{id}                   Raum bearbeiten
@@ -305,6 +426,22 @@ PUT    /{id}/settings          Raum-Einstellungen
 POST   /{id}/members           Mitglied hinzufügen
 DELETE /{id}/members/{userId}  Mitglied entfernen
 GET    /{id}/members           Mitgliederliste
+POST   /{id}/join-request      Beitrittsanfrage senden (body: { message?: string })
+GET    /{id}/join-requests     Offene Anfragen (Leader only)
+POST   /{id}/join-requests/{rid}/approve  Anfrage annehmen (Leader)
+POST   /{id}/join-requests/{rid}/deny     Anfrage ablehnen (Leader)
+GET    /my-join-requests       Eigene Beitrittsanfragen
+```
+
+### Discussion Threads (`/api/v1/rooms/{roomId}/threads`)
+```
+GET    /                       Threads auflisten (paginiert)
+POST   /                       Thread erstellen (LEADER)
+GET    /{threadId}             Thread-Detail
+PUT    /{threadId}/archive     Archivieren (LEADER)
+DELETE /{threadId}             Löschen (LEADER)
+GET    /{threadId}/replies     Antworten (paginiert)
+POST   /{threadId}/replies     Antwort hinzufügen (nur wenn ACTIVE)
 ```
 
 ### Feed (`/api/v1/feed`)
@@ -348,6 +485,7 @@ PUT    /{id}/assignments/{aid} Zuweisung aktualisieren
 POST   /{id}/assignments/{aid}/confirm  Stunden bestätigen
 GET    /report                 Admin: Stunden-Übersicht
 GET    /report/export          Admin: CSV-Export
+GET    /report/pdf             Admin: PDF-Export
 ```
 
 ### Cleaning (`/api/v1/cleaning`) [Modul: cleaning]
@@ -355,6 +493,7 @@ GET    /report/export          Admin: CSV-Export
 GET    /configs                Putz-Konfigurationen (Admin)
 POST   /configs                Konfiguration anlegen
 POST   /configs/{id}/generate  Termine generieren
+GET    /configs/{id}/qr-codes  QR-Codes als PDF (Admin)
 GET    /slots                  Offene Putztermine
 GET    /slots/mine             Meine Termine
 POST   /slots/{id}/register   Anmelden (Opt-in)
@@ -364,12 +503,27 @@ POST   /slots/{id}/checkout    Check-out
 GET    /dashboard              Admin-Dashboard
 ```
 
+### Calendar (`/api/v1/calendar`) [Modul: calendar]
+```
+GET    /events?from=&to=       Persönlicher Kalender (paginiert)
+POST   /events                 Event erstellen
+GET    /events/{id}            Event-Detail
+PUT    /events/{id}            Event bearbeiten
+DELETE /events/{id}            Event löschen
+POST   /events/{id}/cancel     Event absagen
+POST   /events/{id}/rsvp       RSVP (ATTENDING/MAYBE/DECLINED)
+GET    /rooms/{roomId}/events  Raum-Events
+```
+
 ### Notifications (`/api/v1/notifications`)
 ```
 GET    /                       Meine Benachrichtigungen
 PUT    /{id}/read              Als gelesen markieren
 PUT    /read-all               Alle als gelesen
 WS     /ws/notifications       WebSocket Push
+GET    /push/public-key        VAPID Public Key
+POST   /push/subscribe         Push-Subscription registrieren
+POST   /push/unsubscribe       Push-Subscription entfernen
 ```
 
 ### Admin (`/api/v1/admin`)
@@ -386,6 +540,8 @@ GET    /audit-log              Audit-Log
 ```
 GET    /actuator/health        Health-Check (DB, Redis)
 GET    /actuator/info          App-Info
+GET    /actuator/prometheus    Prometheus Metriken
+GET    /actuator/metrics       Micrometer Metriken
 ```
 
 ---
@@ -406,13 +562,19 @@ GET    /actuator/info          App-Info
 
 7. **Kommunikationsregeln:** Lehrer-Eltern immer erlaubt. Eltern-Eltern und Schüler-Schüler standardmäßig deaktiviert, konfigurierbar.
 
+8. **Kalender-Berechtigungen:** ROOM-Events: nur LEADER oder SUPERADMIN. SECTION-Events: TEACHER oder SUPERADMIN. SCHOOL-Events: nur SUPERADMIN. RSVP steht allen authentifizierten Nutzern offen.
+
+9. **Raum-Beitrittsanfragen:** Nicht-Mitglieder können Beitrittsanfragen an geschlossene Räume senden. LEADERs erhalten Notifications und können Anfragen genehmigen/ablehnen. Genehmigte Anfragen fügen den User automatisch als MEMBER hinzu.
+
+10. **Familien-Einladungen:** Familienmitglieder können andere User per AutoComplete-Suche einladen (mit Rollenwahl PARENT/CHILD). Eingeladene erhalten eine Notification und können annehmen oder ablehnen.
+
 ---
 
 ## Konventionen
 
 ### Allgemein
 - Code-Sprache: **Englisch** (Variablen, Klassen, Kommentare)
-- UI-Texte: **Deutsch** (via i18n-Keys in `src/i18n/de.ts`)
+- UI-Texte: **Deutsch + Englisch** (via i18n-Keys in `src/i18n/de.ts` + `en.ts`)
 - Git: Conventional Commits (`feat:`, `fix:`, `chore:`)
 
 ### Java / Spring Boot
@@ -446,9 +608,10 @@ GET    /actuator/info          App-Info
 # 1. Infrastruktur starten (Postgres:5433, Redis:6380, MinIO:9000)
 docker compose -f docker-compose.dev.yml up -d
 
-# 2. Backend kompilieren und starten (via Docker)
-docker run --rm -v "E:/claude/montessori/backend:/app" -w //app maven:3.9-eclipse-temurin-21 mvn clean package -DskipTests
-docker compose up backend
+# 2. Backend kompilieren und starten (lokal mit Maven oder via Docker)
+cd backend && DB_PORT=5433 REDIS_PORT=6380 mvn spring-boot:run
+# Alternativ via Docker:
+# docker compose up backend
 
 # 3. Frontend starten
 cd frontend
@@ -472,15 +635,53 @@ npm run dev
 docker compose up -d   # Startet alle 5 Services (postgres, redis, minio, backend, frontend)
 ```
 
+**Monitoring (optional):**
+```bash
+docker compose --profile monitoring up -d   # + Prometheus + Grafana
+# Grafana: http://localhost:3000 (admin/admin)
+# Prometheus: http://localhost:9090
+```
+
+**Tests:**
+```bash
+# Frontend (98 Tests, ~1.5s)
+cd frontend && npm test
+
+# Backend (Testcontainers, Docker required)
+cd backend && mvn test
+```
+
 ---
 
-## Offene Punkte / Nächste Schritte
+## Abgeschlossene Erweiterungen
 
-- [ ] E-Mail-Versand (aktuell nur Logging von Reset-Tokens)
-- [ ] Englische Übersetzung (i18n-Infrastruktur steht, nur `de.ts` vorhanden)
-- [ ] Testabdeckung erhöhen (aktuell: Spring Modulith Structure Test)
-- [ ] CI/CD Pipeline (GitHub Actions)
-- [ ] OIDC/SSO-Anbindung (Endpunkte vorbereitet, nicht implementiert)
-- [ ] PDF-Export (Stundenbericht, QR-Codes)
-- [ ] Push Notifications (Service Worker vorhanden)
-- [ ] Monitoring (Prometheus/Grafana)
+- [x] E-Mail-Versand (SMTP, conditional via `monteweb.email.enabled`)
+- [x] Englische Übersetzung (`de.ts` + `en.ts`, LanguageSwitcher, Browser-Locale-Detection)
+- [x] Testabdeckung (98 Frontend-Tests via Vitest, Backend Integration Tests via Testcontainers)
+- [x] CI/CD Pipeline (`.github/workflows/ci.yml` — Backend, Frontend, Docker Jobs)
+- [x] OIDC/SSO (OAuth2 Client, conditional via `monteweb.oidc.enabled`, SSO-Button in Login)
+- [x] PDF-Export (Stundenbericht + QR-Codes via OpenHTMLToPDF)
+- [x] Push Notifications (VAPID Web Push, conditional via `monteweb.push.enabled`)
+- [x] Monitoring (Prometheus + Grafana, Docker Compose Profile `monitoring`)
+- [x] Messaging User-Picker (NewMessageDialog mit AutoComplete-Suche)
+- [x] Kommunikationsregeln (Eltern-Eltern, Schüler-Schüler konfigurierbar)
+- [x] Raum-Diskussions-Threads (LEADER erstellt/archiviert/löscht, Mitglieder antworten)
+- [x] Kalender/Events (Raum/Bereich/Schulweit, RSVP, Monatsnavigation, conditional via `monteweb.modules.calendar.enabled`)
+- [x] Raum-Beitrittsanfragen (Browse alle Räume, Anfrage senden, Leader genehmigt/lehnt ab, Notifications)
+- [x] Familien-Einladungen per User-Suche (AutoComplete, Rolle wählen, Annehmen/Ablehnen, Notifications)
+
+## Conditional Features
+
+Folgende Features sind über Konfiguration aktivierbar:
+
+| Feature | Config-Property | Standard |
+|---------|----------------|----------|
+| E-Mail | `monteweb.email.enabled` | `false` |
+| OIDC/SSO | `monteweb.oidc.enabled` | `false` |
+| Push Notifications | `monteweb.push.enabled` | `false` |
+| Messaging-Modul | `monteweb.modules.messaging.enabled` | `true` |
+| Files-Modul | `monteweb.modules.files.enabled` | `true` |
+| Jobboard-Modul | `monteweb.modules.jobboard.enabled` | `true` |
+| Cleaning-Modul | `monteweb.modules.cleaning.enabled` | `true` |
+| Calendar-Modul | `monteweb.modules.calendar.enabled` | `true` |
+| Forms-Modul | `monteweb.modules.forms.enabled` | `true` |

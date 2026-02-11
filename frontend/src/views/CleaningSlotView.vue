@@ -215,7 +215,7 @@ async function doCheckOut() {
     </div>
 
     <!-- QR Check-in Dialog -->
-    <Dialog v-model:visible="showQrDialog" :header="t('cleaning.qrCheckIn')" modal style="width: 400px">
+    <Dialog v-model:visible="showQrDialog" :header="t('cleaning.qrCheckIn')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <p class="mb-3">{{ t('cleaning.qrInstructions') }}</p>
       <InputText v-model="scannerInput" :placeholder="t('cleaning.qrPlaceholder')"
                  class="w-full" autofocus @keyup.enter="submitCheckIn" />

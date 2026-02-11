@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { roomsApi } from '@/api/rooms.api'
-import type { RoomInfo, RoomDetail, CreateRoomRequest, CreateInterestRoomRequest, RoomChatChannelInfo } from '@/types/room'
+import type { RoomInfo, RoomDetail, CreateRoomRequest, CreateInterestRoomRequest, RoomChatChannelInfo, RoomPublicInfo } from '@/types/room'
 
 export const useRoomsStore = defineStore('rooms', () => {
   const myRooms = ref<RoomInfo[]>([])
   const currentRoom = ref<RoomDetail | null>(null)
+  const currentPublicRoom = ref<RoomPublicInfo | null>(null)
   const discoverableRooms = ref<RoomInfo[]>([])
   const discoverTotalPages = ref(0)
   const discoverPage = ref(0)
@@ -24,9 +25,21 @@ export const useRoomsStore = defineStore('rooms', () => {
 
   async function fetchRoom(id: string) {
     loading.value = true
+    currentRoom.value = null
+    currentPublicRoom.value = null
     try {
       const res = await roomsApi.getById(id)
-      currentRoom.value = res.data.data
+      const data = res.data.data as any
+      if (data.members) {
+        currentRoom.value = data as RoomDetail
+        currentPublicRoom.value = null
+      } else {
+        currentRoom.value = null
+        currentPublicRoom.value = data as RoomPublicInfo
+      }
+    } catch {
+      currentRoom.value = null
+      currentPublicRoom.value = null
     } finally {
       loading.value = false
     }
@@ -51,6 +64,8 @@ export const useRoomsStore = defineStore('rooms', () => {
       discoverableRooms.value = res.data.data.content
       discoverTotalPages.value = res.data.data.totalPages
       discoverPage.value = page
+    } catch {
+      discoverableRooms.value = []
     } finally {
       loading.value = false
     }
@@ -75,7 +90,7 @@ export const useRoomsStore = defineStore('rooms', () => {
   }
 
   return {
-    myRooms, currentRoom, discoverableRooms, discoverTotalPages, discoverPage,
+    myRooms, currentRoom, currentPublicRoom, discoverableRooms, discoverTotalPages, discoverPage,
     chatChannels, loading,
     fetchMyRooms, fetchRoom, createRoom, createInterestRoom,
     discoverRooms, joinRoom, leaveRoom,

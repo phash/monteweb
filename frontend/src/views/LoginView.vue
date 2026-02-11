@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import client from '@/api/client'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
+import Divider from 'primevue/divider'
 import Message from 'primevue/message'
 
 const { t } = useI18n()
@@ -15,6 +17,8 @@ const auth = useAuthStore()
 
 const isLogin = ref(true)
 const error = ref('')
+const oidcEnabled = ref(false)
+const oidcAuthUri = ref('')
 
 const form = ref({
   email: '',
@@ -22,6 +26,18 @@ const form = ref({
   firstName: '',
   lastName: '',
   phone: '',
+})
+
+onMounted(async () => {
+  try {
+    const res = await client.get('/auth/oidc/config')
+    if (res.data?.data?.enabled) {
+      oidcEnabled.value = true
+      oidcAuthUri.value = res.data.data.authorizationUri
+    }
+  } catch {
+    // OIDC not available — ignore
+  }
 })
 
 async function submit() {
@@ -48,6 +64,10 @@ async function submit() {
 function toggleMode() {
   isLogin.value = !isLogin.value
   error.value = ''
+}
+
+function loginWithSso() {
+  window.location.href = oidcAuthUri.value
 }
 </script>
 
@@ -105,6 +125,20 @@ function toggleMode() {
           class="w-full"
         />
       </form>
+
+      <template v-if="oidcEnabled && isLogin">
+        <Divider align="center">
+          <span class="divider-text">{{ t('auth.or') }}</span>
+        </Divider>
+        <Button
+          :label="t('auth.loginSso')"
+          icon="pi pi-shield"
+          severity="secondary"
+          outlined
+          class="w-full"
+          @click="loginWithSso"
+        />
+      </template>
 
       <div class="login-toggle">
         <span v-if="isLogin">{{ t('auth.noAccount') }}</span>
@@ -170,10 +204,6 @@ function toggleMode() {
   font-size: var(--mw-font-size-sm);
   font-weight: 500;
   color: var(--mw-text-secondary);
-}
-
-.w-full {
-  width: 100%;
 }
 
 .login-toggle {

@@ -38,4 +38,17 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
     @Query("SELECT r FROM Room r WHERE r.expiresAt IS NOT NULL AND r.expiresAt < :now " +
             "AND r.archived = false")
     List<Room> findExpiredRooms(@Param("now") Instant now);
+
+    // Browse all non-archived rooms where user is NOT a member
+    @Query("SELECT r FROM Room r WHERE r.archived = false " +
+            "AND r.id NOT IN (SELECT m.id.roomId FROM RoomMember m WHERE m.userId = :userId) " +
+            "ORDER BY r.name ASC")
+    Page<Room> findBrowsableRooms(@Param("userId") UUID userId, Pageable pageable);
+
+    // Search browsable rooms by name
+    @Query("SELECT r FROM Room r WHERE r.archived = false " +
+            "AND r.id NOT IN (SELECT m.id.roomId FROM RoomMember m WHERE m.userId = :userId) " +
+            "AND LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "ORDER BY r.name ASC")
+    Page<Room> searchBrowsableRooms(@Param("userId") UUID userId, @Param("query") String query, Pageable pageable);
 }

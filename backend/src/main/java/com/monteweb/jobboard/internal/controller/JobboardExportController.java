@@ -1,7 +1,9 @@
 package com.monteweb.jobboard.internal.controller;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.jobboard.FamilyHoursInfo;
 import com.monteweb.jobboard.internal.service.JobboardService;
+import com.monteweb.shared.util.PdfService;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,9 +21,15 @@ import java.util.List;
 public class JobboardExportController {
 
     private final JobboardService jobboardService;
+    private final PdfService pdfService;
+    private final AdminModuleApi adminModuleApi;
 
-    public JobboardExportController(JobboardService jobboardService) {
+    public JobboardExportController(JobboardService jobboardService,
+                                    PdfService pdfService,
+                                    AdminModuleApi adminModuleApi) {
         this.jobboardService = jobboardService;
+        this.pdfService = pdfService;
+        this.adminModuleApi = adminModuleApi;
     }
 
     @GetMapping(value = "/export", produces = "text/csv")
@@ -29,12 +37,14 @@ public class JobboardExportController {
         List<FamilyHoursInfo> report = jobboardService.getAllFamilyHoursReport();
 
         StringBuilder csv = new StringBuilder();
-        csv.append("Familie;Zielstunden;Geleistete Stunden;Ausstehend;Verbleibend;Ampel\n");
+        csv.append("Familie;Zielstunden;Elternstunden;Putzstunden;Gesamt;Ausstehend;Verbleibend;Ampel\n");
 
         for (var entry : report) {
             csv.append(escapeCsv(entry.familyName())).append(";");
             csv.append(entry.targetHours()).append(";");
             csv.append(entry.completedHours()).append(";");
+            csv.append(entry.cleaningHours()).append(";");
+            csv.append(entry.totalHours()).append(";");
             csv.append(entry.pendingHours()).append(";");
             csv.append(entry.remainingHours()).append(";");
             csv.append(translateTrafficLight(entry.trafficLight())).append("\n");
@@ -48,9 +58,33 @@ public class JobboardExportController {
         System.arraycopy(bytes, 0, result, bom.length, bytes.length);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"elternstunden-report.csv\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"familien-stundenbericht.csv\"")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .body(result);
+    }
+
+    @GetMapping(value = "/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> exportPdf() {
+        List<FamilyHoursInfo> report = jobboardService.getAllFamilyHoursReport();
+        String schoolName = adminModuleApi.getTenantConfig().schoolName();
+
+        var rows = report.stream()
+                .map(e -> new PdfService.HoursReportRow(
+                        e.familyName(),
+                        e.completedHours().toString(),
+                        e.cleaningHours().toString(),
+                        e.totalHours().toString(),
+                        e.pendingHours().toString(),
+                        e.remainingHours().toString()
+                ))
+                .toList();
+
+        byte[] pdf = pdfService.generateHoursReport(schoolName, rows);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"familien-stundenbericht.pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     private String escapeCsv(String value) {

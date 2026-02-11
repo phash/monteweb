@@ -65,10 +65,30 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
+/* Common utilities */
+.w-full {
+  width: 100%;
+}
+
+.mb-1 {
+  margin-bottom: 1rem;
+}
+
 /* Hide on mobile/desktop utilities */
 @media (max-width: 767px) {
   .hide-mobile {
     display: none !important;
+  }
+  .form-actions {
+    position: sticky;
+    bottom: var(--mw-bottom-nav-height);
+    background: var(--mw-bg-card);
+    padding: 0.75rem 0;
+    margin: 0 -1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    border-top: 1px solid var(--mw-border-light);
+    z-index: 10;
   }
 }
 
