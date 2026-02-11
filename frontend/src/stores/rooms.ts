@@ -27,6 +27,8 @@ export const useRoomsStore = defineStore('rooms', () => {
     try {
       const res = await roomsApi.getById(id)
       currentRoom.value = res.data.data
+    } catch {
+      currentRoom.value = null
     } finally {
       loading.value = false
     }
@@ -51,6 +53,8 @@ export const useRoomsStore = defineStore('rooms', () => {
       discoverableRooms.value = res.data.data.content
       discoverTotalPages.value = res.data.data.totalPages
       discoverPage.value = page
+    } catch {
+      discoverableRooms.value = []
     } finally {
       loading.value = false
     }

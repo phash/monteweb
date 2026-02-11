@@ -42,8 +42,12 @@ const chatEnabled = computed(() =>
 )
 
 onMounted(async () => {
-  await rooms.fetchRoom(props.id)
-  loadPosts()
+  try {
+    await rooms.fetchRoom(props.id)
+    loadPosts()
+  } catch {
+    // Room not accessible - currentRoom stays null, loading spinner hides
+  }
 })
 
 async function loadPosts() {
@@ -51,6 +55,8 @@ async function loadPosts() {
   try {
     const res = await feedApi.getRoomPosts(props.id)
     roomPosts.value = res.data.data.content
+  } catch {
+    roomPosts.value = []
   } finally {
     postsLoading.value = false
   }

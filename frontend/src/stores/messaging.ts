@@ -15,6 +15,8 @@ export const useMessagingStore = defineStore('messaging', () => {
     try {
       const res = await messagingApi.getConversations()
       conversations.value = res.data.data
+    } catch {
+      conversations.value = []
     } finally {
       loading.value = false
     }

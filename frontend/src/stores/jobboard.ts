@@ -37,14 +37,20 @@ export const useJobboardStore = defineStore('jobboard', () => {
       jobs.value = reset ? data.content : [...jobs.value, ...data.content]
       hasMore.value = !data.last
       page.value++
+    } catch {
+      // Jobs not available
     } finally {
       loading.value = false
     }
   }
 
   async function fetchCategories() {
-    const res = await jobboardApi.getCategories()
-    categories.value = res.data.data
+    try {
+      const res = await jobboardApi.getCategories()
+      categories.value = res.data.data
+    } catch {
+      categories.value = []
+    }
   }
 
   async function fetchJob(id: string) {
@@ -78,8 +84,12 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function fetchMyAssignments() {
-    const res = await jobboardApi.getMyAssignments()
-    myAssignments.value = res.data.data
+    try {
+      const res = await jobboardApi.getMyAssignments()
+      myAssignments.value = res.data.data
+    } catch {
+      myAssignments.value = []
+    }
   }
 
   async function startAssignment(assignmentId: string) {
