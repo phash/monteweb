@@ -2,6 +2,7 @@
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import BottomNav from './BottomNav.vue'
+import AppBreadcrumb from '@/components/common/AppBreadcrumb.vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 </script>
 
@@ -12,6 +13,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
     <div class="app-body">
       <AppSidebar class="hide-mobile" />
       <main id="main-content" class="app-main" tabindex="-1">
+        <AppBreadcrumb />
         <ErrorBoundary>
           <router-view />
         </ErrorBoundary>
@@ -61,6 +63,12 @@ import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
   padding: 1.5rem;
   max-width: 100%;
   overflow-x: hidden;
+}
+
+@media (min-width: 768px) and (max-width: 1400px) {
+  .app-main {
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 767px) {

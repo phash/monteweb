@@ -3,6 +3,7 @@ package com.monteweb.user;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -62,4 +63,9 @@ public interface UserModuleApi {
      * and their email matches an existing account.
      */
     void linkOidcProvider(UUID userId, String oidcProvider, String oidcSubject);
+
+    /**
+     * Finds users that have a specific special role (e.g. "SECTION_ADMIN:uuid").
+     */
+    List<UserInfo> findBySpecialRoleContaining(String role);
 }

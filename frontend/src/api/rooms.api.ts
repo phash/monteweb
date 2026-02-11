@@ -10,7 +10,7 @@ export const roomsApi = {
     return client.get<ApiResponse<RoomInfo[]>>('/rooms/mine')
   },
 
-  getAll(params?: { page?: number; size?: number }) {
+  getAll(params?: { page?: number; size?: number; includeArchived?: boolean }) {
     return client.get<ApiResponse<PageResponse<RoomInfo>>>('/rooms', { params })
   },
 
@@ -31,8 +31,16 @@ export const roomsApi = {
     return client.post<ApiResponse<RoomInfo>>('/rooms/interest', data)
   },
 
-  update(id: string, data: { name?: string; description?: string; publicDescription?: string }) {
+  update(id: string, data: { name?: string; description?: string; publicDescription?: string; type?: string; sectionId?: string | null }) {
     return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}`, data)
+  },
+
+  toggleArchive(id: string) {
+    return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}/archive`)
+  },
+
+  deleteRoom(id: string) {
+    return client.delete<ApiResponse<void>>(`/rooms/${id}`)
   },
 
   updateSettings(id: string, settings: RoomSettings) {

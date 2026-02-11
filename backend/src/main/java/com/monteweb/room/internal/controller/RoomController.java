@@ -46,7 +46,12 @@ public class RoomController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<RoomInfo>>> getAllRooms(
+            @RequestParam(defaultValue = "false") boolean includeArchived,
             @PageableDefault(size = 20) Pageable pageable) {
+        if (includeArchived) {
+            requireSuperAdmin();
+            return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(roomService.findAllIncludingArchived(pageable))));
+        }
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(roomService.findAll(pageable))));
     }
 
@@ -100,7 +105,8 @@ public class RoomController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRoomRequest request) {
         requireLeaderOrAdmin(id);
-        var room = roomService.update(id, request.name(), request.description(), request.publicDescription());
+        var room = roomService.update(id, request.name(), request.description(), request.publicDescription(),
+                request.type(), request.sectionId());
         return ResponseEntity.ok(ApiResponse.ok(room));
     }
 
@@ -188,7 +194,31 @@ public class RoomController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Role updated"));
     }
 
+    // ── Admin: archive / delete ────────────────────────────────────────
+
+    @PutMapping("/{id}/archive")
+    public ResponseEntity<ApiResponse<RoomInfo>> toggleArchive(@PathVariable UUID id) {
+        requireSuperAdmin();
+        var room = roomService.toggleArchive(id);
+        return ResponseEntity.ok(ApiResponse.ok(room));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteRoom(@PathVariable UUID id) {
+        requireSuperAdmin();
+        roomService.delete(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Room deleted"));
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────
+
+    private void requireSuperAdmin() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId);
+        if (user.isEmpty() || user.get().role() != UserRole.SUPERADMIN) {
+            throw new ForbiddenException("Only administrators can perform this action");
+        }
+    }
 
     private void requireLeaderOrAdmin(UUID roomId) {
         UUID userId = SecurityUtils.requireCurrentUserId();

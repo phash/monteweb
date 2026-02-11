@@ -5,8 +5,10 @@ import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { sectionsApi } from '@/api/sections.api'
 import { roomsApi } from '@/api/rooms.api'
+import { usersApi } from '@/api/users.api'
 import type { SchoolSectionInfo } from '@/types/family'
 import type { RoomInfo } from '@/types/room'
+import type { UserInfo } from '@/types/user'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Accordion from 'primevue/accordion'
 import AccordionPanel from 'primevue/accordionpanel'
@@ -17,7 +19,9 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
+import Select from 'primevue/select'
 import Tag from 'primevue/tag'
+import AutoComplete from 'primevue/autocomplete'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -34,6 +38,12 @@ const form = ref({ name: '', description: '', sortOrder: 0 })
 
 // Delete confirmation
 const confirmDeleteSection = ref<SchoolSectionInfo | null>(null)
+
+// Section admins
+const sectionAdmins = ref<Record<string, UserInfo[]>>({})
+const adminSearchQuery = ref('')
+const adminSearchResults = ref<UserInfo[]>([])
+const addingAdminForSection = ref<string | null>(null)
 
 // Group rooms by sectionId
 const roomsBySection = computed(() => {
@@ -61,9 +71,27 @@ async function loadData() {
     ])
     sections.value = sectionsRes.data.data
     rooms.value = roomsRes.data.data.content
+
+    // Load section admins for all sections
+    await loadAllSectionAdmins()
   } finally {
     loading.value = false
   }
+}
+
+async function loadAllSectionAdmins() {
+  const adminMap: Record<string, UserInfo[]> = {}
+  await Promise.all(
+    sections.value.map(async (section) => {
+      try {
+        const res = await usersApi.findBySpecialRole(`SECTION_ADMIN:${section.id}`)
+        adminMap[section.id] = res.data.data
+      } catch {
+        adminMap[section.id] = []
+      }
+    }),
+  )
+  sectionAdmins.value = adminMap
 }
 
 function openCreate() {
@@ -103,6 +131,47 @@ async function deleteSection() {
 
 function navigateToRoom(roomId: string) {
   router.push({ name: 'room-detail', params: { id: roomId } })
+}
+
+// Section Admin management
+async function searchAdminUsers(event: { query: string }) {
+  const res = await usersApi.search(event.query, 0, 10)
+  adminSearchResults.value = res.data.data.content
+}
+
+async function addSectionAdmin(sectionId: string, user: UserInfo) {
+  try {
+    await usersApi.addSpecialRole(user.id, `SECTION_ADMIN:${sectionId}`)
+    toast.add({ severity: 'success', summary: t('admin.sectionAdminAdded'), life: 3000 })
+    adminSearchQuery.value = ''
+    addingAdminForSection.value = null
+    const res = await usersApi.findBySpecialRole(`SECTION_ADMIN:${sectionId}`)
+    sectionAdmins.value[sectionId] = res.data.data
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
+}
+
+async function removeSectionAdmin(sectionId: string, userId: string) {
+  try {
+    await usersApi.removeSpecialRole(userId, `SECTION_ADMIN:${sectionId}`)
+    toast.add({ severity: 'success', summary: t('admin.sectionAdminRemoved'), life: 3000 })
+    const res = await usersApi.findBySpecialRole(`SECTION_ADMIN:${sectionId}`)
+    sectionAdmins.value[sectionId] = res.data.data
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
+}
+
+// Room section assignment
+async function changeRoomSection(room: RoomInfo, newSectionId: string | null) {
+  try {
+    await roomsApi.update(room.id, { sectionId: newSectionId })
+    toast.add({ severity: 'success', summary: t('admin.roomSectionChanged'), life: 3000 })
+    await loadData()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  }
 }
 
 onMounted(loadData)
@@ -152,6 +221,48 @@ onMounted(loadData)
             </div>
           </AccordionHeader>
           <AccordionContent>
+            <!-- Section Admins -->
+            <div class="section-admins">
+              <div class="section-admins-header">
+                <span class="section-admins-label">{{ t('admin.sectionAdmins') }}</span>
+                <Button
+                  v-if="addingAdminForSection !== section.id"
+                  icon="pi pi-plus"
+                  text
+                  size="small"
+                  @click="addingAdminForSection = section.id"
+                />
+              </div>
+              <div v-if="addingAdminForSection === section.id" class="admin-search-row">
+                <AutoComplete
+                  v-model="adminSearchQuery"
+                  :suggestions="adminSearchResults"
+                  optionLabel="displayName"
+                  :placeholder="t('admin.searchUser')"
+                  @complete="searchAdminUsers"
+                  @item-select="(e: any) => addSectionAdmin(section.id, e.value)"
+                  class="flex-grow"
+                />
+                <Button icon="pi pi-times" text size="small" @click="addingAdminForSection = null" />
+              </div>
+              <div v-if="sectionAdmins[section.id]?.length" class="admin-list">
+                <div v-for="admin in sectionAdmins[section.id]" :key="admin.id" class="admin-item">
+                  <span>{{ admin.displayName }}</span>
+                  <Button
+                    icon="pi pi-trash"
+                    text
+                    size="small"
+                    severity="danger"
+                    @click="removeSectionAdmin(section.id, admin.id)"
+                  />
+                </div>
+              </div>
+              <div v-else-if="addingAdminForSection !== section.id" class="no-admins">
+                {{ t('admin.noSectionAdmins') }}
+              </div>
+            </div>
+
+            <!-- Rooms -->
             <div v-if="roomCountForSection(section.id) === 0" class="no-rooms">
               {{ t('common.noData') }}
             </div>
@@ -160,14 +271,24 @@ onMounted(loadData)
                 v-for="room in roomsBySection.get(section.id)"
                 :key="room.id"
                 class="room-item"
-                tabindex="0"
-                role="link"
-                @click="navigateToRoom(room.id)"
-                @keydown.enter="navigateToRoom(room.id)"
               >
-                <span class="room-name">{{ room.name }}</span>
+                <span
+                  class="room-name clickable"
+                  tabindex="0"
+                  role="link"
+                  @click="navigateToRoom(room.id)"
+                  @keydown.enter="navigateToRoom(room.id)"
+                >{{ room.name }}</span>
                 <Tag :value="t(`rooms.types.${room.type}`)" severity="info" />
                 <span class="room-members">{{ room.memberCount }} {{ t('rooms.members') }}</span>
+                <Select
+                  :modelValue="room.sectionId"
+                  :options="[{ id: null, name: t('admin.noSection') }, ...sections]"
+                  optionLabel="name"
+                  optionValue="id"
+                  style="width: 150px"
+                  @update:modelValue="(val: string | null) => changeRoomSection(room, val)"
+                />
               </div>
             </div>
           </AccordionContent>
@@ -182,14 +303,24 @@ onMounted(loadData)
             v-for="room in unassignedRooms"
             :key="room.id"
             class="room-item"
-            tabindex="0"
-            role="link"
-            @click="navigateToRoom(room.id)"
-            @keydown.enter="navigateToRoom(room.id)"
           >
-            <span class="room-name">{{ room.name }}</span>
+            <span
+              class="room-name clickable"
+              tabindex="0"
+              role="link"
+              @click="navigateToRoom(room.id)"
+              @keydown.enter="navigateToRoom(room.id)"
+            >{{ room.name }}</span>
             <Tag :value="t(`rooms.types.${room.type}`)" severity="info" />
             <span class="room-members">{{ room.memberCount }} {{ t('rooms.members') }}</span>
+            <Select
+              :modelValue="room.sectionId"
+              :options="[{ id: null, name: t('admin.noSection') }, ...sections]"
+              optionLabel="name"
+              optionValue="id"
+              style="width: 150px"
+              @update:modelValue="(val: string | null) => changeRoomSection(room, val)"
+            />
           </div>
         </div>
       </div>
@@ -282,6 +413,63 @@ onMounted(loadData)
   gap: 0.25rem;
 }
 
+.section-admins {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: var(--p-surface-50);
+  border-radius: var(--p-border-radius);
+}
+
+.section-admins-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.section-admins-label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.admin-search-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.flex-grow {
+  flex: 1;
+}
+
+.admin-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--p-border-radius);
+}
+
+.admin-item:hover {
+  background: var(--p-surface-100);
+}
+
+.no-admins {
+  font-size: var(--mw-font-size-sm);
+  color: var(--p-text-muted-color);
+  font-style: italic;
+}
+
 .room-list {
   display: flex;
   flex-direction: column;
@@ -294,13 +482,19 @@ onMounted(loadData)
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
   border-radius: var(--p-border-radius);
-  cursor: pointer;
-  transition: background-color 0.15s;
 }
 
-.room-item:hover,
-.room-item:focus-visible {
+.room-item:hover {
   background-color: var(--p-surface-100);
+}
+
+.clickable {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.clickable:hover {
+  text-decoration: underline;
 }
 
 .room-name {

@@ -24,4 +24,14 @@ public interface FamilyModuleApi {
     List<FamilyInfo> findByUserId(UUID userId);
 
     boolean isUserInFamily(UUID userId, UUID familyId);
+
+    /**
+     * Admin: Add a user to a family without auth checks.
+     */
+    void adminAddMember(UUID familyId, UUID userId, String role);
+
+    /**
+     * Admin: Remove a user from a family without auth checks.
+     */
+    void adminRemoveMember(UUID familyId, UUID userId);
 }

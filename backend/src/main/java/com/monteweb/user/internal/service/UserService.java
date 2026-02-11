@@ -155,6 +155,49 @@ public class UserService implements UserModuleApi {
     }
 
     @Transactional
+    public UserInfo adminUpdateProfile(UUID userId, String email, String firstName, String lastName, String phone) {
+        var user = findEntityById(userId);
+        if (email != null && !email.equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmail(email.toLowerCase().trim())) {
+                throw new com.monteweb.shared.exception.BusinessException("Email already in use");
+            }
+            user.setEmail(email.toLowerCase().trim());
+        }
+        if (firstName != null) user.setFirstName(firstName);
+        if (lastName != null) user.setLastName(lastName);
+        if (phone != null) user.setPhone(phone);
+        user.setDisplayName(user.getFirstName() + " " + user.getLastName());
+        return toUserInfo(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserInfo addSpecialRole(UUID userId, String role) {
+        var user = findEntityById(userId);
+        var roles = new java.util.ArrayList<>(java.util.Arrays.asList(user.getSpecialRoles() != null ? user.getSpecialRoles() : new String[0]));
+        if (!roles.contains(role)) {
+            roles.add(role);
+            user.setSpecialRoles(roles.toArray(new String[0]));
+            userRepository.save(user);
+        }
+        return toUserInfo(user);
+    }
+
+    @Transactional
+    public UserInfo removeSpecialRole(UUID userId, String role) {
+        var user = findEntityById(userId);
+        var roles = new java.util.ArrayList<>(java.util.Arrays.asList(user.getSpecialRoles() != null ? user.getSpecialRoles() : new String[0]));
+        roles.remove(role);
+        user.setSpecialRoles(roles.toArray(new String[0]));
+        return toUserInfo(userRepository.save(user));
+    }
+
+    public List<UserInfo> findBySpecialRoleContaining(String rolePrefix) {
+        return userRepository.findBySpecialRoleContaining(rolePrefix).stream()
+                .map(this::toUserInfo)
+                .toList();
+    }
+
+    @Transactional
     public UserInfo updateRole(UUID userId, UserRole role) {
         var user = findEntityById(userId);
         user.setRole(role);

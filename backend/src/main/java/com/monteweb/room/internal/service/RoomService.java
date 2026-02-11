@@ -126,11 +126,14 @@ public class RoomService implements RoomModuleApi {
     }
 
     @Transactional
-    public RoomInfo update(UUID roomId, String name, String description, String publicDescription) {
+    public RoomInfo update(UUID roomId, String name, String description, String publicDescription,
+                           RoomType type, UUID sectionId) {
         var room = findEntityById(roomId);
         if (name != null) room.setName(name);
         if (description != null) room.setDescription(description);
         if (publicDescription != null) room.setPublicDescription(publicDescription);
+        if (type != null) room.setType(type);
+        room.setSectionId(sectionId);
         return toRoomInfo(roomRepository.save(room));
     }
 
@@ -163,6 +166,25 @@ public class RoomService implements RoomModuleApi {
         var room = findEntityById(roomId);
         room.setArchived(true);
         roomRepository.save(room);
+    }
+
+    @Transactional
+    public RoomInfo toggleArchive(UUID roomId) {
+        var room = findEntityById(roomId);
+        boolean newState = !room.isArchived();
+        room.setArchived(newState);
+        room.setArchiveAt(newState ? Instant.now() : null);
+        return toRoomInfo(roomRepository.save(room));
+    }
+
+    @Transactional
+    public void delete(UUID roomId) {
+        var room = findEntityById(roomId);
+        roomRepository.delete(room);
+    }
+
+    public Page<RoomInfo> findAllIncludingArchived(Pageable pageable) {
+        return roomRepository.findAll(pageable).map(this::toRoomInfo);
     }
 
     @Transactional

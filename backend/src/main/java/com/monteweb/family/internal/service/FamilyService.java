@@ -148,6 +148,32 @@ public class FamilyService implements FamilyModuleApi {
         familyRepository.save(family);
     }
 
+    @Override
+    @Transactional
+    public void adminAddMember(UUID familyId, UUID userId, String role) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        if (familyRepository.isMember(userId, familyId)) {
+            throw new BusinessException("User is already a member of this family");
+        }
+
+        var memberRole = FamilyMemberRole.valueOf(role);
+        var member = new FamilyMember(family, userId, memberRole);
+        family.getMembers().add(member);
+        familyRepository.save(family);
+    }
+
+    @Override
+    @Transactional
+    public void adminRemoveMember(UUID familyId, UUID userId) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        family.getMembers().removeIf(m -> m.getUserId().equals(userId));
+        familyRepository.save(family);
+    }
+
     @Transactional
     public void updateAvatarUrl(UUID familyId, String avatarUrl) {
         var family = familyRepository.findById(familyId)

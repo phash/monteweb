@@ -30,4 +30,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<User> searchByDisplayNameOrEmail(String query, Pageable pageable);
 
     Optional<User> findByOidcProviderAndOidcSubject(String oidcProvider, String oidcSubject);
+
+    @Query("SELECT u FROM User u WHERE u.active = true AND :role = ANY(u.specialRoles)")
+    java.util.List<User> findBySpecialRoleContaining(String role);
 }

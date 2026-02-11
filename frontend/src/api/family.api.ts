@@ -7,6 +7,10 @@ export const familyApi = {
     return client.get<ApiResponse<FamilyInfo[]>>('/families/mine')
   },
 
+  getAll() {
+    return client.get<ApiResponse<FamilyInfo[]>>('/families')
+  },
+
   create(name: string) {
     return client.post<ApiResponse<FamilyInfo>>('/families', { name })
   },
