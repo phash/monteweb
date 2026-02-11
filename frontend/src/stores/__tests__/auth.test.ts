@@ -17,6 +17,12 @@ vi.mock('@/api/users.api', () => ({
   },
 }))
 
+vi.mock('@/api/admin.api', () => ({
+  adminApi: {
+    getPublicConfig: vi.fn().mockResolvedValue({ data: { data: { modules: {} } } }),
+  },
+}))
+
 import { authApi } from '@/api/auth.api'
 import { usersApi } from '@/api/users.api'
 

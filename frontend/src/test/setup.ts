@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
   return {
@@ -11,3 +13,12 @@ const localStorageMock = (() => {
 })()
 
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock })
+
+// Mock PrimeVue useToast globally
+vi.mock('primevue/usetoast', () => ({
+  useToast: () => ({
+    add: vi.fn(),
+    removeGroup: vi.fn(),
+    removeAllGroups: vi.fn(),
+  }),
+}))

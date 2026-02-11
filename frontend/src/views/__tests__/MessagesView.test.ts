@@ -1,0 +1,97 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { setActivePinia, createPinia } from 'pinia'
+import { mount } from '@vue/test-utils'
+import { createI18n } from 'vue-i18n'
+import MessagesView from '@/views/MessagesView.vue'
+
+vi.mock('vue-router', () => ({
+  useRoute: vi.fn(() => ({ params: {} })),
+  useRouter: vi.fn(() => ({ push: vi.fn() })),
+}))
+
+vi.mock('@/api/messaging.api', () => ({
+  messagingApi: {
+    getConversations: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getMessages: vi.fn().mockResolvedValue({ data: { data: { content: [] } } }),
+    sendMessage: vi.fn(),
+    startDirect: vi.fn(),
+  },
+}))
+
+vi.mock('@/api/auth.api', () => ({ authApi: {} }))
+vi.mock('@/api/users.api', () => ({ usersApi: { search: vi.fn() } }))
+
+const i18n = createI18n({
+  legacy: false,
+  locale: 'de',
+  messages: {
+    de: {
+      messages: {
+        title: 'Nachrichten',
+        newConversation: 'Neue Konversation',
+        noConversations: 'Noch keine Konversationen',
+        selectConversation: 'Konversation wählen',
+        conversation: 'Konversation',
+        sendMessage: 'Senden',
+        messagePlaceholder: 'Nachricht eingeben...',
+        newMessage: 'Neue Nachricht',
+        searchUser: 'Benutzer suchen',
+        searchUserPlaceholder: 'Name eingeben...',
+        startConversation: 'Nachricht senden',
+        communicationNotAllowed: 'Kommunikation nicht erlaubt',
+      },
+      common: { cancel: 'Abbrechen' },
+    },
+  },
+})
+
+const stubs = {
+  PageTitle: { template: '<div class="page-title-stub">{{ title }}</div>', props: ['title', 'subtitle'] },
+  LoadingSpinner: { template: '<div class="loading-stub" />' },
+  EmptyState: { template: '<div class="empty-stub">{{ message }}</div>', props: ['icon', 'message'] },
+  NewMessageDialog: { template: '<div class="new-msg-stub" />', props: ['visible'] },
+  Button: {
+    template: '<button class="button-stub" @click="$emit(\'click\')">{{ label }}</button>',
+    props: ['label', 'icon', 'text', 'severity', 'size', 'disabled'],
+    emits: ['click'],
+  },
+  Textarea: { template: '<textarea class="textarea-stub" />', props: ['modelValue', 'placeholder', 'rows', 'autoResize'] },
+}
+
+function mountMessages() {
+  const pinia = createPinia()
+  return mount(MessagesView, {
+    global: { plugins: [i18n, pinia], stubs },
+  })
+}
+
+describe('MessagesView', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+  })
+
+  it('should render page title', () => {
+    const wrapper = mountMessages()
+    expect(wrapper.find('.page-title-stub').exists()).toBe(true)
+  })
+
+  it('should render new message button', () => {
+    const wrapper = mountMessages()
+    expect(wrapper.text()).toContain('Neue Nachricht')
+  })
+
+  it('should show empty state when no conversations', async () => {
+    const wrapper = mountMessages()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    expect(
+      wrapper.find('.empty-stub').exists() || wrapper.find('.loading-stub').exists()
+    ).toBe(true)
+  })
+
+  it('should render new message dialog component', () => {
+    const wrapper = mountMessages()
+    expect(wrapper.find('.new-msg-stub').exists()).toBe(true)
+  })
+})

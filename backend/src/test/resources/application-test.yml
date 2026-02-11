@@ -1,0 +1,34 @@
+monteweb:
+  jwt:
+    secret: test-only-secret-key-that-is-long-enough-for-hmac-sha256-algorithm-minimum-64-chars
+    access-token-expiration: 15m
+  minio:
+    enabled: false
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: monteweb-test
+  email:
+    enabled: false
+  oidc:
+    enabled: false
+  push:
+    enabled: false
+  modules:
+    messaging:
+      enabled: true
+    files:
+      enabled: false
+    jobboard:
+      enabled: true
+    cleaning:
+      enabled: true
+    calendar:
+      enabled: true
+    forms:
+      enabled: true
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate

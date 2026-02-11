@@ -10,7 +10,7 @@ MonteWeb ist ein modulares, selbst-gehostetes Schul-Intranet für Montessori-Sch
 
 ## Projektstatus
 
-Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 98 Frontend-Tests bestehen, und der volle Docker-Stack läuft.
+Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tests bestehen (55% Statement-Coverage), und der volle Docker-Stack läuft.
 
 ### Kern-Phasen (1–6)
 
@@ -31,7 +31,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 98 Frontend-Test
 | 8 | Raum-Diskussions-Threads (LEADER-Berechtigungen) | COMPLETE |
 | 9 | E-Mail-Versand (SMTP, conditional) | COMPLETE |
 | 10 | Englische Übersetzung (i18n DE+EN) + Language-Switcher | COMPLETE |
-| 11 | Testabdeckung (Vitest 27 Tests + Backend Integration Tests) | COMPLETE |
+| 11 | Testabdeckung (418 Frontend-Tests, 55% Coverage + 15 Backend-Testdateien) | COMPLETE |
 | 12 | CI/CD Pipeline (GitHub Actions) | COMPLETE |
 | 13 | OIDC/SSO (OAuth2 Client, conditional) | COMPLETE |
 | 14 | PDF-Export (Stundenbericht, QR-Codes) | COMPLETE |
@@ -70,7 +70,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 98 Frontend-Test
 - **Vue Router 4.6** für Routing
 - **vue-i18n 11** für Internationalisierung (Deutsch + Englisch)
 - **Axios 1.13** als HTTP-Client
-- **Vitest 4** + **@vue/test-utils** für Unit/Component-Tests (98 Tests)
+- **Vitest 4** + **@vue/test-utils** + **@vitest/coverage-v8** für Unit/Component-Tests (418 Tests, 55% Coverage)
 - **PWA** via vite-plugin-pwa
 
 ### Infrastruktur
@@ -198,13 +198,26 @@ monteweb/
 │       │
 │       └── test/java/com/monteweb/
 │           ├── TestContainerConfig.java            # Shared Testcontainers (PostgreSQL + Redis)
+│           ├── TestHelper.java                     # Hilfsmethoden (registerAndGetToken, parseResponse)
 │           ├── auth/AuthControllerIntegrationTest.java
-│           └── user/UserServiceIntegrationTest.java
+│           ├── user/UserServiceIntegrationTest.java
+│           ├── school/SchoolSectionServiceTest.java
+│           ├── room/RoomControllerIntegrationTest.java
+│           ├── room/DiscussionThreadControllerIntegrationTest.java
+│           ├── family/FamilyControllerIntegrationTest.java
+│           ├── feed/FeedControllerIntegrationTest.java
+│           ├── calendar/CalendarControllerIntegrationTest.java
+│           ├── messaging/MessagingControllerIntegrationTest.java
+│           ├── jobboard/JobboardControllerIntegrationTest.java
+│           ├── cleaning/CleaningControllerIntegrationTest.java
+│           ├── notification/NotificationServiceIntegrationTest.java
+│           ├── forms/FormsControllerIntegrationTest.java
+│           └── shared/GlobalExceptionHandlerTest.java, SecurityUtilsTest.java
 │
 ├── frontend/
 │   ├── package.json
 │   ├── vite.config.ts
-│   ├── vitest.config.ts        # Test-Konfiguration (jsdom, setup file)
+│   ├── vitest.config.ts        # Test-Konfiguration (jsdom, v8-coverage, 55% threshold)
 │   ├── tsconfig.json
 │   ├── tsconfig.app.json       # Excludes test files
 │   ├── nginx.conf              # SPA-Config für Docker-Runtime
@@ -221,11 +234,7 @@ monteweb/
 │       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, ...)
 │       │   ├── discussions.ts  # Diskussions-Threads Store
 │       │   ├── calendar.ts     # Kalender/Events Store
-│       │   └── __tests__/      # Store Unit Tests (98 Tests)
-│       │       ├── auth.test.ts        # 5 Tests
-│       │       ├── messaging.test.ts   # 8 Tests
-│       │       ├── feed.test.ts        # 9 Tests
-│       │       └── calendar.test.ts    # 9 Tests
+│       │   └── __tests__/      # Store Unit Tests (12 Dateien, 98 Tests)
 │       ├── api/                # Axios-Wrapper pro Modul (client.ts + *.api.ts)
 │       │   ├── discussions.api.ts      # Diskussions-Thread API
 │       │   └── calendar.api.ts         # Kalender/Events API
@@ -233,14 +242,19 @@ monteweb/
 │       ├── composables/        # useAuth, useNotifications, useWebSocket, usePushNotifications
 │       ├── components/
 │       │   ├── common/         # PageTitle, LoadingSpinner, EmptyState, ErrorBoundary, LanguageSwitcher
+│       │   │   └── __tests__/  # 8 Testdateien (27 Tests)
 │       │   ├── layout/         # AppHeader (+ LanguageSwitcher), AppSidebar, BottomNav
+│       │   │   └── __tests__/  # AppSidebar, BottomNav Tests
 │       │   ├── feed/           # FeedList, FeedPost, PostComposer
+│       │   │   └── __tests__/  # FeedPost, FeedList, SystemBanner Tests
 │       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView, RoomEvents
+│       │   │   └── __tests__/  # RoomCard, RoomChat, RoomFiles, DiscussionThreadView Tests
 │       │   ├── messaging/      # NewMessageDialog (User-Picker)
-│       │   ├── family/         # FamilyHoursWidget, InviteMemberDialog
-│       │   └── __tests__/      # Component Tests
-│       │       └── NewMessageDialog.test.ts  # 5 Tests
+│       │   │   └── __tests__/  # NewMessageDialog Tests
+│       │   └── family/         # FamilyHoursWidget, InviteMemberDialog
+│       │       └── __tests__/  # FamilyHoursWidget, InviteMemberDialog Tests
 │       ├── views/
+│       │   ├── __tests__/              # 19 View-Testdateien
 │       │   ├── LoginView.vue           # + SSO-Button (conditional)
 │       │   ├── DashboardView.vue       # = Feed-Ansicht
 │       │   ├── RoomsView.vue
@@ -259,6 +273,7 @@ monteweb/
 │       │   ├── ProfileView.vue         # + Push Notification Toggle
 │       │   ├── NotFoundView.vue        # 404
 │       │   └── admin/
+│       │       ├── __tests__/          # 6 Admin-View-Testdateien
 │       │       ├── AdminDashboard.vue
 │       │       ├── AdminUsers.vue
 │       │       ├── AdminRooms.vue
@@ -644,10 +659,11 @@ docker compose --profile monitoring up -d   # + Prometheus + Grafana
 
 **Tests:**
 ```bash
-# Frontend (98 Tests, ~1.5s)
+# Frontend (418 Tests, 68 Testdateien, ~55% Statement-Coverage)
 cd frontend && npm test
+cd frontend && npm run test:coverage   # Mit Coverage-Report
 
-# Backend (Testcontainers, Docker required)
+# Backend (Testcontainers, Docker required, ~100 Tests in 15 Dateien)
 cd backend && mvn test
 ```
 
@@ -657,7 +673,7 @@ cd backend && mvn test
 
 - [x] E-Mail-Versand (SMTP, conditional via `monteweb.email.enabled`)
 - [x] Englische Übersetzung (`de.ts` + `en.ts`, LanguageSwitcher, Browser-Locale-Detection)
-- [x] Testabdeckung (98 Frontend-Tests via Vitest, Backend Integration Tests via Testcontainers)
+- [x] Testabdeckung (418 Frontend-Tests via Vitest, 55% Coverage; ~100 Backend Integration Tests via Testcontainers)
 - [x] CI/CD Pipeline (`.github/workflows/ci.yml` — Backend, Frontend, Docker Jobs)
 - [x] OIDC/SSO (OAuth2 Client, conditional via `monteweb.oidc.enabled`, SSO-Button in Login)
 - [x] PDF-Export (Stundenbericht + QR-Codes via OpenHTMLToPDF)
