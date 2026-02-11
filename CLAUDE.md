@@ -10,7 +10,7 @@ MonteWeb ist ein modulares, selbst-gehostetes Schul-Intranet für Montessori-Sch
 
 ## Projektstatus
 
-Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 87 Frontend-Tests bestehen, und der volle Docker-Stack läuft.
+Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 98 Frontend-Tests bestehen, und der volle Docker-Stack läuft.
 
 ### Kern-Phasen (1–6)
 
@@ -48,7 +48,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 87 Frontend-Test
 - **Spring Modulith 1.3.2** für modulare Architektur
 - **Spring Security** mit JWT + Redis Sessions
 - **Spring OAuth2 Client** für OIDC/SSO (conditional via `monteweb.oidc.enabled`)
-- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V026)
+- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V035)
 - **Spring WebSocket** + Redis Pub/Sub für Echtzeit
 - **Spring Boot Actuator** für Health/Info/Prometheus-Endpoints
 - **Spring Boot Mail** für E-Mail-Versand (conditional via `monteweb.email.enabled`)
@@ -70,7 +70,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 87 Frontend-Test
 - **Vue Router 4.6** für Routing
 - **vue-i18n 11** für Internationalisierung (Deutsch + Englisch)
 - **Axios 1.13** als HTTP-Client
-- **Vitest 4** + **@vue/test-utils** für Unit/Component-Tests (87 Tests)
+- **Vitest 4** + **@vue/test-utils** für Unit/Component-Tests (98 Tests)
 - **PWA** via vite-plugin-pwa
 
 ### Infrastruktur
@@ -112,23 +112,32 @@ monteweb/
 │       │   │   ├── UserInfo.java
 │       │   │   └── internal/
 │       │   │
-│       │   ├── family/             # Familienverbund, Einladungscodes, Stundenkonto
+│       │   ├── family/             # Familienverbund, Einladungscodes, Stundenkonto, Einladungen
 │       │   │   ├── FamilyModuleApi.java
 │       │   │   ├── FamilyInfo.java
+│       │   │   ├── FamilyInvitationEvent.java     # Spring Event
 │       │   │   └── internal/
+│       │   │       ├── model/FamilyInvitation.java, FamilyInvitationStatus.java
+│       │   │       ├── repository/FamilyInvitationRepository.java
+│       │   │       ├── dto/FamilyInvitationInfo.java, InviteMemberRequest.java
 │       │   │
 │       │   ├── school/             # Schulbereiche (Krippe, KiGa, GS, MS, OS)
 │       │   │   ├── SchoolModuleApi.java
 │       │   │   ├── SectionInfo.java
 │       │   │   └── internal/
 │       │   │
-│       │   ├── room/               # Räume + Diskussions-Threads
+│       │   ├── room/               # Räume + Diskussions-Threads + Beitrittsanfragen
 │       │   │   ├── RoomModuleApi.java
 │       │   │   ├── RoomInfo.java
 │       │   │   ├── DiscussionThreadCreatedEvent.java   # Spring Event
+│       │   │   ├── RoomJoinRequestEvent.java           # Spring Event
+│       │   │   ├── RoomJoinRequestResolvedEvent.java   # Spring Event
 │       │   │   └── internal/
 │       │   │       ├── model/DiscussionThread.java, DiscussionReply.java, ThreadStatus.java
+│       │   │       ├── model/RoomJoinRequest.java, RoomJoinRequestStatus.java
 │       │   │       ├── repository/DiscussionThreadRepository.java, DiscussionReplyRepository.java
+│       │   │       ├── repository/RoomJoinRequestRepository.java
+│       │   │       ├── dto/JoinRequestInfo.java
 │       │   │       ├── service/DiscussionThreadService.java
 │       │   │       └── controller/DiscussionThreadController.java
 │       │   │
@@ -154,12 +163,14 @@ monteweb/
 │       │   │
 │       │   ├── notification/       # In-App + Push Benachrichtigungen
 │       │   │   ├── NotificationModuleApi.java
-│       │   │   ├── NotificationType.java       # inkl. DISCUSSION_*, EVENT_*
+│       │   │   ├── NotificationType.java       # inkl. DISCUSSION_*, EVENT_*, ROOM_JOIN_*, FAMILY_INVITATION_*
 │       │   │   └── internal/
 │       │   │       ├── model/PushSubscription.java
 │       │   │       ├── service/WebPushService.java             # VAPID Push
 │       │   │       ├── service/DiscussionNotificationListener.java
 │       │   │       ├── service/CalendarNotificationListener.java
+│       │   │       ├── service/RoomJoinRequestNotificationListener.java
+│       │   │       ├── service/FamilyInvitationNotificationListener.java
 │       │   │       └── controller/PushNotificationController.java
 │       │   │
 │       │   ├── admin/              # System-Config, Audit-Log, Modul-Verwaltung
@@ -205,12 +216,12 @@ monteweb/
 │       ├── router/index.ts     # Lazy-loaded Routes + Auth-Guards
 │       ├── i18n/
 │       │   ├── index.ts        # Browser-Locale-Detection
-│       │   ├── de.ts           # Deutsche Übersetzungen (~350+ Keys)
+│       │   ├── de.ts           # Deutsche Übersetzungen (~375+ Keys)
 │       │   └── en.ts           # Englische Übersetzungen
 │       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, ...)
 │       │   ├── discussions.ts  # Diskussions-Threads Store
 │       │   ├── calendar.ts     # Kalender/Events Store
-│       │   └── __tests__/      # Store Unit Tests (87 Tests)
+│       │   └── __tests__/      # Store Unit Tests (98 Tests)
 │       │       ├── auth.test.ts        # 5 Tests
 │       │       ├── messaging.test.ts   # 8 Tests
 │       │       ├── feed.test.ts        # 9 Tests
@@ -226,15 +237,15 @@ monteweb/
 │       │   ├── feed/           # FeedList, FeedPost, PostComposer
 │       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView, RoomEvents
 │       │   ├── messaging/      # NewMessageDialog (User-Picker)
-│       │   ├── family/         # FamilyHoursWidget
+│       │   ├── family/         # FamilyHoursWidget, InviteMemberDialog
 │       │   └── __tests__/      # Component Tests
 │       │       └── NewMessageDialog.test.ts  # 5 Tests
 │       ├── views/
 │       │   ├── LoginView.vue           # + SSO-Button (conditional)
 │       │   ├── DashboardView.vue       # = Feed-Ansicht
 │       │   ├── RoomsView.vue
-│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members, Discussions, Chat, Files, Events
-│       │   ├── DiscoverRoomsView.vue
+│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members (+Join Requests), Discussions, Chat, Files, Events
+│       │   ├── DiscoverRoomsView.vue   # + Browse alle Räume + Beitrittsanfragen
 │       │   ├── MessagesView.vue        # + NewMessageDialog, Deep-Link via conversationId
 │       │   ├── JobBoardView.vue
 │       │   ├── JobCreateView.vue
@@ -244,7 +255,7 @@ monteweb/
 │       │   ├── CalendarView.vue        # Agenda-Liste mit Monatsnavigation
 │       │   ├── EventDetailView.vue     # Event-Info + RSVP + Aktionen
 │       │   ├── EventCreateView.vue     # Erstellen/Bearbeiten mit Scope-Picker
-│       │   ├── FamilyView.vue
+│       │   ├── FamilyView.vue          # + Einladungen senden/empfangen
 │       │   ├── ProfileView.vue         # + Push Notification Toggle
 │       │   ├── NotFoundView.vue        # 404
 │       │   └── admin/
@@ -292,7 +303,7 @@ monteweb/
 
 4. **Optionale Module:** Werden über `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` aktiviert. ALLE Beans (Services, Controllers, Components) brauchen diese Annotation, nicht nur Config-Klassen.
 
-5. **Flyway-Migrationen:** V001–V026 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
+5. **Flyway-Migrationen:** V001–V035 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
 
 6. **Security:** Alle Endpunkte gesichert. JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Security-Headers (HSTS, X-Frame-Options, CSP).
 
@@ -345,6 +356,10 @@ V023  push_subscriptions
 V024  OIDC-Felder (users: oidc_provider, oidc_subject, password_hash nullable)
 V025  calendar_events + calendar_event_rsvps
 V026  calendar-Modul zu default-modules
+V027–V032  (diverse Schema-Erweiterungen: Avatare, öffentliche Raumbeschreibungen, Admin-Seed)
+V033  seed_test_users (Testdaten für alle Rollen)
+V034  room_join_requests (Beitrittsanfragen für Räume)
+V035  family_invitations (Familien-Einladungen per User-Suche)
 ```
 
 ---
@@ -384,6 +399,11 @@ POST   /{id}/invite            Einladungscode generieren
 POST   /{id}/children          Kind verknüpfen
 DELETE /{id}/members/{userId}  Mitglied entfernen
 GET    /{id}/hours             Stundenkonto
+POST   /{id}/invitations       Mitglied per User-Suche einladen
+GET    /{id}/invitations       Offene Einladungen einer Familie
+GET    /my-invitations         Meine empfangenen Einladungen
+POST   /invitations/{id}/accept   Einladung annehmen
+POST   /invitations/{id}/decline  Einladung ablehnen
 ```
 
 ### School Sections (`/api/v1/sections`)
@@ -398,6 +418,7 @@ DELETE /{id}                   Deaktivieren
 ```
 GET    /mine                   Meine Räume
 GET    /                       Alle sichtbaren Räume
+GET    /browse?q=&page=&size=  Alle Räume wo User nicht Mitglied (für Beitrittsanfragen)
 POST   /                       Raum erstellen
 GET    /{id}                   Raum-Details
 PUT    /{id}                   Raum bearbeiten
@@ -405,6 +426,11 @@ PUT    /{id}/settings          Raum-Einstellungen
 POST   /{id}/members           Mitglied hinzufügen
 DELETE /{id}/members/{userId}  Mitglied entfernen
 GET    /{id}/members           Mitgliederliste
+POST   /{id}/join-request      Beitrittsanfrage senden (body: { message?: string })
+GET    /{id}/join-requests     Offene Anfragen (Leader only)
+POST   /{id}/join-requests/{rid}/approve  Anfrage annehmen (Leader)
+POST   /{id}/join-requests/{rid}/deny     Anfrage ablehnen (Leader)
+GET    /my-join-requests       Eigene Beitrittsanfragen
 ```
 
 ### Discussion Threads (`/api/v1/rooms/{roomId}/threads`)
@@ -538,6 +564,10 @@ GET    /actuator/metrics       Micrometer Metriken
 
 8. **Kalender-Berechtigungen:** ROOM-Events: nur LEADER oder SUPERADMIN. SECTION-Events: TEACHER oder SUPERADMIN. SCHOOL-Events: nur SUPERADMIN. RSVP steht allen authentifizierten Nutzern offen.
 
+9. **Raum-Beitrittsanfragen:** Nicht-Mitglieder können Beitrittsanfragen an geschlossene Räume senden. LEADERs erhalten Notifications und können Anfragen genehmigen/ablehnen. Genehmigte Anfragen fügen den User automatisch als MEMBER hinzu.
+
+10. **Familien-Einladungen:** Familienmitglieder können andere User per AutoComplete-Suche einladen (mit Rollenwahl PARENT/CHILD). Eingeladene erhalten eine Notification und können annehmen oder ablehnen.
+
 ---
 
 ## Konventionen
@@ -578,9 +608,10 @@ GET    /actuator/metrics       Micrometer Metriken
 # 1. Infrastruktur starten (Postgres:5433, Redis:6380, MinIO:9000)
 docker compose -f docker-compose.dev.yml up -d
 
-# 2. Backend kompilieren und starten (via Docker)
-docker run --rm -v "E:/claude/montessori/backend:/app" -w //app maven:3.9-eclipse-temurin-21 mvn clean package -DskipTests
-docker compose up backend
+# 2. Backend kompilieren und starten (lokal mit Maven oder via Docker)
+cd backend && DB_PORT=5433 REDIS_PORT=6380 mvn spring-boot:run
+# Alternativ via Docker:
+# docker compose up backend
 
 # 3. Frontend starten
 cd frontend
@@ -613,7 +644,7 @@ docker compose --profile monitoring up -d   # + Prometheus + Grafana
 
 **Tests:**
 ```bash
-# Frontend (87 Tests, ~1.5s)
+# Frontend (98 Tests, ~1.5s)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker required)
@@ -626,7 +657,7 @@ cd backend && mvn test
 
 - [x] E-Mail-Versand (SMTP, conditional via `monteweb.email.enabled`)
 - [x] Englische Übersetzung (`de.ts` + `en.ts`, LanguageSwitcher, Browser-Locale-Detection)
-- [x] Testabdeckung (87 Frontend-Tests via Vitest, Backend Integration Tests via Testcontainers)
+- [x] Testabdeckung (98 Frontend-Tests via Vitest, Backend Integration Tests via Testcontainers)
 - [x] CI/CD Pipeline (`.github/workflows/ci.yml` — Backend, Frontend, Docker Jobs)
 - [x] OIDC/SSO (OAuth2 Client, conditional via `monteweb.oidc.enabled`, SSO-Button in Login)
 - [x] PDF-Export (Stundenbericht + QR-Codes via OpenHTMLToPDF)
@@ -636,6 +667,8 @@ cd backend && mvn test
 - [x] Kommunikationsregeln (Eltern-Eltern, Schüler-Schüler konfigurierbar)
 - [x] Raum-Diskussions-Threads (LEADER erstellt/archiviert/löscht, Mitglieder antworten)
 - [x] Kalender/Events (Raum/Bereich/Schulweit, RSVP, Monatsnavigation, conditional via `monteweb.modules.calendar.enabled`)
+- [x] Raum-Beitrittsanfragen (Browse alle Räume, Anfrage senden, Leader genehmigt/lehnt ab, Notifications)
+- [x] Familien-Einladungen per User-Suche (AutoComplete, Rolle wählen, Annehmen/Ablehnen, Notifications)
 
 ## Conditional Features
 
@@ -650,4 +683,5 @@ Folgende Features sind über Konfiguration aktivierbar:
 | Files-Modul | `monteweb.modules.files.enabled` | `true` |
 | Jobboard-Modul | `monteweb.modules.jobboard.enabled` | `true` |
 | Cleaning-Modul | `monteweb.modules.cleaning.enabled` | `true` |
-| Calendar-Modul | `monteweb.modules.calendar.enabled` | `false` |
+| Calendar-Modul | `monteweb.modules.calendar.enabled` | `true` |
+| Forms-Modul | `monteweb.modules.forms.enabled` | `true` |
