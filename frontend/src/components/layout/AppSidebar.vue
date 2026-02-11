@@ -14,7 +14,6 @@ const navItems = computed(() => {
   const items = [
     { to: '/', icon: 'pi pi-home', label: t('nav.dashboard'), name: 'dashboard' },
     { to: '/rooms', icon: 'pi pi-th-large', label: t('nav.rooms'), name: 'rooms' },
-    { to: '/rooms/discover', icon: 'pi pi-compass', label: t('nav.discover'), name: 'discover-rooms' },
     { to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' },
   ]
 
@@ -30,6 +29,9 @@ const navItems = computed(() => {
   if (admin.isModuleEnabled('calendar')) {
     items.push({ to: '/calendar', icon: 'pi pi-calendar-plus', label: t('nav.calendar'), name: 'calendar' })
   }
+  if (admin.isModuleEnabled('forms')) {
+    items.push({ to: '/forms', icon: 'pi pi-list-check', label: t('nav.forms'), name: 'forms' })
+  }
 
   if (auth.isAdmin) {
     items.push({ to: '/admin', icon: 'pi pi-cog', label: t('nav.admin'), name: 'admin' })
@@ -40,12 +42,15 @@ const navItems = computed(() => {
 
 function isActive(item: { to: string; name: string }) {
   if (item.to === '/') return route.name === 'dashboard'
-  return route.path.startsWith(item.to)
+  // Exact segment match: /rooms should not match /rooms/discover
+  const path = route.path
+  if (path === item.to) return true
+  return path.startsWith(item.to + '/')
 }
 </script>
 
 <template>
-  <aside class="app-sidebar">
+  <aside class="app-sidebar" :aria-label="t('nav.mainNavigation')">
     <nav class="sidebar-nav">
       <router-link
         v-for="item in navItems"
@@ -53,6 +58,8 @@ function isActive(item: { to: string; name: string }) {
         :to="item.to"
         class="nav-item"
         :class="{ active: isActive(item) }"
+        :aria-current="isActive(item) ? 'page' : undefined"
+        active-class=""
       >
         <i :class="item.icon" />
         <span>{{ item.label }}</span>
@@ -83,7 +90,7 @@ function isActive(item: { to: string; name: string }) {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.625rem 1.25rem;
+  padding: 0.75rem 1.25rem;
   color: var(--mw-text-secondary);
   text-decoration: none;
   font-size: var(--mw-font-size-sm);

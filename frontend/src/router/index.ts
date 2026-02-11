@@ -97,6 +97,34 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'forms',
+          name: 'forms',
+          component: () => import('@/views/FormsView.vue'),
+        },
+        {
+          path: 'forms/create',
+          name: 'form-create',
+          component: () => import('@/views/FormCreateView.vue'),
+        },
+        {
+          path: 'forms/:id',
+          name: 'form-detail',
+          component: () => import('@/views/FormDetailView.vue'),
+          props: true,
+        },
+        {
+          path: 'forms/:id/edit',
+          name: 'form-edit',
+          component: () => import('@/views/FormCreateView.vue'),
+          props: true,
+        },
+        {
+          path: 'forms/:id/results',
+          name: 'form-results',
+          component: () => import('@/views/FormResultsView.vue'),
+          props: true,
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),

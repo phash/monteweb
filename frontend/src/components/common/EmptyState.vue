@@ -7,7 +7,7 @@ defineProps<{
 
 <template>
   <div class="empty-state">
-    <i v-if="icon" :class="icon" class="empty-icon" />
+    <i v-if="icon" :class="icon" class="empty-icon" aria-hidden="true" />
     <p class="empty-message">{{ message }}</p>
     <slot />
   </div>

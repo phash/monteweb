@@ -144,10 +144,6 @@ const isArchived = () => discussions.currentThread?.status === 'ARCHIVED'
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .thread-header {
   padding: 1rem;
   margin-bottom: 1rem;

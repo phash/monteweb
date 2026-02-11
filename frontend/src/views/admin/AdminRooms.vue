@@ -78,7 +78,7 @@ onMounted(loadData)
       <Column field="memberCount" :header="t('admin.columnMembers')" />
     </DataTable>
 
-    <Dialog v-model:visible="showCreate" :header="t('rooms.create')" modal style="width: 500px">
+    <Dialog v-model:visible="showCreate" :header="t('rooms.create')" modal :style="{ width: '500px', maxWidth: '90vw' }">
       <form @submit.prevent="createRoom" class="create-form">
         <div class="form-field">
           <label>{{ t('rooms.name') }}</label>
@@ -135,9 +135,5 @@ onMounted(loadData)
 .form-field label {
   font-size: var(--mw-font-size-sm);
   font-weight: 500;
-}
-
-.w-full {
-  width: 100%;
 }
 </style>

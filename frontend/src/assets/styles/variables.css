@@ -1,7 +1,7 @@
 :root {
   /* Primary colors - Montessori green */
   --mw-primary: #2E7D32;
-  --mw-primary-light: #4CAF50;
+  --mw-primary-light: #388E3C;
   --mw-primary-dark: #1B5E20;
   --mw-primary-contrast: #ffffff;
 
@@ -17,7 +17,7 @@
   --mw-bg-sidebar: #ffffff;
   --mw-text: #1a1a2e;
   --mw-text-secondary: #6c757d;
-  --mw-text-muted: #adb5bd;
+  --mw-text-muted: #6b7280;
   --mw-border: #dee2e6;
   --mw-border-light: #e9ecef;
 

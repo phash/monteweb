@@ -112,12 +112,12 @@ function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary'
       :message="t('calendar.noEvents')"
     />
     <div v-else class="event-list">
-      <div
+      <router-link
         v-for="event in calendar.events"
         :key="event.id"
+        :to="{ name: 'event-detail', params: { id: event.id } }"
         class="event-item card"
         :class="{ cancelled: event.cancelled }"
-        @click="router.push({ name: 'event-detail', params: { id: event.id } })"
       >
         <div class="event-date-col">
           <span class="event-date-text">{{ formatEventDate(event) }}</span>
@@ -138,7 +138,7 @@ function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary'
           </div>
         </div>
         <i class="pi pi-chevron-right event-arrow" />
-      </div>
+      </router-link>
     </div>
   </div>
 </template>
@@ -179,6 +179,8 @@ function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary'
   cursor: pointer;
   transition: background 0.15s;
   gap: 1rem;
+  text-decoration: none;
+  color: inherit;
 }
 
 .event-item:hover {

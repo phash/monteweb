@@ -206,10 +206,6 @@ function loginWithSso() {
   color: var(--mw-text-secondary);
 }
 
-.w-full {
-  width: 100%;
-}
-
 .login-toggle {
   text-align: center;
   margin-top: 1.5rem;

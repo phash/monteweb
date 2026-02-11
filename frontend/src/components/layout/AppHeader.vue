@@ -53,7 +53,9 @@ function toggleUserMenu(event: Event) {
         icon="pi pi-user"
         severity="secondary"
         text
+        :aria-label="t('nav.profile')"
         @click="toggleUserMenu"
+        class="user-menu-button"
       />
       <Menu ref="userMenu" :model="menuItems" popup />
     </div>
@@ -74,16 +76,31 @@ function toggleUserMenu(event: Event) {
   z-index: 100;
 }
 
+.header-left {
+  min-width: 0;
+}
+
 .header-logo {
   font-size: var(--mw-font-size-lg);
   font-weight: 700;
   color: var(--mw-primary);
   text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .user-menu-button :deep(.p-button-label) {
+    display: none;
+  }
 }
 </style>

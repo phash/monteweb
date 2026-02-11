@@ -153,18 +153,18 @@ async function handleSubmit() {
     <div class="form-card card">
       <div class="form-grid">
         <div class="field">
-          <label>{{ t('calendar.eventTitle') }} *</label>
-          <InputText v-model="title" :placeholder="t('calendar.titlePlaceholder')" class="w-full" />
+          <label for="event-title">{{ t('calendar.eventTitle') }} *</label>
+          <InputText id="event-title" v-model="title" :placeholder="t('calendar.titlePlaceholder')" class="w-full" />
         </div>
 
         <div class="field">
-          <label>{{ t('calendar.description') }}</label>
-          <Textarea v-model="description" :placeholder="t('calendar.descriptionPlaceholder')" :autoResize="true" rows="3" class="w-full" />
+          <label for="event-description">{{ t('calendar.description') }}</label>
+          <Textarea id="event-description" v-model="description" :placeholder="t('calendar.descriptionPlaceholder')" :autoResize="true" rows="3" class="w-full" />
         </div>
 
         <div class="field">
-          <label>{{ t('calendar.location') }}</label>
-          <InputText v-model="location" :placeholder="t('calendar.locationPlaceholder')" class="w-full" />
+          <label for="event-location">{{ t('calendar.location') }}</label>
+          <InputText id="event-location" v-model="location" :placeholder="t('calendar.locationPlaceholder')" class="w-full" />
         </div>
 
         <div class="field-row">
@@ -252,10 +252,6 @@ async function handleSubmit() {
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .form-card {
   padding: 1.5rem;
 }
@@ -287,10 +283,6 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-}
-
-.w-full {
-  width: 100%;
 }
 
 .form-actions {

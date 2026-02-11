@@ -35,11 +35,13 @@ async function submit() {
     <InputText
       v-model="title"
       :placeholder="t('feed.titlePlaceholder')"
+      :aria-label="t('feed.titlePlaceholder')"
       class="composer-title"
     />
     <Textarea
       v-model="content"
       :placeholder="t('feed.contentPlaceholder')"
+      :aria-label="t('feed.contentPlaceholder')"
       :autoResize="true"
       rows="3"
       class="composer-content"

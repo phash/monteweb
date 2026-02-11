@@ -123,7 +123,7 @@ function formatDate(date: string) {
       v-model:visible="showCreateDialog"
       :header="t('discussions.createTitle')"
       modal
-      :style="{ width: '500px' }"
+      :style="{ width: '500px', maxWidth: '90vw' }"
     >
       <div class="create-form">
         <div class="field">
@@ -210,9 +210,5 @@ function formatDate(date: string) {
 .field label {
   font-weight: 600;
   font-size: var(--mw-font-size-sm);
-}
-
-.w-full {
-  width: 100%;
 }
 </style>

@@ -116,11 +116,11 @@ function formatDate(date: string | null) {
           />
 
           <div v-else class="job-list">
-            <div
+            <router-link
               v-for="job in jobboard.jobs"
               :key="job.id"
+              :to="{ name: 'job-detail', params: { id: job.id } }"
               class="job-card card"
-              @click="router.push({ name: 'job-detail', params: { id: job.id } })"
             >
               <div class="job-card-header">
                 <h3>{{ job.title }}</h3>
@@ -137,7 +137,7 @@ function formatDate(date: string | null) {
                 <span class="assignees">{{ job.currentAssignees }}/{{ job.maxAssignees }} {{ t('jobboard.assignees') }}</span>
                 <span class="creator">{{ job.creatorName }}</span>
               </div>
-            </div>
+            </router-link>
 
             <div v-if="jobboard.hasMore" class="load-more">
               <Button
@@ -159,11 +159,11 @@ function formatDate(date: string | null) {
             :message="t('jobboard.noAssignments')"
           />
           <div v-else class="assignments-list">
-            <div
+            <router-link
               v-for="a in jobboard.myAssignments"
               :key="a.id"
+              :to="{ name: 'job-detail', params: { id: a.jobId } }"
               class="assignment-card card"
-              @click="router.push({ name: 'job-detail', params: { id: a.jobId } })"
             >
               <div class="assignment-header">
                 <h3>{{ a.jobTitle }}</h3>
@@ -174,7 +174,7 @@ function formatDate(date: string | null) {
                 <Tag v-if="a.confirmed" :value="t('jobboard.confirmed')" severity="success" size="small" />
                 <Tag v-else-if="a.status === 'COMPLETED'" :value="t('jobboard.pendingConfirmation')" severity="warn" size="small" />
               </div>
-            </div>
+            </router-link>
           </div>
         </TabPanel>
       </TabPanels>
@@ -210,6 +210,8 @@ function formatDate(date: string | null) {
 .job-card {
   cursor: pointer;
   transition: box-shadow 0.15s;
+  text-decoration: none;
+  color: inherit;
 }
 
 .job-card:hover {
@@ -255,6 +257,8 @@ function formatDate(date: string | null) {
 
 .assignment-card {
   cursor: pointer;
+  text-decoration: none;
+  color: inherit;
 }
 
 .assignment-header {

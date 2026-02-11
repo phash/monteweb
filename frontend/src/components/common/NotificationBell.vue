@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useNotificationsStore } from '@/stores/notifications'
@@ -12,10 +12,15 @@ const notifications = useNotificationsStore()
 const router = useRouter()
 const popover = ref()
 
+let pollInterval: ReturnType<typeof setInterval> | null = null
+
 onMounted(() => {
   notifications.fetchUnreadCount()
-  // Poll for unread count every 30 seconds
-  setInterval(() => notifications.fetchUnreadCount(), 30000)
+  pollInterval = setInterval(() => notifications.fetchUnreadCount(), 30000)
+})
+
+onUnmounted(() => {
+  if (pollInterval) clearInterval(pollInterval)
 })
 
 function toggle(event: Event) {
@@ -35,11 +40,11 @@ function formatTime(date: string) {
   const diff = Date.now() - new Date(date).getTime()
   const minutes = Math.floor(diff / 60000)
   if (minutes < 1) return t('notifications.justNow')
-  if (minutes < 60) return `vor ${minutes}m`
+  if (minutes < 60) return t('notifications.minutesAgo', { n: minutes })
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `vor ${hours}h`
+  if (hours < 24) return t('notifications.hoursAgo', { n: hours })
   const days = Math.floor(hours / 24)
-  return `vor ${days}d`
+  return t('notifications.daysAgo', { n: days })
 }
 </script>
 
@@ -50,6 +55,9 @@ function formatTime(date: string) {
       text
       rounded
       severity="secondary"
+      :aria-label="notifications.unreadCount > 0
+        ? t('notifications.bellWithCount', { count: notifications.unreadCount })
+        : t('notifications.title')"
       @click="toggle"
       class="bell-button"
     />
@@ -78,7 +86,10 @@ function formatTime(date: string) {
           :key="n.id"
           class="notification-item"
           :class="{ unread: !n.read }"
+          role="button"
+          tabindex="0"
           @click="handleClick(n.link, n.id)"
+          @keydown.enter="handleClick(n.link, n.id)"
         >
           <div class="notification-content">
             <strong>{{ n.title }}</strong>

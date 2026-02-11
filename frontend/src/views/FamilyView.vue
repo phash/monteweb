@@ -103,10 +103,10 @@ function copyCode() {
     </EmptyState>
 
     <!-- Create Dialog -->
-    <Dialog v-model:visible="showCreateDialog" :header="t('family.create')" modal style="width: 400px">
+    <Dialog v-model:visible="showCreateDialog" :header="t('family.create')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="form-field">
-        <label>{{ t('family.name') }}</label>
-        <InputText v-model="familyName" class="w-full" />
+        <label for="family-name">{{ t('family.name') }}</label>
+        <InputText id="family-name" v-model="familyName" class="w-full" />
       </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" @click="showCreateDialog = false" />
@@ -115,10 +115,10 @@ function copyCode() {
     </Dialog>
 
     <!-- Join Dialog -->
-    <Dialog v-model:visible="showJoinDialog" :header="t('family.join')" modal style="width: 400px">
+    <Dialog v-model:visible="showJoinDialog" :header="t('family.join')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="form-field">
-        <label>{{ t('family.inviteCode') }}</label>
-        <InputText v-model="inviteCode" class="w-full" />
+        <label for="invite-code">{{ t('family.inviteCode') }}</label>
+        <InputText id="invite-code" v-model="inviteCode" class="w-full" />
       </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" @click="showJoinDialog = false" />
@@ -199,9 +199,5 @@ h3 {
 .form-field label {
   font-size: var(--mw-font-size-sm);
   font-weight: 500;
-}
-
-.w-full {
-  width: 100%;
 }
 </style>

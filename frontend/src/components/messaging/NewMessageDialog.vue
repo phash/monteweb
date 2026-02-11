@@ -119,10 +119,6 @@ function onHide() {
   font-size: var(--mw-font-size-sm);
 }
 
-.w-full {
-  width: 100%;
-}
-
 .user-option {
   display: flex;
   align-items: center;

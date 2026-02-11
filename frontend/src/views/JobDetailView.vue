@@ -209,7 +209,7 @@ function formatDate(date: string | null) {
     </template>
 
     <!-- Complete Dialog -->
-    <Dialog v-model:visible="showCompleteDialog" :header="t('jobboard.completeTask')" modal :style="{ width: '450px' }">
+    <Dialog v-model:visible="showCompleteDialog" :header="t('jobboard.completeTask')" modal :style="{ width: '450px', maxWidth: '90vw' }">
       <div class="complete-form">
         <div class="form-field">
           <label>{{ t('jobboard.actualHours') }}</label>
@@ -229,10 +229,6 @@ function formatDate(date: string | null) {
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .job-header {
   display: flex;
   justify-content: space-between;

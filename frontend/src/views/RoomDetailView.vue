@@ -159,10 +159,6 @@ async function handlePost(data: { title?: string; content: string }) {
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .room-header {
   display: flex;
   align-items: flex-start;

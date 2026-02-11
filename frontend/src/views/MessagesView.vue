@@ -19,6 +19,7 @@ const messaging = useMessagingStore()
 const selectedConversationId = ref<string | null>(null)
 const messageText = ref('')
 const showNewMessage = ref(false)
+const showMessages = ref(false)
 
 onMounted(async () => {
   await messaging.fetchConversations()
@@ -48,8 +49,13 @@ function getConversationName(conv: typeof messaging.conversations[0]) {
 
 async function selectConversation(id: string) {
   selectedConversationId.value = id
+  showMessages.value = true
   await messaging.fetchMessages(id)
   messaging.markAsRead(id)
+}
+
+function goBackToList() {
+  showMessages.value = false
 }
 
 async function sendMessage() {
@@ -86,7 +92,7 @@ function formatTime(date: string | null) {
 
     <div class="messages-layout">
       <!-- Conversation list -->
-      <div class="conversations-panel card">
+      <div class="conversations-panel card" :class="{ 'mobile-hidden': showMessages }">
         <LoadingSpinner v-if="messaging.loading && !messaging.conversations.length" />
         <EmptyState
           v-else-if="!messaging.conversations.length"
@@ -99,7 +105,10 @@ function formatTime(date: string | null) {
             :key="conv.id"
             class="conversation-item"
             :class="{ active: conv.id === selectedConversationId, unread: conv.unreadCount > 0 }"
+            role="button"
+            tabindex="0"
             @click="selectConversation(conv.id)"
+            @keydown.enter="selectConversation(conv.id)"
           >
             <div class="conv-info">
               <strong>{{ getConversationName(conv) }}</strong>
@@ -114,9 +123,18 @@ function formatTime(date: string | null) {
       </div>
 
       <!-- Message area -->
-      <div class="messages-panel card">
+      <div class="messages-panel card" :class="{ 'mobile-visible': showMessages }">
         <template v-if="selectedConversationId">
           <div class="messages-header">
+            <Button
+              icon="pi pi-arrow-left"
+              text
+              severity="secondary"
+              size="small"
+              class="back-button"
+              :aria-label="t('common.back')"
+              @click="goBackToList"
+            />
             <strong>{{ selectedConversation ? getConversationName(selectedConversation) : '' }}</strong>
           </div>
 
@@ -182,15 +200,21 @@ function formatTime(date: string | null) {
   height: calc(100vh - var(--mw-header-height) - 8rem);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .messages-layout {
     grid-template-columns: 1fr;
   }
   .messages-panel {
     display: none;
   }
-  .messages-panel:has(.messages-header) {
+  .messages-panel.mobile-visible {
     display: flex;
+  }
+  .conversations-panel.mobile-hidden {
+    display: none;
+  }
+  .back-button {
+    display: inline-flex;
   }
 }
 
@@ -269,8 +293,15 @@ function formatTime(date: string | null) {
 }
 
 .messages-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--mw-border-light);
+}
+
+.back-button {
+  display: none;
 }
 
 .messages-list {

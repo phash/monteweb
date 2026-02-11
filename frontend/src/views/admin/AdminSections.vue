@@ -69,7 +69,7 @@ onMounted(loadSections)
       </Column>
     </DataTable>
 
-    <Dialog v-model:visible="showCreate" :header="t('admin.sectionDialog')" modal style="width: 450px">
+    <Dialog v-model:visible="showCreate" :header="t('admin.sectionDialog')" modal :style="{ width: '450px', maxWidth: '90vw' }">
       <form @submit.prevent="createSection" class="create-form">
         <div class="form-field">
           <label>{{ t('admin.sectionName') }}</label>
@@ -114,9 +114,5 @@ onMounted(loadSections)
 .form-field label {
   font-size: var(--mw-font-size-sm);
   font-weight: 500;
-}
-
-.w-full {
-  width: 100%;
 }
 </style>

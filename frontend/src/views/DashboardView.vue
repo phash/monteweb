@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useToast } from 'primevue/usetoast'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -9,6 +10,7 @@ import PostComposer from '@/components/feed/PostComposer.vue'
 import FeedList from '@/components/feed/FeedList.vue'
 
 const { t } = useI18n()
+const toast = useToast()
 const auth = useAuthStore()
 const feed = useFeedStore()
 
@@ -21,6 +23,7 @@ async function handlePost(data: { title?: string; content: string }) {
     sourceType: 'SCHOOL',
     ...data,
   })
+  toast.add({ severity: 'success', summary: t('feed.postCreated'), life: 3000 })
 }
 </script>
 

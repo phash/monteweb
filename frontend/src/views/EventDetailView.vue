@@ -149,7 +149,7 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
 
       <!-- RSVP Section -->
       <div v-if="!calendar.currentEvent.cancelled" class="rsvp-section card">
-        <h3>{{ t('calendar.rsvp') }}</h3>
+        <h2>{{ t('calendar.rsvp') }}</h2>
         <div class="rsvp-buttons">
           <Button
             :label="t('calendar.attending')"
@@ -185,7 +185,7 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
       <!-- Linked Jobs -->
       <div v-if="jobboardEnabled" class="linked-jobs-section card">
         <div class="linked-jobs-header">
-          <h3>{{ t('jobboard.linkedJobs') }}</h3>
+          <h2>{{ t('jobboard.linkedJobs') }}</h2>
           <Button
             v-if="auth.isTeacher || auth.isAdmin"
             :label="t('jobboard.createLinkedJob')"
@@ -196,18 +196,18 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
           />
         </div>
         <div v-if="linkedJobs.length" class="linked-jobs-list">
-          <div
+          <router-link
             v-for="job in linkedJobs"
             :key="job.id"
+            :to="{ name: 'job-detail', params: { id: job.id } }"
             class="linked-job-item"
-            @click="router.push({ name: 'job-detail', params: { id: job.id } })"
           >
             <div class="linked-job-info">
               <strong>{{ job.title }}</strong>
               <span class="linked-job-meta">{{ job.category }} · {{ job.estimatedHours }}h · {{ job.currentAssignees }}/{{ job.maxAssignees }} {{ t('jobboard.assignees') }}</span>
             </div>
             <Tag :value="t(`jobboard.statuses.${job.status}`)" :severity="job.status === 'OPEN' ? 'success' : job.status === 'COMPLETED' ? 'secondary' : 'info'" size="small" />
-          </div>
+          </router-link>
         </div>
         <p v-else class="text-muted">{{ t('jobboard.noLinkedJobs') }}</p>
       </div>
@@ -237,7 +237,7 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
     </template>
 
     <!-- Cancel Dialog -->
-    <Dialog v-model:visible="showCancelDialog" :header="t('calendar.cancelEvent')" modal :style="{ width: '400px' }">
+    <Dialog v-model:visible="showCancelDialog" :header="t('calendar.cancelEvent')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <p>{{ t('calendar.cancelConfirm') }}</p>
       <template #footer>
         <Button :label="t('common.no')" severity="secondary" text @click="showCancelDialog = false" />
@@ -246,7 +246,7 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
     </Dialog>
 
     <!-- Delete Dialog -->
-    <Dialog v-model:visible="showDeleteDialog" :header="t('common.delete')" modal :style="{ width: '400px' }">
+    <Dialog v-model:visible="showDeleteDialog" :header="t('common.delete')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <p>{{ t('calendar.deleteConfirm') }}</p>
       <template #footer>
         <Button :label="t('common.no')" severity="secondary" text @click="showDeleteDialog = false" />
@@ -257,10 +257,6 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
 </template>
 
 <style scoped>
-.mb-1 {
-  margin-bottom: 1rem;
-}
-
 .event-header {
   display: flex;
   align-items: flex-start;
@@ -302,7 +298,8 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
   margin-bottom: 1rem;
 }
 
-.rsvp-section h3 {
+.rsvp-section h2 {
+  font-size: var(--mw-font-size-md);
   margin: 0 0 0.75rem;
 }
 
@@ -338,7 +335,8 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
   margin-bottom: 0.75rem;
 }
 
-.linked-jobs-header h3 {
+.linked-jobs-header h2 {
+  font-size: var(--mw-font-size-md);
   margin: 0;
 }
 
@@ -357,6 +355,8 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
   border-radius: var(--mw-border-radius-sm);
   cursor: pointer;
   transition: background 0.15s;
+  text-decoration: none;
+  color: inherit;
 }
 
 .linked-job-item:hover {

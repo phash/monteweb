@@ -62,24 +62,24 @@ async function togglePush() {
 
       <form @submit.prevent="save" class="profile-form">
         <div class="form-field">
-          <label>{{ t('auth.email') }}</label>
-          <InputText :model-value="auth.user?.email" disabled class="w-full" />
+          <label for="profile-email">{{ t('auth.email') }}</label>
+          <InputText id="profile-email" :model-value="auth.user?.email" disabled class="w-full" />
         </div>
 
         <div class="form-row">
           <div class="form-field">
-            <label>{{ t('auth.firstName') }}</label>
-            <InputText v-model="form.firstName" class="w-full" />
+            <label for="profile-firstName">{{ t('auth.firstName') }}</label>
+            <InputText id="profile-firstName" v-model="form.firstName" class="w-full" />
           </div>
           <div class="form-field">
-            <label>{{ t('auth.lastName') }}</label>
-            <InputText v-model="form.lastName" class="w-full" />
+            <label for="profile-lastName">{{ t('auth.lastName') }}</label>
+            <InputText id="profile-lastName" v-model="form.lastName" class="w-full" />
           </div>
         </div>
 
         <div class="form-field">
-          <label>{{ t('auth.phone') }}</label>
-          <InputText v-model="form.phone" class="w-full" />
+          <label for="profile-phone">{{ t('auth.phone') }}</label>
+          <InputText id="profile-phone" v-model="form.phone" class="w-full" />
         </div>
 
         <Button type="submit" :label="t('common.save')" />
@@ -129,9 +129,6 @@ async function togglePush() {
   color: var(--mw-text-secondary);
 }
 
-.w-full {
-  width: 100%;
-}
 
 .push-card {
   margin-top: 1rem;

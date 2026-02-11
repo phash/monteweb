@@ -115,7 +115,7 @@ async function createInterestRoom() {
     </div>
 
     <!-- Create Interest Room Dialog -->
-    <Dialog v-model:visible="showCreateDialog" :header="t('discover.createRoom')" modal style="width: 500px">
+    <Dialog v-model:visible="showCreateDialog" :header="t('discover.createRoom')" modal :style="{ width: '500px', maxWidth: '90vw' }">
       <div class="flex flex-col gap-4">
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('rooms.name') }}</label>
