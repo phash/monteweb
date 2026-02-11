@@ -21,6 +21,8 @@ public record JobInfo(
         UUID createdBy,
         String creatorName,
         String contactInfo,
+        UUID eventId,
+        String eventTitle,
         Instant createdAt
 ) {
 }

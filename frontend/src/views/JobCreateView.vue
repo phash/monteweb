@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useJobboardStore } from '@/stores/jobboard'
+import { useAdminStore } from '@/stores/admin'
+import { useCalendarStore } from '@/stores/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
+import Select from 'primevue/select'
 
 const { t } = useI18n()
 const router = useRouter()
+const route = useRoute()
 const jobboard = useJobboardStore()
+const admin = useAdminStore()
+const calendar = useCalendarStore()
 
 const title = ref('')
 const description = ref('')
@@ -23,10 +29,22 @@ const maxAssignees = ref(1)
 const scheduledDate = ref<Date | null>(null)
 const scheduledTime = ref('')
 const contactInfo = ref('')
+const selectedEventId = ref<string | null>(null)
 const submitting = ref(false)
+const calendarEnabled = admin.isModuleEnabled('calendar')
 
-onMounted(() => {
+onMounted(async () => {
   jobboard.fetchCategories()
+  if (calendarEnabled) {
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const to = new Date(now.getFullYear(), now.getMonth() + 6, 0)
+    const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    await calendar.fetchEvents(formatDate(from), formatDate(to))
+  }
+  if (route.query.eventId) {
+    selectedEventId.value = route.query.eventId as string
+  }
 })
 
 async function submit() {
@@ -43,6 +61,7 @@ async function submit() {
       scheduledDate: scheduledDate.value?.toISOString().split('T')[0],
       scheduledTime: scheduledTime.value.trim() || undefined,
       contactInfo: contactInfo.value.trim() || undefined,
+      eventId: selectedEventId.value || undefined,
     })
     router.push({ name: 'job-detail', params: { id: job.id } })
   } finally {
@@ -113,6 +132,18 @@ async function submit() {
       <div class="form-field">
         <label>{{ t('jobboard.contact') }}</label>
         <InputText v-model="contactInfo" :placeholder="t('jobboard.create_form.contactPlaceholder')" class="full-width" />
+      </div>
+
+      <div v-if="calendarEnabled && calendar.events.length" class="form-field">
+        <label>{{ t('jobboard.linkedEvent') }}</label>
+        <Select
+          v-model="selectedEventId"
+          :options="[{ label: t('jobboard.noLinkedEvent'), value: null }, ...calendar.events.map(e => ({ label: e.title, value: e.id }))]"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('jobboard.selectEvent')"
+          class="full-width"
+        />
       </div>
 
       <div class="form-actions">

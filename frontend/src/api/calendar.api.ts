@@ -1,6 +1,7 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
 import type { CalendarEvent, CreateEventRequest, UpdateEventRequest, RsvpStatus } from '@/types/calendar'
+import type { JobInfo } from '@/types/jobboard'
 
 export const calendarApi = {
   getEvents(from: string, to: string, page = 0, size = 50) {
@@ -37,5 +38,9 @@ export const calendarApi = {
     return client.get<ApiResponse<PageResponse<CalendarEvent>>>(`/calendar/rooms/${roomId}/events`, {
       params: { from, to, page, size },
     })
+  },
+
+  getEventJobs(eventId: string) {
+    return client.get<ApiResponse<JobInfo[]>>(`/calendar/events/${eventId}/jobs`)
   },
 }

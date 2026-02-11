@@ -17,6 +17,8 @@ export interface JobInfo {
   createdBy: string
   creatorName: string
   contactInfo: string | null
+  eventId: string | null
+  eventTitle: string | null
   createdAt: string
 }
 
@@ -70,4 +72,5 @@ export interface CreateJobRequest {
   scheduledDate?: string
   scheduledTime?: string
   contactInfo?: string
+  eventId?: string
 }

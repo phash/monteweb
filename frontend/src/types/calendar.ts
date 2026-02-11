@@ -26,6 +26,7 @@ export interface CalendarEvent {
   maybeCount: number
   declinedCount: number
   currentUserRsvp: RsvpStatus | null
+  linkedJobCount: number
   createdAt: string
   updatedAt: string
 }

@@ -1,6 +1,7 @@
 package com.monteweb.jobboard;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -13,4 +14,8 @@ public interface JobboardModuleApi {
     Optional<FamilyHoursInfo> getFamilyHours(UUID familyId);
 
     BigDecimal getConfirmedHoursForFamily(UUID familyId);
+
+    List<JobInfo> getJobsForEvent(UUID eventId);
+
+    int countJobsForEvent(UUID eventId);
 }

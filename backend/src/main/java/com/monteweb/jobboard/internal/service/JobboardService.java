@@ -1,6 +1,7 @@
 package com.monteweb.jobboard.internal.service;
 
 import com.monteweb.admin.AdminModuleApi;
+import com.monteweb.calendar.CalendarModuleApi;
 import com.monteweb.cleaning.CleaningModuleApi;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
@@ -38,6 +39,7 @@ public class JobboardService implements JobboardModuleApi {
     private final AdminModuleApi adminModuleApi;
     private final ApplicationEventPublisher eventPublisher;
     private final CleaningModuleApi cleaningModuleApi;
+    private final CalendarModuleApi calendarModuleApi;
 
     public JobboardService(JobRepository jobRepository,
                            JobAssignmentRepository assignmentRepository,
@@ -45,7 +47,8 @@ public class JobboardService implements JobboardModuleApi {
                            FamilyModuleApi familyModuleApi,
                            AdminModuleApi adminModuleApi,
                            ApplicationEventPublisher eventPublisher,
-                           @Autowired(required = false) CleaningModuleApi cleaningModuleApi) {
+                           @Autowired(required = false) CleaningModuleApi cleaningModuleApi,
+                           @Autowired(required = false) CalendarModuleApi calendarModuleApi) {
         this.jobRepository = jobRepository;
         this.assignmentRepository = assignmentRepository;
         this.userModuleApi = userModuleApi;
@@ -53,6 +56,7 @@ public class JobboardService implements JobboardModuleApi {
         this.adminModuleApi = adminModuleApi;
         this.eventPublisher = eventPublisher;
         this.cleaningModuleApi = cleaningModuleApi;
+        this.calendarModuleApi = calendarModuleApi;
     }
 
     // ---- Public API (JobboardModuleApi) ----
@@ -68,6 +72,20 @@ public class JobboardService implements JobboardModuleApi {
     @Transactional(readOnly = true)
     public BigDecimal getConfirmedHoursForFamily(UUID familyId) {
         return assignmentRepository.sumConfirmedHoursByFamilyId(familyId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<JobInfo> getJobsForEvent(UUID eventId) {
+        return jobRepository.findByEventId(eventId).stream()
+                .map(this::toJobInfo)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countJobsForEvent(UUID eventId) {
+        return jobRepository.countByEventId(eventId);
     }
 
     // ---- Job CRUD ----
@@ -86,6 +104,14 @@ public class JobboardService implements JobboardModuleApi {
         job.setCreatedBy(userId);
         job.setContactInfo(request.contactInfo());
         job.setStatus(JobStatus.OPEN);
+
+        if (request.eventId() != null) {
+            if (calendarModuleApi != null) {
+                calendarModuleApi.findById(request.eventId())
+                        .orElseThrow(() -> new BusinessException("Event not found"));
+            }
+            job.setEventId(request.eventId());
+        }
 
         return toJobInfo(jobRepository.save(job));
     }
@@ -118,9 +144,17 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     @Transactional(readOnly = true)
-    public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, Pageable pageable) {
+    public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, UUID eventId, Pageable pageable) {
         if (statuses == null || statuses.isEmpty()) {
             statuses = List.of(JobStatus.OPEN, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS);
+        }
+        if (eventId != null && category != null && !category.isBlank()) {
+            return jobRepository.findByCategoryAndEventIdAndStatusInOrderByScheduledDateAscCreatedAtDesc(
+                    category, eventId, statuses, pageable).map(this::toJobInfo);
+        }
+        if (eventId != null) {
+            return jobRepository.findByEventIdAndStatusInOrderByScheduledDateAscCreatedAtDesc(
+                    eventId, statuses, pageable).map(this::toJobInfo);
         }
         if (category != null && !category.isBlank()) {
             return jobRepository.findByCategoryAndStatusInOrderByScheduledDateAscCreatedAtDesc(
@@ -429,6 +463,13 @@ public class JobboardService implements JobboardModuleApi {
                 .map(u -> u.firstName() + " " + u.lastName())
                 .orElse("Unknown");
 
+        String eventTitle = null;
+        if (job.getEventId() != null && calendarModuleApi != null) {
+            eventTitle = calendarModuleApi.findById(job.getEventId())
+                    .map(e -> e.title())
+                    .orElse(null);
+        }
+
         return new JobInfo(
                 job.getId(),
                 job.getTitle(),
@@ -445,6 +486,8 @@ public class JobboardService implements JobboardModuleApi {
                 job.getCreatedBy(),
                 creatorName,
                 job.getContactInfo(),
+                job.getEventId(),
+                eventTitle,
                 job.getCreatedAt()
         );
     }
@@ -493,7 +536,8 @@ public class JobboardService implements JobboardModuleApi {
             int maxAssignees,
             java.time.LocalDate scheduledDate,
             String scheduledTime,
-            String contactInfo
+            String contactInfo,
+            UUID eventId
     ) {
     }
 

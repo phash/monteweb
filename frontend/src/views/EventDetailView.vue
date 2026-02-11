@@ -4,6 +4,9 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
+import { calendarApi } from '@/api/calendar.api'
+import type { JobInfo } from '@/types/jobboard'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
@@ -15,14 +18,21 @@ const { t } = useI18n()
 const router = useRouter()
 const calendar = useCalendarStore()
 const auth = useAuthStore()
+const admin = useAdminStore()
 
 const loading = ref(true)
 const showCancelDialog = ref(false)
 const showDeleteDialog = ref(false)
+const linkedJobs = ref<JobInfo[]>([])
+const jobboardEnabled = admin.isModuleEnabled('jobboard')
 
 onMounted(async () => {
   try {
     await calendar.fetchEvent(props.id)
+    if (jobboardEnabled) {
+      const res = await calendarApi.getEventJobs(props.id)
+      linkedJobs.value = res.data.data
+    }
   } finally {
     loading.value = false
   }
@@ -172,6 +182,36 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
         </div>
       </div>
 
+      <!-- Linked Jobs -->
+      <div v-if="jobboardEnabled" class="linked-jobs-section card">
+        <div class="linked-jobs-header">
+          <h3>{{ t('jobboard.linkedJobs') }}</h3>
+          <Button
+            v-if="auth.isTeacher || auth.isAdmin"
+            :label="t('jobboard.createLinkedJob')"
+            icon="pi pi-plus"
+            size="small"
+            severity="secondary"
+            @click="router.push({ name: 'job-create', query: { eventId: props.id } })"
+          />
+        </div>
+        <div v-if="linkedJobs.length" class="linked-jobs-list">
+          <div
+            v-for="job in linkedJobs"
+            :key="job.id"
+            class="linked-job-item"
+            @click="router.push({ name: 'job-detail', params: { id: job.id } })"
+          >
+            <div class="linked-job-info">
+              <strong>{{ job.title }}</strong>
+              <span class="linked-job-meta">{{ job.category }} · {{ job.estimatedHours }}h · {{ job.currentAssignees }}/{{ job.maxAssignees }} {{ t('jobboard.assignees') }}</span>
+            </div>
+            <Tag :value="t(`jobboard.statuses.${job.status}`)" :severity="job.status === 'OPEN' ? 'success' : job.status === 'COMPLETED' ? 'secondary' : 'info'" size="small" />
+          </div>
+        </div>
+        <p v-else class="text-muted">{{ t('jobboard.noLinkedJobs') }}</p>
+      </div>
+
       <!-- Actions -->
       <div v-if="canManage()" class="event-actions">
         <Button
@@ -284,6 +324,50 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
 
 .text-muted {
   color: var(--mw-text-muted);
+}
+
+.linked-jobs-section {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.linked-jobs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.linked-jobs-header h3 {
+  margin: 0;
+}
+
+.linked-jobs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.linked-job-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--mw-border-light);
+  border-radius: var(--mw-border-radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.linked-job-item:hover {
+  background: var(--mw-bg-hover);
+}
+
+.linked-job-meta {
+  display: block;
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+  margin-top: 0.15rem;
 }
 
 .event-actions {

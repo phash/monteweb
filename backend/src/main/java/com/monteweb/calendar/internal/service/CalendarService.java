@@ -5,11 +5,13 @@ import com.monteweb.calendar.internal.model.CalendarEvent;
 import com.monteweb.calendar.internal.model.EventRsvp;
 import com.monteweb.calendar.internal.repository.CalendarEventRepository;
 import com.monteweb.calendar.internal.repository.EventRsvpRepository;
+import com.monteweb.jobboard.JobboardModuleApi;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -30,19 +33,22 @@ public class CalendarService implements CalendarModuleApi {
     private final SchoolModuleApi schoolModule;
     private final UserModuleApi userModule;
     private final ApplicationEventPublisher eventPublisher;
+    private final JobboardModuleApi jobboardModuleApi;
 
     public CalendarService(CalendarEventRepository eventRepository,
                            EventRsvpRepository rsvpRepository,
                            RoomModuleApi roomModule,
                            SchoolModuleApi schoolModule,
                            UserModuleApi userModule,
-                           ApplicationEventPublisher eventPublisher) {
+                           ApplicationEventPublisher eventPublisher,
+                           @Autowired(required = false) JobboardModuleApi jobboardModuleApi) {
         this.eventRepository = eventRepository;
         this.rsvpRepository = rsvpRepository;
         this.roomModule = roomModule;
         this.schoolModule = schoolModule;
         this.userModule = userModule;
         this.eventPublisher = eventPublisher;
+        this.jobboardModuleApi = jobboardModuleApi;
     }
 
     public Page<EventInfo> getPersonalEvents(UUID userId, LocalDate from, LocalDate to, Pageable pageable) {
@@ -201,6 +207,13 @@ public class CalendarService implements CalendarModuleApi {
                 .stream().map(e -> toEventInfo(e, null)).toList();
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<EventInfo> findById(UUID eventId) {
+        return eventRepository.findById(eventId)
+                .map(e -> toEventInfo(e, null));
+    }
+
     private void checkCreatePermission(EventScope scope, UUID scopeId, UUID userId) {
         var user = userModule.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -244,6 +257,11 @@ public class CalendarService implements CalendarModuleApi {
                     .orElse(null);
         }
 
+        int linkedJobCount = 0;
+        if (jobboardModuleApi != null) {
+            linkedJobCount = jobboardModuleApi.countJobsForEvent(event.getId());
+        }
+
         return new EventInfo(
                 event.getId(),
                 event.getTitle(),
@@ -266,6 +284,7 @@ public class CalendarService implements CalendarModuleApi {
                 maybeCount,
                 declinedCount,
                 currentUserRsvp,
+                linkedJobCount,
                 event.getCreatedAt(),
                 event.getUpdatedAt()
         );

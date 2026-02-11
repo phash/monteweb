@@ -32,9 +32,15 @@ public class JobboardController {
     public ResponseEntity<ApiResponse<PageResponse<JobInfo>>> listJobs(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) List<JobStatus> status,
+            @RequestParam(required = false) UUID eventId,
             @PageableDefault(size = 20) Pageable pageable) {
-        var page = jobboardService.listJobs(category, status, pageable);
+        var page = jobboardService.listJobs(category, status, eventId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+    }
+
+    @GetMapping("/by-event/{eventId}")
+    public ResponseEntity<ApiResponse<List<JobInfo>>> getJobsByEvent(@PathVariable UUID eventId) {
+        return ResponseEntity.ok(ApiResponse.ok(jobboardService.getJobsForEvent(eventId)));
     }
 
     @GetMapping("/mine")

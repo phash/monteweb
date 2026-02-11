@@ -2,11 +2,14 @@ package com.monteweb.calendar.internal.controller;
 
 import com.monteweb.calendar.*;
 import com.monteweb.calendar.internal.service.CalendarService;
+import com.monteweb.jobboard.JobInfo;
+import com.monteweb.jobboard.JobboardModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -14,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,9 +25,12 @@ import java.util.UUID;
 public class CalendarController {
 
     private final CalendarService calendarService;
+    private final JobboardModuleApi jobboardModuleApi;
 
-    public CalendarController(CalendarService calendarService) {
+    public CalendarController(CalendarService calendarService,
+                              @Autowired(required = false) JobboardModuleApi jobboardModuleApi) {
         this.calendarService = calendarService;
+        this.jobboardModuleApi = jobboardModuleApi;
     }
 
     @GetMapping("/events")
@@ -94,6 +101,14 @@ public class CalendarController {
         LocalDate effectiveTo = to != null ? to : effectiveFrom.plusMonths(3);
         var page = calendarService.getRoomEvents(roomId, userId, effectiveFrom, effectiveTo, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+    }
+
+    @GetMapping("/events/{eventId}/jobs")
+    public ResponseEntity<ApiResponse<List<JobInfo>>> getEventJobs(@PathVariable UUID eventId) {
+        if (jobboardModuleApi == null) {
+            return ResponseEntity.ok(ApiResponse.ok(List.of()));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(jobboardModuleApi.getJobsForEvent(eventId)));
     }
 
     public record RsvpRequest(@NotNull RsvpStatus status) {

@@ -30,6 +30,7 @@ public record EventInfo(
         int maybeCount,
         int declinedCount,
         RsvpStatus currentUserRsvp,
+        int linkedJobCount,
         Instant createdAt,
         Instant updatedAt
 ) {

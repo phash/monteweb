@@ -3,7 +3,9 @@ import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
+import { useCalendarStore } from '@/stores/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -19,20 +21,32 @@ import TabPanel from 'primevue/tabpanel'
 const { t } = useI18n()
 const router = useRouter()
 const auth = useAuthStore()
+const admin = useAdminStore()
 const jobboard = useJobboardStore()
+const calendar = useCalendarStore()
 const activeTab = ref('0')
 const selectedCategory = ref<string | null>(null)
+const selectedEventId = ref<string | null>(null)
+const calendarEnabled = admin.isModuleEnabled('calendar')
 
 onMounted(async () => {
-  await Promise.all([
+  const promises: Promise<void>[] = [
     jobboard.fetchJobs(true),
     jobboard.fetchCategories(),
     jobboard.fetchMyAssignments(),
-  ])
+  ]
+  if (calendarEnabled) {
+    const now = new Date()
+    const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const to = new Date(now.getFullYear(), now.getMonth() + 6, 0)
+    const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    promises.push(calendar.fetchEvents(formatDate(from), formatDate(to)))
+  }
+  await Promise.all(promises)
 })
 
-function filterByCategory() {
-  jobboard.fetchJobs(true, selectedCategory.value ?? undefined)
+function applyFilters() {
+  jobboard.fetchJobs(true, selectedCategory.value ?? undefined, selectedEventId.value ?? undefined)
 }
 
 function statusSeverity(status: string) {
@@ -79,8 +93,18 @@ function formatDate(date: string | null) {
               optionLabel="label"
               optionValue="value"
               :placeholder="t('jobboard.filterCategory')"
-              @change="filterByCategory"
+              @change="applyFilters"
               class="category-filter"
+            />
+            <Select
+              v-if="calendarEnabled && calendar.events.length"
+              v-model="selectedEventId"
+              :options="[{ label: t('jobboard.allEvents'), value: null }, ...calendar.events.map(e => ({ label: e.title, value: e.id }))]"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('jobboard.filterByEvent')"
+              @change="applyFilters"
+              class="event-filter"
             />
           </div>
 
@@ -107,6 +131,7 @@ function formatDate(date: string | null) {
                 <span v-if="job.location"><i class="pi pi-map-marker" /> {{ job.location }}</span>
                 <span><i class="pi pi-clock" /> {{ job.estimatedHours }}h</span>
                 <span v-if="job.scheduledDate"><i class="pi pi-calendar" /> {{ formatDate(job.scheduledDate) }}</span>
+                <span v-if="job.eventTitle"><i class="pi pi-calendar-plus" /> {{ job.eventTitle }}</span>
               </div>
               <div class="job-card-footer">
                 <span class="assignees">{{ job.currentAssignees }}/{{ job.maxAssignees }} {{ t('jobboard.assignees') }}</span>
@@ -120,7 +145,7 @@ function formatDate(date: string | null) {
                 :loading="jobboard.loading"
                 severity="secondary"
                 text
-                @click="jobboard.fetchJobs()"
+                @click="jobboard.fetchJobs(false, selectedCategory ?? undefined, selectedEventId ?? undefined)"
               />
             </div>
           </div>
@@ -165,10 +190,14 @@ function formatDate(date: string | null) {
 }
 
 .filter-bar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
   margin-bottom: 1rem;
 }
 
-.category-filter {
+.category-filter,
+.event-filter {
   min-width: 200px;
 }
 

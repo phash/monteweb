@@ -127,6 +127,7 @@ function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary'
             <strong>{{ event.title }}</strong>
             <Tag v-if="event.cancelled" :value="t('calendar.cancelled')" severity="danger" size="small" />
             <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+            <Tag v-if="event.linkedJobCount > 0" :value="t('jobboard.jobCount', { n: event.linkedJobCount })" severity="secondary" size="small" icon="pi pi-briefcase" />
           </div>
           <div class="event-meta">
             <span v-if="event.scopeName">{{ event.scopeName }}</span>

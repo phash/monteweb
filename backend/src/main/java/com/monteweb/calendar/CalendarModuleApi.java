@@ -2,6 +2,7 @@ package com.monteweb.calendar;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -15,4 +16,6 @@ public interface CalendarModuleApi {
     List<EventInfo> getUpcomingEventsForSection(UUID sectionId, LocalDate from, LocalDate to);
 
     List<EventInfo> getUpcomingEventsForSchool(LocalDate from, LocalDate to);
+
+    Optional<EventInfo> findById(UUID eventId);
 }

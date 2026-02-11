@@ -22,7 +22,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
   const hasMore = ref(true)
   const page = ref(0)
 
-  async function fetchJobs(reset = false, category?: string) {
+  async function fetchJobs(reset = false, category?: string, eventId?: string) {
     if (reset) {
       page.value = 0
       hasMore.value = true
@@ -32,7 +32,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
 
     loading.value = true
     try {
-      const res = await jobboardApi.listJobs(page.value, 20, category)
+      const res = await jobboardApi.listJobs(page.value, 20, category, undefined, eventId)
       const data = res.data.data
       jobs.value = reset ? data.content : [...jobs.value, ...data.content]
       hasMore.value = !data.last
