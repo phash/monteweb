@@ -9,14 +9,18 @@ import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.AvatarUtils;
 import com.monteweb.shared.util.SecurityUtils;
+import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
@@ -79,9 +83,16 @@ public class RoomController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<RoomDetailResponse>> getRoom(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Object>> getRoom(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        return ResponseEntity.ok(ApiResponse.ok(buildDetailResponse(id)));
+        var user = userModuleApi.findById(userId);
+        boolean isSuperAdmin = user.isPresent() && user.get().role() == UserRole.SUPERADMIN;
+        boolean isMember = roomService.isUserInRoom(userId, id);
+
+        if (isSuperAdmin || isMember) {
+            return ResponseEntity.ok(ApiResponse.ok(buildDetailResponse(id)));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(buildPublicResponse(id)));
     }
 
     @PutMapping("/{id}")
@@ -89,8 +100,25 @@ public class RoomController {
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRoomRequest request) {
         requireLeaderOrAdmin(id);
-        var room = roomService.update(id, request.name(), request.description());
+        var room = roomService.update(id, request.name(), request.description(), request.publicDescription());
         return ResponseEntity.ok(ApiResponse.ok(room));
+    }
+
+    @PostMapping("/{id}/avatar")
+    public ResponseEntity<ApiResponse<Void>> uploadRoomAvatar(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file) {
+        requireLeaderOrAdmin(id);
+        String dataUrl = AvatarUtils.validateAndConvert(file);
+        roomService.updateAvatarUrl(id, dataUrl);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Avatar uploaded"));
+    }
+
+    @DeleteMapping("/{id}/avatar")
+    public ResponseEntity<ApiResponse<Void>> removeRoomAvatar(@PathVariable UUID id) {
+        requireLeaderOrAdmin(id);
+        roomService.updateAvatarUrl(id, null);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Avatar removed"));
     }
 
     @PutMapping("/{id}/settings")
@@ -164,6 +192,10 @@ public class RoomController {
 
     private void requireLeaderOrAdmin(UUID roomId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId);
+        if (user.isPresent() && user.get().role() == UserRole.SUPERADMIN) {
+            return;
+        }
         var role = roomService.getUserRoleInRoom(userId, roomId);
         if (role.isEmpty() || role.get() != RoomRole.LEADER) {
             throw new ForbiddenException("Only room leaders can perform this action");
@@ -175,12 +207,27 @@ public class RoomController {
                 .orElseThrow(() -> new ResourceNotFoundException("Room", roomId));
         var settings = roomService.getSettings(roomId);
 
-        List<RoomDetailResponse.MemberResponse> memberResponses = List.of();
+        var memberUserIds = roomService.getMemberUserIds(roomId);
+        var memberResponses = memberUserIds.stream()
+                .map(uid -> {
+                    var userOpt = userModuleApi.findById(uid);
+                    var roleOpt = roomService.getUserRoleInRoom(uid, roomId);
+                    return new RoomDetailResponse.MemberResponse(
+                            uid,
+                            userOpt.map(UserInfo::displayName).orElse("Unknown"),
+                            userOpt.map(UserInfo::avatarUrl).orElse(null),
+                            roleOpt.orElse(RoomRole.MEMBER),
+                            null
+                    );
+                })
+                .toList();
 
         return new RoomDetailResponse(
                 room.id(),
                 room.name(),
                 room.description(),
+                room.publicDescription(),
+                room.avatarUrl(),
                 room.type(),
                 room.sectionId(),
                 settings,
@@ -188,6 +235,22 @@ public class RoomController {
                 null,
                 null,
                 memberResponses
+        );
+    }
+
+    private RoomPublicResponse buildPublicResponse(UUID roomId) {
+        var room = roomService.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Room", roomId));
+        return new RoomPublicResponse(
+                room.id(),
+                room.name(),
+                room.publicDescription(),
+                room.avatarUrl(),
+                room.type(),
+                room.sectionId(),
+                room.memberCount(),
+                room.discoverable(),
+                room.tags()
         );
     }
 

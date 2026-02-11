@@ -11,6 +11,16 @@ export const usersApi = {
     return client.put<ApiResponse<UserInfo>>('/users/me', data)
   },
 
+  uploadAvatar(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return client.post<ApiResponse<UserInfo>>('/users/me/avatar', form)
+  },
+
+  removeAvatar() {
+    return client.delete<ApiResponse<UserInfo>>('/users/me/avatar')
+  },
+
   getById(id: string) {
     return client.get<ApiResponse<UserInfo>>(`/users/${id}`)
   },

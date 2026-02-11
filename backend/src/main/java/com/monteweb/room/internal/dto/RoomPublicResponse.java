@@ -1,24 +1,20 @@
-package com.monteweb.room;
+package com.monteweb.room.internal.dto;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Public API: Read-only room information for cross-module use.
+ * Limited room information returned to non-members.
  */
-public record RoomInfo(
+public record RoomPublicResponse(
         UUID id,
         String name,
-        String description,
         String publicDescription,
         String avatarUrl,
         String type,
         UUID sectionId,
-        boolean archived,
         int memberCount,
         boolean discoverable,
-        Instant expiresAt,
         List<String> tags
 ) {
 }

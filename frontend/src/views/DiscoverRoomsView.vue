@@ -81,15 +81,21 @@ async function createInterestRoom() {
       <div v-for="room in roomsStore.discoverableRooms" :key="room.id"
            class="border rounded-lg p-4 hover:shadow-md transition-shadow">
         <div class="flex justify-between items-start mb-2">
-          <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
-              @click="router.push({ name: 'room-detail', params: { id: room.id } })">
-            {{ room.name }}
-          </h3>
+          <div class="flex items-center gap-2">
+            <div class="discover-avatar">
+              <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="discover-avatar-img" />
+              <i v-else class="pi pi-home" />
+            </div>
+            <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
+                @click="router.push({ name: 'room-detail', params: { id: room.id } })">
+              {{ room.name }}
+            </h3>
+          </div>
           <Tag :value="t('rooms.types.' + room.type)" severity="info" />
         </div>
 
-        <p v-if="room.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
-          {{ room.description }}
+        <p v-if="room.publicDescription || room.description" class="text-sm text-gray-600 mb-3 line-clamp-2">
+          {{ room.publicDescription || room.description }}
         </p>
 
         <div v-if="room.tags && room.tags.length > 0" class="flex flex-wrap gap-1 mb-3">
@@ -138,3 +144,24 @@ async function createInterestRoom() {
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+.discover-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mw-bg, #f3f4f6);
+  color: var(--mw-text-muted, #9ca3af);
+  flex-shrink: 0;
+}
+
+.discover-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+</style>

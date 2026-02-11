@@ -11,6 +11,8 @@ public record RoomDetailResponse(
         UUID id,
         String name,
         String description,
+        String publicDescription,
+        String avatarUrl,
         String type,
         UUID sectionId,
         RoomSettings settings,
@@ -22,6 +24,7 @@ public record RoomDetailResponse(
     public record MemberResponse(
             UUID userId,
             String displayName,
+            String avatarUrl,
             RoomRole role,
             Instant joinedAt
     ) {

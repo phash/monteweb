@@ -29,6 +29,12 @@ public class Room {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "public_description", columnDefinition = "TEXT")
+    private String publicDescription;
+
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private RoomType type;

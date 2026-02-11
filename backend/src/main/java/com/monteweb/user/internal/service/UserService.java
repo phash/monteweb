@@ -93,6 +93,13 @@ public class UserService implements UserModuleApi {
     }
 
     @Transactional
+    public UserInfo updateAvatarUrl(UUID userId, String avatarUrl) {
+        var user = findEntityById(userId);
+        user.setAvatarUrl(avatarUrl);
+        return toUserInfo(userRepository.save(user));
+    }
+
+    @Transactional
     public UserInfo updateProfile(UUID userId, String firstName, String lastName, String phone) {
         var user = findEntityById(userId);
         if (firstName != null) user.setFirstName(firstName);

@@ -6,11 +6,14 @@ import com.monteweb.family.internal.dto.CreateFamilyRequest;
 import com.monteweb.family.internal.dto.JoinFamilyRequest;
 import com.monteweb.family.internal.service.FamilyService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.exception.BusinessException;
+import com.monteweb.shared.util.AvatarUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -70,5 +73,28 @@ public class FamilyController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         familyService.removeMember(id, memberId, userId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Member removed"));
+    }
+
+    @PostMapping("/{id}/avatar")
+    public ResponseEntity<ApiResponse<Void>> uploadAvatar(
+            @PathVariable UUID id,
+            @RequestParam("file") MultipartFile file) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        if (!familyService.isUserInFamily(userId, id)) {
+            throw new BusinessException("Not a member of this family");
+        }
+        String dataUrl = AvatarUtils.validateAndConvert(file);
+        familyService.updateAvatarUrl(id, dataUrl);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Avatar uploaded"));
+    }
+
+    @DeleteMapping("/{id}/avatar")
+    public ResponseEntity<ApiResponse<Void>> removeAvatar(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        if (!familyService.isUserInFamily(userId, id)) {
+            throw new BusinessException("Not a member of this family");
+        }
+        familyService.updateAvatarUrl(id, null);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Avatar removed"));
     }
 }

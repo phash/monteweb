@@ -24,7 +24,13 @@ function typeColor(type: string): string {
 <template>
   <router-link :to="{ name: 'room-detail', params: { id: room.id } }" class="room-card">
     <div class="room-card-header">
-      <h3 class="room-name">{{ room.name }}</h3>
+      <div class="room-card-title">
+        <div class="room-card-avatar">
+          <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="room-card-avatar-img" />
+          <i v-else class="pi pi-home" />
+        </div>
+        <h3 class="room-name">{{ room.name }}</h3>
+      </div>
       <Tag :value="t(`rooms.types.${room.type}`)" :severity="typeColor(room.type) as any" />
     </div>
     <p v-if="room.description" class="room-desc">{{ room.description }}</p>
@@ -61,6 +67,32 @@ function typeColor(type: string): string {
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+.room-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.room-card-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mw-bg);
+  color: var(--mw-text-muted);
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+.room-card-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .room-name {

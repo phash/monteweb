@@ -126,11 +126,19 @@ public class RoomService implements RoomModuleApi {
     }
 
     @Transactional
-    public RoomInfo update(UUID roomId, String name, String description) {
+    public RoomInfo update(UUID roomId, String name, String description, String publicDescription) {
         var room = findEntityById(roomId);
         if (name != null) room.setName(name);
         if (description != null) room.setDescription(description);
+        if (publicDescription != null) room.setPublicDescription(publicDescription);
         return toRoomInfo(roomRepository.save(room));
+    }
+
+    @Transactional
+    public void updateAvatarUrl(UUID roomId, String avatarUrl) {
+        var room = findEntityById(roomId);
+        room.setAvatarUrl(avatarUrl);
+        roomRepository.save(room);
     }
 
     @Transactional
@@ -264,6 +272,8 @@ public class RoomService implements RoomModuleApi {
                 room.getId(),
                 room.getName(),
                 room.getDescription(),
+                room.getPublicDescription(),
+                room.getAvatarUrl(),
                 room.getType().name(),
                 room.getSectionId(),
                 room.isArchived(),

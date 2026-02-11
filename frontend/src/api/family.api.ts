@@ -28,4 +28,14 @@ export const familyApi = {
   removeMember(familyId: string, memberId: string) {
     return client.delete<ApiResponse<void>>(`/families/${familyId}/members/${memberId}`)
   },
+
+  uploadAvatar(familyId: string, file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return client.post<ApiResponse<void>>(`/families/${familyId}/avatar`, form)
+  },
+
+  removeAvatar(familyId: string) {
+    return client.delete<ApiResponse<void>>(`/families/${familyId}/avatar`)
+  },
 }

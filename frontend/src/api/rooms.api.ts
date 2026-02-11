@@ -31,7 +31,7 @@ export const roomsApi = {
     return client.post<ApiResponse<RoomInfo>>('/rooms/interest', data)
   },
 
-  update(id: string, data: { name?: string; description?: string }) {
+  update(id: string, data: { name?: string; description?: string; publicDescription?: string }) {
     return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}`, data)
   },
 
@@ -41,6 +41,16 @@ export const roomsApi = {
 
   updateInterestFields(id: string, data: { tags?: string[]; discoverable?: boolean; expiresAt?: string }) {
     return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}/interest`, data)
+  },
+
+  uploadAvatar(roomId: string, file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return client.post<ApiResponse<void>>(`/rooms/${roomId}/avatar`, form)
+  },
+
+  removeAvatar(roomId: string) {
+    return client.delete<ApiResponse<void>>(`/rooms/${roomId}/avatar`)
   },
 
   // Join / Leave

@@ -2,6 +2,7 @@ package com.monteweb.user.internal.controller;
 
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
+import com.monteweb.shared.util.AvatarUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.internal.dto.UpdateProfileRequest;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 import java.util.UUID;
@@ -53,6 +55,21 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserInfo>> getUserById(@PathVariable UUID id) {
         var user = userService.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    @PostMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserInfo>> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        String dataUrl = AvatarUtils.validateAndConvert(file);
+        var user = userService.updateAvatarUrl(userId, dataUrl);
+        return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    @DeleteMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserInfo>> removeAvatar() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userService.updateAvatarUrl(userId, null);
         return ResponseEntity.ok(ApiResponse.ok(user));
     }
 

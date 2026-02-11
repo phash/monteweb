@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/auth'
 import { usersApi } from '@/api/users.api'
 import { usePushNotifications } from '@/composables/usePushNotifications'
 import PageTitle from '@/components/common/PageTitle.vue'
+import AvatarUpload from '@/components/common/AvatarUpload.vue'
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
@@ -41,6 +42,16 @@ async function save() {
   setTimeout(() => { saved.value = false }, 3000)
 }
 
+async function handleAvatarUpload(file: File) {
+  await usersApi.uploadAvatar(file)
+  await auth.fetchUser()
+}
+
+async function handleAvatarRemove() {
+  await usersApi.removeAvatar()
+  await auth.fetchUser()
+}
+
 async function togglePush() {
   if (pushEnabled.value) {
     const ok = await pushSubscribe()
@@ -56,6 +67,15 @@ async function togglePush() {
     <PageTitle :title="t('profile.title')" />
 
     <div class="card profile-card">
+      <AvatarUpload
+        :image-url="auth.user?.avatarUrl"
+        size="lg"
+        icon="pi-user"
+        :editable="true"
+        @upload="handleAvatarUpload"
+        @remove="handleAvatarRemove"
+      />
+
       <Message v-if="saved" severity="success" :closable="false">
         {{ t('profile.saved') }}
       </Message>
@@ -109,6 +129,7 @@ async function togglePush() {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  margin-top: 1rem;
 }
 
 .form-row {

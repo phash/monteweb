@@ -6,6 +6,7 @@ import PageTitle from '@/components/common/PageTitle.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import FamilyHoursWidget from '@/components/family/FamilyHoursWidget.vue'
+import AvatarUpload from '@/components/common/AvatarUpload.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Dialog from 'primevue/dialog'
@@ -47,6 +48,16 @@ async function generateCode(familyId: string) {
 function copyCode() {
   window.navigator.clipboard.writeText(generatedCode.value)
 }
+
+async function handleFamilyAvatarUpload(familyId: string, file: File) {
+  await familyApi.uploadAvatar(familyId, file)
+  await family.fetchFamilies()
+}
+
+async function handleFamilyAvatarRemove(familyId: string) {
+  await familyApi.removeAvatar(familyId)
+  await family.fetchFamilies()
+}
 </script>
 
 <template>
@@ -57,6 +68,14 @@ function copyCode() {
 
     <template v-else-if="family.hasFamily">
       <div v-for="fam in family.families" :key="fam.id" class="family-card card">
+        <AvatarUpload
+          :image-url="fam.avatarUrl"
+          size="md"
+          icon="pi-users"
+          :editable="true"
+          @upload="(file: File) => handleFamilyAvatarUpload(fam.id, file)"
+          @remove="() => handleFamilyAvatarRemove(fam.id)"
+        />
         <FamilyHoursWidget :familyId="fam.id" />
         <div class="family-header">
           <h2>{{ fam.name }}</h2>

@@ -148,6 +148,14 @@ public class FamilyService implements FamilyModuleApi {
         familyRepository.save(family);
     }
 
+    @Transactional
+    public void updateAvatarUrl(UUID familyId, String avatarUrl) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+        family.setAvatarUrl(avatarUrl);
+        familyRepository.save(family);
+    }
+
     private FamilyInfo toFamilyInfo(Family family) {
         var members = family.getMembers().stream()
                 .map(m -> {
@@ -157,6 +165,6 @@ public class FamilyService implements FamilyModuleApi {
                     return new FamilyInfo.FamilyMemberInfo(m.getUserId(), displayName, m.getRole().name());
                 })
                 .toList();
-        return new FamilyInfo(family.getId(), family.getName(), members);
+        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), members);
     }
 }
