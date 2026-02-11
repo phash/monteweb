@@ -6,12 +6,15 @@ import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { calendarApi } from '@/api/calendar.api'
+import { jobboardApi } from '@/api/jobboard.api'
 import type { JobInfo } from '@/types/jobboard'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
+import Select from 'primevue/select'
+import { useToast } from 'primevue/usetoast'
 
 const props = defineProps<{ id: string }>()
 const { t } = useI18n()
@@ -20,10 +23,15 @@ const calendar = useCalendarStore()
 const auth = useAuthStore()
 const admin = useAdminStore()
 
+const toast = useToast()
 const loading = ref(true)
 const showCancelDialog = ref(false)
 const showDeleteDialog = ref(false)
+const showLinkJobDialog = ref(false)
 const linkedJobs = ref<JobInfo[]>([])
+const availableJobs = ref<JobInfo[]>([])
+const selectedJobId = ref<string | null>(null)
+const linkingJob = ref(false)
 const jobboardEnabled = admin.isModuleEnabled('jobboard')
 
 onMounted(async () => {
@@ -71,6 +79,33 @@ function formatDate(date: string) {
 function formatTime(time: string | null) {
   if (!time) return ''
   return time.substring(0, 5)
+}
+
+async function openLinkJobDialog() {
+  try {
+    const res = await jobboardApi.listJobs(0, 100)
+    const linkedIds = new Set(linkedJobs.value.map(j => j.id))
+    availableJobs.value = res.data.data.content.filter(
+      (j: JobInfo) => !j.eventId && !linkedIds.has(j.id) && j.status === 'OPEN'
+    )
+    selectedJobId.value = null
+    showLinkJobDialog.value = true
+  } catch {
+    // ignore
+  }
+}
+
+async function linkSelectedJob() {
+  if (!selectedJobId.value) return
+  linkingJob.value = true
+  try {
+    const res = await jobboardApi.linkEvent(selectedJobId.value, props.id)
+    linkedJobs.value.push(res.data.data)
+    showLinkJobDialog.value = false
+    toast.add({ severity: 'success', summary: t('jobboard.jobLinked'), life: 3000 })
+  } finally {
+    linkingJob.value = false
+  }
 }
 
 function rsvpSeverity(status: string | null, target: string): 'success' | 'warn' | 'danger' | 'secondary' {
@@ -186,14 +221,23 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
       <div v-if="jobboardEnabled" class="linked-jobs-section card">
         <div class="linked-jobs-header">
           <h2>{{ t('jobboard.linkedJobs') }}</h2>
-          <Button
-            v-if="auth.isTeacher || auth.isAdmin"
-            :label="t('jobboard.createLinkedJob')"
-            icon="pi pi-plus"
-            size="small"
-            severity="secondary"
-            @click="router.push({ name: 'job-create', query: { eventId: props.id } })"
-          />
+          <div v-if="!auth.isStudent" class="linked-jobs-actions">
+            <Button
+              :label="t('jobboard.linkExistingJob')"
+              icon="pi pi-link"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="openLinkJobDialog"
+            />
+            <Button
+              :label="t('jobboard.createLinkedJob')"
+              icon="pi pi-plus"
+              size="small"
+              severity="secondary"
+              @click="router.push({ name: 'job-create', query: { eventId: props.id } })"
+            />
+          </div>
         </div>
         <div v-if="linkedJobs.length" class="linked-jobs-list">
           <router-link
@@ -251,6 +295,32 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
       <template #footer>
         <Button :label="t('common.no')" severity="secondary" text @click="showDeleteDialog = false" />
         <Button :label="t('common.yes')" severity="danger" @click="handleDelete" />
+      </template>
+    </Dialog>
+
+    <!-- Link Job Dialog -->
+    <Dialog v-model:visible="showLinkJobDialog" :header="t('jobboard.linkExistingJob')" modal :style="{ width: '450px', maxWidth: '90vw' }">
+      <div v-if="availableJobs.length" class="link-job-form">
+        <label>{{ t('jobboard.selectJobToLink') }}</label>
+        <Select
+          v-model="selectedJobId"
+          :options="availableJobs.map(j => ({ label: `${j.title} (${j.category})`, value: j.id }))"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('jobboard.selectJobToLink')"
+          class="full-width"
+        />
+      </div>
+      <p v-else class="text-muted">{{ t('jobboard.noOpenJobs') }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showLinkJobDialog = false" />
+        <Button
+          :label="t('jobboard.linkJob')"
+          icon="pi pi-link"
+          :loading="linkingJob"
+          :disabled="!selectedJobId"
+          @click="linkSelectedJob"
+        />
       </template>
     </Dialog>
   </div>
@@ -368,6 +438,26 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
   font-size: var(--mw-font-size-xs);
   color: var(--mw-text-muted);
   margin-top: 0.15rem;
+}
+
+.linked-jobs-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.link-job-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.link-job-form label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
+}
+
+.full-width {
+  width: 100%;
 }
 
 .event-actions {

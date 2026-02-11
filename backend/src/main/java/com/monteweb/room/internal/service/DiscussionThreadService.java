@@ -5,7 +5,9 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.room.internal.model.DiscussionReply;
 import com.monteweb.room.internal.model.DiscussionThread;
+import com.monteweb.room.internal.model.ThreadAudience;
 import com.monteweb.room.internal.model.ThreadStatus;
+import com.monteweb.user.UserRole;
 import com.monteweb.room.internal.repository.DiscussionReplyRepository;
 import com.monteweb.room.internal.repository.DiscussionThreadRepository;
 import com.monteweb.shared.exception.BusinessException;
@@ -44,13 +46,38 @@ public class DiscussionThreadService {
 
     public Page<ThreadInfo> getThreads(UUID roomId, UUID userId, String statusFilter, Pageable pageable) {
         requireRoomMember(roomId, userId);
+
+        // Determine which audiences the user can see
+        var user = userModuleApi.findById(userId);
+        var userRole = user.map(u -> u.role()).orElse(null);
+        var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId).orElse(null);
+
+        boolean canSeeAll = userRole == UserRole.TEACHER || userRole == UserRole.SUPERADMIN
+                || userRole == UserRole.SECTION_ADMIN || roomRole == RoomRole.LEADER;
+
         Page<DiscussionThread> threads;
-        if (statusFilter != null && !statusFilter.isBlank()) {
-            threads = threadRepository.findByRoomIdAndStatusOrderByCreatedAtDesc(
-                    roomId, ThreadStatus.valueOf(statusFilter.toUpperCase()), pageable);
+        if (canSeeAll) {
+            if (statusFilter != null && !statusFilter.isBlank()) {
+                threads = threadRepository.findByRoomIdAndStatusOrderByCreatedAtDesc(
+                        roomId, ThreadStatus.valueOf(statusFilter.toUpperCase()), pageable);
+            } else {
+                threads = threadRepository.findByRoomIdOrderByCreatedAtDesc(roomId, pageable);
+            }
         } else {
-            threads = threadRepository.findByRoomIdOrderByCreatedAtDesc(roomId, pageable);
+            boolean isParent = roomRole == RoomRole.PARENT_MEMBER || userRole == UserRole.PARENT;
+            var allowedAudiences = isParent
+                    ? java.util.List.of(ThreadAudience.ALLE, ThreadAudience.ELTERN)
+                    : java.util.List.of(ThreadAudience.ALLE, ThreadAudience.KINDER);
+
+            if (statusFilter != null && !statusFilter.isBlank()) {
+                threads = threadRepository.findByRoomIdAndStatusAndAudienceInOrderByCreatedAtDesc(
+                        roomId, ThreadStatus.valueOf(statusFilter.toUpperCase()), allowedAudiences, pageable);
+            } else {
+                threads = threadRepository.findByRoomIdAndAudienceInOrderByCreatedAtDesc(
+                        roomId, allowedAudiences, pageable);
+            }
         }
+
         return threads.map(this::toThreadInfo);
     }
 
@@ -64,7 +91,7 @@ public class DiscussionThreadService {
     }
 
     @Transactional
-    public ThreadInfo createThread(UUID roomId, UUID userId, String title, String content) {
+    public ThreadInfo createThread(UUID roomId, UUID userId, String title, String content, String audience) {
         requireLeader(roomId, userId);
 
         var thread = new DiscussionThread();
@@ -72,6 +99,9 @@ public class DiscussionThreadService {
         thread.setCreatedBy(userId);
         thread.setTitle(title);
         thread.setContent(content);
+        if (audience != null && !audience.isBlank()) {
+            thread.setAudience(ThreadAudience.valueOf(audience.toUpperCase()));
+        }
         thread = threadRepository.save(thread);
 
         String creatorName = userModuleApi.findById(userId)
@@ -164,6 +194,7 @@ public class DiscussionThreadService {
         return new ThreadInfo(
                 thread.getId(), thread.getRoomId(), thread.getCreatedBy(), authorName,
                 thread.getTitle(), thread.getContent(), thread.getStatus().name(),
+                thread.getAudience().name(),
                 replyCount, thread.getCreatedAt(), thread.getUpdatedAt()
         );
     }
@@ -182,7 +213,7 @@ public class DiscussionThreadService {
 
     public record ThreadInfo(
             UUID id, UUID roomId, UUID createdBy, String creatorName,
-            String title, String content, String status,
+            String title, String content, String status, String audience,
             long replyCount, java.time.Instant createdAt, java.time.Instant updatedAt
     ) {}
 

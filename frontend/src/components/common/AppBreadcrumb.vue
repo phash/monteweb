@@ -1,20 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Breadcrumb from 'primevue/breadcrumb'
 
 const route = useRoute()
-const router = useRouter()
 const { t } = useI18n()
 
 const home = computed(() => ({
   icon: 'pi pi-home',
-  command: () => router.push({ name: 'dashboard' }),
+  route: { name: 'dashboard' },
 }))
 
 const items = computed(() => {
-  const result: { label: string; command?: () => void }[] = []
+  const result: { label: string; route?: { name: string } }[] = []
 
   for (let i = 0; i < route.matched.length; i++) {
     const matched = route.matched[i]!
@@ -26,7 +25,7 @@ const items = computed(() => {
 
     result.push({
       label: t(label),
-      command: isLast || !routeName ? undefined : () => router.push({ name: routeName }),
+      route: isLast || !routeName ? undefined : { name: routeName },
     })
   }
   return result
@@ -36,7 +35,18 @@ const showBreadcrumb = computed(() => items.value.length > 0)
 </script>
 
 <template>
-  <Breadcrumb v-if="showBreadcrumb" :home="home" :model="items" class="app-breadcrumb" />
+  <Breadcrumb v-if="showBreadcrumb" :home="home" :model="items" class="app-breadcrumb">
+    <template #item="{ item }">
+      <router-link v-if="item.route" :to="item.route" class="breadcrumb-link">
+        <span v-if="item.icon" :class="item.icon" />
+        <span v-if="item.label">{{ item.label }}</span>
+      </router-link>
+      <span v-else class="breadcrumb-current">
+        <span v-if="item.icon" :class="item.icon" />
+        <span v-if="item.label">{{ item.label }}</span>
+      </span>
+    </template>
+  </Breadcrumb>
 </template>
 
 <style scoped>
@@ -45,5 +55,18 @@ const showBreadcrumb = computed(() => items.value.length > 0)
   background: transparent;
   border: none;
   padding: 0;
+}
+
+.breadcrumb-link {
+  color: var(--p-primary-color);
+  text-decoration: none;
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-current {
+  color: var(--p-text-color);
 }
 </style>

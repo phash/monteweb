@@ -6,8 +6,11 @@ import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { feedApi } from '@/api/feed.api'
 import { roomsApi } from '@/api/rooms.api'
+import { familyApi } from '@/api/family.api'
 import type { FeedPost } from '@/types/feed'
 import type { JoinRequestInfo } from '@/types/room'
+import type { FamilyInfo } from '@/types/family'
+import Select from 'primevue/select'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import AvatarUpload from '@/components/common/AvatarUpload.vue'
@@ -51,6 +54,12 @@ const joinRequestLoading = ref(false)
 // Leader: pending join requests
 const pendingRequests = ref<JoinRequestInfo[]>([])
 const requestsLoading = ref(false)
+
+// Add family dialog
+const showAddFamilyDialog = ref(false)
+const families = ref<FamilyInfo[]>([])
+const selectedFamilyId = ref<string | null>(null)
+const addingFamily = ref(false)
 
 const filesEnabled = admin.config?.modules?.files ?? false
 const calendarEnabled = admin.config?.modules?.calendar ?? false
@@ -174,6 +183,32 @@ async function denyRequest(requestId: string) {
     await loadPendingRequests()
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
+async function openAddFamilyDialog() {
+  try {
+    const res = await familyApi.getAll()
+    families.value = res.data.data
+    selectedFamilyId.value = null
+    showAddFamilyDialog.value = true
+  } catch {
+    // ignore
+  }
+}
+
+async function addFamilyToRoom() {
+  if (!selectedFamilyId.value) return
+  addingFamily.value = true
+  try {
+    await roomsApi.addFamily(props.id, selectedFamilyId.value)
+    toast.add({ severity: 'success', summary: t('rooms.familyAdded'), life: 3000 })
+    showAddFamilyDialog.value = false
+    await rooms.fetchRoom(props.id)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    addingFamily.value = false
   }
 }
 </script>
@@ -327,6 +362,16 @@ async function denyRequest(requestId: string) {
 
           <!-- Members Tab -->
           <TabPanel value="1">
+            <div v-if="canEditRoom || auth.isTeacher" class="member-actions mb-3">
+              <Button
+                :label="t('rooms.addFamily')"
+                icon="pi pi-users"
+                size="small"
+                severity="secondary"
+                @click="openAddFamilyDialog"
+              />
+            </div>
+
             <!-- Pending join requests (Leader only) -->
             <div v-if="(isLeader || auth.isAdmin) && pendingRequests.length > 0" class="pending-requests mb-4">
               <h3 class="text-md font-semibold mb-2">{{ t('rooms.pendingRequests') }} ({{ pendingRequests.length }})</h3>
@@ -394,6 +439,33 @@ async function denyRequest(requestId: string) {
         <Button :label="t('common.cancel')" text @click="showJoinRequestDialog = false" />
         <Button :label="t('rooms.requestJoin')" icon="pi pi-send"
                 :loading="joinRequestLoading" @click="submitJoinRequest" />
+      </template>
+    </Dialog>
+
+    <!-- Add Family Dialog -->
+    <Dialog v-model:visible="showAddFamilyDialog" :header="t('rooms.addFamily')" modal :style="{ width: '450px', maxWidth: '90vw' }">
+      <div v-if="families.length" class="add-family-form">
+        <label>{{ t('rooms.selectFamily') }}</label>
+        <Select
+          v-model="selectedFamilyId"
+          :options="families.map(f => ({ label: `${f.name} (${f.members.length} ${t('rooms.members')})`, value: f.id }))"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('rooms.selectFamily')"
+          class="w-full"
+          filter
+        />
+      </div>
+      <p v-else class="text-muted">{{ t('rooms.noFamilies') }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showAddFamilyDialog = false" />
+        <Button
+          :label="t('rooms.addFamily')"
+          icon="pi pi-users"
+          :loading="addingFamily"
+          :disabled="!selectedFamilyId"
+          @click="addFamilyToRoom"
+        />
       </template>
     </Dialog>
   </div>
@@ -561,5 +633,21 @@ async function denyRequest(requestId: string) {
   display: flex;
   gap: 0.375rem;
   flex-shrink: 0;
+}
+
+.member-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.add-family-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.add-family-form label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
 }
 </style>

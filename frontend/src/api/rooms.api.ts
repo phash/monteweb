@@ -83,6 +83,10 @@ export const roomsApi = {
     return client.put<ApiResponse<void>>(`/rooms/${roomId}/members/${userId}/role`, { role })
   },
 
+  addFamily(roomId: string, familyId: string) {
+    return client.post<ApiResponse<void>>(`/rooms/${roomId}/families/${familyId}`)
+  },
+
   // Browse all rooms (non-member)
   browse(params?: { q?: string; page?: number; size?: number }) {
     return client.get<ApiResponse<PageResponse<RoomInfo>>>('/rooms/browse', { params })

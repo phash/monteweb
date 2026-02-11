@@ -176,7 +176,7 @@ const router = createRouter({
               path: 'cleaning',
               name: 'admin-cleaning',
               component: () => import('@/views/admin/AdminCleaning.vue'),
-              meta: { breadcrumbLabel: 'cleaning.title' },
+              meta: { breadcrumbLabel: 'cleaning.title', allowPutzOrga: true },
             },
             {
               path: 'theme',
@@ -213,7 +213,11 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
-    return { name: 'dashboard' }
+    if (to.meta.allowPutzOrga && auth.isPutzOrga) {
+      // PutzOrga users may access the cleaning admin page
+    } else {
+      return { name: 'dashboard' }
+    }
   }
 })
 

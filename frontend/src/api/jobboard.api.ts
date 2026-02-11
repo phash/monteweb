@@ -44,6 +44,10 @@ export const jobboardApi = {
     return client.delete<ApiResponse<void>>(`/jobs/${id}`)
   },
 
+  linkEvent(jobId: string, eventId: string) {
+    return client.put<ApiResponse<JobInfo>>(`/jobs/${jobId}/link-event`, { eventId })
+  },
+
   // Assignments
   getAssignments(jobId: string) {
     return client.get<ApiResponse<JobAssignmentInfo[]>>(`/jobs/${jobId}/assignments`)

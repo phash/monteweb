@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth.api'
 import { usersApi } from '@/api/users.api'
+import { useAdminStore } from '@/stores/admin'
 import type { UserInfo, LoginRequest, RegisterRequest } from '@/types/user'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -14,6 +15,10 @@ export const useAuthStore = defineStore('auth', () => {
   const isTeacher = computed(() =>
     user.value?.role === 'TEACHER' || user.value?.role === 'SUPERADMIN' || user.value?.role === 'SECTION_ADMIN'
   )
+  const isStudent = computed(() => user.value?.role === 'STUDENT')
+  const isPutzOrga = computed(() =>
+    user.value?.specialRoles?.some((r: string) => r.startsWith('PUTZORGA:')) ?? false
+  )
 
   async function login(data: LoginRequest) {
     loading.value = true
@@ -22,6 +27,8 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken: token, refreshToken } = res.data.data
       setTokens(token, refreshToken)
       await fetchUser()
+      const admin = useAdminStore()
+      await admin.fetchConfig()
     } finally {
       loading.value = false
     }
@@ -34,6 +41,8 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken: token, refreshToken } = res.data.data
       setTokens(token, refreshToken)
       await fetchUser()
+      const admin = useAdminStore()
+      await admin.fetchConfig()
     } finally {
       loading.value = false
     }
@@ -78,6 +87,8 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     isAdmin,
     isTeacher,
+    isStudent,
+    isPutzOrga,
     login,
     register,
     logout,

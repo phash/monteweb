@@ -13,8 +13,8 @@ export const discussionsApi = {
     return client.get<ApiResponse<DiscussionThread>>(`/rooms/${roomId}/threads/${threadId}`)
   },
 
-  createThread(roomId: string, title: string, content?: string) {
-    return client.post<ApiResponse<DiscussionThread>>(`/rooms/${roomId}/threads`, { title, content })
+  createThread(roomId: string, title: string, content?: string, audience?: string) {
+    return client.post<ApiResponse<DiscussionThread>>(`/rooms/${roomId}/threads`, { title, content, audience })
   },
 
   archiveThread(roomId: string, threadId: string) {

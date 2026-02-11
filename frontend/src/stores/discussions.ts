@@ -26,8 +26,8 @@ export const useDiscussionsStore = defineStore('discussions', () => {
     currentThread.value = res.data.data
   }
 
-  async function createThread(roomId: string, title: string, content?: string) {
-    const res = await discussionsApi.createThread(roomId, title, content)
+  async function createThread(roomId: string, title: string, content?: string, audience?: string) {
+    const res = await discussionsApi.createThread(roomId, title, content, audience)
     threads.value.unshift(res.data.data)
     return res.data.data
   }

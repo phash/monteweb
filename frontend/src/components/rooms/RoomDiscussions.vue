@@ -12,6 +12,8 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
+import Select from 'primevue/select'
+import type { ThreadAudience } from '@/types/discussion'
 
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
@@ -23,6 +25,13 @@ const selectedThreadId = ref<string | null>(null)
 const showCreateDialog = ref(false)
 const newTitle = ref('')
 const newContent = ref('')
+const newAudience = ref<ThreadAudience>('ALLE')
+
+const audienceOptions = [
+  { label: t('discussions.audienceAlle'), value: 'ALLE' },
+  { label: t('discussions.audienceEltern'), value: 'ELTERN' },
+  { label: t('discussions.audienceKinder'), value: 'KINDER' },
+]
 
 const isLeader = ref(false)
 
@@ -44,10 +53,19 @@ function backToList() {
 
 async function createThread() {
   if (!newTitle.value.trim()) return
-  await discussions.createThread(props.roomId, newTitle.value.trim(), newContent.value.trim() || undefined)
+  await discussions.createThread(props.roomId, newTitle.value.trim(), newContent.value.trim() || undefined, newAudience.value)
   showCreateDialog.value = false
   newTitle.value = ''
   newContent.value = ''
+  newAudience.value = 'ALLE'
+}
+
+function audienceSeverity(audience: string): 'info' | 'warn' | 'success' | 'secondary' {
+  switch (audience) {
+    case 'ELTERN': return 'warn'
+    case 'KINDER': return 'info'
+    default: return 'secondary'
+  }
 }
 
 function formatDate(date: string) {
@@ -100,6 +118,12 @@ function formatDate(date: string) {
             <div class="thread-title-row">
               <strong>{{ thread.title }}</strong>
               <Tag
+                v-if="thread.audience && thread.audience !== 'ALLE'"
+                :value="t(`discussions.audience${thread.audience.charAt(0) + thread.audience.slice(1).toLowerCase()}`)"
+                :severity="audienceSeverity(thread.audience)"
+                size="small"
+              />
+              <Tag
                 v-if="thread.status === 'ARCHIVED'"
                 :value="t('discussions.archived')"
                 severity="secondary"
@@ -133,6 +157,16 @@ function formatDate(date: string) {
         <div class="field">
           <label>{{ t('discussions.contentLabel') }}</label>
           <Textarea v-model="newContent" :placeholder="t('discussions.contentPlaceholder')" :autoResize="true" rows="4" class="w-full" />
+        </div>
+        <div class="field">
+          <label>{{ t('discussions.audience') }}</label>
+          <Select
+            v-model="newAudience"
+            :options="audienceOptions"
+            optionLabel="label"
+            optionValue="value"
+            class="w-full"
+          />
         </div>
       </div>
       <template #footer>

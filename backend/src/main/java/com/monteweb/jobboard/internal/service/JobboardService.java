@@ -136,6 +136,21 @@ public class JobboardService implements JobboardModuleApi {
         return toJobInfo(jobRepository.save(job));
     }
 
+    @Transactional
+    public JobInfo linkJobToEvent(UUID jobId, UUID eventId, UUID userId) {
+        var job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
+        if (!job.getCreatedBy().equals(userId)) {
+            var user = userModuleApi.findById(userId);
+            if (user.isEmpty() || (user.get().role() != com.monteweb.user.UserRole.SUPERADMIN
+                    && user.get().role() != com.monteweb.user.UserRole.TEACHER)) {
+                throw new ForbiddenException("Only the creator, teachers, or admins can link jobs");
+            }
+        }
+        job.setEventId(eventId);
+        return toJobInfo(jobRepository.save(job));
+    }
+
     @Transactional(readOnly = true)
     public JobInfo getJob(UUID jobId) {
         return jobRepository.findById(jobId)

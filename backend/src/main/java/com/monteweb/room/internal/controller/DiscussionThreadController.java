@@ -41,7 +41,7 @@ public class DiscussionThreadController {
             @PathVariable UUID roomId,
             @Valid @RequestBody CreateThreadRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var thread = threadService.createThread(roomId, userId, request.title(), request.content());
+        var thread = threadService.createThread(roomId, userId, request.title(), request.content(), request.audience());
         return ResponseEntity.ok(ApiResponse.ok(thread));
     }
 
@@ -94,7 +94,8 @@ public class DiscussionThreadController {
 
     public record CreateThreadRequest(
             @NotBlank @Size(max = 300) String title,
-            String content
+            String content,
+            String audience
     ) {}
 
     public record AddReplyRequest(

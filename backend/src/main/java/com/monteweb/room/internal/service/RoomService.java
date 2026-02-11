@@ -8,6 +8,8 @@ import com.monteweb.room.internal.repository.RoomMemberRepository;
 import com.monteweb.room.internal.repository.RoomRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.family.FamilyInfo;
+import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import org.springframework.context.ApplicationEventPublisher;
@@ -31,15 +33,17 @@ public class RoomService implements RoomModuleApi {
     private final RoomMemberRepository memberRepository;
     private final RoomJoinRequestRepository joinRequestRepository;
     private final UserModuleApi userModuleApi;
+    private final FamilyModuleApi familyModuleApi;
     private final ApplicationEventPublisher eventPublisher;
 
     public RoomService(RoomRepository roomRepository, RoomMemberRepository memberRepository,
                        RoomJoinRequestRepository joinRequestRepository, UserModuleApi userModuleApi,
-                       ApplicationEventPublisher eventPublisher) {
+                       FamilyModuleApi familyModuleApi, ApplicationEventPublisher eventPublisher) {
         this.roomRepository = roomRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
         this.userModuleApi = userModuleApi;
+        this.familyModuleApi = familyModuleApi;
         this.eventPublisher = eventPublisher;
     }
 
@@ -219,6 +223,27 @@ public class RoomService implements RoomModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Room member not found"));
         member.setRole(newRole);
         memberRepository.save(member);
+    }
+
+    @Transactional
+    public int addFamilyMembers(UUID roomId, UUID familyId) {
+        var room = findEntityById(roomId);
+        var family = familyModuleApi.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        int added = 0;
+        for (var member : family.members()) {
+            if (memberRepository.existsByIdRoomIdAndIdUserId(roomId, member.userId())) {
+                continue; // already a member
+            }
+            RoomRole role = "PARENT".equals(member.role()) ? RoomRole.PARENT_MEMBER : RoomRole.MEMBER;
+            room.getMembers().add(new RoomMember(room, member.userId(), role));
+            added++;
+        }
+        if (added > 0) {
+            roomRepository.save(room);
+        }
+        return added;
     }
 
     /**

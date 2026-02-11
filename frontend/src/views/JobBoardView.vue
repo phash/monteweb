@@ -71,7 +71,7 @@ function formatDate(date: string | null) {
     <div class="page-header">
       <PageTitle :title="t('jobboard.title')" />
       <Button
-        v-if="auth.isTeacher || auth.isAdmin"
+        v-if="!auth.isStudent"
         :label="t('jobboard.create')"
         icon="pi pi-plus"
         @click="router.push({ name: 'job-create' })"

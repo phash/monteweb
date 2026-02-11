@@ -11,9 +11,14 @@ import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import Tag from 'primevue/tag'
+import AutoComplete from 'primevue/autocomplete'
 import { useToast } from 'primevue/usetoast'
 import type { CleaningConfigInfo } from '@/types/cleaning'
+import type { UserInfo } from '@/types/user'
+import type { SchoolSectionInfo } from '@/types/family'
 import * as cleaningApi from '@/api/cleaning.api'
+import { usersApi } from '@/api/users.api'
+import { sectionsApi } from '@/api/sections.api'
 
 const { t } = useI18n()
 const cleaningStore = useCleaningStore()
@@ -54,8 +59,9 @@ const qrExportRange = ref({
   to: null as Date | null
 })
 
-onMounted(() => {
+onMounted(async () => {
   cleaningStore.loadConfigs()
+  await loadSections()
 })
 
 async function createConfig() {
@@ -130,6 +136,70 @@ async function toggleActive(config: CleaningConfigInfo) {
 function getDayName(day: number) {
   return dayOptions.find(d => d.value === day)?.label || ''
 }
+
+// ── PutzOrga Management ──────────────────────────────────────────
+const sections = ref<SchoolSectionInfo[]>([])
+const selectedSection = ref<SchoolSectionInfo | null>(null)
+const putzOrgaUsers = ref<UserInfo[]>([])
+const loadingPutzOrga = ref(false)
+const userSuggestions = ref<UserInfo[]>([])
+const selectedUser = ref<UserInfo | null>(null)
+
+async function loadSections() {
+  try {
+    const res = await sectionsApi.getAll()
+    sections.value = res.data.data
+  } catch { /* ignore */ }
+}
+
+async function loadPutzOrgaForSection() {
+  if (!selectedSection.value) return
+  loadingPutzOrga.value = true
+  try {
+    const res = await usersApi.findBySpecialRole(`PUTZORGA:${selectedSection.value.id}`)
+    putzOrgaUsers.value = res.data.data
+  } catch { /* ignore */ } finally {
+    loadingPutzOrga.value = false
+  }
+}
+
+async function searchParents(event: { query: string }) {
+  if (!event.query || event.query.length < 2) {
+    userSuggestions.value = []
+    return
+  }
+  try {
+    const res = await usersApi.search(event.query)
+    userSuggestions.value = (res.data.data.content || [])
+      .filter((u: UserInfo) => u.role === 'PARENT' && u.active)
+  } catch {
+    userSuggestions.value = []
+  }
+}
+
+async function assignPutzOrga() {
+  if (!selectedUser.value || !selectedSection.value) return
+  try {
+    await usersApi.addSpecialRole(selectedUser.value.id, `PUTZORGA:${selectedSection.value.id}`)
+    toast.add({ severity: 'success', summary: t('cleaning.admin.putzOrgaAssigned'), life: 3000 })
+    selectedUser.value = null
+    await loadPutzOrgaForSection()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
+async function removePutzOrga(user: UserInfo) {
+  if (!selectedSection.value) return
+  try {
+    await usersApi.removeSpecialRole(user.id, `PUTZORGA:${selectedSection.value.id}`)
+    toast.add({ severity: 'success', summary: t('cleaning.admin.putzOrgaRemoved'), life: 3000 })
+    await loadPutzOrgaForSection()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
 </script>
 
 <template>
@@ -269,5 +339,67 @@ function getDayName(day: number) {
                 :disabled="!qrExportRange.from || !qrExportRange.to" />
       </template>
     </Dialog>
+
+    <!-- PutzOrga Management Section -->
+    <div class="mt-6">
+      <h2 class="text-xl font-bold mb-3">{{ t('cleaning.admin.putzOrgaManagement') }}</h2>
+      <p class="text-sm text-muted mb-3">{{ t('cleaning.admin.putzOrgaHint') }}</p>
+
+      <div class="flex gap-3 items-end mb-4">
+        <div class="flex-1">
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.section') }}</label>
+          <Select
+            v-model="selectedSection"
+            :options="sections"
+            optionLabel="name"
+            :placeholder="t('cleaning.admin.selectSection')"
+            class="w-full"
+            @change="loadPutzOrgaForSection"
+          />
+        </div>
+      </div>
+
+      <template v-if="selectedSection">
+        <div class="flex gap-2 items-end mb-3">
+          <div class="flex-1">
+            <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.assignPutzOrga') }}</label>
+            <AutoComplete
+              v-model="selectedUser"
+              :suggestions="userSuggestions"
+              optionLabel="displayName"
+              :placeholder="t('cleaning.admin.searchParent')"
+              @complete="searchParents"
+              class="w-full"
+              :minLength="2"
+            />
+          </div>
+          <Button
+            icon="pi pi-plus"
+            :label="t('cleaning.admin.assign')"
+            size="small"
+            @click="assignPutzOrga"
+            :disabled="!selectedUser"
+          />
+        </div>
+
+        <DataTable :value="putzOrgaUsers" :loading="loadingPutzOrga" stripedRows>
+          <template #empty>{{ t('cleaning.admin.noPutzOrga') }}</template>
+          <Column field="displayName" :header="t('admin.columnName')" />
+          <Column field="email" :header="t('admin.columnEmail')" />
+          <Column :header="t('common.actions')">
+            <template #body="{ data }">
+              <Button
+                icon="pi pi-trash"
+                severity="danger"
+                text
+                rounded
+                size="small"
+                @click="removePutzOrga(data)"
+              />
+            </template>
+          </Column>
+        </DataTable>
+      </template>
+    </div>
   </div>
 </template>

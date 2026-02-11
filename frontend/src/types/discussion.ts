@@ -1,4 +1,5 @@
 export type ThreadStatus = 'ACTIVE' | 'ARCHIVED'
+export type ThreadAudience = 'ALLE' | 'ELTERN' | 'KINDER'
 
 export interface DiscussionThread {
   id: string
@@ -8,6 +9,7 @@ export interface DiscussionThread {
   title: string
   content: string | null
   status: ThreadStatus
+  audience: ThreadAudience
   replyCount: number
   createdAt: string
   updatedAt: string

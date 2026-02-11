@@ -248,6 +248,15 @@ public class RoomController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Role updated"));
     }
 
+    @PostMapping("/{id}/families/{familyId}")
+    public ResponseEntity<ApiResponse<Void>> addFamily(
+            @PathVariable UUID id,
+            @PathVariable UUID familyId) {
+        requireLeaderOrAdmin(id);
+        int added = roomService.addFamilyMembers(id, familyId);
+        return ResponseEntity.ok(ApiResponse.ok(null, added + " family members added"));
+    }
+
     // ── Admin: archive / delete ────────────────────────────────────────
 
     @PutMapping("/{id}/archive")
@@ -277,12 +286,15 @@ public class RoomController {
     private void requireLeaderOrAdmin(UUID roomId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userModuleApi.findById(userId);
-        if (user.isPresent() && user.get().role() == UserRole.SUPERADMIN) {
-            return;
+        if (user.isPresent()) {
+            var userRole = user.get().role();
+            if (userRole == UserRole.SUPERADMIN || userRole == UserRole.TEACHER) {
+                return;
+            }
         }
         var role = roomService.getUserRoleInRoom(userId, roomId);
         if (role.isEmpty() || role.get() != RoomRole.LEADER) {
-            throw new ForbiddenException("Only room leaders can perform this action");
+            throw new ForbiddenException("Only room leaders or teachers can perform this action");
         }
     }
 

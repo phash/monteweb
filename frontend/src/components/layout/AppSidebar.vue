@@ -33,6 +33,10 @@ const navItems = computed(() => {
     items.push({ to: '/forms', icon: 'pi pi-list-check', label: t('nav.forms'), name: 'forms' })
   }
 
+  if (auth.isPutzOrga && !auth.isAdmin) {
+    items.push({ to: '/admin/cleaning', icon: 'pi pi-wrench', label: t('cleaning.admin.putzOrgaManagement'), name: 'admin-cleaning' })
+  }
+
   if (auth.isAdmin) {
     items.push({ to: '/admin', icon: 'pi pi-cog', label: t('nav.admin'), name: 'admin' })
   }

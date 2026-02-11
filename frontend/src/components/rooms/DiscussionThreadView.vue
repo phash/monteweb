@@ -72,6 +72,12 @@ const isArchived = () => discussions.currentThread?.status === 'ARCHIVED'
         <div class="thread-title-row">
           <h3>{{ discussions.currentThread.title }}</h3>
           <Tag
+            v-if="discussions.currentThread.audience && discussions.currentThread.audience !== 'ALLE'"
+            :value="t(`discussions.audience${discussions.currentThread.audience.charAt(0) + discussions.currentThread.audience.slice(1).toLowerCase()}`)"
+            :severity="discussions.currentThread.audience === 'ELTERN' ? 'warn' : 'info'"
+            size="small"
+          />
+          <Tag
             v-if="isArchived()"
             :value="t('discussions.archived')"
             severity="secondary"

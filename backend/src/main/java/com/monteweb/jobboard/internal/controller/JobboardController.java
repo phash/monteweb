@@ -5,7 +5,10 @@ import com.monteweb.jobboard.internal.service.JobboardService;
 import com.monteweb.jobboard.internal.service.JobboardService.*;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.SecurityUtils;
+import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -21,9 +24,11 @@ import java.util.UUID;
 public class JobboardController {
 
     private final JobboardService jobboardService;
+    private final UserModuleApi userModuleApi;
 
-    public JobboardController(JobboardService jobboardService) {
+    public JobboardController(JobboardService jobboardService, UserModuleApi userModuleApi) {
         this.jobboardService = jobboardService;
+        this.userModuleApi = userModuleApi;
     }
 
     // ---- Jobs ----
@@ -59,9 +64,25 @@ public class JobboardController {
     @PostMapping
     public ResponseEntity<ApiResponse<JobInfo>> createJob(@RequestBody CreateJobRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() == UserRole.STUDENT) {
+            throw new ForbiddenException("Students cannot create jobs");
+        }
         var job = jobboardService.createJob(userId, request);
         return ResponseEntity.ok(ApiResponse.ok(job));
     }
+
+    @PutMapping("/{id}/link-event")
+    public ResponseEntity<ApiResponse<JobInfo>> linkJobToEvent(
+            @PathVariable UUID id,
+            @RequestBody LinkEventRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var job = jobboardService.linkJobToEvent(id, request.eventId(), userId);
+        return ResponseEntity.ok(ApiResponse.ok(job));
+    }
+
+    public record LinkEventRequest(UUID eventId) {}
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<JobInfo>> getJob(@PathVariable UUID id) {

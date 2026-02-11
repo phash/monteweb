@@ -35,6 +35,10 @@ public class DiscussionThread {
     @Column(nullable = false, length = 20)
     private ThreadStatus status = ThreadStatus.ACTIVE;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ThreadAudience audience = ThreadAudience.ALLE;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
