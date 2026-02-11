@@ -300,7 +300,7 @@ monteweb/
 
 1. **Composition API + `<script setup>`:** Kein Options API. TypeScript in allen Dateien.
 
-2. **PrimeVue 4:** Aura-Theme. Komponenten einzeln importieren (kein globales Plugin).
+2. **PrimeVue 4:** Aura-Theme. Komponenten einzeln importieren (kein globales Plugin). `ToastService` ist global registriert (`main.ts`), `<Toast />` liegt in `App.vue`. Views nutzen `useToast()` für Feedback.
 
 3. **Pinia Stores:** Ein Store pro Domäne. Stores rufen API-Funktionen auf, halten den State.
 
