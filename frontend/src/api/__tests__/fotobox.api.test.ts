@@ -133,13 +133,27 @@ describe('fotoboxApi', () => {
 
   // URL helpers
   describe('imageUrl', () => {
-    it('should return correct image URL', () => {
+    it('should return URL with token when accessToken exists', () => {
+      localStorage.setItem('accessToken', 'test-jwt-token')
+      expect(fotoboxApi.imageUrl('img-1')).toBe('/api/v1/fotobox/images/img-1?token=test-jwt-token')
+    })
+
+    it('should return URL without token when no accessToken', () => {
+      localStorage.removeItem('accessToken')
       expect(fotoboxApi.imageUrl('img-1')).toBe('/api/v1/fotobox/images/img-1')
     })
   })
 
   describe('thumbnailUrl', () => {
-    it('should return correct thumbnail URL', () => {
+    it('should return URL with token when accessToken exists', () => {
+      localStorage.setItem('accessToken', 'test-jwt-token')
+      expect(fotoboxApi.thumbnailUrl('img-1')).toBe(
+        '/api/v1/fotobox/images/img-1/thumbnail?token=test-jwt-token',
+      )
+    })
+
+    it('should return URL without token when no accessToken', () => {
+      localStorage.removeItem('accessToken')
       expect(fotoboxApi.thumbnailUrl('img-1')).toBe('/api/v1/fotobox/images/img-1/thumbnail')
     })
   })

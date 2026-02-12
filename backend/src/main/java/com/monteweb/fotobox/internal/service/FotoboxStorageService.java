@@ -42,12 +42,7 @@ public class FotoboxStorageService {
      * Validates the content type of the uploaded file by checking magic bytes.
      */
     public String validateAndDetectContentType(MultipartFile file) {
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException("Invalid file type. Allowed: JPEG, PNG, WebP, GIF");
-        }
-
-        // Validate magic bytes
+        // Detect actual content type from magic bytes, ignoring declared Content-Type
         try {
             byte[] header = new byte[12];
             try (InputStream is = file.getInputStream()) {
@@ -57,10 +52,19 @@ public class FotoboxStorageService {
                 }
             }
 
-            if (isJpeg(header) || isPng(header) || isGif(header) || isWebP(header)) {
-                return contentType;
+            String detectedType;
+            if (isJpeg(header)) {
+                detectedType = "image/jpeg";
+            } else if (isPng(header)) {
+                detectedType = "image/png";
+            } else if (isGif(header)) {
+                detectedType = "image/gif";
+            } else if (isWebP(header)) {
+                detectedType = "image/webp";
+            } else {
+                throw new IllegalArgumentException("File content does not match a valid image format. Allowed: JPEG, PNG, WebP, GIF");
             }
-            throw new IllegalArgumentException("File content does not match a valid image format");
+            return detectedType;
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {

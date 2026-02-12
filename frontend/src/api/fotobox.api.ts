@@ -59,11 +59,13 @@ export const fotoboxApi = {
     return client.delete<ApiResponse<void>>(`/fotobox/images/${imageId}`)
   },
 
-  // Image URL helpers
+  // Image URL helpers — append JWT for <img> tags which can't send Authorization headers
   imageUrl(imageId: string) {
-    return `/api/v1/fotobox/images/${imageId}`
+    const token = localStorage.getItem('accessToken')
+    return `/api/v1/fotobox/images/${imageId}${token ? `?token=${encodeURIComponent(token)}` : ''}`
   },
   thumbnailUrl(imageId: string) {
-    return `/api/v1/fotobox/images/${imageId}/thumbnail`
+    const token = localStorage.getItem('accessToken')
+    return `/api/v1/fotobox/images/${imageId}/thumbnail${token ? `?token=${encodeURIComponent(token)}` : ''}`
   },
 }

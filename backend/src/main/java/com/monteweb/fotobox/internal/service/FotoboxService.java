@@ -64,8 +64,12 @@ public class FotoboxService implements FotoboxModuleApi {
         });
         if (request.enabled() != null) settings.setEnabled(request.enabled());
         if (request.defaultPermission() != null) {
-            // Validate permission value
-            FotoboxPermissionLevel.valueOf(request.defaultPermission());
+            try {
+                FotoboxPermissionLevel.valueOf(request.defaultPermission());
+            } catch (IllegalArgumentException e) {
+                throw new BadRequestException("Invalid permission level: " + request.defaultPermission()
+                        + ". Allowed values: VIEW_ONLY, POST_IMAGES, CREATE_THREADS");
+            }
             settings.setDefaultPermission(request.defaultPermission());
         }
         if (request.maxImagesPerThread() != null) {
@@ -165,9 +169,14 @@ public class FotoboxService implements FotoboxModuleApi {
 
     // --- Images ---
 
+    private static final int MAX_FILES_PER_UPLOAD = 20;
+
     @Transactional
     public List<FotoboxImageInfo> uploadImages(UUID userId, UUID roomId, UUID threadId,
                                                 List<MultipartFile> files, String caption) {
+        if (files.size() > MAX_FILES_PER_UPLOAD) {
+            throw new BadRequestException("Too many files in a single upload. Maximum: " + MAX_FILES_PER_UPLOAD);
+        }
         permissionService.requirePermission(userId, roomId, FotoboxPermissionLevel.POST_IMAGES);
         var thread = threadRepo.findById(threadId)
                 .orElseThrow(() -> new ResourceNotFoundException("FotoboxThread", threadId));

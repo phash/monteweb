@@ -56,6 +56,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
             return header.substring(7);
         }
+        // Allow token via query parameter for image endpoints (img tags can't send headers)
+        String path = request.getRequestURI();
+        if (path != null && path.startsWith("/api/v1/fotobox/images/")) {
+            String queryToken = request.getParameter("token");
+            if (StringUtils.hasText(queryToken)) {
+                return queryToken;
+            }
+        }
         return null;
     }
 }

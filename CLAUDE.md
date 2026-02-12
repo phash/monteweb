@@ -10,7 +10,7 @@ MonteWeb ist ein modulares, selbst-gehostetes Schul-Intranet für Montessori-Sch
 
 ## Projektstatus
 
-Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tests bestehen (56% Statement-Coverage), und der volle Docker-Stack läuft.
+Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 565 Frontend-Tests bestehen (79 Testdateien), und der volle Docker-Stack läuft.
 
 ### Kern-Phasen (1–6)
 
@@ -31,7 +31,7 @@ Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 | 8 | Raum-Diskussions-Threads (LEADER-Berechtigungen) | COMPLETE |
 | 9 | E-Mail-Versand (SMTP, conditional) | COMPLETE |
 | 10 | Englische Übersetzung (i18n DE+EN) + Language-Switcher | COMPLETE |
-| 11 | Testabdeckung (418 Frontend-Tests, 56% Coverage + 37 Backend-Testdateien) | COMPLETE |
+| 11 | Testabdeckung (565 Frontend-Tests, 79 Testdateien + 37 Backend-Testdateien) | COMPLETE |
 | 12 | CI/CD Pipeline (GitHub Actions) | COMPLETE |
 | 13 | OIDC/SSO (OAuth2 Client, conditional) | COMPLETE |
 | 14 | PDF-Export (Stundenbericht, QR-Codes) | COMPLETE |
@@ -39,6 +39,7 @@ Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 | 16 | Monitoring (Prometheus + Grafana) | COMPLETE |
 | 17 | Kalender/Events (Raum/Bereich/Schulweit, RSVP) | COMPLETE |
 | 18 | Formulare & Umfragen (Survey/Consent, Scopes, Export) | COMPLETE |
+| 19 | Fotobox (Foto-Threads in Räumen, Thumbnails, Lightbox) | COMPLETE |
 
 ---
 
@@ -49,7 +50,7 @@ Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 - **Spring Modulith 1.3.2** für modulare Architektur
 - **Spring Security** mit JWT + Redis Sessions
 - **Spring OAuth2 Client** für OIDC/SSO (conditional via `monteweb.oidc.enabled`)
-- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V036)
+- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V039)
 - **Spring WebSocket** + Redis Pub/Sub für Echtzeit
 - **Spring Boot Actuator** für Health/Info/Prometheus-Endpoints
 - **Spring Boot Mail** für E-Mail-Versand (conditional via `monteweb.email.enabled`)
@@ -71,7 +72,7 @@ Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 - **Vue Router 4.6** für Routing
 - **vue-i18n 11** für Internationalisierung (Deutsch + Englisch)
 - **Axios 1.13** als HTTP-Client
-- **Vitest 4** + **@vue/test-utils** + **@vitest/coverage-v8** für Unit/Component-Tests (418 Tests, 56% Coverage)
+- **Vitest 4** + **@vue/test-utils** + **@vitest/coverage-v8** für Unit/Component-Tests (565 Tests, 79 Testdateien)
 - **PWA** via vite-plugin-pwa
 
 ### Infrastruktur
@@ -206,6 +207,18 @@ monteweb/
 │       │   │       ├── service/FormsService.java
 │       │   │       └── controller/FormsController.java, FormsExportController.java
 │       │   │
+│       │   ├── fotobox/             # [Optional] Foto-Threads in Räumen (Galerie + Lightbox)
+│       │   │   ├── FotoboxModuleApi.java        # Public Facade
+│       │   │   ├── FotoboxThreadInfo.java, FotoboxImageInfo.java  # Public DTOs
+│       │   │   ├── FotoboxPermissionLevel.java  # Enum: VIEW_ONLY, POST_IMAGES, CREATE_THREADS
+│       │   │   ├── FotoboxThreadCreatedEvent.java  # Spring Event
+│       │   │   └── internal/
+│       │   │       ├── model/FotoboxThread.java, FotoboxImage.java, FotoboxRoomSettings.java
+│       │   │       ├── repository/FotoboxThreadRepository.java, FotoboxImageRepository.java, FotoboxRoomSettingsRepository.java
+│       │   │       ├── service/FotoboxService.java, FotoboxPermissionService.java, FotoboxStorageService.java
+│       │   │       ├── controller/FotoboxController.java
+│       │   │       └── dto/CreateThreadRequest.java, UpdateThreadRequest.java, UpdateSettingsRequest.java, ...
+│       │   │
 │       │   └── shared/             # Querschnittsthemen (kein Modul, via @NamedInterface exponiert)
 │       │       ├── config/         # CORS, SecurityConfig, RateLimitFilter, WebSocketConfig, EmailProperties, EmailService
 │       │       ├── dto/            # ApiResponse, ErrorResponse, PageResponse
@@ -247,16 +260,18 @@ monteweb/
 │       │   ├── index.ts        # Browser-Locale-Detection
 │       │   ├── de.ts           # Deutsche Übersetzungen (~375+ Keys)
 │       │   └── en.ts           # Englische Übersetzungen
-│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, forms, ...)
+│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, forms, fotobox, ...)
 │       │   ├── discussions.ts  # Diskussions-Threads Store
 │       │   ├── calendar.ts     # Kalender/Events Store
 │       │   ├── forms.ts        # Formulare/Umfragen Store
-│       │   └── __tests__/      # Store Unit Tests (13 Dateien, 98+ Tests)
+│       │   ├── fotobox.ts      # Fotobox Store (Threads, Images, Settings)
+│       │   └── __tests__/      # Store Unit Tests
 │       ├── api/                # Axios-Wrapper pro Modul (client.ts + *.api.ts)
 │       │   ├── discussions.api.ts      # Diskussions-Thread API
 │       │   ├── calendar.api.ts         # Kalender/Events API
-│       │   └── forms.api.ts            # Formulare/Umfragen API
-│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, calendar, forms, ...)
+│       │   ├── forms.api.ts            # Formulare/Umfragen API
+│       │   └── fotobox.api.ts          # Fotobox API (Threads, Images, URL-Helpers mit JWT-Token)
+│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, calendar, forms, fotobox, ...)
 │       ├── composables/        # useAuth, useNotifications, useWebSocket, usePushNotifications
 │       ├── components/
 │       │   ├── common/         # PageTitle, LoadingSpinner, EmptyState, ErrorBoundary, LanguageSwitcher
@@ -265,8 +280,8 @@ monteweb/
 │       │   │   └── __tests__/  # AppSidebar, BottomNav Tests
 │       │   ├── feed/           # FeedList, FeedPost, PostComposer
 │       │   │   └── __tests__/  # FeedPost, FeedList, SystemBanner Tests
-│       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView, RoomEvents
-│       │   │   └── __tests__/  # RoomCard, RoomChat, RoomFiles, DiscussionThreadView Tests
+│       │   ├── rooms/          # RoomFiles, RoomChat, RoomDiscussions, DiscussionThreadView, RoomEvents, RoomFotobox, FotoboxThread, FotoboxLightbox
+│       │   │   └── __tests__/  # RoomCard, RoomChat, RoomFiles, DiscussionThreadView, RoomFotobox, FotoboxThread, FotoboxLightbox Tests
 │       │   ├── messaging/      # NewMessageDialog (User-Picker)
 │       │   │   └── __tests__/  # NewMessageDialog Tests
 │       │   └── family/         # FamilyHoursWidget, InviteMemberDialog
@@ -276,7 +291,7 @@ monteweb/
 │       │   ├── LoginView.vue           # + SSO-Button (conditional)
 │       │   ├── DashboardView.vue       # = Feed-Ansicht
 │       │   ├── RoomsView.vue
-│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members (+Join Requests), Discussions, Chat, Files, Events
+│       │   ├── RoomDetailView.vue      # Tabs: Info-Board, Members (+Join Requests), Discussions, Chat, Files, Events, Fotobox
 │       │   ├── DiscoverRoomsView.vue   # + Browse alle Räume + Beitrittsanfragen
 │       │   ├── MessagesView.vue        # + NewMessageDialog, Deep-Link via conversationId
 │       │   ├── JobBoardView.vue
@@ -340,9 +355,9 @@ monteweb/
 
 4. **Optionale Module:** Werden über `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` aktiviert. ALLE Beans (Services, Controllers, Components) brauchen diese Annotation, nicht nur Config-Klassen.
 
-5. **Flyway-Migrationen:** V001–V036 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
+5. **Flyway-Migrationen:** V001–V039 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
 
-6. **Security:** Alle Endpunkte gesichert. JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Security-Headers (HSTS, X-Frame-Options, CSP).
+6. **Security:** Alle Endpunkte gesichert. JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Security-Headers (HSTS, X-Frame-Options, CSP). Fotobox-Bild-Endpoints akzeptieren JWT auch via `?token=` Query-Parameter (da `<img>`-Tags keine Authorization-Header senden können).
 
 ### Frontend
 
@@ -403,6 +418,9 @@ V033  seed_test_users (Testdaten für alle Rollen)
 V034  room_join_requests (Beitrittsanfragen für Räume)
 V035  family_invitations (Familien-Einladungen per User-Suche)
 V036  add_thread_audience (Zielgruppen-Sichtbarkeit für Diskussions-Threads)
+V037  role_concept_refactoring
+V038  create_fotobox_tables (fotobox_room_settings, fotobox_threads, fotobox_images)
+V039  fix_fotobox_schema (COALESCE modules NULL, ON DELETE SET NULL für DSGVO)
 ```
 
 ---
@@ -575,6 +593,23 @@ POST   /events/{id}/rsvp       RSVP (ATTENDING/MAYBE/DECLINED)
 GET    /rooms/{roomId}/events  Raum-Events
 ```
 
+### Fotobox (`/api/v1/rooms/{roomId}/fotobox` + `/api/v1/fotobox`) [Modul: fotobox]
+```
+GET    /rooms/{roomId}/fotobox/settings                   Raum-Fotobox-Einstellungen
+PUT    /rooms/{roomId}/fotobox/settings                   Einstellungen ändern (Leader/Admin)
+GET    /rooms/{roomId}/fotobox/threads                    Alle Foto-Threads im Raum
+POST   /rooms/{roomId}/fotobox/threads                    Thread erstellen (CREATE_THREADS)
+GET    /rooms/{roomId}/fotobox/threads/{threadId}         Thread-Detail
+PUT    /rooms/{roomId}/fotobox/threads/{threadId}         Thread bearbeiten (Owner/Leader)
+DELETE /rooms/{roomId}/fotobox/threads/{threadId}         Thread löschen (Owner/Leader)
+GET    /rooms/{roomId}/fotobox/threads/{threadId}/images  Bilder im Thread
+POST   /rooms/{roomId}/fotobox/threads/{threadId}/images  Bilder hochladen (POST_IMAGES, max 20/Request)
+PUT    /fotobox/images/{imageId}                          Bild bearbeiten (Caption, Sort)
+DELETE /fotobox/images/{imageId}                          Bild löschen (Owner/Leader)
+GET    /fotobox/images/{imageId}                          Bild herunterladen (+ ?token= JWT)
+GET    /fotobox/images/{imageId}/thumbnail                Thumbnail herunterladen (+ ?token= JWT)
+```
+
 ### Notifications (`/api/v1/notifications`)
 ```
 GET    /                       Meine Benachrichtigungen
@@ -628,6 +663,8 @@ GET    /actuator/metrics       Micrometer Metriken
 
 10. **Familien-Einladungen:** Familienmitglieder können andere User per AutoComplete-Suche einladen (mit Rollenwahl PARENT/CHILD). Eingeladene erhalten eine Notification und können annehmen oder ablehnen.
 
+11. **Fotobox-Berechtigungen:** Dreistufig: VIEW_ONLY < POST_IMAGES < CREATE_THREADS. LEADER und SUPERADMIN haben immer CREATE_THREADS. Standard-Berechtigung pro Raum konfigurierbar. Bilder werden via MinIO gespeichert, Thumbnails automatisch generiert. Content-Type wird aus Magic Bytes erkannt (nicht aus HTTP-Header). Max 20 Dateien pro Upload-Request.
+
 ---
 
 ## Konventionen
@@ -662,7 +699,7 @@ GET    /actuator/metrics       Micrometer Metriken
 
 ## Entwicklung starten
 
-**Voraussetzung:** Docker + Node.js. Java ist NICHT lokal nötig (Backend wird via Docker kompiliert).
+**Voraussetzung:** Docker + Node.js 22+. Java ist NICHT lokal nötig (Backend wird via Docker kompiliert).
 
 ```bash
 # 1. Infrastruktur starten (Postgres:5433, Redis:6380, MinIO:9000)
@@ -704,7 +741,7 @@ docker compose --profile monitoring up -d   # + Prometheus + Grafana
 
 **Tests:**
 ```bash
-# Frontend (418 Tests, 68 Testdateien, ~56% Statement-Coverage)
+# Frontend (565 Tests, 79 Testdateien) — erfordert Node.js 22+
 cd frontend && npm test
 cd frontend && npm run test:coverage   # Mit Coverage-Report
 
@@ -731,6 +768,7 @@ cd backend && mvn test
 - [x] Raum-Beitrittsanfragen (Browse alle Räume, Anfrage senden, Leader genehmigt/lehnt ab, Notifications)
 - [x] Familien-Einladungen per User-Suche (AutoComplete, Rolle wählen, Annehmen/Ablehnen, Notifications)
 - [x] Formulare & Umfragen (Survey/Consent, Scopes, anonyme/nicht-anonyme Antworten, CSV/PDF-Export)
+- [x] Fotobox (Foto-Threads in Räumen, Thumbnails via MinIO, Lightbox, Permission-System, JWT-Query-Param für Bilder)
 
 ## Conditional Features
 
@@ -747,3 +785,4 @@ Folgende Features sind über Konfiguration aktivierbar:
 | Cleaning-Modul | `monteweb.modules.cleaning.enabled` | `true` |
 | Calendar-Modul | `monteweb.modules.calendar.enabled` | `true` |
 | Forms-Modul | `monteweb.modules.forms.enabled` | `true` |
+| Fotobox-Modul | `monteweb.modules.fotobox.enabled` | `true` |

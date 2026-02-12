@@ -5,6 +5,7 @@ import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useFotoboxStore } from '@/stores/fotobox'
 import { useAuthStore } from '@/stores/auth'
 import { useRoomsStore } from '@/stores/rooms'
+import { fotoboxApi } from '@/api/fotobox.api'
 import type { FotoboxPermissionLevel } from '@/types/fotobox'
 import FotoboxThread from './FotoboxThread.vue'
 import FotoboxSettings from './FotoboxSettings.vue'
@@ -161,8 +162,8 @@ function formatDate(date: string) {
           >
             <div class="thread-cover">
               <img
-                v-if="thread.coverImageThumbnailUrl"
-                :src="thread.coverImageThumbnailUrl"
+                v-if="thread.coverImageId"
+                :src="fotoboxApi.thumbnailUrl(thread.coverImageId)"
                 alt=""
                 class="cover-img"
               />
