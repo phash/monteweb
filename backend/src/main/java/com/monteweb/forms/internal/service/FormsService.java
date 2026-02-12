@@ -11,6 +11,7 @@ import com.monteweb.user.UserRole;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
+@ConditionalOnProperty(prefix = "monteweb.modules", name = "forms.enabled", havingValue = "true")
 public class FormsService implements FormsModuleApi {
 
     private final FormRepository formRepository;

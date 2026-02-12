@@ -1,8 +1,8 @@
 # MonteWeb -- Spec-Driven Documentation
 
-**Version:** 1.0
-**Date:** 2026-02-11
-**Status:** All 17 phases complete, production-ready
+**Version:** 1.1
+**Date:** 2026-02-12
+**Status:** All 19 phases complete, production-ready
 
 ---
 
@@ -32,8 +32,10 @@ School
               ├── Feed Posts + Comments
               ├── Discussion Threads + Replies
               ├── Files (via MinIO)
-              ├── Chat (WebSocket)
-              └── Calendar Events (RSVP)
+              ├── Chat (WebSocket, channels: MAIN/PARENTS/STUDENTS)
+              ├── Calendar Events (RSVP)
+              ├── Fotobox (photo threads, thumbnails, lightbox)
+              └── Forms/Surveys (scoped distribution, CSV/PDF export)
 
 Family (accounting unit)
   ├── Parents (PARENT role)
@@ -42,7 +44,8 @@ Family (accounting unit)
   └── Invitations (per user search)
 
 User
-  ├── Roles: PARENT | STUDENT | TEACHER | SUPERADMIN
+  ├── Roles: SUPERADMIN | SECTION_ADMIN | TEACHER | PARENT | STUDENT
+  ├── Special roles: ELTERNBEIRAT, PUTZORGA (optional, string-based)
   ├── Rooms membership
   ├── Family membership
   └── OIDC identity (optional)
@@ -174,8 +177,10 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 **Room Member Roles:**
 | Role | Permissions |
 |------|------------|
-| LEADER | All MEMBER permissions + create threads, manage members, approve join requests |
-| MEMBER | View content, post, reply to threads, upload files, chat |
+| LEADER | All MEMBER permissions + create threads, manage members, approve join requests, configure fotobox |
+| MEMBER | View content, post, reply to threads, upload files, chat (MAIN + STUDENTS channel) |
+| PARENT_MEMBER | Like MEMBER but with access to PARENTS chat channel instead of STUDENTS, sees ELTERN-audience threads |
+| GUEST | Read-only access to room content |
 
 ---
 
@@ -253,28 +258,111 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 **Event Scopes & Permissions:**
 | Scope | Can Create |
 |-------|-----------|
-| ROOM | Room LEADER or SUPERADMIN |
-| SECTION | TEACHER or SUPERADMIN |
-| SCHOOL | SUPERADMIN only |
+| ROOM | Room LEADER, SUPERADMIN, or ELTERNBEIRAT |
+| SECTION | TEACHER, SECTION_ADMIN, SUPERADMIN, or ELTERNBEIRAT |
+| SCHOOL | SUPERADMIN or ELTERNBEIRAT |
 
 **Recurrence:** NONE, DAILY, WEEKLY, MONTHLY, YEARLY
 **RSVP:** ATTENDING, MAYBE, DECLINED (open to all authenticated users)
 
 ---
 
-### FEAT-011: Notifications
+### FEAT-011: Forms & Surveys [Conditional Module]
 
-**What:** Multi-channel notification system (in-app, WebSocket, Web Push).
+**What:** Scoped forms and surveys with anonymous/named responses and export.
+**Why:** Schools need digital consent forms, feedback surveys, and parent polls.
+
+**Toggle:** `monteweb.modules.forms.enabled` (default: `true`)
+
+**Form Types:**
+- **SURVEY**: Questionnaire (can be anonymous)
+- **CONSENT**: Yes/No consent form (always named)
+
+**Question Types:** TEXT, SINGLE_CHOICE, MULTIPLE_CHOICE, RATING, YES_NO
+
+**Form Scopes & Permissions:**
+| Scope | Can Create |
+|-------|-----------|
+| ROOM | Room LEADER, SUPERADMIN, ELTERNBEIRAT |
+| SECTION | TEACHER, SECTION_ADMIN, SUPERADMIN, ELTERNBEIRAT |
+| SCHOOL | SUPERADMIN, ELTERNBEIRAT |
+
+**Form Lifecycle:** DRAFT -> PUBLISHED -> CLOSED -> ARCHIVED
+
+**API Contract:**
+```
+GET    /api/v1/forms                 -> Available forms (paginated)
+GET    /api/v1/forms/mine            -> Own forms
+POST   /api/v1/forms                 -> Create form
+GET    /api/v1/forms/{id}            -> Form detail with questions
+PUT    /api/v1/forms/{id}            -> Edit form (DRAFT only)
+DELETE /api/v1/forms/{id}            -> Delete form (DRAFT only)
+POST   /api/v1/forms/{id}/publish    -> Publish form
+POST   /api/v1/forms/{id}/close      -> Close form
+POST   /api/v1/forms/{id}/respond    -> Submit response
+GET    /api/v1/forms/{id}/results    -> Aggregated results (creator/admin)
+GET    /api/v1/forms/{id}/responses  -> Individual responses (non-anonymous, creator/admin)
+GET    /api/v1/forms/{id}/results/csv -> CSV export
+GET    /api/v1/forms/{id}/results/pdf -> PDF export
+```
+
+---
+
+### FEAT-012: Fotobox [Conditional Module]
+
+**What:** Photo gallery threads within rooms with upload, thumbnails, and lightbox viewer.
+**Why:** Teachers and parents want to share event photos in an organized, room-scoped gallery.
+
+**Toggle:** `monteweb.modules.fotobox.enabled` (default: `true`)
+
+**Permission Levels (hierarchical):**
+| Level | Can Do |
+|-------|--------|
+| VIEW_ONLY | View photo threads and images, use lightbox |
+| POST_IMAGES | Upload images to existing threads (max 20 per request) |
+| CREATE_THREADS | Create new photo threads |
+
+**Permission Resolution:**
+- SUPERADMIN -> always CREATE_THREADS
+- Room LEADER -> always CREATE_THREADS
+- Other room members -> room default permission (`FotoboxRoomSettings.defaultPermission`)
+
+**Image Access:** JWT token accepted via `?token=` query parameter (since `<img>` tags cannot send Authorization headers).
+
+**API Contract:**
+```
+GET    /api/v1/rooms/{roomId}/fotobox/settings                    -> Room fotobox settings
+PUT    /api/v1/rooms/{roomId}/fotobox/settings                    -> Update settings (Leader/Admin)
+GET    /api/v1/rooms/{roomId}/fotobox/threads                     -> All photo threads in room
+POST   /api/v1/rooms/{roomId}/fotobox/threads                     -> Create thread (CREATE_THREADS)
+GET    /api/v1/rooms/{roomId}/fotobox/threads/{threadId}          -> Thread detail
+PUT    /api/v1/rooms/{roomId}/fotobox/threads/{threadId}          -> Edit thread (owner/leader)
+DELETE /api/v1/rooms/{roomId}/fotobox/threads/{threadId}          -> Delete thread (owner/leader)
+GET    /api/v1/rooms/{roomId}/fotobox/threads/{threadId}/images   -> Images in thread
+POST   /api/v1/rooms/{roomId}/fotobox/threads/{threadId}/images   -> Upload images (POST_IMAGES)
+PUT    /api/v1/fotobox/images/{imageId}                           -> Edit image (caption, sort)
+DELETE /api/v1/fotobox/images/{imageId}                           -> Delete image (owner/leader)
+GET    /api/v1/fotobox/images/{imageId}                           -> Download image (+?token=)
+GET    /api/v1/fotobox/images/{imageId}/thumbnail                 -> Download thumbnail (+?token=)
+```
+
+---
+
+### FEAT-013: Notifications
+
+**What:** Multi-channel notification system (in-app, WebSocket, Web Push, Email).
 **Why:** Users need timely alerts without polling.
 
-**Notification Types:**
-- Feed: new post, new comment
-- Room: member added/removed, join request
-- Discussion: new thread, new reply
-- Calendar: event created, cancelled, upcoming
-- Family: invitation received
-- Messaging: new message
-- Cleaning: slot reminder
+**Notification Types (from `NotificationType` enum):**
+- `POST`, `COMMENT` -- Feed: new post, new comment
+- `ROOM_JOIN_REQUEST`, `ROOM_JOIN_APPROVED`, `ROOM_JOIN_DENIED` -- Room join requests
+- `DISCUSSION_THREAD`, `DISCUSSION_REPLY` -- Discussion: new thread, new reply
+- `EVENT_CREATED`, `EVENT_UPDATED`, `EVENT_CANCELLED` -- Calendar events
+- `FORM_PUBLISHED`, `CONSENT_REQUIRED` -- Forms/Surveys
+- `FAMILY_INVITATION`, `FAMILY_INVITATION_ACCEPTED` -- Family invitations
+- `MESSAGE` -- New direct message
+- `CLEANING_COMPLETED`, `JOB_COMPLETED` -- Task completion
+- `SYSTEM`, `REMINDER` -- System messages and reminders
 
 **Channels:**
 | Channel | Mechanism | Conditional |
@@ -286,17 +374,18 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 
 ---
 
-### FEAT-012: Admin Panel
+### FEAT-014: Admin Panel
 
 **What:** System-wide configuration and monitoring.
 **Why:** Schools need self-service administration.
 
 **Capabilities:**
-- User management (roles, search)
+- User management (roles, special roles, search)
 - Room management (create, assign to sections)
 - Section management
-- Module toggles (messaging, files, jobboard, cleaning, calendar)
+- Module toggles (messaging, files, jobboard, cleaning, calendar, forms, fotobox)
 - Theme customization (CSS custom properties, logo upload)
+- Communication rules (parent-to-parent, student-to-student messaging)
 - Audit log viewer
 - Job hour reports (CSV/PDF)
 - Cleaning QR code generation
@@ -332,7 +421,7 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 
 ### 3.2 Database Schema
 
-35 Flyway migrations (V001-V035) managing:
+39 Flyway migrations (V001-V039) managing:
 
 | Migration Range | Domain |
 |----------------|--------|
@@ -349,10 +438,16 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 | V023 | Push subscriptions |
 | V024 | OIDC fields on users |
 | V025-V026 | Calendar events, RSVP, module seed |
-| V027-V032 | Schema extensions (avatars, public descriptions, admin seed) |
+| V027 | Job-event link (jobs linked to calendar events) |
+| V028-V029 | Forms module: forms, questions, responses, default module config |
+| V030 | Configurable cleaning hours target |
+| V031-V032 | Avatars, public room descriptions, default admin seed |
 | V033 | Test user seed data |
 | V034 | Room join requests |
 | V035 | Family invitations |
+| V036 | Thread audience (discussion thread visibility scoping) |
+| V037 | Role concept refactoring (JoinPolicy, DiscussionMode, special roles, room subscriptions) |
+| V038-V039 | Fotobox tables (room settings, threads, images) and schema fixes |
 
 ### 3.3 Security Specification
 
@@ -430,7 +525,7 @@ monteweb:
 @ConditionalOnProperty(prefix = "monteweb.modules", name = "{module-name}.enabled", havingValue = "true")
 ```
 
-**Affected modules:** messaging, files, jobboard, cleaning, calendar, forms
+**Affected modules:** messaging, files, jobboard, cleaning, calendar, forms, fotobox
 
 ---
 
@@ -501,40 +596,62 @@ grafana:3000    -> prometheus:9090                    (query)
 ### 5.1 Frontend Testing
 
 **Tool:** Vitest 4 + @vue/test-utils + jsdom
-**Coverage target:** 55% statement coverage (current)
-**Test count:** 418 tests across 68 test files
+**Test count:** 565 tests across 79 test files
 
-| Test Category | Files | Tests | Scope |
-|--------------|-------|-------|-------|
-| Store unit tests | 12 | 98 | Pinia store logic |
-| Component tests | 8 | 27 | Common components |
-| View tests | 19 | ~150 | Page-level rendering |
-| Admin view tests | 6 | ~50 | Admin panel views |
-| Layout tests | 2 | ~20 | Header, sidebar, nav |
-| Feature component tests | ~20 | ~73 | Feed, room, messaging, family |
+| Test Category | Files | Scope |
+|--------------|-------|-------|
+| Store unit tests | 15 | Pinia store logic (auth, feed, rooms, family, calendar, forms, fotobox, etc.) |
+| Component tests | 8 | Common components (PageTitle, EmptyState, LanguageSwitcher, etc.) |
+| View tests | 22 | Page-level rendering (Dashboard, Rooms, Calendar, Forms, etc.) |
+| Admin view tests | 7 | Admin panel views |
+| Layout tests | 2 | Sidebar, BottomNav |
+| Feature component tests | 18 | Feed, room, messaging, family, fotobox |
+| API/composable tests | 4 | Fotobox API, router, useWebSocket, usePushNotifications, useTheme |
+| Type tests | 1 | Room type definitions |
 
 ### 5.2 Backend Testing
 
 **Tool:** JUnit 5 + Spring Boot Test + Testcontainers (PostgreSQL + Redis)
-**Test count:** ~100 tests across 15 test files
+**Test files:** 37 test files
 
 | Test File | Module |
 |-----------|--------|
 | AuthControllerIntegrationTest | auth |
+| AuthServiceIntegrationTest | auth |
 | UserServiceIntegrationTest | user |
+| UserControllerIntegrationTest | user |
 | SchoolSectionServiceTest | school |
+| SchoolSectionControllerIntegrationTest | school |
 | RoomControllerIntegrationTest | room |
+| RoomServiceIntegrationTest | room |
 | DiscussionThreadControllerIntegrationTest | room |
+| RoleConceptIntegrationTest | room |
 | FamilyControllerIntegrationTest | family |
+| FamilyServiceIntegrationTest | family |
 | FeedControllerIntegrationTest | feed |
+| FeedServiceIntegrationTest | feed |
 | CalendarControllerIntegrationTest | calendar |
+| CalendarServiceIntegrationTest | calendar |
 | MessagingControllerIntegrationTest | messaging |
+| MessagingServiceIntegrationTest | messaging |
 | JobboardControllerIntegrationTest | jobboard |
+| JobboardServiceIntegrationTest | jobboard |
 | CleaningControllerIntegrationTest | cleaning |
+| CleaningServiceIntegrationTest | cleaning |
 | NotificationServiceIntegrationTest | notification |
+| NotificationControllerIntegrationTest | notification |
 | FormsControllerIntegrationTest | forms |
+| FormsServiceIntegrationTest | forms |
+| FotoboxControllerIntegrationTest | fotobox |
+| AdminConfigControllerIntegrationTest | admin |
+| AdminModuleApiTest | admin |
 | GlobalExceptionHandlerTest | shared |
+| ExceptionHandlerTest | shared |
 | SecurityUtilsTest | shared |
+| RateLimitFilterTest | shared |
+| ApiResponseTest | shared |
+| PdfServiceTest | shared |
+| AvatarUtilsTest | shared |
 
 ### 5.3 CI/CD Pipeline
 
@@ -626,9 +743,18 @@ docker compose up -d        # Rolling restart
 
 ## 8. Evolution Roadmap
 
-### Completed (Phases 1-17)
+### Completed (Phases 1-19)
 
-All core and extension features are implemented and tested.
+All core and extension features are implemented and tested, including:
+- Phases 1-6: Core modules (Auth, User, Family, School, Room, Feed, Notifications, Messaging, Files, Jobboard, Cleaning, i18n, Security, DSGVO)
+- Phase 7-8: Messaging inbox with user picker, room discussion threads
+- Phase 9-10: Email (SMTP), English translation + language switcher
+- Phase 11-12: Test coverage (565 FE tests, 37 BE test files), CI/CD pipeline
+- Phase 13-14: OIDC/SSO, PDF export
+- Phase 15-16: Web Push notifications, Prometheus/Grafana monitoring
+- Phase 17: Calendar/Events with RSVP
+- Phase 18: Forms & Surveys (Survey/Consent, scopes, anonymous/named, CSV/PDF export)
+- Phase 19: Fotobox (photo threads in rooms, thumbnails, lightbox, permission system)
 
 ### Potential Future Enhancements
 

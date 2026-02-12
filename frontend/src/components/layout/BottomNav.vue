@@ -98,7 +98,7 @@ watch(() => route.path, () => {
     </Transition>
 
     <!-- Bottom navigation bar -->
-    <nav class="bottom-nav" aria-label="Hauptnavigation">
+    <nav class="bottom-nav" :aria-label="t('nav.mainNavigation')">
       <router-link
         v-for="item in primaryItems"
         :key="item.name"

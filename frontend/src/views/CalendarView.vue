@@ -99,10 +99,10 @@ function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary'
     </div>
 
     <div class="month-nav card">
-      <Button icon="pi pi-chevron-left" text @click="prevMonth" />
+      <Button icon="pi pi-chevron-left" text :aria-label="t('common.previous')" @click="prevMonth" />
       <Button :label="t('calendar.today')" text size="small" @click="goToday" />
       <span class="month-label">{{ monthLabel }}</span>
-      <Button icon="pi pi-chevron-right" text @click="nextMonth" />
+      <Button icon="pi pi-chevron-right" text :aria-label="t('common.next')" @click="nextMonth" />
     </div>
 
     <LoadingSpinner v-if="calendar.loading && !calendar.events.length" />

@@ -225,23 +225,25 @@ monteweb/
 │       │       ├── exception/      # GlobalExceptionHandler, Custom Exceptions
 │       │       └── util/           # SecurityUtils, PdfService
 │       │
-│       └── test/java/com/monteweb/
+│       └── test/java/com/monteweb/       # 37 Testdateien
 │           ├── TestContainerConfig.java            # Shared Testcontainers (PostgreSQL + Redis)
 │           ├── TestHelper.java                     # Hilfsmethoden (registerAndGetToken, parseResponse)
-│           ├── auth/AuthControllerIntegrationTest.java
-│           ├── user/UserServiceIntegrationTest.java
-│           ├── school/SchoolSectionServiceTest.java
-│           ├── room/RoomControllerIntegrationTest.java
-│           ├── room/DiscussionThreadControllerIntegrationTest.java
-│           ├── family/FamilyControllerIntegrationTest.java
-│           ├── feed/FeedControllerIntegrationTest.java
-│           ├── calendar/CalendarControllerIntegrationTest.java
-│           ├── messaging/MessagingControllerIntegrationTest.java
-│           ├── jobboard/JobboardControllerIntegrationTest.java
-│           ├── cleaning/CleaningControllerIntegrationTest.java
-│           ├── notification/NotificationServiceIntegrationTest.java
-│           ├── forms/FormsControllerIntegrationTest.java
-│           └── shared/GlobalExceptionHandlerTest.java, SecurityUtilsTest.java
+│           ├── auth/AuthControllerIntegrationTest.java, AuthServiceIntegrationTest.java
+│           ├── user/UserServiceIntegrationTest.java, UserControllerIntegrationTest.java
+│           ├── school/SchoolSectionServiceTest.java, SchoolSectionControllerIntegrationTest.java
+│           ├── room/RoomControllerIntegrationTest.java, RoomServiceIntegrationTest.java
+│           ├── room/DiscussionThreadControllerIntegrationTest.java, RoleConceptIntegrationTest.java
+│           ├── family/FamilyControllerIntegrationTest.java, FamilyServiceIntegrationTest.java
+│           ├── feed/FeedControllerIntegrationTest.java, FeedServiceIntegrationTest.java
+│           ├── calendar/CalendarControllerIntegrationTest.java, CalendarServiceIntegrationTest.java
+│           ├── messaging/MessagingControllerIntegrationTest.java, MessagingServiceIntegrationTest.java
+│           ├── jobboard/JobboardControllerIntegrationTest.java, JobboardServiceIntegrationTest.java
+│           ├── cleaning/CleaningControllerIntegrationTest.java, CleaningServiceIntegrationTest.java
+│           ├── notification/NotificationServiceIntegrationTest.java, NotificationControllerIntegrationTest.java
+│           ├── forms/FormsControllerIntegrationTest.java, FormsServiceIntegrationTest.java
+│           ├── fotobox/FotoboxControllerIntegrationTest.java
+│           ├── admin/AdminConfigControllerIntegrationTest.java, AdminModuleApiTest.java
+│           └── shared/GlobalExceptionHandlerTest.java, ExceptionHandlerTest.java, SecurityUtilsTest.java, ...
 │
 ├── frontend/
 │   ├── package.json
@@ -443,12 +445,27 @@ POST   /oidc/token             OIDC-Claims → JWT-Token-Austausch
 ```
 GET    /me                    Eigenes Profil
 PUT    /me                    Profil aktualisieren
+POST   /me/avatar             Avatar hochladen
+DELETE /me/avatar             Avatar löschen
 GET    /me/data-export        DSGVO: Alle eigenen Daten als JSON
 DELETE /me                    DSGVO: Account anonymisieren/löschen
 GET    /{id}                  User-Profil (eingeschränkt)
-GET    /                      User-Liste (Admin)
 GET    /search?q={query}      User-Suche (für Messaging User-Picker)
-PUT    /{id}/roles            Rollen ändern (Admin)
+```
+
+### Admin Users (`/api/v1/admin/users`) [SUPERADMIN]
+```
+GET    /                      User-Liste (paginiert)
+PUT    /{id}/profile          Profil bearbeiten
+PUT    /{id}/roles            Rollen ändern
+PUT    /{id}/status           Status ändern (aktiv/inaktiv)
+GET    /{id}/rooms            Raum-Mitgliedschaften
+GET    /{id}/families         Familien-Mitgliedschaften
+POST   /{id}/families/{familyId}     User zu Familie hinzufügen
+DELETE /{id}/families/{familyId}     User aus Familie entfernen
+GET    /search-special        Suche nach Sonderrollen
+POST   /{id}/special-roles    Sonderrolle zuweisen
+DELETE /{id}/special-roles/{role}  Sonderrolle entfernen
 ```
 
 ### Families (`/api/v1/families`)
@@ -480,18 +497,36 @@ DELETE /{id}                   Deaktivieren
 GET    /mine                   Meine Räume
 GET    /                       Alle sichtbaren Räume
 GET    /browse?q=&page=&size=  Alle Räume wo User nicht Mitglied (für Beitrittsanfragen)
+GET    /discover               Räume entdecken (öffentliche Räume)
 POST   /                       Raum erstellen
+POST   /interest               Interessensraum erstellen
 GET    /{id}                   Raum-Details
 PUT    /{id}                   Raum bearbeiten
 PUT    /{id}/settings          Raum-Einstellungen
+PUT    /{id}/interest          Interessensraum-Felder bearbeiten
+POST   /{id}/avatar            Raum-Avatar hochladen
+DELETE /{id}/avatar            Raum-Avatar löschen
+PUT    /{id}/archive           Raum archivieren (Admin)
+DELETE /{id}                   Raum löschen (Admin)
+POST   /{id}/join              Direkt beitreten (bei OPEN JoinPolicy)
+POST   /{id}/leave             Raum verlassen
 POST   /{id}/members           Mitglied hinzufügen
 DELETE /{id}/members/{userId}  Mitglied entfernen
-GET    /{id}/members           Mitgliederliste
+PUT    /{id}/members/{userId}/role  Mitglied-Rolle ändern
+POST   /{id}/families/{familyId}   Familien-Kinder zum Raum hinzufügen
+POST   /{id}/mute              Raum im Feed stumm schalten
+POST   /{id}/unmute            Stummschaltung aufheben
 POST   /{id}/join-request      Beitrittsanfrage senden (body: { message?: string })
 GET    /{id}/join-requests     Offene Anfragen (Leader only)
 POST   /{id}/join-requests/{rid}/approve  Anfrage annehmen (Leader)
 POST   /{id}/join-requests/{rid}/deny     Anfrage ablehnen (Leader)
 GET    /my-join-requests       Eigene Beitrittsanfragen
+```
+
+### Room Chat (`/api/v1/rooms/{roomId}/chat`)
+```
+GET    /channels               Chat-Kanäle auflisten (MAIN, PARENTS, STUDENTS)
+POST   /channels               Chat-Kanal erstellen (Leader)
 ```
 
 ### Discussion Threads (`/api/v1/rooms/{roomId}/threads`)
@@ -537,30 +572,48 @@ POST   /folders                Ordner erstellen
 
 ### Jobboard (`/api/v1/jobs`) [Modul: jobboard]
 ```
-GET    /                       Offene Jobs
+GET    /                       Offene Jobs (paginiert, filterbar)
+GET    /mine                   Meine erstellten Jobs
+GET    /my-assignments         Meine Zuweisungen
+GET    /categories             Job-Kategorien
+GET    /by-event/{eventId}     Jobs zu einem Kalender-Event
 POST   /                       Job erstellen
 GET    /{id}                   Job-Detail
 PUT    /{id}                   Job bearbeiten
+DELETE /{id}                   Job löschen
+PUT    /{id}/link-event        Job mit Kalender-Event verknüpfen
 POST   /{id}/apply             Für Job anmelden
-PUT    /{id}/assignments/{aid} Zuweisung aktualisieren
-POST   /{id}/assignments/{aid}/confirm  Stunden bestätigen
+GET    /{id}/assignments       Zuweisungen zu einem Job
+PUT    /assignments/{aid}/start     Zuweisung starten
+PUT    /assignments/{aid}/complete  Zuweisung abschließen
+PUT    /assignments/{aid}/confirm   Stunden bestätigen
+DELETE /assignments/{aid}           Zuweisung abbrechen
+GET    /family/{familyId}/hours     Familien-Stundenkonto
 GET    /report                 Admin: Stunden-Übersicht
+GET    /report/summary         Admin: Zusammenfassung
 GET    /report/export          Admin: CSV-Export
 GET    /report/pdf             Admin: PDF-Export
 ```
 
 ### Cleaning (`/api/v1/cleaning`) [Modul: cleaning]
 ```
-GET    /configs                Putz-Konfigurationen (Admin)
-POST   /configs                Konfiguration anlegen
-POST   /configs/{id}/generate  Termine generieren
-GET    /configs/{id}/qr-codes  QR-Codes als PDF (Admin)
 GET    /slots                  Offene Putztermine
 GET    /slots/mine             Meine Termine
+GET    /slots/{id}             Slot-Detail
 POST   /slots/{id}/register   Anmelden (Opt-in)
 DELETE /slots/{id}/register    Abmelden
+POST   /slots/{id}/swap        Tausch anbieten
+GET    /slots/{id}/swaps       Verfügbare Tausch-Angebote
 POST   /slots/{id}/checkin     QR-Check-in
 POST   /slots/{id}/checkout    Check-out
+GET    /configs                Putz-Konfigurationen (Admin/PUTZORGA/ELTERNBEIRAT)
+POST   /configs                Konfiguration anlegen
+PUT    /configs/{id}           Konfiguration bearbeiten
+POST   /configs/{id}/generate  Termine generieren
+GET    /configs/{id}/qr-codes  QR-Codes als PDF
+PUT    /slots/{id}             Slot bearbeiten (Admin)
+DELETE /slots/{id}             Slot löschen (Admin)
+GET    /slots/{id}/qr          QR-Code für einzelnen Slot
 GET    /dashboard              Admin-Dashboard
 ```
 
@@ -612,18 +665,28 @@ GET    /fotobox/images/{imageId}/thumbnail                Thumbnail herunterlade
 
 ### Notifications (`/api/v1/notifications`)
 ```
-GET    /                       Meine Benachrichtigungen
+GET    /                       Meine Benachrichtigungen (paginiert)
+GET    /unread-count           Anzahl ungelesener Benachrichtigungen
 PUT    /{id}/read              Als gelesen markieren
 PUT    /read-all               Alle als gelesen
 WS     /ws/notifications       WebSocket Push
-GET    /push/public-key        VAPID Public Key
-POST   /push/subscribe         Push-Subscription registrieren
-POST   /push/unsubscribe       Push-Subscription entfernen
 ```
 
-### Admin (`/api/v1/admin`)
+### Push Notifications (`/api/v1/notifications/push`)
 ```
-GET    /config                 Systemkonfiguration
+GET    /public-key             VAPID Public Key
+POST   /subscribe              Push-Subscription registrieren
+POST   /unsubscribe            Push-Subscription entfernen
+```
+
+### Public Config (`/api/v1/config`)
+```
+GET    /                       Öffentliche Konfiguration (Theme, Module, Schulname)
+```
+
+### Admin (`/api/v1/admin`) [SUPERADMIN]
+```
+GET    /config                 Systemkonfiguration (vollständig)
 PUT    /config                 Konfiguration aktualisieren
 PUT    /config/theme           Theme-Einstellungen
 PUT    /config/modules         Module aktivieren/deaktivieren
@@ -755,7 +818,7 @@ cd backend && mvn test
 
 - [x] E-Mail-Versand (SMTP, conditional via `monteweb.email.enabled`)
 - [x] Englische Übersetzung (`de.ts` + `en.ts`, LanguageSwitcher, Browser-Locale-Detection)
-- [x] Testabdeckung (418 Frontend-Tests via Vitest, 56% Coverage; 37 Backend-Testdateien via Testcontainers)
+- [x] Testabdeckung (565 Frontend-Tests in 79 Testdateien via Vitest; 37 Backend-Testdateien via Testcontainers)
 - [x] CI/CD Pipeline (`.github/workflows/ci.yml` — Backend, Frontend, Docker Jobs)
 - [x] OIDC/SSO (OAuth2 Client, conditional via `monteweb.oidc.enabled`, SSO-Button in Login)
 - [x] PDF-Export (Stundenbericht + QR-Codes via OpenHTMLToPDF)

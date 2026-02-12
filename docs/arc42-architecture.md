@@ -1,8 +1,8 @@
 # MonteWeb -- arc42 Architecture Documentation
 
-**Version:** 1.0
-**Date:** 2026-02-11
-**Status:** All 17 phases complete
+**Version:** 1.1
+**Date:** 2026-02-12
+**Status:** All 19 phases complete
 
 ---
 
@@ -18,6 +18,8 @@ MonteWeb is a modular, self-hosted school intranet for Montessori school complex
 - **Job Board** for parent volunteer hours with time tracking
 - **Cleaning Organization** with QR check-in for parent duties
 - **Calendar/Events** with RSVP at room, section, and school-wide scope
+- **Forms & Surveys** with scoped distribution, anonymous/named responses, and CSV/PDF export
+- **Fotobox** photo gallery threads in rooms with thumbnail generation and lightbox
 - **Notifications** (in-app, WebSocket real-time, Web Push)
 - **DSGVO-compliant** user data export and account deletion
 
@@ -145,7 +147,7 @@ MonteWeb is a modular, self-hosted school intranet for Montessori school complex
 | **Spring Modulith** | Enforces module boundaries at compile time while keeping deployment as single artifact. Easier than microservices for school IT. |
 | **Module toggle via `@ConditionalOnProperty`** | Schools can disable unused features without code changes. All beans in optional modules carry this annotation. |
 | **JWT + Redis sessions** | Stateless API authentication with short-lived access tokens (15min) and long-lived refresh tokens (7d) stored in Redis. |
-| **Flyway migrations** | Schema changes are versioned (V001-V035). Hibernate only validates (`ddl-auto: validate`). |
+| **Flyway migrations** | Schema changes are versioned (V001-V039). Hibernate only validates (`ddl-auto: validate`). |
 | **Vue 3 + PrimeVue SPA** | Rich component library reduces custom UI code. PWA for mobile-first experience. |
 | **Docker Compose as deployment unit** | Single command deploys all infrastructure. No Kubernetes needed for typical school deployment. |
 | **Facade pattern for inter-module communication** | `*ModuleApi` interfaces provide stable contracts. Spring Events for async decoupling. |
@@ -171,6 +173,10 @@ MonteWeb is a modular, self-hosted school intranet for Montessori school complex
 |  +-----------+  +-------+  +----------+  +----------+             |
 |  | messaging |  | files |  | jobboard |  | cleaning |  [optional] |
 |  +-----------+  +-------+  +----------+  +----------+             |
+|                                                                    |
+|  +---------+  +---------+                                         |
+|  | forms   |  | fotobox |                              [optional] |
+|  +---------+  +---------+                                         |
 |                                                                    |
 |  +----------------------------------------------------------------+
 |  | shared (config, dto, exception, util)                          |
@@ -212,6 +218,8 @@ com.monteweb.{module}/
 | **files** | File upload/download via MinIO | `FilesModuleApi` |
 | **jobboard** | Volunteer jobs, assignments, hour tracking, PDF reports | `JobboardModuleApi` |
 | **cleaning** | Cleaning schedules, QR check-in, PDF QR codes | `CleaningModuleApi` |
+| **forms** | Surveys, consent forms, scoped distribution, CSV/PDF export | `FormsModuleApi` |
+| **fotobox** | Photo gallery threads in rooms, thumbnails, lightbox | `FotoboxModuleApi` |
 | **admin** | System config, theme, modules, audit log | (internal only) |
 | **shared** | CORS, security, rate limiting, error handling, PDF util | `@NamedInterface` exports |
 
@@ -326,7 +334,8 @@ Frontend Dockerfile:
 
 - **JWT-based stateless authentication** with BCrypt password hashing
 - Access tokens expire after 15 minutes, refresh tokens after 7 days
-- Roles: `PARENT`, `STUDENT`, `TEACHER`, `SUPERADMIN`
+- Roles: `SUPERADMIN`, `SECTION_ADMIN`, `TEACHER`, `PARENT`, `STUDENT`
+- Special roles: `ELTERNBEIRAT`, `PUTZORGA` (string-based, stored in `specialRoles` array)
 - Method-level security via `@EnableMethodSecurity`
 - Optional OIDC/SSO via Spring OAuth2 Client
 
@@ -384,8 +393,8 @@ Every bean (Service, Controller, Component) in optional modules carries this ann
 
 | Layer | Tool | Coverage |
 |-------|------|----------|
-| Frontend Unit/Component | Vitest + @vue/test-utils | 418 tests, 55% statement coverage |
-| Backend Integration | Spring Boot Test + Testcontainers | ~100 tests, 15 test files |
+| Frontend Unit/Component | Vitest + @vue/test-utils | 565 tests, 79 test files |
+| Backend Integration | Spring Boot Test + Testcontainers | 37 test files |
 | CI/CD | GitHub Actions | Backend, frontend, Docker build jobs |
 
 ---
@@ -419,7 +428,7 @@ Every bean (Service, Controller, Component) in optional modules carries this ann
 ### ADR-5: Flyway-Only Schema Management
 
 **Context:** Need reproducible database state across environments.
-**Decision:** All schema changes as Flyway migrations (V001-V035). Hibernate set to `validate` only.
+**Decision:** All schema changes as Flyway migrations (V001-V039). Hibernate set to `validate` only.
 **Consequences:** Explicit migration history. No surprise schema changes. Rollback requires manual down-migration.
 
 ### ADR-6: Self-Hosted with No External Dependencies
@@ -463,8 +472,8 @@ Quality
 │   ├── Health checks on all services
 │   └── Prometheus/Grafana monitoring
 └── Maintainability
-    ├── 55%+ frontend test coverage
-    ├── Integration tests with Testcontainers
+    ├── 565 frontend tests across 79 files
+    ├── 37 backend test files with Testcontainers
     └── CI/CD pipeline with automated checks
 ```
 
@@ -497,7 +506,7 @@ Quality
 | Item | Description | Priority |
 |------|-------------|----------|
 | No database backup automation | Docker volumes are not backed up automatically | High |
-| Frontend coverage at 55% | Below typical production threshold of 70% | Medium |
+| Frontend coverage target | Coverage thresholds to be monitored in CI | Medium |
 | No API rate limiting beyond auth endpoints | Other endpoints unprotected against abuse | Medium |
 | No email templates | Email content is hardcoded strings, not HTML templates | Low |
 | No database connection pooling metrics | HikariCP metrics not exposed to Prometheus | Low |
@@ -521,6 +530,13 @@ Quality
 | **DSGVO** | Datenschutz-Grundverordnung (GDPR) -- EU data protection regulation. |
 | **OIDC** | OpenID Connect -- protocol for federated authentication (SSO). |
 | **VAPID** | Voluntary Application Server Identification -- protocol for Web Push notifications. |
-| **Conditional Module** | Feature module that can be enabled/disabled via `monteweb.modules.{name}.enabled` property. |
+| **SECTION_ADMIN** | Section-level administrative role managing a specific school division (e.g., Grundschule). |
+| **ELTERNBEIRAT** | Special role (string-based) granting parents extended permissions for events, forms, posts, and cleaning administration. |
+| **PUTZORGA** | Special role (string-based, section-scoped) granting cleaning administration permissions for a specific section. |
+| **JoinPolicy** | Room setting controlling how users join: OPEN, REQUEST (default), or INVITE_ONLY. |
+| **DiscussionMode** | Room setting controlling discussion behavior: FULL, ANNOUNCEMENTS_ONLY, or DISABLED. |
+| **ThreadAudience** | Discussion thread visibility scope: ALLE (all members), ELTERN (parents + staff), or KINDER (students + staff). |
+| **Fotobox** | Photo gallery feature within rooms, with permission levels (VIEW_ONLY, POST_IMAGES, CREATE_THREADS). |
+| **Conditional Module** | Feature module that can be enabled/disabled via `monteweb.modules.{name}.enabled` property. Currently: messaging, files, jobboard, cleaning, calendar, forms, fotobox. |
 | **Spring Modulith** | Framework enforcing module boundaries within a monolithic Spring application. |
 | **Facade / ModuleApi** | Public interface exposing a module's capabilities to other modules. |

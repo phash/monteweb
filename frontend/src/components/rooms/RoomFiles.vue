@@ -141,7 +141,7 @@ function formatDate(date: string) {
         <i class="pi pi-folder" />
         <span class="file-name">{{ folder.name }}</span>
         <span class="file-date">{{ formatDate(folder.createdAt) }}</span>
-        <Button icon="pi pi-trash" text severity="danger" size="small" @click.stop="deleteFolder(folder)" />
+        <Button icon="pi pi-trash" text severity="danger" size="small" :aria-label="t('common.delete')" @click.stop="deleteFolder(folder)" />
       </div>
     </div>
 
@@ -153,7 +153,7 @@ function formatDate(date: string) {
         <span class="file-size">{{ formatSize(file.fileSize) }}</span>
         <span class="file-date">{{ formatDate(file.createdAt) }}</span>
         <span class="file-uploader">{{ file.uploaderName }}</span>
-        <Button icon="pi pi-trash" text severity="danger" size="small" @click.stop="deleteFile(file)" />
+        <Button icon="pi pi-trash" text severity="danger" size="small" :aria-label="t('common.delete')" @click.stop="deleteFile(file)" />
       </div>
     </div>
 

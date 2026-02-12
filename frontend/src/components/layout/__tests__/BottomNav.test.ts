@@ -33,6 +33,7 @@ const i18n = createI18n({
         profile: 'Profil',
         admin: 'Verwaltung',
         more: 'Mehr',
+        mainNavigation: 'Hauptnavigation',
       },
       cleaning: { admin: { putzOrgaManagement: 'Putz-Orga Verwaltung' } },
     },

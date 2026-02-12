@@ -243,7 +243,7 @@ onMounted(loadData)
                   @item-select="(e: any) => addSectionAdmin(section.id, e.value)"
                   class="flex-grow"
                 />
-                <Button icon="pi pi-times" text size="small" @click="addingAdminForSection = null" />
+                <Button icon="pi pi-times" text size="small" :aria-label="t('common.close')" @click="addingAdminForSection = null" />
               </div>
               <div v-if="sectionAdmins[section.id]?.length" class="admin-list">
                 <div v-for="admin in sectionAdmins[section.id]" :key="admin.id" class="admin-item">

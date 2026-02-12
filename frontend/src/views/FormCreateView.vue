@@ -314,9 +314,9 @@ async function handleSubmit(publish: boolean) {
           <div class="question-header">
             <span class="question-number">{{ idx + 1 }}.</span>
             <div class="question-actions">
-              <Button icon="pi pi-arrow-up" text size="small" :disabled="idx === 0" @click="moveQuestion(idx, -1)" />
-              <Button icon="pi pi-arrow-down" text size="small" :disabled="idx === questions.length - 1" @click="moveQuestion(idx, 1)" />
-              <Button icon="pi pi-trash" text size="small" severity="danger" @click="removeQuestion(idx)" />
+              <Button icon="pi pi-arrow-up" text size="small" :disabled="idx === 0" :aria-label="t('common.previous')" @click="moveQuestion(idx, -1)" />
+              <Button icon="pi pi-arrow-down" text size="small" :disabled="idx === questions.length - 1" :aria-label="t('common.next')" @click="moveQuestion(idx, 1)" />
+              <Button icon="pi pi-trash" text size="small" severity="danger" :aria-label="t('forms.removeQuestion')" @click="removeQuestion(idx)" />
             </div>
           </div>
 
@@ -353,7 +353,7 @@ async function handleSubmit(publish: boolean) {
               <label>{{ t('forms.options') }}</label>
               <div v-for="(_opt, optIdx) in q.options" :key="optIdx" class="option-row">
                 <InputText v-model="q.options[optIdx]" class="w-full" :placeholder="`${t('forms.option')} ${optIdx + 1}`" />
-                <Button icon="pi pi-times" text size="small" severity="danger" @click="removeOption(q, optIdx)" />
+                <Button icon="pi pi-times" text size="small" severity="danger" :aria-label="t('common.delete')" @click="removeOption(q, optIdx)" />
               </div>
               <Button :label="t('forms.addOption')" icon="pi pi-plus" text size="small" @click="addOption(q)" />
             </div>

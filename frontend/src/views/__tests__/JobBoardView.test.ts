@@ -38,6 +38,8 @@ const i18n = createI18n({
         myAssignments: 'Meine Aufgaben',
         noJobs: 'Keine offenen Jobs.',
         allCategories: 'Alle Kategorien',
+        filterCategory: 'Kategorie filtern',
+        noAssignments: 'Sie haben keine aktiven Aufgaben.',
         allEvents: 'Alle Events',
         jobCount: '{n} Jobs',
       },

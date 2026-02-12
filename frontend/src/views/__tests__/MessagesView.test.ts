@@ -40,7 +40,8 @@ const i18n = createI18n({
         startConversation: 'Nachricht senden',
         communicationNotAllowed: 'Kommunikation nicht erlaubt',
       },
-      common: { cancel: 'Abbrechen' },
+      nav: { messages: 'Nachrichten' },
+      common: { cancel: 'Abbrechen', back: 'Zurück' },
     },
   },
 })
