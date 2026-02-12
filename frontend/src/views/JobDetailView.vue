@@ -2,6 +2,7 @@
 import { onMounted, computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useJobboardStore } from '@/stores/jobboard'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -14,6 +15,7 @@ import Textarea from 'primevue/textarea'
 
 const props = defineProps<{ id: string }>()
 const { t } = useI18n()
+const { formatShortDate } = useLocaleDate()
 const router = useRouter()
 const auth = useAuthStore()
 const jobboard = useJobboardStore()
@@ -87,7 +89,7 @@ function statusSeverity(status: string) {
 
 function formatDate(date: string | null) {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('de-DE')
+  return formatShortDate(date)
 }
 </script>
 

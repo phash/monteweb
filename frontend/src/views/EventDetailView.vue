@@ -15,9 +15,11 @@ import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 
 const props = defineProps<{ id: string }>()
 const { t } = useI18n()
+const { formatFullDate } = useLocaleDate()
 const router = useRouter()
 const calendar = useCalendarStore()
 const auth = useAuthStore()
@@ -68,12 +70,7 @@ async function handleDelete() {
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('de-DE', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
+  return formatFullDate(date)
 }
 
 function formatTime(time: string | null) {

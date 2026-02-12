@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -11,6 +12,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 
 const { t } = useI18n()
+const { formatMonthYear, formatEventDate: formatEventDateLocale } = useLocaleDate()
 const router = useRouter()
 const calendar = useCalendarStore()
 const auth = useAuthStore()
@@ -18,7 +20,7 @@ const auth = useAuthStore()
 const currentMonth = ref(new Date())
 
 const monthLabel = computed(() => {
-  return currentMonth.value.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
+  return formatMonthYear(currentMonth.value)
 })
 
 const fromDate = computed(() => {
@@ -61,14 +63,12 @@ function goToday() {
   loadEvents()
 }
 
-function formatEventDate(event: { allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null }) {
-  const start = new Date(event.startDate)
-  const startStr = start.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+function formatEventDateDisplay(event: { allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null }) {
+  const startStr = formatEventDateLocale(event.startDate)
 
   if (event.allDay) {
     if (event.startDate === event.endDate) return startStr
-    const end = new Date(event.endDate)
-    return `${startStr} - ${end.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}`
+    return `${startStr} - ${formatEventDateLocale(event.endDate)}`
   }
 
   const time = event.startTime ? ` ${event.startTime.substring(0, 5)}` : ''
@@ -120,7 +120,7 @@ function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary'
         :class="{ cancelled: event.cancelled }"
       >
         <div class="event-date-col">
-          <span class="event-date-text">{{ formatEventDate(event) }}</span>
+          <span class="event-date-text">{{ formatEventDateDisplay(event) }}</span>
         </div>
         <div class="event-info">
           <div class="event-title-row">

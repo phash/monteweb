@@ -15,4 +15,13 @@ public interface MessagingModuleApi {
     List<ConversationInfo> findConversationsByUser(UUID userId);
 
     long getTotalUnreadCount(UUID userId);
+
+    /**
+     * Creates a group conversation for room chat channels.
+     * @param title The conversation title
+     * @param creatorId The user who creates the conversation
+     * @param memberIds All participants
+     * @return The created conversation info
+     */
+    ConversationInfo createGroupConversation(String title, UUID creatorId, List<UUID> memberIds);
 }

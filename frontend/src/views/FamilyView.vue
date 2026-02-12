@@ -197,7 +197,7 @@ async function handleFamilyAvatarRemove(familyId: string) {
             <i class="pi pi-send" />
             <span>{{ inv.inviteeName }}</span>
             <Tag :value="t(`family.roles.${inv.role}`)" severity="secondary" size="small" />
-            <Tag value="Pending" severity="warn" size="small" />
+            <Tag :value="t('family.pending')" severity="warn" size="small" />
           </div>
         </div>
 

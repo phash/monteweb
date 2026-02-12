@@ -2,6 +2,7 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -12,6 +13,7 @@ import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 
 const { t } = useI18n()
+const { formatCompactDateTime } = useLocaleDate()
 const route = useRoute()
 const auth = useAuthStore()
 const messaging = useMessagingStore()
@@ -70,12 +72,7 @@ function onConversationStarted(conversationId: string) {
 
 function formatTime(date: string | null) {
   if (!date) return ''
-  return new Date(date).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatCompactDateTime(date)
 }
 </script>
 

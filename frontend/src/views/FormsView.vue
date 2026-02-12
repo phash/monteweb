@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useFormsStore } from '@/stores/forms'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -16,6 +17,7 @@ import TabPanel from 'primevue/tabpanel'
 import ProgressBar from 'primevue/progressbar'
 
 const { t } = useI18n()
+const { formatShortDate } = useLocaleDate()
 const router = useRouter()
 const forms = useFormsStore()
 const activeTab = ref('0')
@@ -97,7 +99,7 @@ function responseProgress(form: { responseCount: number; targetCount: number }) 
             <div class="form-meta">
               <span v-if="form.scopeName">{{ form.scopeName }}</span>
               <span v-if="form.deadline" class="separator">·</span>
-              <span v-if="form.deadline"><i class="pi pi-calendar" /> {{ new Date(form.deadline).toLocaleDateString('de-DE') }}</span>
+              <span v-if="form.deadline"><i class="pi pi-calendar" /> {{ formatShortDate(form.deadline) }}</span>
               <span class="separator">·</span>
               <span>{{ form.questionCount }} {{ t('forms.questionsCount') }}</span>
               <span class="separator">·</span>
@@ -139,7 +141,7 @@ function responseProgress(form: { responseCount: number; targetCount: number }) 
             <div class="form-meta">
               <span>{{ form.responseCount }} {{ t('forms.responsesCount') }}</span>
               <span v-if="form.deadline" class="separator">·</span>
-              <span v-if="form.deadline"><i class="pi pi-calendar" /> {{ new Date(form.deadline).toLocaleDateString('de-DE') }}</span>
+              <span v-if="form.deadline"><i class="pi pi-calendar" /> {{ formatShortDate(form.deadline) }}</span>
             </div>
           </div>
           <i class="pi pi-chevron-right form-arrow" />

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useDiscussionsStore } from '@/stores/discussions'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
@@ -16,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{ back: [] }>()
 
 const { t } = useI18n()
+const { formatCompactDateTime } = useLocaleDate()
 const discussions = useDiscussionsStore()
 
 const replyText = ref('')
@@ -41,13 +43,7 @@ async function deleteThread() {
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatCompactDateTime(date)
 }
 
 const isArchived = () => discussions.currentThread?.status === 'ARCHIVED'

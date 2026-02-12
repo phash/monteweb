@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import type { FeedPost } from '@/types/feed'
@@ -10,6 +11,7 @@ import Tag from 'primevue/tag'
 
 const props = defineProps<{ post: FeedPost }>()
 const { t } = useI18n()
+const { formatCompactDateTime } = useLocaleDate()
 const auth = useAuthStore()
 const feed = useFeedStore()
 
@@ -18,13 +20,7 @@ const commentText = ref('')
 const showDeleteConfirm = ref(false)
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatCompactDateTime(date)
 }
 
 async function toggleComments() {

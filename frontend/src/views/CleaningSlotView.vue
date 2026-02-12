@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
@@ -13,6 +14,7 @@ import Column from 'primevue/column'
 import { useToast } from 'primevue/usetoast'
 
 const { t } = useI18n()
+const { formatDate: formatLocaleDate } = useLocaleDate()
 const route = useRoute()
 const router = useRouter()
 const cleaningStore = useCleaningStore()
@@ -72,9 +74,7 @@ function statusSeverity(status: string) {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('de-DE', {
-    weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
-  })
+  return formatLocaleDate(dateStr, { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
 }
 
 async function register() {

@@ -8,6 +8,9 @@ import com.monteweb.room.RoomInfo;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.UUID;
+
 @Component
 public class FeedPostNotificationListener {
 
@@ -23,7 +26,6 @@ public class FeedPostNotificationListener {
     @ApplicationModuleListener
     public void onFeedPostCreated(FeedPostCreatedEvent event) {
         if (event.sourceType() == SourceType.ROOM && event.sourceId() != null) {
-            // Notify all room members except the author
             var roomInfo = roomModuleApi.findById(event.sourceId());
             if (roomInfo.isEmpty()) return;
 
@@ -31,8 +33,20 @@ public class FeedPostNotificationListener {
             String message = event.authorName() + " hat einen Beitrag verfasst";
             String link = "/rooms/" + event.sourceId();
 
-            // In a full implementation, we'd get all room member IDs and notify each.
-            // For now, the infrastructure is in place.
+            List<UUID> memberIds = roomModuleApi.getMemberUserIds(event.sourceId());
+            for (var memberId : memberIds) {
+                if (!memberId.equals(event.authorId())) {
+                    notificationService.sendNotification(
+                            memberId,
+                            NotificationType.POST,
+                            title,
+                            message,
+                            link,
+                            "ROOM",
+                            event.sourceId()
+                    );
+                }
+            }
         }
     }
 }

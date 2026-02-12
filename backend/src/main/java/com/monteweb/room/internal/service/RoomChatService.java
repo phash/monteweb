@@ -93,17 +93,15 @@ public class RoomChatService {
             throw new ForbiddenException("Only room leaders can create specialized channels");
         }
 
-        // Create conversation via messaging module - we'll store the channel mapping
-        // The actual conversation creation will be handled when the first message is sent
-        // For now, create a placeholder channel record
+        // Create a real group conversation via the messaging module
         RoomChatChannel channel = new RoomChatChannel();
         channel.setRoomId(roomId);
         channel.setChannelType(type);
 
-        // We need a conversation ID - create a group conversation title
         String title = buildChannelTitle(room.getName(), type);
-        // Use a deterministic UUID as placeholder until we can create via messaging API
-        channel.setConversationId(UUID.randomUUID());
+        List<UUID> memberIds = roomService.getMemberUserIds(roomId);
+        var conversation = messagingModuleApi.createGroupConversation(title, userId, memberIds);
+        channel.setConversationId(conversation.id());
 
         channel = channelRepository.save(channel);
         return toChannelInfo(channel, userId);

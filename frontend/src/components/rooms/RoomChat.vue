@@ -4,6 +4,7 @@ import { useRoomsStore } from '@/stores/rooms'
 import { useMessagingStore } from '@/stores/messaging'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import SelectButton from 'primevue/selectbutton'
@@ -12,6 +13,7 @@ import type { ChannelType } from '@/types/room'
 const props = defineProps<{ roomId: string }>()
 
 const { t } = useI18n()
+const { formatTime: localeFormatTime } = useLocaleDate()
 const roomsStore = useRoomsStore()
 const messagingStore = useMessagingStore()
 const authStore = useAuthStore()
@@ -69,7 +71,7 @@ function isOwnMessage(senderId: string) {
 }
 
 function formatTime(dateStr: string) {
-  return new Date(dateStr).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  return localeFormatTime(dateStr, { hour: '2-digit', minute: '2-digit' })
 }
 </script>
 

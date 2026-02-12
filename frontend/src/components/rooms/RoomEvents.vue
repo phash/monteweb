@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useRouter } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
@@ -12,6 +13,7 @@ import Tag from 'primevue/tag'
 
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
+const { formatEventDate: localeFormatEventDate } = useLocaleDate()
 const router = useRouter()
 const calendar = useCalendarStore()
 const auth = useAuthStore()
@@ -31,13 +33,11 @@ onMounted(async () => {
 })
 
 function formatEventDate(event: { allDay: boolean; startDate: string; startTime: string | null; endDate: string }) {
-  const start = new Date(event.startDate)
-  const startStr = start.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
+  const startStr = localeFormatEventDate(event.startDate)
 
   if (event.allDay) {
     if (event.startDate === event.endDate) return startStr
-    const end = new Date(event.endDate)
-    return `${startStr} - ${end.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })}`
+    return `${startStr} - ${localeFormatEventDate(event.endDate)}`
   }
 
   const time = event.startTime ? ` ${event.startTime.substring(0, 5)}` : ''

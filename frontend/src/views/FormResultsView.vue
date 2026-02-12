@@ -2,6 +2,7 @@
 import { onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useFormsStore } from '@/stores/forms'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -11,6 +12,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 
 const { t } = useI18n()
+const { formatCompactDateTime } = useLocaleDate()
 const router = useRouter()
 const route = useRoute()
 const forms = useFormsStore()
@@ -149,7 +151,7 @@ function barWidth(count: number, max: number): string {
           <Column field="userName" :header="t('forms.user')" />
           <Column :header="t('forms.submittedAt')">
             <template #body="{ data }">
-              {{ new Date(data.submittedAt).toLocaleString('de-DE') }}
+              {{ formatCompactDateTime(data.submittedAt) }}
             </template>
           </Column>
           <Column v-for="result in forms.currentResults.results" :key="result.questionId" :header="result.label">

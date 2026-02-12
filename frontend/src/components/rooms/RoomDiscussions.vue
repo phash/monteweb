@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useDiscussionsStore } from '@/stores/discussions'
 import { useAuthStore } from '@/stores/auth'
 import { useRoomsStore } from '@/stores/rooms'
@@ -17,6 +18,7 @@ import type { ThreadAudience } from '@/types/discussion'
 
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
+const { formatCompactDateTime } = useLocaleDate()
 const discussions = useDiscussionsStore()
 const auth = useAuthStore()
 const rooms = useRoomsStore()
@@ -69,13 +71,7 @@ function audienceSeverity(audience: string): 'info' | 'warn' | 'success' | 'seco
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleString('de-DE', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  return formatCompactDateTime(date)
 }
 </script>
 

@@ -345,6 +345,7 @@ async function addFamilyToRoom() {
         <TabPanels>
           <!-- Info-Board Tab -->
           <TabPanel value="0">
+            <h2 class="sr-only">{{ t('rooms.infoBoard') }}</h2>
             <PostComposer
               v-if="auth.isTeacher || auth.isAdmin"
               @submit="handlePost"
@@ -362,6 +363,7 @@ async function addFamilyToRoom() {
 
           <!-- Members Tab -->
           <TabPanel value="1">
+            <h2 class="sr-only">{{ t('rooms.members') }}</h2>
             <div v-if="canEditRoom || auth.isTeacher" class="member-actions mb-3">
               <Button
                 :label="t('rooms.addFamily')"

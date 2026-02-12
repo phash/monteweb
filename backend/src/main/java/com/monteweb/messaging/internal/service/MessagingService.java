@@ -77,6 +77,11 @@ public class MessagingService implements MessagingModuleApi {
     }
 
     @Override
+    public ConversationInfo createGroupConversation(String title, UUID creatorId, List<UUID> memberIds) {
+        return startGroupConversation(creatorId, title, memberIds);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public long getTotalUnreadCount(UUID userId) {
         var participants = participantRepository.findByUserId(userId);

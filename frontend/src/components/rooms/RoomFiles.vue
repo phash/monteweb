@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { filesApi } from '@/api/files.api'
 import type { FileInfo, FolderInfo } from '@/types/files'
 import Button from 'primevue/button'
@@ -10,6 +11,7 @@ import FileUpload from 'primevue/fileupload'
 
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
+const { formatShortDate } = useLocaleDate()
 
 const files = ref<FileInfo[]>([])
 const folders = ref<FolderInfo[]>([])
@@ -94,7 +96,7 @@ function formatSize(bytes: number) {
 }
 
 function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('de-DE')
+  return formatShortDate(date)
 }
 </script>
 

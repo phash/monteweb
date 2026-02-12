@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useI18n } from 'vue-i18n'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -15,6 +16,7 @@ import Tag from 'primevue/tag'
 import ProgressBar from 'primevue/progressbar'
 
 const { t } = useI18n()
+const { formatDate: formatLocaleDate } = useLocaleDate()
 const cleaningStore = useCleaningStore()
 const activeTab = ref('0')
 
@@ -35,9 +37,7 @@ function statusSeverity(status: string) {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('de-DE', {
-    weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
-  })
+  return formatLocaleDate(dateStr, { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function participantPercent(slot: { currentRegistrations: number; minParticipants: number }) {

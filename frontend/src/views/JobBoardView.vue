@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
@@ -19,6 +20,7 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 
 const { t } = useI18n()
+const { formatShortDate } = useLocaleDate()
 const router = useRouter()
 const auth = useAuthStore()
 const admin = useAdminStore()
@@ -62,7 +64,7 @@ function statusSeverity(status: string) {
 
 function formatDate(date: string | null) {
   if (!date) return ''
-  return new Date(date).toLocaleDateString('de-DE')
+  return formatShortDate(date)
 }
 </script>
 

@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useFormsStore } from '@/stores/forms'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
@@ -16,6 +17,7 @@ import Checkbox from 'primevue/checkbox'
 import Rating from 'primevue/rating'
 
 const { t } = useI18n()
+const { formatShortDate } = useLocaleDate()
 const router = useRouter()
 const route = useRoute()
 const forms = useFormsStore()
@@ -165,7 +167,7 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
       <div class="form-meta-bar card">
         <span v-if="forms.currentForm.form.scopeName"><i class="pi pi-tag" /> {{ forms.currentForm.form.scopeName }}</span>
         <span><i class="pi pi-user" /> {{ forms.currentForm.form.creatorName }}</span>
-        <span v-if="forms.currentForm.form.deadline"><i class="pi pi-calendar" /> {{ t('forms.deadlineLabel') }}: {{ new Date(forms.currentForm.form.deadline).toLocaleDateString('de-DE') }}</span>
+        <span v-if="forms.currentForm.form.deadline"><i class="pi pi-calendar" /> {{ t('forms.deadlineLabel') }}: {{ formatShortDate(forms.currentForm.form.deadline) }}</span>
         <span><i class="pi pi-inbox" /> {{ forms.currentForm.form.responseCount }} {{ t('forms.responsesCount') }}</span>
       </div>
 

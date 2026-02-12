@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@primevue/themes": "^4.5.4",
+    "@stomp/stompjs": "^7.3.0",
     "axios": "^1.13.5",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
