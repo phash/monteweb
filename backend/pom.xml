@@ -154,6 +154,13 @@
             <version>8.5.14</version>
         </dependency>
 
+        <!-- Thumbnail generation for Fotobox module -->
+        <dependency>
+            <groupId>net.coobird</groupId>
+            <artifactId>thumbnailator</artifactId>
+            <version>0.4.20</version>
+        </dependency>
+
         <!-- Monitoring / Prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>

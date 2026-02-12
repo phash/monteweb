@@ -41,6 +41,11 @@ spring:
           starttls:
             enable: ${SMTP_STARTTLS:false}
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
@@ -113,4 +118,6 @@ monteweb:
     calendar:
       enabled: true
     forms:
+      enabled: true
+    fotobox:
       enabled: true
