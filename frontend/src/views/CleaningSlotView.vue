@@ -5,6 +5,8 @@ import { useCleaningStore } from '@/stores/cleaning'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import PageTitle from '@/components/common/PageTitle.vue'
+import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
@@ -131,41 +133,45 @@ async function doCheckOut() {
 </script>
 
 <template>
-  <div class="p-4">
-    <Button :label="t('common.back')" icon="pi pi-arrow-left" text class="mb-4"
-            @click="router.push({ name: 'cleaning' })" />
+  <div>
+    <Button
+      :label="t('common.back')"
+      icon="pi pi-arrow-left"
+      text
+      severity="secondary"
+      class="mb-1"
+      @click="router.push({ name: 'cleaning' })"
+    />
 
-    <div v-if="cleaningStore.loading" class="text-center p-8">
-      <i class="pi pi-spin pi-spinner text-2xl"></i>
-    </div>
+    <LoadingSpinner v-if="cleaningStore.loading" />
 
-    <div v-else-if="slot">
-      <div class="flex justify-between items-start mb-4">
+    <template v-else-if="slot">
+      <div class="slot-detail-header">
         <div>
-          <h1 class="text-2xl font-bold">{{ slot.configTitle }}</h1>
-          <p class="text-gray-500">{{ slot.sectionName }}</p>
+          <PageTitle :title="slot.configTitle" />
+          <p class="slot-section">{{ slot.sectionName }}</p>
         </div>
-        <Tag :value="t('cleaning.status.' + slot.status)" :severity="statusSeverity(slot.status)" class="text-lg" />
+        <Tag :value="t('cleaning.status.' + slot.status)" :severity="statusSeverity(slot.status)" />
       </div>
 
       <!-- Info Grid -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div class="border rounded-lg p-3 text-center">
-          <div class="text-sm text-gray-500">{{ t('cleaning.date') }}</div>
-          <div class="font-semibold">{{ formatDate(slot.slotDate) }}</div>
+      <div class="info-grid">
+        <div class="info-card card">
+          <div class="info-label">{{ t('cleaning.date') }}</div>
+          <div class="info-value">{{ formatDate(slot.slotDate) }}</div>
         </div>
-        <div class="border rounded-lg p-3 text-center">
-          <div class="text-sm text-gray-500">{{ t('cleaning.time') }}</div>
-          <div class="font-semibold">{{ slot.startTime }} - {{ slot.endTime }}</div>
+        <div class="info-card card">
+          <div class="info-label">{{ t('cleaning.time') }}</div>
+          <div class="info-value">{{ slot.startTime }} - {{ slot.endTime }}</div>
         </div>
-        <div class="border rounded-lg p-3 text-center">
-          <div class="text-sm text-gray-500">{{ t('cleaning.participants') }}</div>
-          <div class="font-semibold">{{ slot.currentRegistrations }} / {{ slot.maxParticipants }}</div>
-          <div class="text-xs text-gray-400">{{ t('cleaning.minRequired', { n: slot.minParticipants }) }}</div>
+        <div class="info-card card">
+          <div class="info-label">{{ t('cleaning.participants') }}</div>
+          <div class="info-value">{{ slot.currentRegistrations }} / {{ slot.maxParticipants }}</div>
+          <div class="info-hint">{{ t('cleaning.minRequired', { n: slot.minParticipants }) }}</div>
         </div>
-        <div class="border rounded-lg p-3 text-center">
-          <div class="text-sm text-gray-500">{{ t('cleaning.slotStatus') }}</div>
-          <div class="font-semibold">
+        <div class="info-card card">
+          <div class="info-label">{{ t('cleaning.slotStatus') }}</div>
+          <div class="info-value">
             {{ slot.currentRegistrations >= slot.minParticipants
               ? t('cleaning.enoughParticipants') : t('cleaning.needMore') }}
           </div>
@@ -173,7 +179,7 @@ async function doCheckOut() {
       </div>
 
       <!-- Action Buttons -->
-      <div class="flex flex-wrap gap-2 mb-6">
+      <div class="slot-actions">
         <Button v-if="canRegister" :label="t('cleaning.register')" icon="pi pi-plus" @click="register" />
         <Button v-if="canUnregister" :label="t('cleaning.unregister')" icon="pi pi-minus"
                 severity="secondary" @click="unregister" />
@@ -187,17 +193,17 @@ async function doCheckOut() {
       </div>
 
       <!-- Registrations Table -->
-      <h2 class="text-xl font-semibold mb-3">{{ t('cleaning.registrations') }}</h2>
+      <h2 class="registrations-title">{{ t('cleaning.registrations') }}</h2>
       <DataTable :value="slot.registrations" stripedRows>
         <Column field="userName" :header="t('common.name')" />
         <Column :header="t('cleaning.checkedInCol')">
           <template #body="{ data }">
-            <i :class="data.checkedIn ? 'pi pi-check text-green-600' : 'pi pi-times text-gray-400'"></i>
+            <i :class="data.checkedIn ? 'pi pi-check status-check' : 'pi pi-times status-uncheck'" />
           </template>
         </Column>
         <Column :header="t('cleaning.checkedOutCol')">
           <template #body="{ data }">
-            <i :class="data.checkedOut ? 'pi pi-check text-green-600' : 'pi pi-times text-gray-400'"></i>
+            <i :class="data.checkedOut ? 'pi pi-check status-check' : 'pi pi-times status-uncheck'" />
           </template>
         </Column>
         <Column :header="t('cleaning.duration')">
@@ -212,11 +218,11 @@ async function doCheckOut() {
           </template>
         </Column>
       </DataTable>
-    </div>
+    </template>
 
     <!-- QR Check-in Dialog -->
     <Dialog v-model:visible="showQrDialog" :header="t('cleaning.qrCheckIn')" modal :style="{ width: '400px', maxWidth: '90vw' }">
-      <p class="mb-3">{{ t('cleaning.qrInstructions') }}</p>
+      <p class="qr-instructions">{{ t('cleaning.qrInstructions') }}</p>
       <InputText v-model="scannerInput" :placeholder="t('cleaning.qrPlaceholder')"
                  class="w-full" autofocus @keyup.enter="submitCheckIn" />
       <template #footer>
@@ -227,3 +233,76 @@ async function doCheckOut() {
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+.slot-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.slot-section {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .info-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.info-card {
+  text-align: center;
+  padding: 0.75rem;
+}
+
+.info-label {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.info-value {
+  font-weight: 600;
+}
+
+.info-hint {
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+  margin-top: 0.125rem;
+}
+
+.slot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.registrations-title {
+  font-size: var(--mw-font-size-lg);
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.status-check {
+  color: var(--mw-success);
+}
+
+.status-uncheck {
+  color: var(--mw-text-muted);
+}
+
+.qr-instructions {
+  margin-bottom: 0.75rem;
+}
+</style>

@@ -253,8 +253,9 @@ async function handleSubmit(publish: boolean) {
 
         <div class="field-row" v-if="!isEdit">
           <div class="field">
-            <label>{{ t('forms.formType') }} *</label>
+            <label for="form-type">{{ t('forms.formType') }} *</label>
             <Select
+              id="form-type"
               v-model="formType"
               :options="typeOptions.map(o => ({ label: o.label(), value: o.value }))"
               optionLabel="label"
@@ -263,8 +264,9 @@ async function handleSubmit(publish: boolean) {
             />
           </div>
           <div class="field">
-            <label>{{ t('forms.scope') }} *</label>
+            <label for="form-scope">{{ t('forms.scope') }} *</label>
             <Select
+              id="form-scope"
               v-model="scope"
               :options="scopeOptions"
               optionLabel="label"
@@ -275,8 +277,9 @@ async function handleSubmit(publish: boolean) {
         </div>
 
         <div v-if="scope === 'ROOM' && !isEdit" class="field">
-          <label>{{ t('forms.selectRoom') }}</label>
+          <label for="form-room">{{ t('forms.selectRoom') }}</label>
           <Select
+            id="form-room"
             v-model="scopeId"
             :options="roomOptions"
             optionLabel="label"
@@ -288,8 +291,8 @@ async function handleSubmit(publish: boolean) {
 
         <div class="field-row">
           <div class="field">
-            <label>{{ t('forms.deadline') }}</label>
-            <DatePicker v-model="deadline" dateFormat="dd.mm.yy" class="w-full" showIcon />
+            <label for="form-deadline">{{ t('forms.deadline') }}</label>
+            <DatePicker id="form-deadline" v-model="deadline" dateFormat="dd.mm.yy" class="w-full" showIcon />
           </div>
           <div class="field-check" v-if="!isEdit">
             <Checkbox v-model="anonymous" :binary="true" inputId="anonymous" />
@@ -323,8 +326,9 @@ async function handleSubmit(publish: boolean) {
           <div class="question-fields">
             <div class="field-row">
               <div class="field">
-                <label>{{ t('forms.questionType') }}</label>
+                <label :for="`q-type-${idx}`">{{ t('forms.questionType') }}</label>
                 <Select
+                  :id="`q-type-${idx}`"
                   v-model="q.type"
                   :options="questionTypeOptions.map(o => ({ label: o.label(), value: o.value }))"
                   optionLabel="label"
@@ -339,13 +343,13 @@ async function handleSubmit(publish: boolean) {
             </div>
 
             <div class="field">
-              <label>{{ t('forms.questionLabel') }} *</label>
-              <InputText v-model="q.label" class="w-full" />
+              <label :for="`q-label-${idx}`">{{ t('forms.questionLabel') }} *</label>
+              <InputText :id="`q-label-${idx}`" v-model="q.label" class="w-full" />
             </div>
 
             <div class="field">
-              <label>{{ t('forms.questionDescription') }}</label>
-              <InputText v-model="q.description" class="w-full" />
+              <label :for="`q-desc-${idx}`">{{ t('forms.questionDescription') }}</label>
+              <InputText :id="`q-desc-${idx}`" v-model="q.description" class="w-full" />
             </div>
 
             <!-- Options for choice questions -->
@@ -361,12 +365,12 @@ async function handleSubmit(publish: boolean) {
             <!-- Rating config -->
             <div v-if="q.type === 'RATING'" class="field-row">
               <div class="field">
-                <label>Min</label>
-                <InputText :modelValue="String(q.ratingMin)" @update:modelValue="q.ratingMin = Number($event)" type="number" class="w-full" />
+                <label :for="`q-rating-min-${idx}`">Min</label>
+                <InputText :id="`q-rating-min-${idx}`" :modelValue="String(q.ratingMin)" @update:modelValue="q.ratingMin = Number($event)" type="number" class="w-full" />
               </div>
               <div class="field">
-                <label>Max</label>
-                <InputText :modelValue="String(q.ratingMax)" @update:modelValue="q.ratingMax = Number($event)" type="number" class="w-full" />
+                <label :for="`q-rating-max-${idx}`">Max</label>
+                <InputText :id="`q-rating-max-${idx}`" :modelValue="String(q.ratingMax)" @update:modelValue="q.ratingMax = Number($event)" type="number" class="w-full" />
               </div>
             </div>
           </div>

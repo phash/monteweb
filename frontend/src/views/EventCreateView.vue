@@ -188,30 +188,31 @@ async function handleSubmit() {
 
         <div class="field-row">
           <div class="field">
-            <label>{{ t('calendar.startDate') }} *</label>
-            <DatePicker v-model="startDate" dateFormat="dd.mm.yy" class="w-full" />
+            <label for="event-start-date">{{ t('calendar.startDate') }} *</label>
+            <DatePicker id="event-start-date" v-model="startDate" dateFormat="dd.mm.yy" class="w-full" />
           </div>
           <div v-if="!allDay" class="field">
-            <label>{{ t('calendar.startTime') }}</label>
-            <InputText v-model="startTime" placeholder="HH:MM" class="w-full" />
+            <label for="event-start-time">{{ t('calendar.startTime') }}</label>
+            <InputText id="event-start-time" v-model="startTime" placeholder="HH:MM" class="w-full" />
           </div>
         </div>
 
         <div class="field-row">
           <div class="field">
-            <label>{{ t('calendar.endDate') }} *</label>
-            <DatePicker v-model="endDate" dateFormat="dd.mm.yy" class="w-full" />
+            <label for="event-end-date">{{ t('calendar.endDate') }} *</label>
+            <DatePicker id="event-end-date" v-model="endDate" dateFormat="dd.mm.yy" class="w-full" />
           </div>
           <div v-if="!allDay" class="field">
-            <label>{{ t('calendar.endTime') }}</label>
-            <InputText v-model="endTime" placeholder="HH:MM" class="w-full" />
+            <label for="event-end-time">{{ t('calendar.endTime') }}</label>
+            <InputText id="event-end-time" v-model="endTime" placeholder="HH:MM" class="w-full" />
           </div>
         </div>
 
         <div class="field-row" v-if="!isEdit">
           <div class="field">
-            <label>{{ t('calendar.scope') }} *</label>
+            <label for="event-scope">{{ t('calendar.scope') }} *</label>
             <Select
+              id="event-scope"
               v-model="scope"
               :options="scopeOptions"
               optionLabel="label"
@@ -220,8 +221,9 @@ async function handleSubmit() {
             />
           </div>
           <div v-if="scope === 'ROOM'" class="field">
-            <label>{{ t('calendar.selectRoom') }}</label>
+            <label for="event-room">{{ t('calendar.selectRoom') }}</label>
             <Select
+              id="event-room"
               v-model="scopeId"
               :options="roomOptions"
               optionLabel="label"
@@ -234,8 +236,9 @@ async function handleSubmit() {
 
         <div class="field-row">
           <div class="field">
-            <label>{{ t('calendar.recurrence') }}</label>
+            <label for="event-recurrence">{{ t('calendar.recurrence') }}</label>
             <Select
+              id="event-recurrence"
               v-model="recurrence"
               :options="recurrenceOptions.map(o => ({ label: t(`calendar.recurrences.${o.value}`), value: o.value }))"
               optionLabel="label"
@@ -244,8 +247,8 @@ async function handleSubmit() {
             />
           </div>
           <div v-if="recurrence !== 'NONE'" class="field">
-            <label>{{ t('calendar.recurrenceEnd') }}</label>
-            <DatePicker v-model="recurrenceEnd" dateFormat="dd.mm.yy" class="w-full" />
+            <label for="event-recurrence-end">{{ t('calendar.recurrenceEnd') }}</label>
+            <DatePicker id="event-recurrence-end" v-model="recurrenceEnd" dateFormat="dd.mm.yy" class="w-full" />
           </div>
         </div>
       </div>
