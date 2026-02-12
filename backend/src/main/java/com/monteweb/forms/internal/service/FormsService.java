@@ -545,6 +545,11 @@ public class FormsService implements FormsModuleApi {
 
         if (user.role() == UserRole.SUPERADMIN) return;
 
+        // ELTERNBEIRAT special role can create forms
+        if (hasSpecialRole(user, "ELTERNBEIRAT", scopeId)) {
+            return;
+        }
+
         switch (scope) {
             case ROOM -> {
                 if (scopeId == null) throw new IllegalArgumentException("Room ID required for ROOM scope");
@@ -556,13 +561,19 @@ public class FormsService implements FormsModuleApi {
             }
             case SECTION -> {
                 if (user.role() != UserRole.TEACHER && user.role() != UserRole.SECTION_ADMIN) {
-                    throw new IllegalArgumentException("Only teachers can create section forms");
+                    throw new IllegalArgumentException("Only teachers or Elternbeirat can create section forms");
                 }
             }
             case SCHOOL -> {
                 throw new IllegalArgumentException("Only admins can create school-wide forms");
             }
         }
+    }
+
+    private boolean hasSpecialRole(com.monteweb.user.UserInfo user, String roleName, UUID scopeId) {
+        if (user.specialRoles() == null) return false;
+        if (user.specialRoles().contains(roleName)) return true;
+        return scopeId != null && user.specialRoles().contains(roleName + ":" + scopeId);
     }
 
     private void checkResultsPermission(Form form, UUID userId) {

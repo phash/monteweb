@@ -6,12 +6,14 @@ import com.monteweb.room.internal.model.*;
 import com.monteweb.room.internal.repository.RoomJoinRequestRepository;
 import com.monteweb.room.internal.repository.RoomMemberRepository;
 import com.monteweb.room.internal.repository.RoomRepository;
+import com.monteweb.room.internal.repository.RoomSubscriptionRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,16 +34,20 @@ public class RoomService implements RoomModuleApi {
     private final RoomRepository roomRepository;
     private final RoomMemberRepository memberRepository;
     private final RoomJoinRequestRepository joinRequestRepository;
+    private final RoomSubscriptionRepository subscriptionRepository;
     private final UserModuleApi userModuleApi;
     private final FamilyModuleApi familyModuleApi;
     private final ApplicationEventPublisher eventPublisher;
 
     public RoomService(RoomRepository roomRepository, RoomMemberRepository memberRepository,
-                       RoomJoinRequestRepository joinRequestRepository, UserModuleApi userModuleApi,
+                       RoomJoinRequestRepository joinRequestRepository,
+                       RoomSubscriptionRepository subscriptionRepository,
+                       UserModuleApi userModuleApi,
                        FamilyModuleApi familyModuleApi, ApplicationEventPublisher eventPublisher) {
         this.roomRepository = roomRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
+        this.subscriptionRepository = subscriptionRepository;
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
         this.eventPublisher = eventPublisher;
@@ -77,6 +83,11 @@ public class RoomService implements RoomModuleApi {
         return memberRepository.findByIdRoomId(roomId).stream()
                 .map(RoomMember::getUserId)
                 .toList();
+    }
+
+    @Override
+    public List<UUID> getMutedRoomIds(UUID userId) {
+        return subscriptionRepository.findMutedRoomIdsByUserId(userId);
     }
 
     // --- Internal service methods ---
@@ -122,7 +133,7 @@ public class RoomService implements RoomModuleApi {
         room.setType(RoomType.INTEREST);
         room.setSectionId(null); // cross-section
         room.setCreatedBy(createdBy);
-        room.setDiscoverable(true);
+        room.setJoinPolicyEnum(JoinPolicy.OPEN);
         room.setTags(tags != null ? tags.toArray(new String[0]) : new String[0]);
         room.setExpiresAt(expiresAt);
         room.setSettings(RoomSettings.defaults());
@@ -158,10 +169,10 @@ public class RoomService implements RoomModuleApi {
 
     @Transactional
     public RoomInfo updateInterestFields(UUID roomId, List<String> tags,
-                                          Boolean discoverable, Instant expiresAt) {
+                                          JoinPolicy joinPolicy, Instant expiresAt) {
         var room = findEntityById(roomId);
         if (tags != null) room.setTags(tags.toArray(new String[0]));
-        if (discoverable != null) room.setDiscoverable(discoverable);
+        if (joinPolicy != null) room.setJoinPolicyEnum(joinPolicy);
         if (expiresAt != null) room.setExpiresAt(expiresAt);
         return toRoomInfo(roomRepository.save(room));
     }
@@ -205,7 +216,9 @@ public class RoomService implements RoomModuleApi {
         if (memberRepository.existsByIdRoomIdAndIdUserId(roomId, userId)) {
             throw new BusinessException("User is already a member of this room");
         }
-        var member = new RoomMember(room, userId, role);
+        // Auto-promote TEACHER to LEADER in KLASSE rooms
+        RoomRole effectiveRole = resolveEffectiveRole(room, userId, role);
+        var member = new RoomMember(room, userId, effectiveRole);
         room.getMembers().add(member);
         roomRepository.save(room);
     }
@@ -247,12 +260,12 @@ public class RoomService implements RoomModuleApi {
     }
 
     /**
-     * Join a discoverable room as MEMBER (self-service for interest rooms).
+     * Join an OPEN room as MEMBER (self-service).
      */
     @Transactional
     public void joinRoom(UUID roomId, UUID userId) {
         var room = findEntityById(roomId);
-        if (!room.isDiscoverable()) {
+        if (room.getJoinPolicyEnum() != JoinPolicy.OPEN) {
             throw new BusinessException("Room is not open for joining");
         }
         if (room.isArchived()) {
@@ -261,7 +274,8 @@ public class RoomService implements RoomModuleApi {
         if (memberRepository.existsByIdRoomIdAndIdUserId(roomId, userId)) {
             throw new BusinessException("Already a member of this room");
         }
-        var member = new RoomMember(room, userId, RoomRole.MEMBER);
+        RoomRole effectiveRole = resolveEffectiveRole(room, userId, RoomRole.MEMBER);
+        var member = new RoomMember(room, userId, effectiveRole);
         room.getMembers().add(member);
         roomRepository.save(room);
     }
@@ -291,14 +305,14 @@ public class RoomService implements RoomModuleApi {
         return findEntityById(roomId).getSettings();
     }
 
-    // --- Browse/Search for discoverable rooms ---
+    // --- Browse/Search for open rooms ---
 
-    public Page<RoomInfo> browseDiscoverable(Pageable pageable) {
-        return roomRepository.findDiscoverable(pageable).map(this::toRoomInfo);
+    public Page<RoomInfo> browseOpenRooms(Pageable pageable) {
+        return roomRepository.findOpenRooms(pageable).map(this::toRoomInfo);
     }
 
-    public Page<RoomInfo> searchDiscoverable(String query, Pageable pageable) {
-        return roomRepository.searchDiscoverable(query, pageable).map(this::toRoomInfo);
+    public Page<RoomInfo> searchOpenRooms(String query, Pageable pageable) {
+        return roomRepository.searchOpenRooms(query, pageable).map(this::toRoomInfo);
     }
 
     // --- Scheduled auto-archival ---
@@ -375,10 +389,11 @@ public class RoomService implements RoomModuleApi {
         request.setResolvedAt(Instant.now());
         joinRequestRepository.save(request);
 
-        // Add user as member
+        // Add user as member (auto-promote TEACHER to LEADER in KLASSE rooms)
         var room = findEntityById(request.getRoomId());
         if (!memberRepository.existsByIdRoomIdAndIdUserId(request.getRoomId(), request.getUserId())) {
-            var member = new RoomMember(room, request.getUserId(), RoomRole.MEMBER);
+            RoomRole effectiveRole = resolveEffectiveRole(room, request.getUserId(), RoomRole.MEMBER);
+            var member = new RoomMember(room, request.getUserId(), effectiveRole);
             room.getMembers().add(member);
             roomRepository.save(room);
         }
@@ -420,7 +435,40 @@ public class RoomService implements RoomModuleApi {
                 request.getStatus().name(), request.getCreatedAt(), request.getResolvedAt());
     }
 
+    // --- Feed subscription (mute/unmute) ---
+
+    @Transactional
+    public void muteRoom(UUID roomId, UUID userId) {
+        findEntityById(roomId); // verify room exists
+        var sub = subscriptionRepository.findByUserIdAndRoomId(userId, roomId)
+                .orElseGet(() -> new RoomSubscription(userId, roomId));
+        sub.setFeedMuted(true);
+        subscriptionRepository.save(sub);
+    }
+
+    @Transactional
+    public void unmuteRoom(UUID roomId, UUID userId) {
+        subscriptionRepository.findByUserIdAndRoomId(userId, roomId)
+                .ifPresent(sub -> {
+                    sub.setFeedMuted(false);
+                    subscriptionRepository.save(sub);
+                });
+    }
+
     // --- Internal helpers ---
+
+    /**
+     * Auto-promote TEACHER to LEADER in KLASSE rooms.
+     */
+    private RoomRole resolveEffectiveRole(Room room, UUID userId, RoomRole requestedRole) {
+        if (room.getType() == RoomType.KLASSE) {
+            var user = userModuleApi.findById(userId);
+            if (user.isPresent() && user.get().role() == UserRole.TEACHER) {
+                return RoomRole.LEADER;
+            }
+        }
+        return requestedRole;
+    }
 
     Room findEntityById(UUID roomId) {
         return roomRepository.findById(roomId)
@@ -438,7 +486,7 @@ public class RoomService implements RoomModuleApi {
                 room.getSectionId(),
                 room.isArchived(),
                 room.getMembers().size(),
-                room.isDiscoverable(),
+                room.getJoinPolicy(),
                 room.getExpiresAt(),
                 room.getTags() != null ? Arrays.asList(room.getTags()) : List.of()
         );

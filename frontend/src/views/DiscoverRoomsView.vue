@@ -204,10 +204,11 @@ async function createInterestRoom() {
 
             <div class="flex justify-between items-center text-sm text-gray-500">
               <span><i class="pi pi-users mr-1"></i>{{ room.memberCount }} {{ t('discover.members') }}</span>
-              <Button v-if="room.discoverable" :label="t('discover.join')" icon="pi pi-sign-in" size="small"
+              <Button v-if="room.joinPolicy === 'OPEN'" :label="t('discover.join')" icon="pi pi-sign-in" size="small"
                       @click="joinRoom(room.id)" />
-              <Button v-else :label="t('rooms.requestJoin')" icon="pi pi-send" size="small" severity="secondary"
+              <Button v-else-if="room.joinPolicy === 'REQUEST'" :label="t('rooms.requestJoin')" icon="pi pi-send" size="small" severity="secondary"
                       @click="openJoinRequestDialog(room)" />
+              <Tag v-else :value="t('rooms.inviteOnly')" severity="warn" />
             </div>
           </div>
         </div>

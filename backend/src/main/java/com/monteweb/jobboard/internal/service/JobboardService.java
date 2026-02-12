@@ -193,8 +193,13 @@ public class JobboardService implements JobboardModuleApi {
     public void cancelJob(UUID jobId, UUID userId) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
+        // Creator can cancel; SECTION_ADMIN and SUPERADMIN can cancel any job
         if (!job.getCreatedBy().equals(userId)) {
-            throw new ForbiddenException("Only the creator can cancel this job");
+            var user = userModuleApi.findById(userId);
+            if (user.isEmpty() || (user.get().role() != com.monteweb.user.UserRole.SUPERADMIN
+                    && user.get().role() != com.monteweb.user.UserRole.SECTION_ADMIN)) {
+                throw new ForbiddenException("Only the creator or administrators can cancel this job");
+            }
         }
         job.setStatus(JobStatus.CANCELLED);
         job.setClosedAt(Instant.now());
@@ -206,6 +211,15 @@ public class JobboardService implements JobboardModuleApi {
     public JobAssignmentInfo applyForJob(UUID jobId, UUID userId) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
+
+        // SUPERADMIN, SECTION_ADMIN, TEACHER do not perform parent hours
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (user.role() == com.monteweb.user.UserRole.SUPERADMIN
+                || user.role() == com.monteweb.user.UserRole.SECTION_ADMIN
+                || user.role() == com.monteweb.user.UserRole.TEACHER) {
+            throw new ForbiddenException("This role does not perform parent hours");
+        }
 
         if (job.getStatus() != JobStatus.OPEN) {
             throw new BusinessException("This job is no longer open for applications");

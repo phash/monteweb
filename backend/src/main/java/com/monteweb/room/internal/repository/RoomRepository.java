@@ -23,16 +23,16 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
 
     List<Room> findByTypeAndArchivedFalse(RoomType type);
 
-    // Interest rooms: discoverable and not archived
-    @Query("SELECT r FROM Room r WHERE r.discoverable = true AND r.archived = false " +
+    // Open rooms: joinPolicy = OPEN and not archived
+    @Query("SELECT r FROM Room r WHERE r.joinPolicy = 'OPEN' AND r.archived = false " +
             "ORDER BY r.name ASC")
-    Page<Room> findDiscoverable(Pageable pageable);
+    Page<Room> findOpenRooms(Pageable pageable);
 
-    // Search interest rooms by name or tags
-    @Query("SELECT r FROM Room r WHERE r.discoverable = true AND r.archived = false " +
+    // Search open rooms by name or description
+    @Query("SELECT r FROM Room r WHERE r.joinPolicy = 'OPEN' AND r.archived = false " +
             "AND (LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "OR LOWER(r.description) LIKE LOWER(CONCAT('%', :query, '%')))")
-    Page<Room> searchDiscoverable(@Param("query") String query, Pageable pageable);
+    Page<Room> searchOpenRooms(@Param("query") String query, Pageable pageable);
 
     // Find expired rooms for auto-archival
     @Query("SELECT r FROM Room r WHERE r.expiresAt IS NOT NULL AND r.expiresAt < :now " +

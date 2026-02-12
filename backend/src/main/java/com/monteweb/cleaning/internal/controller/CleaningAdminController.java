@@ -144,9 +144,16 @@ public class CleaningAdminController {
         if (user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN) {
             return;
         }
-        if (sectionId != null && user.specialRoles() != null) {
-            String expected = "PUTZORGA:" + sectionId;
-            if (user.specialRoles().contains(expected)) {
+        if (user.specialRoles() != null) {
+            // PUTZORGA special role (section-scoped)
+            if (sectionId != null && user.specialRoles().contains("PUTZORGA:" + sectionId)) {
+                return;
+            }
+            // ELTERNBEIRAT special role (can manage cleaning schedules)
+            if (user.specialRoles().contains("ELTERNBEIRAT")) {
+                return;
+            }
+            if (sectionId != null && user.specialRoles().contains("ELTERNBEIRAT:" + sectionId)) {
                 return;
             }
         }

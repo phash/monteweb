@@ -79,6 +79,14 @@ export const useRoomsStore = defineStore('rooms', () => {
     await roomsApi.leaveRoom(roomId)
   }
 
+  async function muteRoom(roomId: string) {
+    await roomsApi.muteRoom(roomId)
+  }
+
+  async function unmuteRoom(roomId: string) {
+    await roomsApi.unmuteRoom(roomId)
+  }
+
   async function fetchChatChannels(roomId: string) {
     const res = await roomsApi.getChatChannels(roomId)
     chatChannels.value = res.data.data
@@ -93,7 +101,7 @@ export const useRoomsStore = defineStore('rooms', () => {
     myRooms, currentRoom, currentPublicRoom, discoverableRooms, discoverTotalPages, discoverPage,
     chatChannels, loading,
     fetchMyRooms, fetchRoom, createRoom, createInterestRoom,
-    discoverRooms, joinRoom, leaveRoom,
+    discoverRooms, joinRoom, leaveRoom, muteRoom, unmuteRoom,
     fetchChatChannels, getOrCreateChatChannel,
   }
 })

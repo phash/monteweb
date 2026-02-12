@@ -113,6 +113,21 @@ export default {
     familyAdded: 'Familienmitglieder hinzugefügt',
     selectFamily: 'Familie auswählen',
     noFamilies: 'Keine Familien vorhanden.',
+    inviteOnly: 'Nur auf Einladung',
+    muteFeed: 'Feed stummschalten',
+    unmuteFeed: 'Stummschaltung aufheben',
+    muted: 'Feed stummgeschaltet',
+    unmuted: 'Stummschaltung aufgehoben',
+    joinPolicies: {
+      OPEN: 'Offen',
+      REQUEST: 'Auf Anfrage',
+      INVITE_ONLY: 'Nur auf Einladung',
+    },
+    discussionModes: {
+      FULL: 'Voll (alle können antworten)',
+      ANNOUNCEMENTS_ONLY: 'Nur Ankündigungen',
+      DISABLED: 'Deaktiviert',
+    },
   },
   family: {
     title: 'Familienverbund',

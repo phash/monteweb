@@ -109,15 +109,15 @@ public class RoomController {
         return ResponseEntity.ok(ApiResponse.ok(roomService.getMyJoinRequests(userId)));
     }
 
-    // ── Interest rooms: browse & search ─────────────────────────────────
+    // ── Open rooms: browse & search ─────────────────────────────────
 
     @GetMapping("/discover")
-    public ResponseEntity<ApiResponse<PageResponse<RoomInfo>>> browseDiscoverable(
+    public ResponseEntity<ApiResponse<PageResponse<RoomInfo>>> browseOpenRooms(
             @RequestParam(required = false) String q,
             @PageableDefault(size = 20) Pageable pageable) {
         var page = (q != null && !q.isBlank())
-                ? roomService.searchDiscoverable(q, pageable)
-                : roomService.browseDiscoverable(pageable);
+                ? roomService.searchOpenRooms(q, pageable)
+                : roomService.browseOpenRooms(pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
@@ -198,7 +198,10 @@ public class RoomController {
             @RequestBody UpdateInterestFieldsRequest request) {
         requireLeaderOrAdmin(id);
         Instant expiresAt = request.expiresAt() != null ? Instant.parse(request.expiresAt()) : null;
-        var room = roomService.updateInterestFields(id, request.tags(), request.discoverable(), expiresAt);
+        com.monteweb.room.JoinPolicy joinPolicy = request.joinPolicy() != null
+                ? com.monteweb.room.JoinPolicy.valueOf(request.joinPolicy())
+                : null;
+        var room = roomService.updateInterestFields(id, request.tags(), joinPolicy, expiresAt);
         return ResponseEntity.ok(ApiResponse.ok(room));
     }
 
@@ -255,6 +258,22 @@ public class RoomController {
         requireLeaderOrAdmin(id);
         int added = roomService.addFamilyMembers(id, familyId);
         return ResponseEntity.ok(ApiResponse.ok(null, added + " family members added"));
+    }
+
+    // ── Feed subscription (mute/unmute) ────────────────────────────────
+
+    @PostMapping("/{id}/mute")
+    public ResponseEntity<ApiResponse<Void>> muteRoom(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        roomService.muteRoom(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Room muted"));
+    }
+
+    @PostMapping("/{id}/unmute")
+    public ResponseEntity<ApiResponse<Void>> unmuteRoom(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        roomService.unmuteRoom(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Room unmuted"));
     }
 
     // ── Admin: archive / delete ────────────────────────────────────────
@@ -345,7 +364,7 @@ public class RoomController {
                 room.type(),
                 room.sectionId(),
                 room.memberCount(),
-                room.discoverable(),
+                room.joinPolicy(),
                 room.tags()
         );
     }
@@ -361,7 +380,7 @@ public class RoomController {
 
     public record UpdateInterestFieldsRequest(
             List<String> tags,
-            Boolean discoverable,
+            String joinPolicy,
             String expiresAt
     ) {}
 }

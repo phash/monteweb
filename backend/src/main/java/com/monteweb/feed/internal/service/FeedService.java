@@ -77,6 +77,12 @@ public class FeedService implements FeedModuleApi {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
+        // Remove muted rooms from the feed
+        var mutedRoomIds = roomModuleApi.getMutedRoomIds(userId);
+        if (mutedRoomIds != null && !mutedRoomIds.isEmpty()) {
+            roomIds.removeAll(mutedRoomIds);
+        }
+
         // Ensure non-empty collections for the IN clause
         if (roomIds.isEmpty()) roomIds.add(UUID.fromString("00000000-0000-0000-0000-000000000000"));
         if (sectionIds.isEmpty()) sectionIds.add(UUID.fromString("00000000-0000-0000-0000-000000000000"));
@@ -101,8 +107,11 @@ public class FeedService implements FeedModuleApi {
         if (sourceType == SourceType.SCHOOL || sourceType == SourceType.SECTION) {
             var user = userModuleApi.findById(authorId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
-            if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN && user.role() != UserRole.TEACHER) {
-                throw new ForbiddenException("Only staff can create school-wide or section posts");
+            boolean isStaff = user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN || user.role() == UserRole.TEACHER;
+            boolean isElternbeirat = user.specialRoles() != null && (user.specialRoles().contains("ELTERNBEIRAT")
+                    || (sourceId != null && user.specialRoles().contains("ELTERNBEIRAT:" + sourceId)));
+            if (!isStaff && !isElternbeirat) {
+                throw new ForbiddenException("Only staff or Elternbeirat can create school-wide or section posts");
             }
         }
 
