@@ -150,7 +150,7 @@ class FamilyServiceIntegrationTest {
         JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
         String familyId = json.path("data").path("id").asText();
 
-        mockMvc.perform(get("/api/v1/families/" + familyId + "/hours")
+        mockMvc.perform(get("/api/v1/jobs/family/" + familyId + "/hours")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
     }

@@ -115,6 +115,15 @@ class JobboardControllerIntegrationTest {
         String tokenB = TestHelper.registerAndGetToken(mockMvc,
                 "job-applierB@example.com", "Applier", "B");
 
+        // User B must belong to a family to apply for jobs
+        mockMvc.perform(post("/api/v1/families")
+                        .header("Authorization", "Bearer " + tokenB)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Applier Family"}
+                                """))
+                .andExpect(status().isCreated());
+
         mockMvc.perform(post("/api/v1/jobs/" + jobId + "/apply")
                         .header("Authorization", "Bearer " + tokenB))
                 .andExpect(status().isOk())
