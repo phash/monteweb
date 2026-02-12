@@ -81,7 +81,8 @@ class FormsServiceIntegrationTest {
                                     "title": "Feedback Formular",
                                     "description": "Eltern-Feedback zum Schuljahr",
                                     "type": "SURVEY",
-                                    "fields": [
+                                    "scope": "SCHOOL",
+                                    "questions": [
                                         {"label": "Zufriedenheit", "type": "RATING", "required": true},
                                         {"label": "Kommentar", "type": "TEXT", "required": false}
                                     ]
@@ -137,7 +138,8 @@ class FormsServiceIntegrationTest {
                                 {
                                     "title": "Detail Test Form",
                                     "type": "SURVEY",
-                                    "fields": [{"label": "Name", "type": "TEXT", "required": true}]
+                                    "scope": "SCHOOL",
+                                    "questions": [{"label": "Name", "type": "TEXT", "required": true}]
                                 }
                                 """))
                 .andReturn();
@@ -179,7 +181,7 @@ class FormsServiceIntegrationTest {
                                     "type": "SURVEY",
                                     "scope": "ROOM",
                                     "scopeId": "%s",
-                                    "fields": [{"label": "Rating", "type": "RATING", "required": true}]
+                                    "questions": [{"label": "Rating", "type": "RATING", "required": true}]
                                 }
                                 """.formatted(roomId)))
                 .andReturn();
