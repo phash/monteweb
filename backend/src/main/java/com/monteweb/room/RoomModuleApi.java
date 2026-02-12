@@ -22,4 +22,9 @@ public interface RoomModuleApi {
      * Returns all member user IDs of a room.
      */
     List<UUID> getMemberUserIds(UUID roomId);
+
+    /**
+     * Returns room IDs that the user has muted (feed posts from these rooms should be hidden).
+     */
+    List<UUID> getMutedRoomIds(UUID userId);
 }

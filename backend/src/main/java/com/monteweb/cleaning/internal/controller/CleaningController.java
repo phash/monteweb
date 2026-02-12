@@ -52,6 +52,12 @@ public class CleaningController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         UserInfo user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
+        // SUPERADMIN, SECTION_ADMIN, TEACHER do not perform cleaning hours
+        if (user.role() == com.monteweb.user.UserRole.SUPERADMIN
+                || user.role() == com.monteweb.user.UserRole.SECTION_ADMIN
+                || user.role() == com.monteweb.user.UserRole.TEACHER) {
+            throw new BusinessException("This role does not perform cleaning hours");
+        }
         List<FamilyInfo> families = familyModuleApi.findByUserId(userId);
         if (families.isEmpty()) {
             throw new BusinessException("User must belong to a family to register for cleaning");

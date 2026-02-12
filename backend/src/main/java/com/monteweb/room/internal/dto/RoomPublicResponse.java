@@ -14,7 +14,7 @@ public record RoomPublicResponse(
         String type,
         UUID sectionId,
         int memberCount,
-        boolean discoverable,
+        String joinPolicy,
         List<String> tags
 ) {
 }

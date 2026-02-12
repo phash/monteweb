@@ -55,6 +55,9 @@ const joinRequestLoading = ref(false)
 const pendingRequests = ref<JoinRequestInfo[]>([])
 const requestsLoading = ref(false)
 
+// Mute state
+const roomMuted = ref(false)
+
 // Add family dialog
 const showAddFamilyDialog = ref(false)
 const families = ref<FamilyInfo[]>([])
@@ -211,6 +214,22 @@ async function addFamilyToRoom() {
     addingFamily.value = false
   }
 }
+
+async function toggleMute() {
+  try {
+    if (roomMuted.value) {
+      await rooms.unmuteRoom(props.id)
+      roomMuted.value = false
+      toast.add({ severity: 'success', summary: t('rooms.unmuted'), life: 2000 })
+    } else {
+      await rooms.muteRoom(props.id)
+      roomMuted.value = true
+      toast.add({ severity: 'success', summary: t('rooms.muted'), life: 2000 })
+    }
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
 </script>
 
 <template>
@@ -261,17 +280,22 @@ async function addFamilyToRoom() {
         <div class="join-section">
           <p class="text-muted">{{ t('rooms.joinToSee') }}</p>
           <Button
-            v-if="rooms.currentPublicRoom.discoverable"
+            v-if="rooms.currentPublicRoom.joinPolicy === 'OPEN'"
             :label="t('discover.join')"
             icon="pi pi-sign-in"
             @click="joinRoom"
           />
           <Button
-            v-else
+            v-else-if="rooms.currentPublicRoom.joinPolicy === 'REQUEST'"
             :label="t('rooms.requestJoin')"
             icon="pi pi-send"
             severity="secondary"
             @click="showJoinRequestDialog = true"
+          />
+          <Tag
+            v-else
+            :value="t('rooms.inviteOnly')"
+            severity="warn"
           />
         </div>
       </div>
@@ -301,6 +325,28 @@ async function addFamilyToRoom() {
 
       <div class="room-info card" v-if="rooms.currentRoom.description">
         <p>{{ rooms.currentRoom.description }}</p>
+      </div>
+
+      <!-- Mute/Unmute feed toggle -->
+      <div class="card mute-card" v-if="!canEditRoom">
+        <Button
+          v-if="!roomMuted"
+          :label="t('rooms.muteFeed')"
+          icon="pi pi-volume-off"
+          severity="secondary"
+          text
+          size="small"
+          @click="toggleMute"
+        />
+        <Button
+          v-else
+          :label="t('rooms.unmuteFeed')"
+          icon="pi pi-volume-up"
+          severity="secondary"
+          text
+          size="small"
+          @click="toggleMute"
+        />
       </div>
 
       <!-- Public description (editable by leader) -->
@@ -522,6 +568,12 @@ async function addFamilyToRoom() {
   padding: 1.5rem;
   border-top: 1px solid var(--mw-border-light);
   margin-top: 1rem;
+}
+
+.mute-card {
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .public-desc-card {

@@ -97,7 +97,7 @@ describe('RoomsView', () => {
     vi.mocked(roomsApi.getMine).mockResolvedValue({
       data: {
         data: [
-          { id: 'r1', name: 'Test Room', type: 'KLASSE', memberCount: 5, description: null, publicDescription: null, avatarUrl: null, sectionId: null, archived: false, discoverable: true, expiresAt: null, tags: [] },
+          { id: 'r1', name: 'Test Room', type: 'KLASSE', memberCount: 5, description: null, publicDescription: null, avatarUrl: null, sectionId: null, archived: false, joinPolicy: 'OPEN', expiresAt: null, tags: [] },
         ],
       },
     } as any)

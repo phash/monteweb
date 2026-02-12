@@ -39,7 +39,7 @@ const mockRoom: RoomInfo = {
   sectionId: 'sec-1',
   archived: false,
   memberCount: 25,
-  discoverable: true,
+  joinPolicy: 'OPEN',
   expiresAt: null,
   tags: [],
 }

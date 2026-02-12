@@ -13,6 +13,8 @@ vi.mock('@/api/rooms.api', () => ({
     getOrCreateChatChannel: vi.fn(),
     joinRoom: vi.fn(),
     leaveRoom: vi.fn(),
+    muteRoom: vi.fn(),
+    unmuteRoom: vi.fn(),
   },
 }))
 

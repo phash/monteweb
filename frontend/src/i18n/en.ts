@@ -113,6 +113,21 @@ export default {
     familyAdded: 'Family members added',
     selectFamily: 'Select family',
     noFamilies: 'No families available.',
+    inviteOnly: 'Invite only',
+    muteFeed: 'Mute feed',
+    unmuteFeed: 'Unmute feed',
+    muted: 'Feed muted',
+    unmuted: 'Feed unmuted',
+    joinPolicies: {
+      OPEN: 'Open',
+      REQUEST: 'Request to join',
+      INVITE_ONLY: 'Invite only',
+    },
+    discussionModes: {
+      FULL: 'Full (everyone can reply)',
+      ANNOUNCEMENTS_ONLY: 'Announcements only',
+      DISABLED: 'Disabled',
+    },
   },
   family: {
     title: 'Family',

@@ -3,13 +3,11 @@ package com.monteweb.room.internal.service;
 import com.monteweb.room.DiscussionThreadCreatedEvent;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
-import com.monteweb.room.internal.model.DiscussionReply;
-import com.monteweb.room.internal.model.DiscussionThread;
-import com.monteweb.room.internal.model.ThreadAudience;
-import com.monteweb.room.internal.model.ThreadStatus;
+import com.monteweb.room.internal.model.*;
 import com.monteweb.user.UserRole;
 import com.monteweb.room.internal.repository.DiscussionReplyRepository;
 import com.monteweb.room.internal.repository.DiscussionThreadRepository;
+import com.monteweb.room.internal.repository.RoomRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
@@ -29,23 +27,34 @@ public class DiscussionThreadService {
     private final DiscussionThreadRepository threadRepository;
     private final DiscussionReplyRepository replyRepository;
     private final RoomModuleApi roomModuleApi;
+    private final RoomRepository roomRepository;
     private final UserModuleApi userModuleApi;
     private final ApplicationEventPublisher eventPublisher;
 
     public DiscussionThreadService(DiscussionThreadRepository threadRepository,
                                    DiscussionReplyRepository replyRepository,
                                    RoomModuleApi roomModuleApi,
+                                   RoomRepository roomRepository,
                                    UserModuleApi userModuleApi,
                                    ApplicationEventPublisher eventPublisher) {
         this.threadRepository = threadRepository;
         this.replyRepository = replyRepository;
         this.roomModuleApi = roomModuleApi;
+        this.roomRepository = roomRepository;
         this.userModuleApi = userModuleApi;
         this.eventPublisher = eventPublisher;
     }
 
     public Page<ThreadInfo> getThreads(UUID roomId, UUID userId, String statusFilter, Pageable pageable) {
         requireRoomMember(roomId, userId);
+
+        var room = roomRepository.findById(roomId).orElse(null);
+        var settings = room != null ? room.getSettings() : RoomSettings.defaults();
+
+        // If discussions are disabled, return empty
+        if (settings.effectiveDiscussionMode() == DiscussionMode.DISABLED) {
+            return Page.empty(pageable);
+        }
 
         // Determine which audiences the user can see
         var user = userModuleApi.findById(userId);
@@ -65,9 +74,19 @@ public class DiscussionThreadService {
             }
         } else {
             boolean isParent = roomRole == RoomRole.PARENT_MEMBER || userRole == UserRole.PARENT;
-            var allowedAudiences = isParent
-                    ? java.util.List.of(ThreadAudience.ALLE, ThreadAudience.ELTERN)
-                    : java.util.List.of(ThreadAudience.ALLE, ThreadAudience.KINDER);
+            boolean isStudent = userRole == UserRole.STUDENT;
+
+            java.util.List<ThreadAudience> allowedAudiences;
+            if (isParent) {
+                allowedAudiences = java.util.List.of(ThreadAudience.ALLE, ThreadAudience.ELTERN);
+            } else if (isStudent && settings.childDiscussionEnabled()) {
+                allowedAudiences = java.util.List.of(ThreadAudience.ALLE, ThreadAudience.KINDER);
+            } else if (isStudent) {
+                // Child discussions not enabled: only see ALLE
+                allowedAudiences = java.util.List.of(ThreadAudience.ALLE);
+            } else {
+                allowedAudiences = java.util.List.of(ThreadAudience.ALLE);
+            }
 
             if (statusFilter != null && !statusFilter.isBlank()) {
                 threads = threadRepository.findByRoomIdAndStatusAndAudienceInOrderByCreatedAtDesc(
@@ -92,7 +111,7 @@ public class DiscussionThreadService {
 
     @Transactional
     public ThreadInfo createThread(UUID roomId, UUID userId, String title, String content, String audience) {
-        requireLeader(roomId, userId);
+        requireThreadCreator(roomId, userId);
 
         var thread = new DiscussionThread();
         thread.setRoomId(roomId);
@@ -117,7 +136,7 @@ public class DiscussionThreadService {
 
     @Transactional
     public ThreadInfo archiveThread(UUID roomId, UUID threadId, UUID userId) {
-        requireLeader(roomId, userId);
+        requireThreadManager(roomId, userId);
         var thread = findThread(threadId);
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("Thread", threadId);
@@ -128,7 +147,7 @@ public class DiscussionThreadService {
 
     @Transactional
     public void deleteThread(UUID roomId, UUID threadId, UUID userId) {
-        requireLeader(roomId, userId);
+        requireThreadManager(roomId, userId);
         var thread = findThread(threadId);
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("Thread", threadId);
@@ -149,6 +168,17 @@ public class DiscussionThreadService {
     @Transactional
     public ReplyInfo addReply(UUID roomId, UUID threadId, UUID userId, String content) {
         requireRoomMember(roomId, userId);
+
+        // Check discussion mode - ANNOUNCEMENTS_ONLY means no replies
+        var room = roomRepository.findById(roomId).orElse(null);
+        var settings = room != null ? room.getSettings() : RoomSettings.defaults();
+        if (settings.effectiveDiscussionMode() == DiscussionMode.ANNOUNCEMENTS_ONLY) {
+            throw new BusinessException("Replies are not allowed in announcement-only mode");
+        }
+        if (settings.effectiveDiscussionMode() == DiscussionMode.DISABLED) {
+            throw new BusinessException("Discussions are disabled in this room");
+        }
+
         var thread = findThread(threadId);
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("Thread", threadId);
@@ -177,12 +207,47 @@ public class DiscussionThreadService {
         }
     }
 
-    private void requireLeader(UUID roomId, UUID userId) {
-        var role = roomModuleApi.getUserRoleInRoom(userId, roomId)
+    /**
+     * Check if user can create threads: LEADER, TEACHER (in any room they're member of),
+     * or PARENT if allowMemberThreadCreation is enabled.
+     */
+    private void requireThreadCreator(UUID roomId, UUID userId) {
+        var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId)
                 .orElseThrow(() -> new ForbiddenException("You are not a member of this room"));
-        if (role != RoomRole.LEADER) {
-            throw new ForbiddenException("Only room leaders can perform this action");
+        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
+
+        // LEADER can always create
+        if (roomRole == RoomRole.LEADER) return;
+        // TEACHER can create discussions in rooms they're a member of
+        if (userRole == UserRole.TEACHER) return;
+        // SUPERADMIN can always create
+        if (userRole == UserRole.SUPERADMIN) return;
+
+        // PARENT can create if room setting allows
+        if (userRole == UserRole.PARENT || roomRole == RoomRole.PARENT_MEMBER) {
+            var room = roomRepository.findById(roomId).orElse(null);
+            var settings = room != null ? room.getSettings() : RoomSettings.defaults();
+            if (settings.allowMemberThreadCreation()) {
+                return;
+            }
         }
+
+        throw new ForbiddenException("You do not have permission to create threads in this room");
+    }
+
+    /**
+     * Check if user can manage (archive/delete) threads: LEADER, TEACHER, SUPERADMIN.
+     */
+    private void requireThreadManager(UUID roomId, UUID userId) {
+        var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId)
+                .orElseThrow(() -> new ForbiddenException("You are not a member of this room"));
+        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
+
+        if (roomRole == RoomRole.LEADER) return;
+        if (userRole == UserRole.TEACHER) return;
+        if (userRole == UserRole.SUPERADMIN) return;
+
+        throw new ForbiddenException("Only room leaders or teachers can manage threads");
     }
 
     private ThreadInfo toThreadInfo(DiscussionThread thread) {

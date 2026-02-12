@@ -50,7 +50,7 @@ vi.mock('@/api/rooms.api', () => ({
     getMine: vi.fn().mockResolvedValue({
       data: {
         data: [
-          { id: 'r1', name: 'Room 1', type: 'KLASSE', memberCount: 5, description: null, publicDescription: null, avatarUrl: null, sectionId: null, archived: false, discoverable: true, expiresAt: null, tags: [] },
+          { id: 'r1', name: 'Room 1', type: 'KLASSE', memberCount: 5, description: null, publicDescription: null, avatarUrl: null, sectionId: null, archived: false, joinPolicy: 'OPEN', expiresAt: null, tags: [] },
         ],
       },
     }),

@@ -69,6 +69,14 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInfo create(String name, UUID creatorUserId) {
+        // Only PARENT and SUPERADMIN can create/manage families
+        var user = userModuleApi.findById(creatorUserId);
+        if (user.isPresent()) {
+            var role = user.get().role();
+            if (role != com.monteweb.user.UserRole.PARENT && role != com.monteweb.user.UserRole.SUPERADMIN) {
+                throw new BusinessException("Only parents and administrators can create families");
+            }
+        }
         // Check if parent already has a family
         List<Family> existingFamilies = familyRepository.findByMemberUserId(creatorUserId);
         if (!existingFamilies.isEmpty()) {

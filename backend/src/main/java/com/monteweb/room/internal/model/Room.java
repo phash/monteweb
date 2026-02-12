@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import com.monteweb.room.JoinPolicy;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,8 +54,8 @@ public class Room {
     @Column(name = "archive_at")
     private Instant archiveAt;
 
-    @Column(nullable = false)
-    private boolean discoverable = false;
+    @Column(name = "join_policy", nullable = false, length = 20)
+    private String joinPolicy = "REQUEST";
 
     @Column(name = "expires_at")
     private Instant expiresAt;
@@ -73,6 +75,18 @@ public class Room {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    public JoinPolicy getJoinPolicyEnum() {
+        try {
+            return JoinPolicy.valueOf(joinPolicy);
+        } catch (Exception e) {
+            return JoinPolicy.REQUEST;
+        }
+    }
+
+    public void setJoinPolicyEnum(JoinPolicy policy) {
+        this.joinPolicy = policy.name();
+    }
 
     @PrePersist
     protected void onCreate() {

@@ -1,6 +1,8 @@
 export type RoomType = 'KLASSE' | 'GRUPPE' | 'PROJEKT' | 'INTEREST' | 'CUSTOM'
 export type RoomRole = 'LEADER' | 'MEMBER' | 'PARENT_MEMBER' | 'GUEST'
 export type ChannelType = 'MAIN' | 'PARENTS' | 'STUDENTS'
+export type JoinPolicy = 'OPEN' | 'REQUEST' | 'INVITE_ONLY'
+export type DiscussionMode = 'FULL' | 'ANNOUNCEMENTS_ONLY' | 'DISABLED'
 
 export interface RoomInfo {
   id: string
@@ -12,7 +14,7 @@ export interface RoomInfo {
   sectionId: string | null
   archived: boolean
   memberCount: number
-  discoverable: boolean
+  joinPolicy: JoinPolicy
   expiresAt: string | null
   tags: string[]
 }
@@ -22,6 +24,9 @@ export interface RoomSettings {
   filesEnabled: boolean
   parentSpaceEnabled: boolean
   visibility: 'MEMBERS_ONLY' | 'SECTION' | 'ALL'
+  discussionMode: DiscussionMode
+  allowMemberThreadCreation: boolean
+  childDiscussionEnabled: boolean
 }
 
 export interface RoomDetail extends RoomInfo {
@@ -39,7 +44,7 @@ export interface RoomPublicInfo {
   type: RoomType
   sectionId: string | null
   memberCount: number
-  discoverable: boolean
+  joinPolicy: JoinPolicy
   tags: string[]
 }
 

@@ -10,7 +10,7 @@ MonteWeb ist ein modulares, selbst-gehostetes Schul-Intranet für Montessori-Sch
 
 ## Projektstatus
 
-Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tests bestehen (55% Statement-Coverage), und der volle Docker-Stack läuft.
+Alle 18 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tests bestehen (56% Statement-Coverage), und der volle Docker-Stack läuft.
 
 ### Kern-Phasen (1–6)
 
@@ -23,7 +23,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 | 5 | Messaging & Chat | COMPLETE |
 | 6 | i18n, Security-Hardening, DSGVO, Production-Setup | COMPLETE |
 
-### Erweiterungs-Phasen (7–17)
+### Erweiterungs-Phasen (7–18)
 
 | Phase | Inhalt | Status |
 |-------|--------|--------|
@@ -31,13 +31,14 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 | 8 | Raum-Diskussions-Threads (LEADER-Berechtigungen) | COMPLETE |
 | 9 | E-Mail-Versand (SMTP, conditional) | COMPLETE |
 | 10 | Englische Übersetzung (i18n DE+EN) + Language-Switcher | COMPLETE |
-| 11 | Testabdeckung (418 Frontend-Tests, 55% Coverage + 15 Backend-Testdateien) | COMPLETE |
+| 11 | Testabdeckung (418 Frontend-Tests, 56% Coverage + 37 Backend-Testdateien) | COMPLETE |
 | 12 | CI/CD Pipeline (GitHub Actions) | COMPLETE |
 | 13 | OIDC/SSO (OAuth2 Client, conditional) | COMPLETE |
 | 14 | PDF-Export (Stundenbericht, QR-Codes) | COMPLETE |
 | 15 | Web Push Notifications (VAPID) | COMPLETE |
 | 16 | Monitoring (Prometheus + Grafana) | COMPLETE |
 | 17 | Kalender/Events (Raum/Bereich/Schulweit, RSVP) | COMPLETE |
+| 18 | Formulare & Umfragen (Survey/Consent, Scopes, Export) | COMPLETE |
 
 ---
 
@@ -48,7 +49,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 - **Spring Modulith 1.3.2** für modulare Architektur
 - **Spring Security** mit JWT + Redis Sessions
 - **Spring OAuth2 Client** für OIDC/SSO (conditional via `monteweb.oidc.enabled`)
-- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V035)
+- **Spring Data JPA** (Hibernate, `ddl-auto: validate`) + **Flyway** (V001–V036)
 - **Spring WebSocket** + Redis Pub/Sub für Echtzeit
 - **Spring Boot Actuator** für Health/Info/Prometheus-Endpoints
 - **Spring Boot Mail** für E-Mail-Versand (conditional via `monteweb.email.enabled`)
@@ -70,7 +71,7 @@ Alle 17 Phasen sind abgeschlossen. Das Projekt kompiliert, alle 418 Frontend-Tes
 - **Vue Router 4.6** für Routing
 - **vue-i18n 11** für Internationalisierung (Deutsch + Englisch)
 - **Axios 1.13** als HTTP-Client
-- **Vitest 4** + **@vue/test-utils** + **@vitest/coverage-v8** für Unit/Component-Tests (418 Tests, 55% Coverage)
+- **Vitest 4** + **@vue/test-utils** + **@vitest/coverage-v8** für Unit/Component-Tests (418 Tests, 56% Coverage)
 - **PWA** via vite-plugin-pwa
 
 ### Infrastruktur
@@ -190,6 +191,21 @@ monteweb/
 │       │   ├── cleaning/           # [Optional] Putz-Orga mit QR-Check-in + QR-PDF-Export
 │       │   │   └── internal/
 │       │   │
+│       │   ├── forms/              # [Optional] Formulare & Umfragen (Survey/Consent) + CSV/PDF-Export
+│       │   │   ├── FormsModuleApi.java         # Public Facade
+│       │   │   ├── FormInfo.java, FormDetailInfo.java  # Public DTOs
+│       │   │   ├── FormStatus.java             # Enum: DRAFT, PUBLISHED, CLOSED, ARCHIVED
+│       │   │   ├── FormScope.java              # Enum: ROOM, SECTION, SCHOOL
+│       │   │   ├── FormType.java               # Enum: SURVEY, CONSENT
+│       │   │   ├── QuestionType.java           # Enum: TEXT, SINGLE_CHOICE, MULTIPLE_CHOICE, RATING, YES_NO
+│       │   │   ├── FormPublishedEvent.java, FormClosedEvent.java  # Spring Events
+│       │   │   └── internal/
+│       │   │       ├── config/FormsModuleConfig.java
+│       │   │       ├── model/Form.java, FormQuestion.java, FormResponse.java, FormAnswer.java
+│       │   │       ├── repository/FormRepository.java, FormQuestionRepository.java, ...
+│       │   │       ├── service/FormsService.java
+│       │   │       └── controller/FormsController.java, FormsExportController.java
+│       │   │
 │       │   └── shared/             # Querschnittsthemen (kein Modul, via @NamedInterface exponiert)
 │       │       ├── config/         # CORS, SecurityConfig, RateLimitFilter, WebSocketConfig, EmailProperties, EmailService
 │       │       ├── dto/            # ApiResponse, ErrorResponse, PageResponse
@@ -231,14 +247,16 @@ monteweb/
 │       │   ├── index.ts        # Browser-Locale-Detection
 │       │   ├── de.ts           # Deutsche Übersetzungen (~375+ Keys)
 │       │   └── en.ts           # Englische Übersetzungen
-│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, ...)
+│       ├── stores/             # Pinia Stores (auth, user, feed, rooms, family, discussions, calendar, forms, ...)
 │       │   ├── discussions.ts  # Diskussions-Threads Store
 │       │   ├── calendar.ts     # Kalender/Events Store
-│       │   └── __tests__/      # Store Unit Tests (12 Dateien, 98 Tests)
+│       │   ├── forms.ts        # Formulare/Umfragen Store
+│       │   └── __tests__/      # Store Unit Tests (13 Dateien, 98+ Tests)
 │       ├── api/                # Axios-Wrapper pro Modul (client.ts + *.api.ts)
 │       │   ├── discussions.api.ts      # Diskussions-Thread API
-│       │   └── calendar.api.ts         # Kalender/Events API
-│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, calendar, ...)
+│       │   ├── calendar.api.ts         # Kalender/Events API
+│       │   └── forms.api.ts            # Formulare/Umfragen API
+│       ├── types/              # TypeScript Interfaces (user, room, feed, family, discussion, calendar, forms, ...)
 │       ├── composables/        # useAuth, useNotifications, useWebSocket, usePushNotifications
 │       ├── components/
 │       │   ├── common/         # PageTitle, LoadingSpinner, EmptyState, ErrorBoundary, LanguageSwitcher
@@ -269,6 +287,10 @@ monteweb/
 │       │   ├── CalendarView.vue        # Agenda-Liste mit Monatsnavigation
 │       │   ├── EventDetailView.vue     # Event-Info + RSVP + Aktionen
 │       │   ├── EventCreateView.vue     # Erstellen/Bearbeiten mit Scope-Picker
+│       │   ├── FormsView.vue           # Formulare-Liste
+│       │   ├── FormCreateView.vue      # Formular erstellen/bearbeiten
+│       │   ├── FormDetailView.vue      # Formular ausfüllen + Details
+│       │   ├── FormResultsView.vue     # Ergebnis-Auswertung + Export
 │       │   ├── FamilyView.vue          # + Einladungen senden/empfangen
 │       │   ├── ProfileView.vue         # + Push Notification Toggle
 │       │   ├── NotFoundView.vue        # 404
@@ -318,7 +340,7 @@ monteweb/
 
 4. **Optionale Module:** Werden über `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` aktiviert. ALLE Beans (Services, Controllers, Components) brauchen diese Annotation, nicht nur Config-Klassen.
 
-5. **Flyway-Migrationen:** V001–V035 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
+5. **Flyway-Migrationen:** V001–V036 vorhanden. Jede Schema-Änderung als neue Migration. Hibernate validiert nur (`ddl-auto: validate`).
 
 6. **Security:** Alle Endpunkte gesichert. JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Security-Headers (HSTS, X-Frame-Options, CSP).
 
@@ -371,10 +393,16 @@ V023  push_subscriptions
 V024  OIDC-Felder (users: oidc_provider, oidc_subject, password_hash nullable)
 V025  calendar_events + calendar_event_rsvps
 V026  calendar-Modul zu default-modules
-V027–V032  (diverse Schema-Erweiterungen: Avatare, öffentliche Raumbeschreibungen, Admin-Seed)
+V027  job_event_link (Jobs mit Kalender-Events verknüpfen)
+V028  create_forms (Formulare, Fragen, Antworten, Tracking)
+V029  add_forms_to_default_modules (Forms-Modul Standardkonfiguration)
+V030  add_target_cleaning_hours (Konfigurierbares Putzstunden-Ziel)
+V031  add_avatars_and_public_description (Avatare, öffentliche Raumbeschreibungen)
+V032  seed_default_admin (Standard-Superadmin-Account)
 V033  seed_test_users (Testdaten für alle Rollen)
 V034  room_join_requests (Beitrittsanfragen für Räume)
 V035  family_invitations (Familien-Einladungen per User-Suche)
+V036  add_thread_audience (Zielgruppen-Sichtbarkeit für Diskussions-Threads)
 ```
 
 ---
@@ -518,6 +546,23 @@ POST   /slots/{id}/checkout    Check-out
 GET    /dashboard              Admin-Dashboard
 ```
 
+### Forms (`/api/v1/forms`) [Modul: forms]
+```
+GET    /                       Verfügbare Formulare (paginiert)
+GET    /mine                   Eigene Formulare
+POST   /                       Formular erstellen
+GET    /{id}                   Formular-Detail mit Fragen
+PUT    /{id}                   Formular bearbeiten (nur DRAFT)
+DELETE /{id}                   Formular löschen (nur DRAFT)
+POST   /{id}/publish           Formular veröffentlichen
+POST   /{id}/close             Formular schließen
+POST   /{id}/respond           Antwort einreichen
+GET    /{id}/results            Aggregierte Ergebnisse (Ersteller/Admin)
+GET    /{id}/responses          Einzelantworten (nicht-anonym, Ersteller/Admin)
+GET    /{id}/results/csv        CSV-Export
+GET    /{id}/results/pdf        PDF-Export
+```
+
 ### Calendar (`/api/v1/calendar`) [Modul: calendar]
 ```
 GET    /events?from=&to=       Persönlicher Kalender (paginiert)
@@ -659,11 +704,11 @@ docker compose --profile monitoring up -d   # + Prometheus + Grafana
 
 **Tests:**
 ```bash
-# Frontend (418 Tests, 68 Testdateien, ~55% Statement-Coverage)
+# Frontend (418 Tests, 68 Testdateien, ~56% Statement-Coverage)
 cd frontend && npm test
 cd frontend && npm run test:coverage   # Mit Coverage-Report
 
-# Backend (Testcontainers, Docker required, ~100 Tests in 15 Dateien)
+# Backend (Testcontainers, Docker required, 37 Testdateien)
 cd backend && mvn test
 ```
 
@@ -673,7 +718,7 @@ cd backend && mvn test
 
 - [x] E-Mail-Versand (SMTP, conditional via `monteweb.email.enabled`)
 - [x] Englische Übersetzung (`de.ts` + `en.ts`, LanguageSwitcher, Browser-Locale-Detection)
-- [x] Testabdeckung (418 Frontend-Tests via Vitest, 55% Coverage; ~100 Backend Integration Tests via Testcontainers)
+- [x] Testabdeckung (418 Frontend-Tests via Vitest, 56% Coverage; 37 Backend-Testdateien via Testcontainers)
 - [x] CI/CD Pipeline (`.github/workflows/ci.yml` — Backend, Frontend, Docker Jobs)
 - [x] OIDC/SSO (OAuth2 Client, conditional via `monteweb.oidc.enabled`, SSO-Button in Login)
 - [x] PDF-Export (Stundenbericht + QR-Codes via OpenHTMLToPDF)
@@ -685,6 +730,7 @@ cd backend && mvn test
 - [x] Kalender/Events (Raum/Bereich/Schulweit, RSVP, Monatsnavigation, conditional via `monteweb.modules.calendar.enabled`)
 - [x] Raum-Beitrittsanfragen (Browse alle Räume, Anfrage senden, Leader genehmigt/lehnt ab, Notifications)
 - [x] Familien-Einladungen per User-Suche (AutoComplete, Rolle wählen, Annehmen/Ablehnen, Notifications)
+- [x] Formulare & Umfragen (Survey/Consent, Scopes, anonyme/nicht-anonyme Antworten, CSV/PDF-Export)
 
 ## Conditional Features
 

@@ -221,6 +221,11 @@ public class CalendarService implements CalendarModuleApi {
 
         if (user.role() == UserRole.SUPERADMIN) return;
 
+        // ELTERNBEIRAT special role can create/edit events
+        if (hasSpecialRole(user, "ELTERNBEIRAT", scopeId)) {
+            return;
+        }
+
         switch (scope) {
             case ROOM -> {
                 if (scopeId == null) throw new IllegalArgumentException("Room ID required for ROOM scope");
@@ -232,13 +237,19 @@ public class CalendarService implements CalendarModuleApi {
             }
             case SECTION -> {
                 if (user.role() != UserRole.TEACHER && user.role() != UserRole.SECTION_ADMIN) {
-                    throw new IllegalArgumentException("Only teachers can create section events");
+                    throw new IllegalArgumentException("Only teachers or Elternbeirat can create section events");
                 }
             }
             case SCHOOL -> {
                 throw new IllegalArgumentException("Only admins can create school-wide events");
             }
         }
+    }
+
+    private boolean hasSpecialRole(com.monteweb.user.UserInfo user, String roleName, UUID scopeId) {
+        if (user.specialRoles() == null) return false;
+        if (user.specialRoles().contains(roleName)) return true;
+        return scopeId != null && user.specialRoles().contains(roleName + ":" + scopeId);
     }
 
     private EventInfo toEventInfo(CalendarEvent event, UUID currentUserId) {

@@ -17,7 +17,7 @@ public record RoomInfo(
         UUID sectionId,
         boolean archived,
         int memberCount,
-        boolean discoverable,
+        String joinPolicy,
         Instant expiresAt,
         List<String> tags
 ) {

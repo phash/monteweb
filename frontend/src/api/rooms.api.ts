@@ -47,8 +47,16 @@ export const roomsApi = {
     return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}/settings`, settings)
   },
 
-  updateInterestFields(id: string, data: { tags?: string[]; discoverable?: boolean; expiresAt?: string }) {
+  updateInterestFields(id: string, data: { tags?: string[]; joinPolicy?: string; expiresAt?: string }) {
     return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}/interest`, data)
+  },
+
+  muteRoom(id: string) {
+    return client.post<ApiResponse<void>>(`/rooms/${id}/mute`)
+  },
+
+  unmuteRoom(id: string) {
+    return client.post<ApiResponse<void>>(`/rooms/${id}/unmute`)
   },
 
   uploadAvatar(roomId: string, file: File) {

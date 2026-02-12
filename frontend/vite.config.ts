@@ -63,6 +63,25 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('/vue/') || id.includes('/@vue/') || id.includes('/vue-router/') || id.includes('/pinia/')) {
+              return 'vue-vendor'
+            }
+            if (id.includes('/vue-i18n/') || id.includes('/@intlify/')) {
+              return 'i18n-vendor'
+            }
+            if (id.includes('/axios/') || id.includes('/@stomp/')) {
+              return 'http-vendor'
+            }
+          }
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {
