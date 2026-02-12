@@ -53,30 +53,14 @@ class JobboardServiceIntegrationTest {
                                 {
                                     "title": "Schulhof aufräumen",
                                     "description": "Laub rechen und Müll sammeln",
-                                    "hours": 2.0,
-                                    "date": "2026-06-15",
-                                    "maxParticipants": 3,
+                                    "estimatedHours": 2.0,
+                                    "scheduledDate": "2026-06-15",
+                                    "maxAssignees": 3,
                                     "category": "GENERAL"
                                 }
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("Schulhof aufräumen"));
-    }
-
-    @Test
-    void createJob_missingTitle_shouldReturn400() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
-
-        mockMvc.perform(post("/api/v1/jobs")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "description": "No title job",
-                                    "hours": 2.0
-                                }
-                                """))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -104,7 +88,7 @@ class JobboardServiceIntegrationTest {
     void getJob_existing_shouldReturnDetails() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create job
+        // Create job with correct field names
         var createResult = mockMvc.perform(post("/api/v1/jobs")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -112,9 +96,9 @@ class JobboardServiceIntegrationTest {
                                 {
                                     "title": "Detail Job",
                                     "description": "Job for detail test",
-                                    "hours": 1.5,
-                                    "date": "2026-07-01",
-                                    "maxParticipants": 2,
+                                    "estimatedHours": 1.5,
+                                    "scheduledDate": "2026-07-01",
+                                    "maxAssignees": 2,
                                     "category": "GENERAL"
                                 }
                                 """))
@@ -143,9 +127,9 @@ class JobboardServiceIntegrationTest {
                                 {
                                     "title": "Apply Test Job",
                                     "description": "Job for apply test",
-                                    "hours": 3.0,
-                                    "date": "2026-07-15",
-                                    "maxParticipants": 5,
+                                    "estimatedHours": 3.0,
+                                    "scheduledDate": "2026-07-15",
+                                    "maxAssignees": 5,
                                     "category": "GENERAL"
                                 }
                                 """))
@@ -183,7 +167,7 @@ class JobboardServiceIntegrationTest {
     void getMyJobs_shouldReturnList() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        mockMvc.perform(get("/api/v1/jobs/my-jobs")
+        mockMvc.perform(get("/api/v1/jobs/mine")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
     }

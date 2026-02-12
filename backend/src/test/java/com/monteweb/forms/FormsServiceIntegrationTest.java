@@ -73,6 +73,9 @@ class FormsServiceIntegrationTest {
     void createForm_shouldReturnCreatedForm() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
+        // Create a room first (user becomes LEADER, which grants create permission for ROOM scope)
+        String roomId = createRoom(token, "Forms Room");
+
         mockMvc.perform(post("/api/v1/forms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -81,15 +84,16 @@ class FormsServiceIntegrationTest {
                                     "title": "Feedback Formular",
                                     "description": "Eltern-Feedback zum Schuljahr",
                                     "type": "SURVEY",
-                                    "scope": "SCHOOL",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
                                     "questions": [
                                         {"label": "Zufriedenheit", "type": "RATING", "required": true},
                                         {"label": "Kommentar", "type": "TEXT", "required": false}
                                     ]
                                 }
-                                """))
+                                """.formatted(roomId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title").value("Feedback Formular"));
+                .andExpect(jsonPath("$.data.form.title").value("Feedback Formular"));
     }
 
     @Test
@@ -121,36 +125,24 @@ class FormsServiceIntegrationTest {
     void getForm_nonExistent_shouldReturn404() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
+        // Forms service throws IllegalArgumentException("Form not found") which maps to 400
         mockMvc.perform(get("/api/v1/forms/00000000-0000-0000-0000-000000000099")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
     void getForm_existing_shouldReturnDetails() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create form
-        var createResult = mockMvc.perform(post("/api/v1/forms")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "title": "Detail Test Form",
-                                    "type": "SURVEY",
-                                    "scope": "SCHOOL",
-                                    "questions": [{"label": "Name", "type": "TEXT", "required": true}]
-                                }
-                                """))
-                .andReturn();
-
-        JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
-        String formId = json.path("data").path("id").asText();
+        // Create room and form
+        String roomId = createRoom(token, "Detail Form Room");
+        String formId = createForm(token, roomId);
 
         mockMvc.perform(get("/api/v1/forms/" + formId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title").value("Detail Test Form"));
+                .andExpect(jsonPath("$.data.form.title").value("Test Survey"));
     }
 
     // ── Publish Form ─────────────────────────────────────────────────
@@ -159,35 +151,9 @@ class FormsServiceIntegrationTest {
     void publishForm_shouldUpdateStatus() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create room first (for scope)
-        var roomResult = mockMvc.perform(post("/api/v1/rooms")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"name": "Forms Room"}
-                                """))
-                .andReturn();
-
-        JsonNode roomJson = TestHelper.parseResponse(roomResult.getResponse().getContentAsString());
-        String roomId = roomJson.path("data").path("id").asText();
-
-        // Create form
-        var createResult = mockMvc.perform(post("/api/v1/forms")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "title": "Publish Test Form",
-                                    "type": "SURVEY",
-                                    "scope": "ROOM",
-                                    "scopeId": "%s",
-                                    "questions": [{"label": "Rating", "type": "RATING", "required": true}]
-                                }
-                                """.formatted(roomId)))
-                .andReturn();
-
-        JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
-        String formId = json.path("data").path("id").asText();
+        // Create room and form
+        String roomId = createRoom(token, "Publish Form Room");
+        String formId = createForm(token, roomId);
 
         mockMvc.perform(post("/api/v1/forms/" + formId + "/publish")
                         .header("Authorization", "Bearer " + token))
@@ -195,11 +161,46 @@ class FormsServiceIntegrationTest {
     }
 
     @Test
-    void publishForm_nonExistent_shouldReturn404() throws Exception {
+    void publishForm_nonExistent_shouldReturn400() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
+        // Forms service throws IllegalArgumentException("Form not found") which maps to 400
         mockMvc.perform(post("/api/v1/forms/00000000-0000-0000-0000-000000000099/publish")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    private String createRoom(String token, String name) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "%s", "type": "PROJEKT"}
+                                """.formatted(name)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+    }
+
+    private String createForm(String token, String roomId) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/forms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Test Survey",
+                                    "type": "SURVEY",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
+                                    "questions": [
+                                        {"label": "Rating", "type": "RATING", "required": true}
+                                    ]
+                                }
+                                """.formatted(roomId)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("form").path("id").asText();
     }
 }

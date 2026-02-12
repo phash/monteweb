@@ -55,6 +55,9 @@ class FormsControllerIntegrationTest {
         String token = TestHelper.registerAndGetToken(mockMvc,
                 "forms-create@example.com", "Forms", "Creator");
 
+        // Create a room first (user becomes LEADER, which grants create permission for ROOM scope)
+        String roomId = createRoom(token, "Create Form Room");
+
         mockMvc.perform(post("/api/v1/forms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,7 +66,8 @@ class FormsControllerIntegrationTest {
                                     "title": "Test Survey",
                                     "description": "A test survey",
                                     "type": "SURVEY",
-                                    "scope": "SCHOOL",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
                                     "anonymous": false,
                                     "questions": [
                                         {
@@ -79,9 +83,9 @@ class FormsControllerIntegrationTest {
                                         }
                                     ]
                                 }
-                                """))
+                                """.formatted(roomId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title").value("Test Survey"));
+                .andExpect(jsonPath("$.data.form.title").value("Test Survey"));
     }
 
     @Test
@@ -89,6 +93,7 @@ class FormsControllerIntegrationTest {
         String token = TestHelper.registerAndGetToken(mockMvc,
                 "forms-404@example.com", "Forms", "NotFound");
 
+        // Forms service throws IllegalArgumentException("Form not found") which maps to 400
         mockMvc.perform(get("/api/v1/forms/00000000-0000-0000-0000-000000000001")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().is4xxClientError());
@@ -99,6 +104,9 @@ class FormsControllerIntegrationTest {
         String token = TestHelper.registerAndGetToken(mockMvc,
                 "forms-getone@example.com", "Forms", "GetOne");
 
+        // Create room first
+        String roomId = createRoom(token, "GetOne Form Room");
+
         var createResult = mockMvc.perform(post("/api/v1/forms")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -106,7 +114,8 @@ class FormsControllerIntegrationTest {
                                 {
                                     "title": "Retrievable Survey",
                                     "type": "SURVEY",
-                                    "scope": "SCHOOL",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
                                     "anonymous": true,
                                     "questions": [
                                         {
@@ -116,21 +125,24 @@ class FormsControllerIntegrationTest {
                                         }
                                     ]
                                 }
-                                """))
+                                """.formatted(roomId)))
                 .andReturn();
         String formId = TestHelper.parseResponse(createResult.getResponse().getContentAsString())
-                .path("data").path("id").asText();
+                .path("data").path("form").path("id").asText();
 
         mockMvc.perform(get("/api/v1/forms/" + formId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.title").value("Retrievable Survey"));
+                .andExpect(jsonPath("$.data.form.title").value("Retrievable Survey"));
     }
 
     @Test
     void publishForm_shouldSucceed() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc,
                 "forms-publish@example.com", "Forms", "Publisher");
+
+        // Create room first
+        String roomId = createRoom(token, "Publish Form Room");
 
         var createResult = mockMvc.perform(post("/api/v1/forms")
                         .header("Authorization", "Bearer " + token)
@@ -139,7 +151,8 @@ class FormsControllerIntegrationTest {
                                 {
                                     "title": "Publishable Survey",
                                     "type": "CONSENT",
-                                    "scope": "SCHOOL",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
                                     "anonymous": false,
                                     "questions": [
                                         {
@@ -149,14 +162,28 @@ class FormsControllerIntegrationTest {
                                         }
                                     ]
                                 }
-                                """))
+                                """.formatted(roomId)))
                 .andReturn();
         String formId = TestHelper.parseResponse(createResult.getResponse().getContentAsString())
-                .path("data").path("id").asText();
+                .path("data").path("form").path("id").asText();
 
         mockMvc.perform(post("/api/v1/forms/" + formId + "/publish")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    private String createRoom(String token, String name) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "%s", "type": "PROJEKT"}
+                                """.formatted(name)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("id").asText();
     }
 }

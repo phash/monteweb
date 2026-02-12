@@ -36,7 +36,7 @@ class FamilyServiceIntegrationTest {
                         .content("""
                                 {"name": "Familie Müller"}
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.name").value("Familie Müller"));
     }
@@ -85,7 +85,7 @@ class FamilyServiceIntegrationTest {
                         .content("""
                                 {"name": "Check Family"}
                                 """))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         // Verify it appears
         mockMvc.perform(get("/api/v1/families/mine")

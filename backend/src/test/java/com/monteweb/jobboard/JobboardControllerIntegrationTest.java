@@ -52,11 +52,10 @@ class JobboardControllerIntegrationTest {
                                     "title": "Test Job",
                                     "description": "A job for testing",
                                     "category": "GENERAL",
-                                    "hours": 2.0,
-                                    "maxSlots": 3,
-                                    "date": "2025-07-01",
-                                    "startTime": "09:00",
-                                    "endTime": "11:00"
+                                    "estimatedHours": 2.0,
+                                    "maxAssignees": 3,
+                                    "scheduledDate": "2025-07-01",
+                                    "scheduledTime": "09:00"
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -76,9 +75,9 @@ class JobboardControllerIntegrationTest {
                                     "title": "Get Job",
                                     "description": "Retrievable job",
                                     "category": "GENERAL",
-                                    "hours": 1.0,
-                                    "maxSlots": 1,
-                                    "date": "2025-08-01"
+                                    "estimatedHours": 1.0,
+                                    "maxAssignees": 1,
+                                    "scheduledDate": "2025-08-01"
                                 }
                                 """))
                 .andReturn();
@@ -104,9 +103,9 @@ class JobboardControllerIntegrationTest {
                                     "title": "Apply Job",
                                     "description": "Job to apply for",
                                     "category": "CLEANING",
-                                    "hours": 3.0,
-                                    "maxSlots": 5,
-                                    "date": "2025-09-01"
+                                    "estimatedHours": 3.0,
+                                    "maxAssignees": 5,
+                                    "scheduledDate": "2025-09-01"
                                 }
                                 """))
                 .andReturn();

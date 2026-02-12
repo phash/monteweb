@@ -87,7 +87,7 @@ class UserControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.content").isArray());
     }
 
     @Test
@@ -130,30 +130,30 @@ class UserControllerIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ── GET /users (Admin) ───────────────────────────────────────────
+    // ── GET /admin/users (Admin) ─────────────────────────────────────
 
     @Test
     void listUsers_regularUser_shouldReturn403() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        mockMvc.perform(get("/api/v1/users")
+        mockMvc.perform(get("/api/v1/admin/users")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void listUsers_unauthenticated_shouldReturn401() throws Exception {
-        mockMvc.perform(get("/api/v1/users"))
+        mockMvc.perform(get("/api/v1/admin/users"))
                 .andExpect(status().isUnauthorized());
     }
 
-    // ── PUT /users/{id}/roles (Admin) ────────────────────────────────
+    // ── PUT /admin/users/{id}/roles (Admin) ──────────────────────────
 
     @Test
     void updateRoles_regularUser_shouldReturn403() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        mockMvc.perform(put("/api/v1/users/00000000-0000-0000-0000-000000000001/roles")
+        mockMvc.perform(put("/api/v1/admin/users/00000000-0000-0000-0000-000000000001/roles")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

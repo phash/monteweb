@@ -116,7 +116,7 @@ class AuthServiceIntegrationTest {
                                     "lastName": "UserId"
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.userId").isNotEmpty())
                 .andExpect(jsonPath("$.data.email").value("userid-check@example.com"));
     }
@@ -312,7 +312,7 @@ class AuthServiceIntegrationTest {
                                     "lastName": "Flow"
                                 }
                                 """.formatted(email)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
 
         // Login
         var loginResult = mockMvc.perform(post("/api/v1/auth/login")

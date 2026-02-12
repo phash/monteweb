@@ -47,16 +47,22 @@ class FeedServiceIntegrationTest {
     void createPost_shouldReturnCreatedPost() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
+        // Create room first
+        String roomId = createRoom(token, "Feed Post Room");
+
         mockMvc.perform(post("/api/v1/feed/posts")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                     "content": "Willkommen im neuen Schuljahr!",
-                                    "title": "Schulstart"
+                                    "title": "Schulstart",
+                                    "sourceType": "ROOM",
+                                    "sourceId": "%s",
+                                    "parentOnly": false
                                 }
-                                """))
-                .andExpect(status().isOk())
+                                """.formatted(roomId)))
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.data.content").value("Willkommen im neuen Schuljahr!"));
     }
 
@@ -98,17 +104,9 @@ class FeedServiceIntegrationTest {
     void getPost_existing_shouldReturnPost() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create post
-        var createResult = mockMvc.perform(post("/api/v1/feed/posts")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"content": "Detail test post"}
-                                """))
-                .andReturn();
-
-        JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
-        String postId = json.path("data").path("id").asText();
+        // Create room and post
+        String roomId = createRoom(token, "Detail Room");
+        String postId = createPost(token, roomId, "Detail test post");
 
         mockMvc.perform(get("/api/v1/feed/posts/" + postId)
                         .header("Authorization", "Bearer " + token))
@@ -122,17 +120,9 @@ class FeedServiceIntegrationTest {
     void updatePost_asAuthor_shouldWork() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create
-        var createResult = mockMvc.perform(post("/api/v1/feed/posts")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"content": "Original content"}
-                                """))
-                .andReturn();
-
-        JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
-        String postId = json.path("data").path("id").asText();
+        // Create room and post
+        String roomId = createRoom(token, "Update Room");
+        String postId = createPost(token, roomId, "Original content");
 
         // Update
         mockMvc.perform(put("/api/v1/feed/posts/" + postId)
@@ -151,17 +141,9 @@ class FeedServiceIntegrationTest {
     void deletePost_asAuthor_shouldWork() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create
-        var createResult = mockMvc.perform(post("/api/v1/feed/posts")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"content": "Delete me"}
-                                """))
-                .andReturn();
-
-        JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
-        String postId = json.path("data").path("id").asText();
+        // Create room and post
+        String roomId = createRoom(token, "Delete Room");
+        String postId = createPost(token, roomId, "Delete me");
 
         mockMvc.perform(delete("/api/v1/feed/posts/" + postId)
                         .header("Authorization", "Bearer " + token))
@@ -183,17 +165,9 @@ class FeedServiceIntegrationTest {
     void addComment_shouldWork() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create post
-        var createResult = mockMvc.perform(post("/api/v1/feed/posts")
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {"content": "Comment on me"}
-                                """))
-                .andReturn();
-
-        JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
-        String postId = json.path("data").path("id").asText();
+        // Create room and post
+        String roomId = createRoom(token, "Comment Room");
+        String postId = createPost(token, roomId, "Comment on me");
 
         mockMvc.perform(post("/api/v1/feed/posts/" + postId + "/comments")
                         .header("Authorization", "Bearer " + token)
@@ -201,7 +175,7 @@ class FeedServiceIntegrationTest {
                         .content("""
                                 {"content": "Great post!"}
                                 """))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
     }
 
     @Test
@@ -244,5 +218,36 @@ class FeedServiceIntegrationTest {
         mockMvc.perform(post("/api/v1/feed/posts/00000000-0000-0000-0000-000000000099/pin")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNotFound());
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────
+
+    private String createRoom(String token, String name) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "%s", "type": "PROJEKT"}
+                                """.formatted(name)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+    }
+
+    private String createPost(String token, String roomId, String content) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "%s",
+                                    "sourceType": "ROOM",
+                                    "sourceId": "%s",
+                                    "parentOnly": false
+                                }
+                                """.formatted(content, roomId)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("id").asText();
     }
 }
