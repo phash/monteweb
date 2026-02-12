@@ -6,10 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   backend:
     name: Backend (Java 21 + Maven)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     services:
       postgres:
@@ -63,6 +68,8 @@ jobs:
   frontend:
     name: Frontend (Node 22 + Vite)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -89,6 +96,8 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     needs: [backend, frontend]
     if: github.ref == 'refs/heads/main'
 

@@ -45,8 +45,16 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Serve static files
-  let filePath = path.join(DIST, req.url === '/' ? 'index.html' : req.url);
+  // Serve static files with path traversal protection
+  const safePath = path.normalize(req.url === '/' ? 'index.html' : req.url).replace(/^(\.\.(\/|\\|$))+/, '');
+  let filePath = path.join(DIST, safePath);
+
+  // Ensure resolved path is within DIST directory
+  if (!filePath.startsWith(DIST)) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
 
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
     // SPA fallback: serve index.html for all routes
