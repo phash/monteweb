@@ -3,6 +3,7 @@ package com.monteweb.shared.config;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,11 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Simple in-memory rate limiting filter for auth endpoints.
  * Uses a token-bucket approach per client IP address.
+ * Can be disabled via monteweb.rate-limit.enabled=false (e.g. in tests).
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
+@ConditionalOnProperty(name = "monteweb.rate-limit.enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitFilter implements Filter {
 
     private static final int LOGIN_MAX_REQUESTS = 10;
