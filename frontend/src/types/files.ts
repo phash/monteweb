@@ -18,5 +18,6 @@ export interface FolderInfo {
   roomId: string
   parentId: string | null
   name: string
+  audience: FileAudience
   createdAt: string
 }

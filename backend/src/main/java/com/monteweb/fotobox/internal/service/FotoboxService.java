@@ -21,8 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.monteweb.user.UserRole;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -90,7 +93,13 @@ public class FotoboxService implements FotoboxModuleApi {
     public List<FotoboxThreadInfo> getThreads(UUID userId, UUID roomId) {
         permissionService.requirePermission(userId, roomId, FotoboxPermissionLevel.VIEW_ONLY);
         var threads = threadRepo.findByRoomIdOrderByCreatedAtDesc(roomId);
-        return threads.stream().map(this::toThreadInfo).toList();
+
+        // Filter threads by audience based on user's role
+        Set<String> allowedAudiences = getAllowedAudiences(userId, roomId);
+        return threads.stream()
+                .filter(t -> allowedAudiences.contains(t.getAudience()))
+                .map(this::toThreadInfo)
+                .toList();
     }
 
     public FotoboxThreadInfo getThread(UUID userId, UUID roomId, UUID threadId) {
@@ -121,6 +130,7 @@ public class FotoboxService implements FotoboxModuleApi {
         thread.setRoomId(roomId);
         thread.setTitle(request.title());
         thread.setDescription(request.description());
+        thread.setAudience(resolveAudience(request.audience(), userId));
         thread.setCreatedBy(userId);
         threadRepo.save(thread);
 
@@ -315,10 +325,67 @@ public class FotoboxService implements FotoboxModuleApi {
                 thread.getCoverImageId(),
                 coverThumbnailUrl,
                 imageCount,
+                thread.getAudience(),
                 thread.getCreatedBy(),
                 createdByName,
                 thread.getCreatedAt()
         );
+    }
+
+    /**
+     * Resolves the audience for a new thread.
+     * Parents always get PARENTS_ONLY. Teachers/Leaders/Admins can choose.
+     */
+    private String resolveAudience(String audience, UUID userId) {
+        var userInfo = userModule.findById(userId).orElse(null);
+        var userRole = userInfo != null ? userInfo.role() : null;
+
+        // Parents always create with PARENTS_ONLY
+        if (userRole == UserRole.PARENT) {
+            return "PARENTS_ONLY";
+        }
+
+        // Teachers, leaders, admins can choose
+        if (audience != null && !audience.isBlank()) {
+            String upper = audience.toUpperCase();
+            if (!Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY").contains(upper)) {
+                throw new BadRequestException("Invalid audience value: " + audience);
+            }
+            return upper;
+        }
+
+        return "ALL";
+    }
+
+    /**
+     * Determines which audience values a user is allowed to see in a room.
+     * Same logic as FileService.getAllowedAudiences.
+     */
+    private Set<String> getAllowedAudiences(UUID userId, UUID roomId) {
+        var roomRole = roomModule.getUserRoleInRoom(userId, roomId).orElse(null);
+        var userInfo = userModule.findById(userId).orElse(null);
+        var userRole = userInfo != null ? userInfo.role() : null;
+
+        // Leaders, teachers, superadmins, section admins see everything
+        if (roomRole == RoomRole.LEADER
+                || userRole == UserRole.TEACHER
+                || userRole == UserRole.SUPERADMIN
+                || userRole == UserRole.SECTION_ADMIN) {
+            return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
+        }
+
+        // Parents see ALL + PARENTS_ONLY
+        if (userRole == UserRole.PARENT) {
+            return Set.of("ALL", "PARENTS_ONLY");
+        }
+
+        // Students see ALL + STUDENTS_ONLY
+        if (userRole == UserRole.STUDENT) {
+            return Set.of("ALL", "STUDENTS_ONLY");
+        }
+
+        // Others see ALL only
+        return Set.of("ALL");
     }
 
     private FotoboxImageInfo toImageInfo(FotoboxImage image) {

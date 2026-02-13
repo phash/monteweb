@@ -14,6 +14,7 @@ public record FotoboxThreadInfo(
         UUID coverImageId,
         String coverImageThumbnailUrl,
         int imageCount,
+        String audience,
         UUID createdBy,
         String createdByName,
         Instant createdAt

@@ -35,10 +35,11 @@ export const filesApi = {
     })
   },
 
-  createFolder(roomId: string, name: string, parentId?: string) {
+  createFolder(roomId: string, name: string, parentId?: string, audience?: string) {
     return client.post<ApiResponse<FolderInfo>>(`/rooms/${roomId}/files/folders`, {
       name,
       parentId: parentId ?? null,
+      audience: audience ?? null,
     })
   },
 

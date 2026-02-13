@@ -70,6 +70,7 @@ const i18n = createI18n({
         confirmDeleteImage: 'Bild löschen?',
         deleteImage: 'Gelöscht',
       },
+      files: { audience: 'Sichtbarkeit', audienceAll: 'Alle', audienceParents: 'Nur Eltern', audienceStudents: 'Nur Schüler' },
       common: { cancel: 'Abbrechen', create: 'Erstellen', save: 'Speichern', loading: 'Laden...' },
     },
   },
@@ -84,6 +85,15 @@ const stubs = {
   Textarea: { template: '<textarea class="textarea-stub" />', props: ['modelValue', 'placeholder', 'autoResize', 'rows'] },
   FotoboxThread: { template: '<div class="fotobox-thread-stub" />' },
   FotoboxSettings: { template: '<div class="fotobox-settings-stub" />' },
+  Select: {
+    template: '<select class="select-stub"></select>',
+    props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder'],
+    emits: ['update:modelValue'],
+  },
+  Tag: {
+    template: '<span class="tag-stub">{{ value }}</span>',
+    props: ['value', 'severity', 'size'],
+  },
 }
 
 function mountRoomFotobox(isLeader = false) {

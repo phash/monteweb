@@ -36,6 +36,10 @@ const i18n = createI18n({
         newFolder: 'Neuer Ordner',
         folderName: 'Ordnername',
         noFiles: 'Keine Dateien vorhanden',
+        audience: 'Sichtbarkeit',
+        audienceAll: 'Alle',
+        audienceParents: 'Nur Eltern',
+        audienceStudents: 'Nur Schüler',
       },
       common: {
         cancel: 'Abbrechen',
@@ -65,6 +69,15 @@ const stubs = {
     template: '<div class="fileupload-stub"></div>',
     props: ['mode', 'auto', 'customUpload', 'chooseLabel'],
     emits: ['uploader'],
+  },
+  Select: {
+    template: '<select class="select-stub"></select>',
+    props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder', 'size'],
+    emits: ['update:modelValue'],
+  },
+  Tag: {
+    template: '<span class="tag-stub">{{ value }}</span>',
+    props: ['value', 'severity', 'size'],
   },
 }
 

@@ -26,6 +26,7 @@ const folderPath = ref<{ id: string | undefined; name: string }[]>([{ id: undefi
 const loading = ref(false)
 const showNewFolder = ref(false)
 const newFolderName = ref('')
+const folderAudience = ref<FileAudience>('ALL')
 const uploadAudience = ref<FileAudience>('ALL')
 const isLeader = ref(false)
 
@@ -74,8 +75,9 @@ async function navigateTo(index: number) {
 
 async function createFolder() {
   if (!newFolderName.value.trim()) return
-  await filesApi.createFolder(props.roomId, newFolderName.value.trim(), currentFolderId.value)
+  await filesApi.createFolder(props.roomId, newFolderName.value.trim(), currentFolderId.value, isLeader.value ? folderAudience.value : undefined)
   newFolderName.value = ''
+  folderAudience.value = 'ALL'
   showNewFolder.value = false
   await loadContent()
 }
@@ -184,6 +186,12 @@ function audienceLabel(audience: string): string {
       <div v-for="folder in folders" :key="folder.id" class="file-item folder" @click="openFolder(folder)">
         <i class="pi pi-folder" />
         <span class="file-name">{{ folder.name }}</span>
+        <Tag
+          v-if="folder.audience && folder.audience !== 'ALL'"
+          :value="audienceLabel(folder.audience)"
+          :severity="audienceSeverity(folder.audience)"
+          size="small"
+        />
         <span class="file-date">{{ formatDate(folder.createdAt) }}</span>
         <Button icon="pi pi-trash" text severity="danger" size="small" :aria-label="t('common.delete')" @click.stop="deleteFolder(folder)" />
       </div>
@@ -213,7 +221,18 @@ function audienceLabel(audience: string): string {
 
     <!-- New Folder Dialog -->
     <Dialog v-model:visible="showNewFolder" :header="t('files.newFolder')" modal :style="{ width: '400px', maxWidth: '90vw' }">
-      <InputText v-model="newFolderName" :placeholder="t('files.folderName')" class="folder-input" />
+      <div class="create-form">
+        <InputText v-model="newFolderName" :placeholder="t('files.folderName')" class="folder-input" />
+        <Select
+          v-if="isLeader"
+          v-model="folderAudience"
+          :options="audienceOptions"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('files.audience')"
+          class="folder-input"
+        />
+      </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" text @click="showNewFolder = false" />
         <Button :label="t('common.create')" :disabled="!newFolderName.trim()" @click="createFolder" />
@@ -297,6 +316,12 @@ function audienceLabel(audience: string): string {
   text-align: center;
   color: var(--mw-text-muted);
   padding: 2rem;
+}
+
+.create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .folder-input {

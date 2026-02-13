@@ -178,10 +178,16 @@ public class FileService implements FilesModuleApi {
         } else {
             folders = folderRepository.findByRoomIdAndParentIdOrderByNameAsc(roomId, parentId);
         }
-        return folders.stream().map(this::toFolderInfo).toList();
+
+        // Filter folders by audience based on user's role
+        Set<String> allowedAudiences = getAllowedAudiences(userId, roomId);
+        return folders.stream()
+                .filter(f -> allowedAudiences.contains(f.getAudience()))
+                .map(this::toFolderInfo)
+                .toList();
     }
 
-    public FolderInfo createFolder(UUID roomId, UUID parentId, String name, UUID userId) {
+    public FolderInfo createFolder(UUID roomId, UUID parentId, String name, String audience, UUID userId) {
         requireRoomMembership(userId, roomId);
 
         if (folderRepository.existsByRoomIdAndParentIdAndName(roomId, parentId, name)) {
@@ -194,11 +200,15 @@ public class FileService implements FilesModuleApi {
                     .orElseThrow(() -> new ResourceNotFoundException("Parent folder", parentId));
         }
 
+        // Resolve audience: Parents always get PARENTS_ONLY, others can choose
+        String resolvedAudience = resolveAudience(audience, userId);
+
         var folder = new RoomFolder();
         folder.setRoomId(roomId);
         folder.setParentId(parentId);
         folder.setName(name);
         folder.setCreatedBy(userId);
+        folder.setAudience(resolvedAudience);
 
         return toFolderInfo(folderRepository.save(folder));
     }
@@ -295,12 +305,38 @@ public class FileService implements FilesModuleApi {
         );
     }
 
+    /**
+     * Resolves the audience for a new folder or thread.
+     * Parents always get PARENTS_ONLY. Teachers/Leaders/Admins can choose.
+     */
+    private String resolveAudience(String audience, UUID userId) {
+        var userInfo = userModuleApi.findById(userId).orElse(null);
+        var userRole = userInfo != null ? userInfo.role() : null;
+
+        // Parents always create with PARENTS_ONLY
+        if (userRole == UserRole.PARENT) {
+            return "PARENTS_ONLY";
+        }
+
+        // Teachers, leaders, admins can choose
+        if (audience != null && !audience.isBlank()) {
+            String upper = audience.toUpperCase();
+            if (!Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY").contains(upper)) {
+                throw new BusinessException("Invalid audience value: " + audience);
+            }
+            return upper;
+        }
+
+        return "ALL";
+    }
+
     private FolderInfo toFolderInfo(RoomFolder f) {
         return new FolderInfo(
                 f.getId(),
                 f.getRoomId(),
                 f.getParentId(),
                 f.getName(),
+                f.getAudience(),
                 f.getCreatedAt()
         );
     }

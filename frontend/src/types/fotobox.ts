@@ -1,5 +1,7 @@
 export type FotoboxPermissionLevel = 'VIEW_ONLY' | 'POST_IMAGES' | 'CREATE_THREADS'
 
+import type { FileAudience } from './files'
+
 export interface FotoboxThreadInfo {
   id: string
   roomId: string
@@ -8,6 +10,7 @@ export interface FotoboxThreadInfo {
   coverImageId: string | null
   coverImageThumbnailUrl: string | null
   imageCount: number
+  audience: FileAudience
   createdBy: string
   createdByName: string
   createdAt: string
@@ -40,4 +43,5 @@ export interface FotoboxRoomSettings {
 export interface CreateFotoboxThreadRequest {
   title: string
   description?: string
+  audience?: FileAudience
 }

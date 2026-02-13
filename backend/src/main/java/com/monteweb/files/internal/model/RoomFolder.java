@@ -31,6 +31,9 @@ public class RoomFolder {
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
 
+    @Column(nullable = false, length = 20)
+    private String audience = "ALL";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

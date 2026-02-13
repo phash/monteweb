@@ -91,6 +91,7 @@ describe('filesApi', () => {
       expect(client.post).toHaveBeenCalledWith('/rooms/room-1/files/folders', {
         name: 'Documents',
         parentId: null,
+        audience: null,
       })
     })
 
@@ -99,6 +100,16 @@ describe('filesApi', () => {
       expect(client.post).toHaveBeenCalledWith('/rooms/room-1/files/folders', {
         name: 'Sub',
         parentId: 'parent-1',
+        audience: null,
+      })
+    })
+
+    it('should pass audience when provided', async () => {
+      await filesApi.createFolder('room-1', 'Parents', undefined, 'PARENTS_ONLY')
+      expect(client.post).toHaveBeenCalledWith('/rooms/room-1/files/folders', {
+        name: 'Parents',
+        parentId: null,
+        audience: 'PARENTS_ONLY',
       })
     })
   })

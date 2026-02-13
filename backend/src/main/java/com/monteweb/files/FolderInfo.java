@@ -8,6 +8,7 @@ public record FolderInfo(
         UUID roomId,
         UUID parentId,
         String name,
+        String audience,
         Instant createdAt
 ) {
 }

@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useRoomsStore } from '@/stores/rooms'
 import { fotoboxApi } from '@/api/fotobox.api'
 import type { FotoboxPermissionLevel } from '@/types/fotobox'
+import type { FileAudience } from '@/types/files'
 import FotoboxThread from './FotoboxThread.vue'
 import FotoboxSettings from './FotoboxSettings.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -15,6 +16,8 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
+import Select from 'primevue/select'
+import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
 
 const props = defineProps<{ roomId: string; isLeader: boolean }>()
@@ -30,6 +33,13 @@ const showCreateDialog = ref(false)
 const showSettingsDialog = ref(false)
 const newTitle = ref('')
 const newDescription = ref('')
+const newAudience = ref<FileAudience>('ALL')
+
+const audienceOptions = [
+  { label: t('files.audienceAll'), value: 'ALL' as FileAudience },
+  { label: t('files.audienceParents'), value: 'PARENTS_ONLY' as FileAudience },
+  { label: t('files.audienceStudents'), value: 'STUDENTS_ONLY' as FileAudience },
+]
 
 const permission = ref<FotoboxPermissionLevel>('VIEW_ONLY')
 const fotoboxEnabled = ref(false)
@@ -70,10 +80,12 @@ async function createThread() {
     await fotobox.createThread(props.roomId, {
       title: newTitle.value.trim(),
       description: newDescription.value.trim() || undefined,
+      audience: props.isLeader ? newAudience.value : undefined,
     })
     showCreateDialog.value = false
     newTitle.value = ''
     newDescription.value = ''
+    newAudience.value = 'ALL'
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   }
@@ -91,6 +103,22 @@ async function deleteThread(threadId: string) {
 
 function formatDate(date: string) {
   return formatCompactDateTime(date)
+}
+
+function audienceSeverity(audience: string): 'info' | 'warn' | 'secondary' {
+  switch (audience) {
+    case 'PARENTS_ONLY': return 'warn'
+    case 'STUDENTS_ONLY': return 'info'
+    default: return 'secondary'
+  }
+}
+
+function audienceLabel(audience: string): string {
+  switch (audience) {
+    case 'PARENTS_ONLY': return t('files.audienceParents')
+    case 'STUDENTS_ONLY': return t('files.audienceStudents')
+    default: return t('files.audienceAll')
+  }
 }
 </script>
 
@@ -170,7 +198,15 @@ function formatDate(date: string) {
               <i v-else class="pi pi-images cover-placeholder" />
             </div>
             <div class="thread-body">
-              <strong class="thread-title">{{ thread.title }}</strong>
+              <div class="thread-title-row">
+                <strong class="thread-title">{{ thread.title }}</strong>
+                <Tag
+                  v-if="thread.audience && thread.audience !== 'ALL'"
+                  :value="audienceLabel(thread.audience)"
+                  :severity="audienceSeverity(thread.audience)"
+                  size="small"
+                />
+              </div>
               <div class="thread-meta">
                 <span>{{ thread.imageCount }} {{ t('fotobox.images') }}</span>
                 <span class="separator">·</span>
@@ -213,6 +249,16 @@ function formatDate(date: string) {
             :placeholder="t('fotobox.threadDescription')"
             :autoResize="true"
             rows="3"
+            class="w-full"
+          />
+        </div>
+        <div v-if="isLeader" class="field">
+          <label>{{ t('files.audience') }}</label>
+          <Select
+            v-model="newAudience"
+            :options="audienceOptions"
+            optionLabel="label"
+            optionValue="value"
             class="w-full"
           />
         </div>
@@ -306,8 +352,13 @@ function formatDate(date: string) {
   min-width: 0;
 }
 
+.thread-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .thread-title {
-  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

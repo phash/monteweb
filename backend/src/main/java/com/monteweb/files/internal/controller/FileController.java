@@ -91,7 +91,7 @@ public class FileController {
             @PathVariable UUID roomId,
             @RequestBody CreateFolderRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var folder = fileService.createFolder(roomId, request.parentId(), request.name(), userId);
+        var folder = fileService.createFolder(roomId, request.parentId(), request.name(), request.audience(), userId);
         return ResponseEntity.ok(ApiResponse.ok(folder));
     }
 
@@ -104,6 +104,6 @@ public class FileController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
-    public record CreateFolderRequest(UUID parentId, String name) {
+    public record CreateFolderRequest(UUID parentId, String name, String audience) {
     }
 }
