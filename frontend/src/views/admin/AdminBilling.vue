@@ -13,7 +13,7 @@ import DatePicker from 'primevue/datepicker'
 import InputText from 'primevue/inputtext'
 import Dialog from 'primevue/dialog'
 
-const { t, d } = useI18n()
+const { t } = useI18n()
 const toast = useToast()
 const billing = useBillingStore()
 
