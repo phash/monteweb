@@ -162,7 +162,19 @@ public class CalendarService implements CalendarModuleApi {
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
         checkCreatePermission(event.getScope(), event.getScopeId(), userId);
+
+        // Capture attending users before deletion for targeted feed post
+        List<UUID> attendingUserIds = rsvpRepository.findUserIdsByEventIdAndStatus(eventId, RsvpStatus.ATTENDING);
+
+        var user = userModule.findById(userId).orElse(null);
+        String deleterName = user != null ? user.displayName() : "Unknown";
+
         eventRepository.delete(event);
+
+        eventPublisher.publishEvent(new EventDeletedEvent(
+                eventId, event.getTitle(), event.getScope(), event.getScopeId(),
+                userId, deleterName, attendingUserIds
+        ));
     }
 
     public EventInfo rsvp(UUID eventId, UUID userId, RsvpStatus status) {

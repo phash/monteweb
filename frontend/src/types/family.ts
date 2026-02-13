@@ -42,4 +42,6 @@ export interface TenantConfig {
   modules: Record<string, boolean>
   targetHoursPerFamily: number
   targetCleaningHours: number
+  bundesland: string
+  schoolVacations: { name: string; from: string; to: string }[]
 }

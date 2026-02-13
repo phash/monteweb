@@ -1,6 +1,7 @@
 package com.monteweb.admin;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -16,6 +17,8 @@ public record TenantConfigInfo(
         BigDecimal targetHoursPerFamily,
         BigDecimal targetCleaningHours,
         boolean parentToParentMessaging,
-        boolean studentToStudentMessaging
+        boolean studentToStudentMessaging,
+        String bundesland,
+        List<Map<String, String>> schoolVacations
 ) {
 }

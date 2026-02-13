@@ -13,6 +13,7 @@ export interface CleaningConfigInfo {
   maxParticipants: number
   hoursCredit: number
   active: boolean
+  specificDate?: string | null
 }
 
 export interface RegistrationInfo {
@@ -61,6 +62,7 @@ export interface CreateConfigRequest {
   minParticipants: number
   maxParticipants: number
   hoursCredit: number
+  specificDate?: string
 }
 
 export interface GenerateSlotsRequest {

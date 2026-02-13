@@ -3,7 +3,7 @@
 MonteWeb: modulares, selbst-gehostetes Schul-Intranet für Montessori-Schulkomplexe (Krippe bis Oberstufe).
 Räume, Feed, Direktnachrichten, Jobbörse (Elternstunden), Putz-Organisation (QR-Check-in), Kalender, Formulare, Fotobox.
 
-**GitHub:** https://github.com/phash/monteweb (privat) | **Alle 19 Phasen COMPLETE** | Flyway V001–V041
+**GitHub:** https://github.com/phash/monteweb (privat) | **Alle 19 Phasen COMPLETE** | Flyway V001–V044
 
 ## Tech-Stack
 
@@ -29,7 +29,7 @@ Räume, Feed, Direktnachrichten, Jobbörse (Elternstunden), Putz-Organisation (Q
 
 4. **Optionale Module:** `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` auf **ALLE** Beans, nicht nur Config.
 
-5. **Flyway:** V001–V041. Jede Schema-Änderung als neue Migration. Hibernate `ddl-auto: validate`.
+5. **Flyway:** V001–V044. Jede Schema-Änderung als neue Migration. Hibernate `ddl-auto: validate`.
 
 6. **Security:** JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Fotobox-Bild-Endpoints: JWT auch via `?token=` Query-Parameter.
 
@@ -53,14 +53,14 @@ Räume, Feed, Direktnachrichten, Jobbörse (Elternstunden), Putz-Organisation (Q
 | family | Familienverbund, Einladungen, Stundenkonto | - |
 | school | Schulbereiche (Krippe–OS) | - |
 | room | Räume, Diskussions-Threads, Beitrittsanfragen | - |
-| feed | Unified Feed, Posts, Kommentare, Banner | - |
+| feed | Unified Feed, Posts, Kommentare, Banner, Targeted Posts | - |
 | notification | In-App + Push (VAPID) | Push: `monteweb.push.enabled` |
 | admin | System-Config, Audit-Log, Module | - |
 | messaging | DM & Chat, Kommunikationsregeln | `monteweb.modules.messaging.enabled` |
 | files | Dateiablage via MinIO | `monteweb.modules.files.enabled` |
 | jobboard | Jobbörse, Elternstunden, PDF-Export | `monteweb.modules.jobboard.enabled` |
-| cleaning | Putz-Orga, QR-Check-in, PDF | `monteweb.modules.cleaning.enabled` |
-| calendar | Events (Raum/Bereich/Schule), RSVP | `monteweb.modules.calendar.enabled` |
+| cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen (einmalig+wiederkehrend) | `monteweb.modules.cleaning.enabled` |
+| calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed, Delete→Targeted Feed | `monteweb.modules.calendar.enabled` |
 | forms | Survey/Consent, Scopes, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
 | fotobox | Foto-Threads, Thumbnails, Lightbox | `monteweb.modules.fotobox.enabled` |
 
@@ -75,10 +75,13 @@ Weitere conditional Features: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`mont
 5. **Raum-Posts = Feed-Einträge** aller Mitglieder (rollenabhängig)
 6. **Module abschaltbar:** Backend via `@ConditionalOnProperty`, Frontend: Menü nur wenn Modul aktiv
 7. **Kommunikationsregeln:** Lehrer↔Eltern immer erlaubt. Eltern↔Eltern / Schüler↔Schüler: konfigurierbar
-8. **Kalender-Berechtigungen:** ROOM→LEADER/SUPERADMIN, SECTION→TEACHER/SUPERADMIN, SCHOOL→SUPERADMIN
+8. **Kalender-Berechtigungen:** ROOM→LEADER/SUPERADMIN, SECTION→TEACHER/SUPERADMIN, SCHOOL→SUPERADMIN. Absage→Feed für alle, Löschung→Feed nur für Zusager
 9. **Raum-Beitrittsanfragen:** Non-Members anfragen, LEADER genehmigt/lehnt ab, auto-MEMBER bei Genehmigung
 10. **Familien-Einladungen:** Per User-Suche mit Rollenwahl (PARENT/CHILD), Annehmen/Ablehnen via Notification
 11. **Fotobox:** VIEW_ONLY < POST_IMAGES < CREATE_THREADS. LEADER/SUPERADMIN = CREATE_THREADS. MinIO, Thumbnails auto, Content-Type aus Magic Bytes, max 20 Dateien/Upload
+12. **Putzaktionen:** Einmalig (mit Datum) oder wiederkehrend (Wochentag). DatePicker zeigt Feiertage (rot) und Schulferien (orange) je Bundesland
+13. **Bundesland-Konfiguration:** Default BY (Bayern), SuperAdmin konfiguriert unter Design & Einstellungen. Bestimmt Feiertage
+14. **Targeted Feed Posts:** `feed_posts.target_user_ids UUID[]` — NULL=für alle sichtbar, gefüllt=nur für diese User
 
 ## Konventionen
 
@@ -122,7 +125,7 @@ docker compose build && docker compose up -d  # Nach Code-Änderungen
 cd frontend && npm install && npm run dev   # http://localhost:5173
 
 # Tests
-cd frontend && npm test                 # 868 Tests, 106 Dateien
+cd frontend && npm test                 # 891 Tests, 107 Dateien
 cd backend && mvn test                  # 37 Testdateien, Testcontainers
 
 # Monitoring (optional)
@@ -131,11 +134,15 @@ docker compose --profile monitoring up -d  # Grafana :3000, Prometheus :9090
 
 **Dev-Ports:** PostgreSQL 5433, Redis 6380, MinIO 9000/9001, Backend 8090, Frontend 5173 (dev) / 8091 (Docker)
 
-## Flyway-Migrationen (V001–V041)
+## Flyway-Migrationen (V001–V044)
 
-V001 tenant_config | V002 users | V003 sections | V004 families | V005 rooms | V006 audit_log | V007 seed_tenant | V008 feed | V009 notifications | V010 conversations | V011 files | V012 event_publication | V013 jobs | V014 assignments | V015 cleaning_configs | V016 cleaning_slots | V017 interest_fields | V018 chat_channels | V019 DSGVO | V020 password_reset | V021 comm_rules | V022 discussions | V023 push_subs | V024 OIDC | V025 calendar | V026 calendar_default | V027 job_event_link | V028 forms | V029 forms_default | V030 target_cleaning_hours | V031 avatars | V032 seed_admin | V033 seed_test_users | V034 join_requests | V035 family_invitations | V036 thread_audience | V037 role_refactoring | V038 fotobox | V039 fotobox_fix | V040 seed_realistic | V041 feedback_batch_1
+V001 tenant_config | V002 users | V003 sections | V004 families | V005 rooms | V006 audit_log | V007 seed_tenant | V008 feed | V009 notifications | V010 conversations | V011 files | V012 event_publication | V013 jobs | V014 assignments | V015 cleaning_configs | V016 cleaning_slots | V017 interest_fields | V018 chat_channels | V019 DSGVO | V020 password_reset | V021 comm_rules | V022 discussions | V023 push_subs | V024 OIDC | V025 calendar | V026 calendar_default | V027 job_event_link | V028 forms | V029 forms_default | V030 target_cleaning_hours | V031 avatars | V032 seed_admin | V033 seed_test_users | V034 join_requests | V035 family_invitations | V036 thread_audience | V037 role_refactoring | V038 fotobox | V039 fotobox_fix | V040 seed_realistic | V041 feedback_batch_1 | V043 cleaning_date_and_bundesland | V044 feed_target_user_ids
 
 ## DB-Hinweise
 
 - `room_members`: Composite PK (room_id, user_id) — kein `id`
 - `rooms.is_archived` (nicht `archived`)
+- `feed_posts.target_user_ids`: PostgreSQL `UUID[]` — NULL=alle sehen Post, gefüllt=nur gelistete User
+- `cleaning_configs.specific_date`: Optional `DATE` für einmalige Putzaktionen
+- `tenant_config.bundesland`: `VARCHAR(5)` Default `'BY'`, bestimmt Feiertage
+- `tenant_config.school_vacations`: `JSONB` Array mit `{name, from, to}`

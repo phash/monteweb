@@ -157,7 +157,11 @@ const stubs = {
 function mountComponent() {
   const pinia = createPinia()
   return mount(AdminCleaning, {
-    global: { plugins: [i18n, pinia], stubs },
+    global: {
+      plugins: [i18n, pinia],
+      stubs,
+      directives: { tooltip: () => {} },
+    },
   })
 }
 
@@ -201,8 +205,14 @@ describe('AdminCleaning', () => {
     expect(wrapper.text()).toContain('PutzOrga-Verwaltung')
   })
 
-  it('should render section select for PutzOrga', () => {
+  it('should render section select for PutzOrga', async () => {
     const wrapper = mountComponent()
+    await flushPromises()
+    // Open PutzOrga dialog first
+    const buttons = wrapper.findAll('.button-stub')
+    const putzOrgaBtn = buttons.find(b => b.text().includes('PutzOrga-Verwaltung'))
+    await putzOrgaBtn!.trigger('click')
+    await flushPromises()
     const selects = wrapper.findAll('.select-stub')
     expect(selects.length).toBeGreaterThanOrEqual(1)
   })
@@ -226,8 +236,14 @@ describe('AdminCleaning', () => {
     expect(columns.length).toBe(8)
   })
 
-  it('should render PutzOrga hint text', () => {
+  it('should render PutzOrga hint text', async () => {
     const wrapper = mountComponent()
+    await flushPromises()
+    // Open PutzOrga dialog first
+    const buttons = wrapper.findAll('.button-stub')
+    const putzOrgaBtn = buttons.find(b => b.text().includes('PutzOrga-Verwaltung'))
+    await putzOrgaBtn!.trigger('click')
+    await flushPromises()
     expect(wrapper.text()).toContain('Verwalten Sie die PutzOrga-Verantwortlichen.')
   })
 })

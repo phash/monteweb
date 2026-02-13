@@ -19,4 +19,7 @@ public interface EventRsvpRepository extends JpaRepository<EventRsvp, UUID> {
 
     @Query("SELECT DISTINCT r.eventId FROM EventRsvp r WHERE r.userId IN :userIds AND r.status IN ('ATTENDING', 'MAYBE')")
     List<UUID> findEventIdsByUserIdsAndAccepted(@Param("userIds") List<UUID> userIds);
+
+    @Query("SELECT r.userId FROM EventRsvp r WHERE r.eventId = :eventId AND r.status = :status")
+    List<UUID> findUserIdsByEventIdAndStatus(@Param("eventId") UUID eventId, @Param("status") RsvpStatus status);
 }

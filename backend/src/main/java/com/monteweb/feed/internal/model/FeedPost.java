@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -43,6 +45,10 @@ public class FeedPost {
 
     @Column(name = "is_parent_only", nullable = false)
     private boolean parentOnly = false;
+
+    @Column(name = "target_user_ids", columnDefinition = "uuid[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private UUID[] targetUserIds;
 
     @Column(name = "published_at", nullable = false)
     private Instant publishedAt = Instant.now();

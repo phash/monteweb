@@ -52,7 +52,6 @@ const editLoading = ref(false)
 
 // Profile form
 const profileForm = ref({ email: '', firstName: '', lastName: '', phone: '' })
-const editRole = ref<UserRole>('PARENT')
 const editActive = ref(true)
 const editAssignedRoles = ref<string[]>([])
 
@@ -172,7 +171,6 @@ function openEdit(user: UserInfo) {
     lastName: user.lastName,
     phone: user.phone || '',
   }
-  editRole.value = user.role
   editActive.value = user.active
   editAssignedRoles.value = [...(user.assignedRoles || [])]
   userRooms.value = []
@@ -186,9 +184,6 @@ async function saveProfile() {
   editLoading.value = true
   try {
     await usersApi.adminUpdateProfile(editUser.value.id, profileForm.value)
-    if (editRole.value !== editUser.value.role) {
-      await usersApi.updateRole(editUser.value.id, editRole.value)
-    }
     if (editActive.value !== editUser.value.active) {
       await usersApi.setActive(editUser.value.id, editActive.value)
     }
@@ -420,10 +415,6 @@ onUnmounted(() => {
               <div class="form-field">
                 <label>{{ t('auth.phone') }}</label>
                 <InputText v-model="profileForm.phone" class="w-full" />
-              </div>
-              <div class="form-field">
-                <label>{{ t('admin.columnRole') }}</label>
-                <Select v-model="editRole" :options="roleOptions" optionLabel="label" optionValue="value" class="w-full" />
               </div>
               <div class="form-field toggle-field">
                 <label>{{ t('common.active') }}</label>

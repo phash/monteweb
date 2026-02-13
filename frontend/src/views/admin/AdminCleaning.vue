@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
@@ -19,10 +19,16 @@ import type { SchoolSectionInfo } from '@/types/family'
 import * as cleaningApi from '@/api/cleaning.api'
 import { usersApi } from '@/api/users.api'
 import { sectionsApi } from '@/api/sections.api'
+import { useHolidays } from '@/composables/useHolidays'
+import { useAdminStore } from '@/stores/admin'
 
 const { t } = useI18n()
 const cleaningStore = useCleaningStore()
+const adminStore = useAdminStore()
 const toast = useToast()
+
+const currentYear = ref(new Date().getFullYear())
+const { isHoliday, isVacation, getDateClass, getDateTooltip } = useHolidays(currentYear)
 
 const showCreateDialog = ref(false)
 const showGenerateDialog = ref(false)
@@ -42,6 +48,7 @@ const newConfig = ref({
   sectionId: '',
   title: '',
   description: '',
+  specificDate: null as Date | null,
   dayOfWeek: 1,
   startTime: '14:00',
   endTime: '16:00',
@@ -61,21 +68,40 @@ const qrExportRange = ref({
 })
 
 onMounted(async () => {
+  if (!adminStore.config) {
+    await adminStore.fetchConfig()
+  }
   cleaningStore.loadConfigs()
   await loadSections()
 })
 
 async function createConfig() {
   try {
-    await cleaningStore.createConfig({
+    const payload: any = {
       ...newConfig.value,
-      hoursCredit: newConfig.value.hoursCredit
+      hoursCredit: newConfig.value.hoursCredit,
+    }
+    if (newConfig.value.specificDate) {
+      payload.specificDate = newConfig.value.specificDate.toISOString().split('T')[0]
+      payload.dayOfWeek = newConfig.value.specificDate.getDay() === 0 ? 7 : newConfig.value.specificDate.getDay()
+    }
+    delete payload.specificDate
+    await cleaningStore.createConfig({
+      ...payload,
+      ...(newConfig.value.specificDate ? { specificDate: newConfig.value.specificDate.toISOString().split('T')[0] } : {}),
     })
     showCreateDialog.value = false
-    toast.add({ severity: 'success', summary: t('cleaning.configCreated'), life: 3000 })
+    newConfig.value.specificDate = null
+    toast.add({ severity: 'success', summary: t('cleaning.admin.configCreated'), life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   }
+}
+
+function formatSpecificDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr + 'T00:00:00')
+  return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function openGenerate(config: CleaningConfigInfo) {
@@ -117,7 +143,7 @@ async function generateSlots() {
     showGenerateDialog.value = false
     toast.add({
       severity: 'success',
-      summary: t('cleaning.slotsGenerated', { n: slots.length }),
+      summary: t('cleaning.admin.slotsGenerated', { n: slots.length }),
       life: 3000
     })
   } catch (e: any) {
@@ -219,7 +245,12 @@ async function removePutzOrga(user: UserInfo) {
       <Column field="title" :header="t('cleaning.admin.configTitle')" />
       <Column field="sectionName" :header="t('cleaning.admin.section')" />
       <Column :header="t('cleaning.admin.day')">
-        <template #body="{ data }">{{ getDayName(data.dayOfWeek) }}</template>
+        <template #body="{ data }">
+          <template v-if="data.specificDate">
+            {{ formatSpecificDate(data.specificDate) }}
+          </template>
+          <template v-else>{{ getDayName(data.dayOfWeek) }}</template>
+        </template>
       </Column>
       <Column :header="t('cleaning.admin.timeRange')">
         <template #body="{ data }">{{ data.startTime }} - {{ data.endTime }}</template>
@@ -267,8 +298,20 @@ async function removePutzOrga(user: UserInfo) {
                   :placeholder="t('cleaning.admin.selectSection')"
                   class="w-full" />
         </div>
+        <!-- Specific Date (for one-time actions) -->
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.day') }}</label>
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.specificDate') }}</label>
+          <DatePicker v-model="newConfig.specificDate" dateFormat="dd.mm.yy" class="w-full"
+                      showIcon :showOnFocus="false">
+            <template #date="{ date }">
+              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
+            </template>
+          </DatePicker>
+          <small class="text-gray-500">{{ t('cleaning.admin.specificDateHint') }}</small>
+        </div>
+        <!-- Day of week (only when no specific date) -->
+        <div v-if="!newConfig.specificDate">
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.orRecurring') }}</label>
           <Select v-model="newConfig.dayOfWeek" :options="dayOptions"
                   optionLabel="label" optionValue="value" class="w-full" />
         </div>
@@ -312,11 +355,19 @@ async function removePutzOrga(user: UserInfo) {
       <div class="flex flex-col gap-3">
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
-          <DatePicker v-model="generateRange.from" dateFormat="dd.mm.yy" class="w-full" />
+          <DatePicker v-model="generateRange.from" dateFormat="dd.mm.yy" class="w-full">
+            <template #date="{ date }">
+              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
+            </template>
+          </DatePicker>
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
-          <DatePicker v-model="generateRange.to" dateFormat="dd.mm.yy" class="w-full" />
+          <DatePicker v-model="generateRange.to" dateFormat="dd.mm.yy" class="w-full">
+            <template #date="{ date }">
+              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
+            </template>
+          </DatePicker>
         </div>
       </div>
       <template #footer>
@@ -333,11 +384,19 @@ async function removePutzOrga(user: UserInfo) {
       <div class="flex flex-col gap-3">
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
-          <DatePicker v-model="qrExportRange.from" dateFormat="dd.mm.yy" class="w-full" />
+          <DatePicker v-model="qrExportRange.from" dateFormat="dd.mm.yy" class="w-full">
+            <template #date="{ date }">
+              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
+            </template>
+          </DatePicker>
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
-          <DatePicker v-model="qrExportRange.to" dateFormat="dd.mm.yy" class="w-full" />
+          <DatePicker v-model="qrExportRange.to" dateFormat="dd.mm.yy" class="w-full">
+            <template #date="{ date }">
+              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
+            </template>
+          </DatePicker>
         </div>
       </div>
       <template #footer>
@@ -410,3 +469,38 @@ async function removePutzOrga(user: UserInfo) {
     </Dialog>
   </div>
 </template>
+
+<style scoped>
+:deep(.mw-holiday) {
+  color: #dc2626;
+  font-weight: 700;
+  position: relative;
+}
+:deep(.mw-holiday)::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #dc2626;
+}
+:deep(.mw-vacation) {
+  color: #ea580c;
+  font-weight: 600;
+  position: relative;
+}
+:deep(.mw-vacation)::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ea580c;
+}
+</style>

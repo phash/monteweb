@@ -9,6 +9,8 @@ import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -42,6 +44,13 @@ public class TenantConfig {
 
     @Column(name = "target_cleaning_hours", nullable = false)
     private BigDecimal targetCleaningHours = new BigDecimal("3.0");
+
+    @Column(name = "bundesland", nullable = false, length = 5)
+    private String bundesland = "BY";
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "school_vacations", nullable = false, columnDefinition = "jsonb")
+    private List<Map<String, String>> schoolVacations = new ArrayList<>();
 
     @Column(name = "parent_to_parent_messaging", nullable = false)
     private boolean parentToParentMessaging = false;

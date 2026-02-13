@@ -52,12 +52,17 @@ public class CleaningService implements CleaningModuleApi {
         config.setSectionId(request.sectionId());
         config.setTitle(request.title());
         config.setDescription(request.description());
-        config.setDayOfWeek(request.dayOfWeek());
         config.setStartTime(request.startTime());
         config.setEndTime(request.endTime());
         config.setMinParticipants(request.minParticipants());
         config.setMaxParticipants(request.maxParticipants());
         config.setHoursCredit(request.hoursCredit());
+        if (request.specificDate() != null) {
+            config.setSpecificDate(request.specificDate());
+            config.setDayOfWeek(request.specificDate().getDayOfWeek().getValue());
+        } else {
+            config.setDayOfWeek(request.dayOfWeek());
+        }
         config = configRepository.save(config);
         return toConfigInfo(config);
     }
@@ -111,24 +116,42 @@ public class CleaningService implements CleaningModuleApi {
                 .map(CleaningSlot::getSlotDate)
                 .collect(Collectors.toSet());
 
-        DayOfWeek targetDay = DayOfWeek.of(config.getDayOfWeek());
         List<CleaningSlot> generated = new ArrayList<>();
 
-        LocalDate current = from;
-        while (!current.isAfter(to)) {
-            if (current.getDayOfWeek() == targetDay && !existingDates.contains(current)) {
+        if (config.getSpecificDate() != null) {
+            // One-time cleaning action: generate exactly one slot for the specific date
+            LocalDate target = config.getSpecificDate();
+            if (!target.isBefore(from) && !target.isAfter(to) && !existingDates.contains(target)) {
                 CleaningSlot slot = new CleaningSlot();
                 slot.setConfigId(configId);
                 slot.setSectionId(config.getSectionId());
-                slot.setSlotDate(current);
+                slot.setSlotDate(target);
                 slot.setStartTime(config.getStartTime());
                 slot.setEndTime(config.getEndTime());
                 slot.setMinParticipants(config.getMinParticipants());
                 slot.setMaxParticipants(config.getMaxParticipants());
-                slot.setQrToken(qrTokenService.generateToken(slot.getId() != null ? slot.getId() : UUID.randomUUID()));
+                slot.setQrToken(qrTokenService.generateToken(UUID.randomUUID()));
                 generated.add(slot);
             }
-            current = current.plusDays(1);
+        } else {
+            // Recurring: iterate by day-of-week
+            DayOfWeek targetDay = DayOfWeek.of(config.getDayOfWeek());
+            LocalDate current = from;
+            while (!current.isAfter(to)) {
+                if (current.getDayOfWeek() == targetDay && !existingDates.contains(current)) {
+                    CleaningSlot slot = new CleaningSlot();
+                    slot.setConfigId(configId);
+                    slot.setSectionId(config.getSectionId());
+                    slot.setSlotDate(current);
+                    slot.setStartTime(config.getStartTime());
+                    slot.setEndTime(config.getEndTime());
+                    slot.setMinParticipants(config.getMinParticipants());
+                    slot.setMaxParticipants(config.getMaxParticipants());
+                    slot.setQrToken(qrTokenService.generateToken(slot.getId() != null ? slot.getId() : UUID.randomUUID()));
+                    generated.add(slot);
+                }
+                current = current.plusDays(1);
+            }
         }
 
         List<CleaningSlot> saved = slotRepository.saveAll(generated);
@@ -438,7 +461,8 @@ public class CleaningService implements CleaningModuleApi {
                 config.getTitle(), config.getDescription(),
                 config.getDayOfWeek(), config.getStartTime(), config.getEndTime(),
                 config.getMinParticipants(), config.getMaxParticipants(),
-                config.getHoursCredit(), config.isActive());
+                config.getHoursCredit(), config.isActive(),
+                config.getSpecificDate());
     }
 
     private CleaningSlotInfo toSlotInfo(CleaningSlot slot, String configTitle) {
@@ -484,7 +508,8 @@ public class CleaningService implements CleaningModuleApi {
     public record CreateConfigRequest(
             UUID sectionId, String title, String description,
             int dayOfWeek, LocalTime startTime, LocalTime endTime,
-            int minParticipants, int maxParticipants, BigDecimal hoursCredit) {
+            int minParticipants, int maxParticipants, BigDecimal hoursCredit,
+            LocalDate specificDate) {
     }
 
     public record UpdateConfigRequest(

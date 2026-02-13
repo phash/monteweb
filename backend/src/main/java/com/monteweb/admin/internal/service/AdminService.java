@@ -36,12 +36,15 @@ public class AdminService implements AdminModuleApi {
     }
 
     @Transactional
-    public TenantConfigInfo updateConfig(String schoolName, String logoUrl, BigDecimal targetHours, BigDecimal targetCleaningHours) {
+    public TenantConfigInfo updateConfig(String schoolName, String logoUrl, BigDecimal targetHours, BigDecimal targetCleaningHours,
+                                          String bundesland, java.util.List<java.util.Map<String, String>> schoolVacations) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
         if (targetHours != null) config.setTargetHoursPerFamily(targetHours);
         if (targetCleaningHours != null) config.setTargetCleaningHours(targetCleaningHours);
+        if (bundesland != null) config.setBundesland(bundesland);
+        if (schoolVacations != null) config.setSchoolVacations(schoolVacations);
         return toInfo(configRepository.save(config));
     }
 
@@ -104,7 +107,9 @@ public class AdminService implements AdminModuleApi {
                 config.getTargetHoursPerFamily(),
                 config.getTargetCleaningHours(),
                 config.isParentToParentMessaging(),
-                config.isStudentToStudentMessaging()
+                config.isStudentToStudentMessaging(),
+                config.getBundesland(),
+                config.getSchoolVacations()
         );
     }
 }

@@ -25,6 +25,8 @@ vi.mock('@/api/admin.api', () => ({
           modules: {},
           targetHoursPerFamily: 30,
           targetCleaningHours: 3,
+          bundesland: 'BY',
+          schoolVacations: [],
         },
       },
     }),
@@ -35,6 +37,8 @@ vi.mock('@/api/admin.api', () => ({
           schoolName: 'Montessori Schule',
           targetHoursPerFamily: 30,
           targetCleaningHours: 3,
+          bundesland: 'BY',
+          schoolVacations: [],
         },
       },
     }),
@@ -112,6 +116,22 @@ const stubs = {
     template: '<div class="fileupload-stub" />',
     props: ['mode', 'accept', 'maxFileSize', 'auto', 'chooseLabel'],
     emits: ['select'],
+  },
+  Select: {
+    template: '<select class="select-stub"><option>{{ modelValue }}</option></select>',
+    props: ['modelValue', 'options', 'optionLabel', 'optionValue'],
+  },
+  DatePicker: {
+    template: '<input class="datepicker-stub" />',
+    props: ['modelValue', 'dateFormat'],
+  },
+  DataTable: {
+    template: '<table class="datatable-stub"><slot /></table>',
+    props: ['value', 'stripedRows'],
+  },
+  Column: {
+    template: '<td class="column-stub"><slot /></td>',
+    props: ['field', 'header'],
   },
 }
 

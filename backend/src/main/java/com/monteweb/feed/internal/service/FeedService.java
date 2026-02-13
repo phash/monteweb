@@ -60,6 +60,22 @@ public class FeedService implements FeedModuleApi {
     }
 
     @Override
+    @Transactional
+    public FeedPostInfo createTargetedSystemPost(String title, String content, SourceType sourceType, UUID sourceId, List<UUID> targetUserIds) {
+        var post = new FeedPost();
+        post.setAuthorId(UUID.fromString("00000000-0000-0000-0000-000000000000")); // system user
+        post.setTitle(title);
+        post.setContent(content);
+        post.setSourceType(sourceType);
+        post.setSourceId(sourceId);
+        post.setPinned(true);
+        if (targetUserIds != null && !targetUserIds.isEmpty()) {
+            post.setTargetUserIds(targetUserIds.toArray(new UUID[0]));
+        }
+        return toPostInfo(postRepository.save(post));
+    }
+
+    @Override
     public Optional<FeedPostInfo> findPostById(UUID postId) {
         return postRepository.findById(postId).map(this::toPostInfo);
     }
@@ -89,7 +105,7 @@ public class FeedService implements FeedModuleApi {
 
         boolean isParent = userInfo.role() == UserRole.PARENT;
 
-        return postRepository.findPersonalFeed(roomIds, sectionIds, isParent, pageable)
+        return postRepository.findPersonalFeed(roomIds, sectionIds, isParent, userId, pageable)
                 .map(this::toPostInfo);
     }
 

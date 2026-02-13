@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
@@ -46,6 +47,9 @@ public class CleaningConfig {
 
     @Column(name = "hours_credit", nullable = false, precision = 5, scale = 2)
     private BigDecimal hoursCredit;
+
+    @Column(name = "specific_date")
+    private LocalDate specificDate;
 
     @Column(nullable = false)
     private boolean active = true;

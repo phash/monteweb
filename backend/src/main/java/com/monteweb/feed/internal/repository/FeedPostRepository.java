@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -16,24 +17,41 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
     /**
      * Personal feed: posts from the user's rooms, sections of those rooms, school-wide, and board posts.
      * Filters out expired and parent-only posts based on the user's role.
+     * Targeted posts (target_user_ids not null) are only shown to the specified users.
      */
-    @Query("""
-        SELECT p FROM FeedPost p
+    @Query(value = """
+        SELECT p.* FROM feed_posts p
         WHERE (
-            (p.sourceType = 'ROOM' AND p.sourceId IN :roomIds)
-            OR (p.sourceType = 'SECTION' AND p.sourceId IN :sectionIds)
-            OR p.sourceType = 'SCHOOL'
-            OR p.sourceType = 'SYSTEM'
-            OR p.sourceType = 'BOARD'
+            (p.source_type = 'ROOM' AND p.source_id IN (:roomIds))
+            OR (p.source_type = 'SECTION' AND p.source_id IN (:sectionIds))
+            OR p.source_type = 'SCHOOL'
+            OR p.source_type = 'SYSTEM'
+            OR p.source_type = 'BOARD'
         )
-        AND (p.expiresAt IS NULL OR p.expiresAt > CURRENT_TIMESTAMP)
-        AND (p.parentOnly = false OR :isParent = true)
-        ORDER BY p.pinned DESC, p.publishedAt DESC
-    """)
+        AND (p.expires_at IS NULL OR p.expires_at > NOW())
+        AND (p.is_parent_only = false OR :isParent = true)
+        AND (p.target_user_ids IS NULL OR CAST(:userId AS UUID) = ANY(p.target_user_ids))
+        ORDER BY p.is_pinned DESC, p.published_at DESC
+        """,
+        countQuery = """
+        SELECT COUNT(*) FROM feed_posts p
+        WHERE (
+            (p.source_type = 'ROOM' AND p.source_id IN (:roomIds))
+            OR (p.source_type = 'SECTION' AND p.source_id IN (:sectionIds))
+            OR p.source_type = 'SCHOOL'
+            OR p.source_type = 'SYSTEM'
+            OR p.source_type = 'BOARD'
+        )
+        AND (p.expires_at IS NULL OR p.expires_at > NOW())
+        AND (p.is_parent_only = false OR :isParent = true)
+        AND (p.target_user_ids IS NULL OR CAST(:userId AS UUID) = ANY(p.target_user_ids))
+        """,
+        nativeQuery = true)
     Page<FeedPost> findPersonalFeed(
-            Collection<UUID> roomIds,
-            Collection<UUID> sectionIds,
-            boolean isParent,
+            @Param("roomIds") Collection<UUID> roomIds,
+            @Param("sectionIds") Collection<UUID> sectionIds,
+            @Param("isParent") boolean isParent,
+            @Param("userId") UUID userId,
             Pageable pageable
     );
 
