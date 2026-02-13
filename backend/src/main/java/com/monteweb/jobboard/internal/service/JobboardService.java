@@ -121,7 +121,11 @@ public class JobboardService implements JobboardModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
 
         if (!job.getCreatedBy().equals(userId)) {
-            throw new ForbiddenException("Only the creator can edit this job");
+            var user = userModuleApi.findById(userId);
+            if (user.isEmpty() || (user.get().role() != com.monteweb.user.UserRole.SUPERADMIN
+                    && user.get().role() != com.monteweb.user.UserRole.SECTION_ADMIN)) {
+                throw new ForbiddenException("Only the creator or administrators can edit this job");
+            }
         }
 
         if (request.title() != null) job.setTitle(request.title());
@@ -220,11 +224,12 @@ public class JobboardService implements JobboardModuleApi {
     public void deleteJob(UUID jobId, UUID userId) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
-        // Only creator or SUPERADMIN can permanently delete
+        // Only creator, SUPERADMIN or SECTION_ADMIN can permanently delete
         if (!job.getCreatedBy().equals(userId)) {
             var user = userModuleApi.findById(userId);
-            if (user.isEmpty() || user.get().role() != com.monteweb.user.UserRole.SUPERADMIN) {
-                throw new ForbiddenException("Only the creator or SUPERADMIN can delete this job");
+            if (user.isEmpty() || (user.get().role() != com.monteweb.user.UserRole.SUPERADMIN
+                    && user.get().role() != com.monteweb.user.UserRole.SECTION_ADMIN)) {
+                throw new ForbiddenException("Only the creator or administrators can delete this job");
             }
         }
         assignmentRepository.deleteByJobId(jobId);

@@ -12,6 +12,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
+import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 
 const props = defineProps<{ id: string }>()
@@ -23,9 +24,54 @@ const jobboard = useJobboardStore()
 
 const showCompleteDialog = ref(false)
 const showDeleteDialog = ref(false)
+const showEditDialog = ref(false)
 const completeAssignmentId = ref<string | null>(null)
 const actualHours = ref<number>(0)
 const completeNotes = ref('')
+
+const editTitle = ref('')
+const editDescription = ref('')
+const editCategory = ref('')
+const editLocation = ref('')
+const editEstimatedHours = ref<number>(2)
+const editContactInfo = ref('')
+const editSubmitting = ref(false)
+
+const canManageJob = computed(() => {
+  if (!jobboard.currentJob) return false
+  if (auth.isAdmin || auth.isSectionAdmin) return true
+  return jobboard.currentJob.createdBy === auth.user?.id
+})
+
+function openEditDialog() {
+  const job = jobboard.currentJob
+  if (!job) return
+  editTitle.value = job.title
+  editDescription.value = job.description ?? ''
+  editCategory.value = job.category
+  editLocation.value = job.location ?? ''
+  editEstimatedHours.value = job.estimatedHours
+  editContactInfo.value = job.contactInfo ?? ''
+  showEditDialog.value = true
+}
+
+async function submitEdit() {
+  editSubmitting.value = true
+  try {
+    await jobboardApi.updateJob(props.id, {
+      title: editTitle.value.trim(),
+      description: editDescription.value.trim() || undefined,
+      category: editCategory.value.trim(),
+      location: editLocation.value.trim() || undefined,
+      estimatedHours: editEstimatedHours.value,
+      contactInfo: editContactInfo.value.trim() || undefined,
+    })
+    showEditDialog.value = false
+    await jobboard.fetchJob(props.id)
+  } finally {
+    editSubmitting.value = false
+  }
+}
 
 async function handleDeleteJob() {
   try {
@@ -193,7 +239,14 @@ function formatDate(date: string | null) {
           @click="openComplete"
         />
         <Button
-          v-if="auth.isAdmin"
+          v-if="canManageJob"
+          :label="t('common.edit')"
+          icon="pi pi-pencil"
+          severity="secondary"
+          @click="openEditDialog"
+        />
+        <Button
+          v-if="canManageJob"
           :label="t('common.delete')"
           icon="pi pi-trash"
           severity="danger"
@@ -215,7 +268,7 @@ function formatDate(date: string | null) {
             <div class="assignment-actions">
               <span v-if="a.actualHours" class="hours">{{ a.actualHours }}h</span>
               <Button
-                v-if="a.status === 'COMPLETED' && !a.confirmed && (auth.isTeacher || auth.isAdmin)"
+                v-if="a.status === 'COMPLETED' && !a.confirmed && (auth.isTeacher || auth.isAdmin || auth.isSectionAdmin)"
                 :label="t('common.confirm')"
                 icon="pi pi-check"
                 severity="success"
@@ -253,6 +306,40 @@ function formatDate(date: string | null) {
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" text @click="showCompleteDialog = false" />
         <Button :label="t('jobboard.complete')" icon="pi pi-check" @click="submitComplete" />
+      </template>
+    </Dialog>
+
+    <!-- Edit Dialog -->
+    <Dialog v-model:visible="showEditDialog" :header="t('jobboard.editJob')" modal :style="{ width: '500px', maxWidth: '90vw' }">
+      <div class="complete-form">
+        <div class="form-field">
+          <label>{{ t('jobboard.titleLabel') }}</label>
+          <InputText v-model="editTitle" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label>{{ t('jobboard.category') }}</label>
+          <InputText v-model="editCategory" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label>{{ t('common.description') }}</label>
+          <Textarea v-model="editDescription" :autoResize="true" rows="3" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label>{{ t('jobboard.estimatedHours') }}</label>
+          <InputNumber v-model="editEstimatedHours" :minFractionDigits="1" :maxFractionDigits="2" :min="0.5" :step="0.5" />
+        </div>
+        <div class="form-field">
+          <label>{{ t('jobboard.location') }}</label>
+          <InputText v-model="editLocation" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label>{{ t('jobboard.contact') }}</label>
+          <InputText v-model="editContactInfo" class="w-full" />
+        </div>
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showEditDialog = false" />
+        <Button :label="t('common.save')" icon="pi pi-check" :loading="editSubmitting" :disabled="!editTitle.trim() || !editCategory.trim()" @click="submitEdit" />
       </template>
     </Dialog>
   </div>

@@ -7,9 +7,12 @@ import { useAdminStore } from '@/stores/admin'
 import { feedApi } from '@/api/feed.api'
 import { roomsApi } from '@/api/rooms.api'
 import { familyApi } from '@/api/family.api'
+import { usersApi } from '@/api/users.api'
 import type { FeedPost } from '@/types/feed'
+import type { UserInfo } from '@/types/user'
 import type { JoinRequestInfo } from '@/types/room'
 import type { FamilyInfo } from '@/types/family'
+import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -65,6 +68,14 @@ const families = ref<FamilyInfo[]>([])
 const selectedFamilyId = ref<string | null>(null)
 const addingFamily = ref(false)
 
+// Add member dialog
+const showAddMemberDialog = ref(false)
+const memberSearchQuery = ref('')
+const memberSearchResults = ref<UserInfo[]>([])
+const memberSearchLoading = ref(false)
+const addingMemberId = ref<string | null>(null)
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
 const filesEnabled = admin.config?.modules?.files ?? false
 const calendarEnabled = admin.config?.modules?.calendar ?? false
 const fotoboxEnabled = admin.config?.modules?.fotobox ?? false
@@ -79,7 +90,7 @@ const isLeader = computed(() => {
     m => m.userId === auth.user?.id && m.role === 'LEADER'
   )
 })
-const canEditRoom = computed(() => isLeader.value || auth.isAdmin)
+const canEditRoom = computed(() => isLeader.value || auth.isAdmin || auth.isSectionAdmin)
 
 // Member grouping computeds
 const leaderMembers = computed(() => {
@@ -111,7 +122,7 @@ onMounted(async () => {
     await rooms.fetchRoom(props.id)
     if (rooms.currentRoom) {
       loadPosts()
-      if (isLeader.value || auth.isAdmin) {
+      if (isLeader.value || auth.isAdmin || auth.isSectionAdmin) {
         loadPendingRequests()
       }
     }
@@ -239,6 +250,51 @@ async function addFamilyToRoom() {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   } finally {
     addingFamily.value = false
+  }
+}
+
+function openAddMemberDialog() {
+  memberSearchQuery.value = ''
+  memberSearchResults.value = []
+  showAddMemberDialog.value = true
+}
+
+function onMemberSearch() {
+  if (searchTimeout) clearTimeout(searchTimeout)
+  const query = memberSearchQuery.value.trim()
+  if (query.length < 2) {
+    memberSearchResults.value = []
+    return
+  }
+  searchTimeout = setTimeout(async () => {
+    memberSearchLoading.value = true
+    try {
+      const res = await usersApi.search(query)
+      memberSearchResults.value = res.data.data.content
+    } catch {
+      memberSearchResults.value = []
+    } finally {
+      memberSearchLoading.value = false
+    }
+  }, 300)
+}
+
+function isMemberAlready(userId: string): boolean {
+  return rooms.currentRoom?.members?.some(m => m.userId === userId) ?? false
+}
+
+async function addMemberToRoom(userId: string) {
+  addingMemberId.value = userId
+  try {
+    await roomsApi.addMember(props.id, userId, 'MEMBER')
+    toast.add({ severity: 'success', summary: t('rooms.memberAdded'), life: 3000 })
+    await rooms.fetchRoom(props.id)
+    // Update search results to reflect new membership
+    memberSearchResults.value = [...memberSearchResults.value]
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    addingMemberId.value = null
   }
 }
 
@@ -440,6 +496,12 @@ async function toggleMute() {
             <h2 class="sr-only">{{ t('rooms.members') }}</h2>
             <div v-if="canEditRoom || auth.isTeacher" class="member-actions mb-3">
               <Button
+                :label="t('rooms.addMember')"
+                icon="pi pi-user-plus"
+                size="small"
+                @click="openAddMemberDialog"
+              />
+              <Button
                 :label="t('rooms.addFamily')"
                 icon="pi pi-users"
                 size="small"
@@ -449,7 +511,7 @@ async function toggleMute() {
             </div>
 
             <!-- Pending join requests (Leader only) -->
-            <div v-if="(isLeader || auth.isAdmin) && pendingRequests.length > 0" class="pending-requests mb-4">
+            <div v-if="(isLeader || auth.isAdmin || auth.isSectionAdmin) && pendingRequests.length > 0" class="pending-requests mb-4">
               <h3 class="text-md font-semibold mb-2">{{ t('rooms.pendingRequests') }} ({{ pendingRequests.length }})</h3>
               <div v-for="req in pendingRequests" :key="req.id" class="request-item">
                 <div class="request-info">
@@ -562,6 +624,45 @@ async function toggleMute() {
         <Button :label="t('common.cancel')" text @click="showJoinRequestDialog = false" />
         <Button :label="t('rooms.requestJoin')" icon="pi pi-send"
                 :loading="joinRequestLoading" @click="submitJoinRequest" />
+      </template>
+    </Dialog>
+
+    <!-- Add Member Dialog -->
+    <Dialog v-model:visible="showAddMemberDialog" :header="t('rooms.addMember')" modal :style="{ width: '500px', maxWidth: '90vw' }">
+      <div class="add-member-form">
+        <InputText
+          v-model="memberSearchQuery"
+          :placeholder="t('rooms.searchMemberPlaceholder')"
+          class="w-full"
+          @input="onMemberSearch"
+        />
+        <div v-if="memberSearchLoading" class="text-muted text-sm" style="padding: 0.5rem 0;">
+          <i class="pi pi-spinner pi-spin" /> {{ t('rooms.searchMember') }}...
+        </div>
+        <div v-else-if="memberSearchResults.length" class="member-search-results">
+          <div v-for="user in memberSearchResults" :key="user.id" class="member-search-item">
+            <div class="member-search-info">
+              <strong>{{ user.displayName }}</strong>
+              <span class="text-muted text-sm">{{ user.email }}</span>
+              <Tag v-if="user.role" :value="user.role" severity="secondary" size="small" />
+            </div>
+            <Button
+              v-if="!isMemberAlready(user.id)"
+              :label="t('common.add')"
+              icon="pi pi-plus"
+              size="small"
+              :loading="addingMemberId === user.id"
+              @click="addMemberToRoom(user.id)"
+            />
+            <Tag v-else :value="t('rooms.alreadyMember')" severity="info" size="small" />
+          </div>
+        </div>
+        <p v-else-if="memberSearchQuery.trim().length >= 2" class="text-muted text-sm" style="padding: 0.5rem 0;">
+          {{ t('common.noResults') }}
+        </p>
+      </div>
+      <template #footer>
+        <Button :label="t('common.close')" severity="secondary" text @click="showAddMemberDialog = false" />
       </template>
     </Dialog>
 
@@ -813,5 +914,44 @@ async function toggleMute() {
 .add-family-form label {
   font-size: var(--mw-font-size-sm);
   font-weight: 500;
+}
+
+.add-member-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.member-search-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.member-search-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--mw-border-light);
+  border-radius: var(--mw-border-radius-sm);
+}
+
+.member-search-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.member-search-info strong {
+  font-size: var(--mw-font-size-sm);
+}
+
+.member-search-info span {
+  font-size: var(--mw-font-size-xs);
 }
 </style>

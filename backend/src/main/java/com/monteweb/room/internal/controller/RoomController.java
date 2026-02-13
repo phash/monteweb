@@ -150,10 +150,10 @@ public class RoomController {
     public ResponseEntity<ApiResponse<Object>> getRoom(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userModuleApi.findById(userId);
-        boolean isSuperAdmin = user.isPresent() && user.get().role() == UserRole.SUPERADMIN;
+        boolean isAdmin = user.isPresent() && (user.get().role() == UserRole.SUPERADMIN || user.get().role() == UserRole.SECTION_ADMIN);
         boolean isMember = roomService.isUserInRoom(userId, id);
 
-        if (isSuperAdmin || isMember) {
+        if (isAdmin || isMember) {
             return ResponseEntity.ok(ApiResponse.ok(buildDetailResponse(id)));
         }
         return ResponseEntity.ok(ApiResponse.ok(buildPublicResponse(id)));
@@ -312,7 +312,7 @@ public class RoomController {
         var user = userModuleApi.findById(userId);
         if (user.isPresent()) {
             var userRole = user.get().role();
-            if (userRole == UserRole.SUPERADMIN || userRole == UserRole.TEACHER) {
+            if (userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN || userRole == UserRole.TEACHER) {
                 return;
             }
         }
