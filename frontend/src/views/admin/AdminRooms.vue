@@ -17,6 +17,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import Tag from 'primevue/tag'
 import AutoComplete from 'primevue/autocomplete'
 
@@ -34,7 +35,7 @@ const showMembers = ref(false)
 const selectedRoom = ref<RoomInfo | null>(null)
 
 // Filters
-const sectionFilter = ref<string | null>(null)
+const sectionFilter = ref<string[]>([])
 const typeFilter = ref<RoomType | null>(null)
 
 const form = ref<CreateRoomRequest>({
@@ -85,8 +86,8 @@ const sectionMap = computed(() => {
 
 const filteredRooms = computed(() => {
   let result = rooms.value
-  if (sectionFilter.value) {
-    result = result.filter(r => r.sectionId === sectionFilter.value)
+  if (sectionFilter.value.length > 0) {
+    result = result.filter(r => r.sectionId != null && sectionFilter.value.includes(r.sectionId))
   }
   if (typeFilter.value) {
     result = result.filter(r => r.type === typeFilter.value)
@@ -117,6 +118,16 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+function openCreate() {
+  form.value = {
+    name: '',
+    type: 'KLASSE',
+    description: '',
+    sectionId: sectionFilter.value.length === 1 ? sectionFilter.value[0] : undefined,
+  }
+  showCreate.value = true
 }
 
 async function createRoom() {
@@ -287,19 +298,19 @@ onMounted(loadData)
   <div>
     <div class="header-row">
       <PageTitle :title="t('admin.rooms')" />
-      <Button :label="t('rooms.create')" icon="pi pi-plus" @click="showCreate = true" />
+      <Button :label="t('rooms.create')" icon="pi pi-plus" @click="openCreate" />
     </div>
 
     <!-- Filters -->
     <div class="filter-row">
-      <Select
+      <MultiSelect
         v-model="sectionFilter"
         :options="sections"
         optionLabel="name"
         optionValue="id"
         :placeholder="t('admin.allSections')"
-        showClear
-        style="width: 200px"
+        :maxSelectedLabels="2"
+        style="width: 280px"
       />
       <Select
         v-model="typeFilter"

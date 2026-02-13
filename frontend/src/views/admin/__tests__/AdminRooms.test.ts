@@ -162,6 +162,7 @@ const stubs = {
   InputText: { template: '<input class="input-stub" />', props: ['modelValue', 'required'] },
   Textarea: { template: '<textarea class="textarea-stub" />', props: ['modelValue', 'rows'] },
   Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder', 'showClear', 'filter'] },
+  MultiSelect: { template: '<select class="multiselect-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder', 'maxSelectedLabels'] },
   Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity'] },
   AutoComplete: {
     template: '<input class="autocomplete-stub" />',
@@ -209,7 +210,8 @@ describe('AdminRooms', () => {
   it('should render filter selects', () => {
     const wrapper = mountComponent()
     const selects = wrapper.findAll('.select-stub')
-    expect(selects.length).toBeGreaterThanOrEqual(2)
+    const multiSelects = wrapper.findAll('.multiselect-stub')
+    expect(selects.length + multiSelects.length).toBeGreaterThanOrEqual(2)
   })
 
   it('should load rooms and sections on mount', async () => {

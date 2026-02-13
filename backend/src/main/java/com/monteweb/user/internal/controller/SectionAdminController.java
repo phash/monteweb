@@ -2,7 +2,6 @@ package com.monteweb.user.internal.controller;
 
 import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
-import com.monteweb.room.RoomRole;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.school.SchoolSectionInfo;
 import com.monteweb.shared.dto.ApiResponse;
@@ -23,7 +22,8 @@ import java.util.stream.Collectors;
 /**
  * REST controller for SECTION_ADMIN operations.
  * Section admins manage users and rooms within their school sections.
- * A section admin's sections are determined by rooms where they are a LEADER.
+ * A section admin's sections are determined by explicit {@code SECTION_ADMIN:<sectionId>}
+ * entries in the user's special roles, assigned via the admin UI.
  */
 @RestController
 @RequestMapping("/api/v1/section-admin")
@@ -46,7 +46,7 @@ public class SectionAdminController {
 
     /**
      * Returns the sections where the current user is SECTION_ADMIN.
-     * Determined by rooms where the user is a LEADER -> extract distinct section IDs.
+     * Determined by explicit {@code SECTION_ADMIN:<sectionId>} entries in the user's special roles.
      */
     @GetMapping("/my-sections")
     public ResponseEntity<ApiResponse<List<SchoolSectionInfo>>> getMySections() {
@@ -163,25 +163,21 @@ public class SectionAdminController {
 
     /**
      * Returns the set of section IDs the user administers.
-     * Derived from rooms where the user is LEADER that have a non-null sectionId.
+     * Derived from explicit {@code SECTION_ADMIN:<sectionId>} entries in the user's special roles.
+     * Superadmins have access to all active sections.
      */
     private Set<UUID> getAdminSectionIds(UUID userId) {
-        var currentUser = userModuleApi.findById(userId);
-        if (currentUser.isPresent() && currentUser.get().role() == UserRole.SUPERADMIN) {
-            // Superadmins can access all active sections
+        var currentUser = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (currentUser.role() == UserRole.SUPERADMIN) {
             return schoolModuleApi.findAllActive().stream()
                     .map(SchoolSectionInfo::id)
                     .collect(Collectors.toSet());
         }
-
-        var rooms = roomModuleApi.findByUserId(userId);
         Set<UUID> sectionIds = new LinkedHashSet<>();
-        for (RoomInfo room : rooms) {
-            if (room.sectionId() != null) {
-                var role = roomModuleApi.getUserRoleInRoom(userId, room.id());
-                if (role.isPresent() && role.get() == RoomRole.LEADER) {
-                    sectionIds.add(room.sectionId());
-                }
+        for (String specialRole : currentUser.specialRoles()) {
+            if (specialRole.startsWith("SECTION_ADMIN:")) {
+                sectionIds.add(UUID.fromString(specialRole.substring("SECTION_ADMIN:".length())));
             }
         }
         return sectionIds;
