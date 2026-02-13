@@ -129,6 +129,9 @@ public class RoomService implements RoomModuleApi {
         room.getMembers().add(member);
         room = roomRepository.save(room);
 
+        eventPublisher.publishEvent(new RoomCreatedEvent(
+                room.getId(), room.getName(), room.getType().name(), createdBy));
+
         return toRoomInfo(room);
     }
 

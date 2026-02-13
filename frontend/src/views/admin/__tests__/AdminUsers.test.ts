@@ -14,6 +14,10 @@ vi.mock('@/api/users.api', () => ({
     getUserFamilies: vi.fn().mockResolvedValue({ data: { data: [] } }),
     addUserToFamily: vi.fn(),
     removeUserFromFamily: vi.fn(),
+    addSpecialRole: vi.fn().mockResolvedValue({ data: { data: {} } }),
+    removeSpecialRole: vi.fn().mockResolvedValue({ data: { data: {} } }),
+    findBySpecialRole: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    updateAssignedRoles: vi.fn().mockResolvedValue({ data: { data: {} } }),
   },
 }))
 
@@ -71,8 +75,11 @@ const i18n = createI18n({
         noRoomMemberships: 'Keine Raum-Mitgliedschaften',
         noFamilyMemberships: 'Keine Familien-Mitgliedschaften',
       },
-      auth: { email: 'E-Mail' },
-      common: { loading: 'Laden...', save: 'Speichern', cancel: 'Abbrechen', name: 'Name', status: 'Status', actions: 'Aktionen', edit: 'Bearbeiten', delete: 'Löschen' },
+      auth: { email: 'E-Mail', firstName: 'Vorname', lastName: 'Nachname', phone: 'Telefon' },
+      common: { loading: 'Laden...', save: 'Speichern', cancel: 'Abbrechen', name: 'Name', status: 'Status', actions: 'Aktionen', edit: 'Bearbeiten', delete: 'Löschen', active: 'Aktiv', inactive: 'Inaktiv' },
+      error: { unexpected: 'Fehler' },
+      rooms: { types: { KLASSE: 'Klasse', GRUPPE: 'Gruppe', PROJEKT: 'Projekt', INTEREST: 'Interesse', CUSTOM: 'Eigener' }, roles: { LEADER: 'Leiter', MEMBER: 'Mitglied', PARENT_MEMBER: 'Eltern', GUEST: 'Gast' } },
+      family: { members: 'Mitglieder' },
     },
   },
 })
@@ -96,6 +103,11 @@ const stubs = {
   TabList: { template: '<div class="tablist-stub"><slot /></div>' },
   Tab: { template: '<div class="tab-stub"><slot /></div>', props: ['value'] },
   TabPanels: { template: '<div class="tabpanels-stub"><slot /></div>' },
+  IconField: { template: '<div class="iconfield-stub"><slot /></div>' },
+  InputIcon: { template: '<span class="inputicon-stub" />' },
+  SelectButton: { template: '<div class="selectbutton-stub" />', props: ['modelValue', 'options'] },
+  ToggleSwitch: { template: '<input type="checkbox" class="toggleswitch-stub" />', props: ['modelValue'] },
+  AutoComplete: { template: '<input class="autocomplete-stub" />', props: ['modelValue', 'suggestions'] },
 }
 
 function mountAdminUsers() {

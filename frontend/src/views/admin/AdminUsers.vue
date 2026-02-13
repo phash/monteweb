@@ -51,6 +51,12 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 const allSections = ref<SchoolSectionInfo[]>([])
 const editSectionIds = ref<string[]>([])
 
+// Special roles editing
+const editPutzorga = ref(false)
+const editPutzorgaSections = ref<string[]>([])
+const editElternbeirat = ref(false)
+const editElternbeiratSections = ref<string[]>([])
+
 // Edit dialog
 const showEdit = ref(false)
 const editUser = ref<UserInfo | null>(null)
@@ -118,11 +124,13 @@ const roomRoleOptions = computed(() => [
   { label: t('rooms.roles.GUEST'), value: 'GUEST' as RoomRole },
 ])
 
+// When filtering by special role, store results separately
+const specialRoleUsers = ref<UserInfo[]>([])
+const isSpecialRoleFiltering = computed(() => !!filterSpecialRole.value)
+
 const displayedUsers = computed(() => {
-  if (!filterSpecialRole.value) return users.value
-  return users.value.filter(u =>
-    u.specialRoles?.some(r => r === filterSpecialRole.value || r.startsWith(filterSpecialRole.value + ':'))
-  )
+  if (isSpecialRoleFiltering.value) return specialRoleUsers.value
+  return users.value
 })
 
 async function loadUsers() {
@@ -151,9 +159,24 @@ async function loadUsers() {
   }
 }
 
-function onFilterChange() {
+async function onFilterChange() {
   page.value = 0
-  loadUsers()
+  if (filterSpecialRole.value) {
+    await loadSpecialRoleUsers()
+  } else {
+    specialRoleUsers.value = []
+    await loadUsers()
+  }
+}
+
+async function loadSpecialRoleUsers() {
+  loading.value = true
+  try {
+    const res = await usersApi.findBySpecialRole(filterSpecialRole.value!)
+    specialRoleUsers.value = res.data.data
+  } finally {
+    loading.value = false
+  }
 }
 
 function onSearchInput() {
@@ -198,6 +221,18 @@ async function openEdit(user: UserInfo) {
   editSectionIds.value = (user.specialRoles || [])
     .filter(r => r.startsWith('SECTION_ADMIN:'))
     .map(r => r.substring('SECTION_ADMIN:'.length))
+  // Extract PUTZORGA special roles
+  const putzorgaRoles = (user.specialRoles || []).filter(r => r === 'PUTZORGA' || r.startsWith('PUTZORGA:'))
+  editPutzorga.value = putzorgaRoles.length > 0
+  editPutzorgaSections.value = putzorgaRoles
+    .filter(r => r.startsWith('PUTZORGA:'))
+    .map(r => r.substring('PUTZORGA:'.length))
+  // Extract ELTERNBEIRAT special roles
+  const elternbeiratRoles = (user.specialRoles || []).filter(r => r === 'ELTERNBEIRAT' || r.startsWith('ELTERNBEIRAT:'))
+  editElternbeirat.value = elternbeiratRoles.length > 0
+  editElternbeiratSections.value = elternbeiratRoles
+    .filter(r => r.startsWith('ELTERNBEIRAT:'))
+    .map(r => r.substring('ELTERNBEIRAT:'.length))
   userRooms.value = []
   userFamilies.value = []
   selectedRoom.value = null
@@ -229,29 +264,62 @@ async function saveProfile() {
     }
     // Save SECTION_ADMIN section assignments
     if (editAssignedRoles.value.includes('SECTION_ADMIN')) {
-      const currentSectionRoles = (editUser.value.specialRoles || [])
-        .filter(r => r.startsWith('SECTION_ADMIN:'))
-      const newSectionRoles = editSectionIds.value.map(id => `SECTION_ADMIN:${id}`)
-      // Remove old section assignments
-      for (const role of currentSectionRoles) {
-        if (!newSectionRoles.includes(role)) {
-          await usersApi.removeSpecialRole(editUser.value.id, role)
-        }
-      }
-      // Add new section assignments
-      for (const role of newSectionRoles) {
-        if (!currentSectionRoles.includes(role)) {
-          await usersApi.addSpecialRole(editUser.value.id, role)
-        }
-      }
+      await syncSpecialRoles(editUser.value.id, 'SECTION_ADMIN', editSectionIds.value, editUser.value.specialRoles || [])
     }
+    // Save PUTZORGA special roles
+    await syncSpecialRoles(
+      editUser.value.id, 'PUTZORGA',
+      editPutzorga.value ? editPutzorgaSections.value : null,
+      editUser.value.specialRoles || [],
+    )
+    // Save ELTERNBEIRAT special roles
+    await syncSpecialRoles(
+      editUser.value.id, 'ELTERNBEIRAT',
+      editElternbeirat.value ? editElternbeiratSections.value : null,
+      editUser.value.specialRoles || [],
+    )
     toast.add({ severity: 'success', summary: t('admin.userSaved'), life: 3000 })
     showEdit.value = false
-    await loadUsers()
+    if (isSpecialRoleFiltering.value) {
+      await loadSpecialRoleUsers()
+    } else {
+      await loadUsers()
+    }
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   } finally {
     editLoading.value = false
+  }
+}
+
+/**
+ * Syncs special role entries for a given prefix.
+ * @param sectionIds - array of section IDs (section-scoped roles), or null to remove all
+ *   An empty array with the role enabled means global (prefix only, no sections).
+ */
+async function syncSpecialRoles(userId: string, prefix: string, sectionIds: string[] | null, currentSpecialRoles: string[]) {
+  const currentRoles = currentSpecialRoles.filter(r => r === prefix || r.startsWith(prefix + ':'))
+  if (sectionIds === null) {
+    // Remove all roles with this prefix
+    for (const role of currentRoles) {
+      await usersApi.removeSpecialRole(userId, role)
+    }
+    return
+  }
+  const newRoles = sectionIds.length > 0
+    ? sectionIds.map(id => `${prefix}:${id}`)
+    : [prefix] // global role if no sections selected
+  // Remove old entries not in new set
+  for (const role of currentRoles) {
+    if (!newRoles.includes(role)) {
+      await usersApi.removeSpecialRole(userId, role)
+    }
+  }
+  // Add new entries not in current set
+  for (const role of newRoles) {
+    if (!currentRoles.includes(role)) {
+      await usersApi.addSpecialRole(userId, role)
+    }
   }
 }
 
@@ -422,8 +490,8 @@ onUnmounted(() => {
       :loading="loading"
       :paginator="true"
       :rows="rows"
-      :totalRecords="filterSpecialRole ? displayedUsers.length : totalRecords"
-      :lazy="!filterSpecialRole"
+      :totalRecords="isSpecialRoleFiltering ? displayedUsers.length : totalRecords"
+      :lazy="!isSpecialRoleFiltering"
       @page="onPage"
       stripedRows
       scrollable
@@ -534,6 +602,39 @@ onUnmounted(() => {
                   class="w-full"
                   display="chip"
                 />
+              </div>
+              <div class="form-field">
+                <label>{{ t('admin.specialRoles') }}</label>
+                <div class="special-roles-section">
+                  <div class="special-role-row">
+                    <Checkbox v-model="editPutzorga" inputId="sr-putzorga" :binary="true" />
+                    <label for="sr-putzorga">Putz-Orga</label>
+                  </div>
+                  <MultiSelect
+                    v-if="editPutzorga"
+                    v-model="editPutzorgaSections"
+                    :options="allSections.map(s => ({ label: s.name, value: s.id }))"
+                    optionLabel="label"
+                    optionValue="value"
+                    :placeholder="t('admin.allSectionsGlobal')"
+                    class="w-full special-role-sections"
+                    display="chip"
+                  />
+                  <div class="special-role-row">
+                    <Checkbox v-model="editElternbeirat" inputId="sr-elternbeirat" :binary="true" />
+                    <label for="sr-elternbeirat">Elternbeirat</label>
+                  </div>
+                  <MultiSelect
+                    v-if="editElternbeirat"
+                    v-model="editElternbeiratSections"
+                    :options="allSections.map(s => ({ label: s.name, value: s.id }))"
+                    optionLabel="label"
+                    optionValue="value"
+                    :placeholder="t('admin.allSectionsGlobal')"
+                    class="w-full special-role-sections"
+                    display="chip"
+                  />
+                </div>
               </div>
               <div class="form-actions">
                 <Button :label="t('common.save')" type="submit" :loading="editLoading" />
@@ -756,5 +857,26 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+}
+
+.special-roles-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.special-role-row {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.special-role-row label {
+  font-size: var(--mw-font-size-sm);
+  cursor: pointer;
+}
+
+.special-role-sections {
+  margin-left: 1.5rem;
 }
 </style>

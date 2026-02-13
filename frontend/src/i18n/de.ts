@@ -358,6 +358,8 @@ export default {
     noUsersFound: 'Keine Benutzer gefunden',
     assignedRoles: 'Zugewiesene Rollen',
     assignedRolesHint: 'Rollen, zwischen denen der Benutzer wechseln kann',
+    specialRoles: 'Sonderrollen',
+    allSectionsGlobal: 'Alle Bereiche (global)',
   },
   jobboard: {
     title: 'Jobbörse',

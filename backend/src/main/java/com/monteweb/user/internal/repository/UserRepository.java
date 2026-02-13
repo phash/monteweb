@@ -32,7 +32,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Optional<User> findByOidcProviderAndOidcSubject(String oidcProvider, String oidcSubject);
 
-    @Query(value = "SELECT * FROM users WHERE is_active = true AND :role = ANY(special_roles)", nativeQuery = true)
+    @Query(value = "SELECT * FROM users WHERE is_active = true AND EXISTS (SELECT 1 FROM unnest(special_roles) sr WHERE sr = :role OR sr LIKE :role || ':%')", nativeQuery = true)
     java.util.List<User> findBySpecialRoleContaining(String role);
 
     @Query("""

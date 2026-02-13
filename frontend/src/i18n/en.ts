@@ -358,6 +358,8 @@ export default {
     noUsersFound: 'No users found',
     assignedRoles: 'Assigned Roles',
     assignedRolesHint: 'Roles the user can switch between',
+    specialRoles: 'Special Roles',
+    allSectionsGlobal: 'All sections (global)',
   },
   jobboard: {
     title: 'Job Board',
