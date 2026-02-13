@@ -113,6 +113,8 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInfo joinByInviteCode(String inviteCode, UUID userId) {
+        assertCanJoinFamily(userId);
+
         var family = familyRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new BusinessException("Invalid invite code"));
 
@@ -191,6 +193,56 @@ public class FamilyService implements FamilyModuleApi {
     }
 
     @Transactional
+    public void leaveFamily(UUID familyId, UUID userId) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+
+        if (!familyRepository.isMember(userId, familyId)) {
+            throw new BusinessException("Not a member of this family");
+        }
+
+        // Check if this is the last PARENT and there are children
+        var member = family.getMembers().stream()
+                .filter(m -> m.getUserId().equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Member not found"));
+
+        if (member.getRole() == FamilyMemberRole.PARENT) {
+            long parentCount = family.getMembers().stream()
+                    .filter(m -> m.getRole() == FamilyMemberRole.PARENT)
+                    .count();
+            boolean hasChildren = family.getMembers().stream()
+                    .anyMatch(m -> m.getRole() == FamilyMemberRole.CHILD);
+            if (parentCount <= 1 && hasChildren) {
+                throw new BusinessException("Cannot leave: you are the last parent with children in this family");
+            }
+        }
+
+        family.getMembers().removeIf(m -> m.getUserId().equals(userId));
+
+        // If no members left, delete the family
+        if (family.getMembers().isEmpty()) {
+            invitationRepository.deleteByFamilyId(familyId);
+            familyRepository.delete(family);
+        } else {
+            familyRepository.save(family);
+        }
+    }
+
+    @Transactional
+    public void deleteFamily(UUID familyId, UUID requestingUserId) {
+        var user = userModuleApi.findById(requestingUserId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new BusinessException("Only SUPERADMIN can delete families");
+        }
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+        invitationRepository.deleteByFamilyId(familyId);
+        familyRepository.delete(family);
+    }
+
+    @Transactional
     public void updateAvatarUrl(UUID familyId, String avatarUrl) {
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
@@ -239,6 +291,8 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInvitationInfo acceptInvitation(UUID invitationId, UUID userId) {
+        assertCanJoinFamily(userId);
+
         var invitation = invitationRepository.findById(invitationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation", invitationId));
         if (!invitation.getInviteeId().equals(userId)) {
@@ -286,6 +340,17 @@ public class FamilyService implements FamilyModuleApi {
         invitationRepository.save(invitation);
 
         return toInvitationInfo(invitation);
+    }
+
+    private void assertCanJoinFamily(UUID userId) {
+        var user = userModuleApi.findById(userId);
+        if (user.isPresent()) {
+            var role = user.get().role();
+            if (role == com.monteweb.user.UserRole.TEACHER
+                    || role == com.monteweb.user.UserRole.SECTION_ADMIN) {
+                throw new BusinessException("Teachers and section admins cannot join families");
+            }
+        }
     }
 
     private FamilyInvitationInfo toInvitationInfo(FamilyInvitation invitation) {

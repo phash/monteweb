@@ -54,6 +54,8 @@ export interface RoomMember {
   avatarUrl: string | null
   role: RoomRole
   joinedAt: string
+  familyId?: string
+  familyName?: string
 }
 
 export interface CreateRoomRequest {

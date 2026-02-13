@@ -8,6 +8,8 @@ import com.monteweb.files.internal.model.RoomFolder;
 import com.monteweb.files.internal.repository.RoomFileRepository;
 import com.monteweb.files.internal.repository.RoomFolderRepository;
 import com.monteweb.room.RoomModuleApi;
+import com.monteweb.room.RoomRole;
+import com.monteweb.user.UserRole;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
@@ -19,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -80,16 +83,31 @@ public class FileService implements FilesModuleApi {
         } else {
             files = fileRepository.findByRoomIdAndFolderIdOrderByCreatedAtDesc(roomId, folderId);
         }
-        return files.stream().map(this::toFileInfo).toList();
+
+        // Filter files by audience based on user's role
+        Set<String> allowedAudiences = getAllowedAudiences(userId, roomId);
+        return files.stream()
+                .filter(f -> allowedAudiences.contains(f.getAudience()))
+                .map(this::toFileInfo)
+                .toList();
     }
 
-    public FileInfo uploadFile(UUID roomId, UUID folderId, UUID userId, MultipartFile file) {
+    public FileInfo uploadFile(UUID roomId, UUID folderId, UUID userId, MultipartFile file, String audience) {
         requireRoomMembership(userId, roomId);
 
         if (folderId != null) {
             folderRepository.findById(folderId)
                     .filter(f -> f.getRoomId().equals(roomId))
                     .orElseThrow(() -> new ResourceNotFoundException("Folder", folderId));
+        }
+
+        // Validate audience value
+        String resolvedAudience = "ALL";
+        if (audience != null && !audience.isBlank()) {
+            if (!Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY").contains(audience.toUpperCase())) {
+                throw new BusinessException("Invalid audience value: " + audience);
+            }
+            resolvedAudience = audience.toUpperCase();
         }
 
         String storedName = UUID.randomUUID() + "_" + sanitizeFileName(file.getOriginalFilename());
@@ -104,6 +122,7 @@ public class FileService implements FilesModuleApi {
         roomFile.setFileSize(file.getSize());
         roomFile.setStoragePath(storagePath);
         roomFile.setUploadedBy(userId);
+        roomFile.setAudience(resolvedAudience);
 
         return toFileInfo(fileRepository.save(roomFile));
     }
@@ -116,15 +135,18 @@ public class FileService implements FilesModuleApi {
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("File", fileId));
 
+        requireAudienceAccess(userId, roomId, roomFile.getAudience());
         return storageService.download(roomFile.getStoragePath());
     }
 
     @Transactional(readOnly = true)
     public RoomFile getFileMetadata(UUID roomId, UUID fileId, UUID userId) {
         requireRoomMembership(userId, roomId);
-        return fileRepository.findById(fileId)
+        var roomFile = fileRepository.findById(fileId)
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("File", fileId));
+        requireAudienceAccess(userId, roomId, roomFile.getAudience());
+        return roomFile;
     }
 
     public void deleteFile(UUID roomId, UUID fileId, UUID userId) {
@@ -212,6 +234,48 @@ public class FileService implements FilesModuleApi {
         }
     }
 
+    private void requireAudienceAccess(UUID userId, UUID roomId, String audience) {
+        if ("ALL".equals(audience)) return;
+        Set<String> allowed = getAllowedAudiences(userId, roomId);
+        if (!allowed.contains(audience)) {
+            throw new ForbiddenException("You do not have access to this file");
+        }
+    }
+
+    /**
+     * Determines which audience values a user is allowed to see in a room.
+     * LEADER, TEACHER, SUPERADMIN, SECTION_ADMIN see all audiences.
+     * PARENT_MEMBER sees ALL + PARENTS_ONLY.
+     * MEMBER (student) sees ALL + STUDENTS_ONLY.
+     * GUEST sees ALL only.
+     */
+    private Set<String> getAllowedAudiences(UUID userId, UUID roomId) {
+        var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId).orElse(null);
+        var userInfo = userModuleApi.findById(userId).orElse(null);
+        var userRole = userInfo != null ? userInfo.role() : null;
+
+        // Leaders, teachers, superadmins, section admins see everything
+        if (roomRole == RoomRole.LEADER
+                || userRole == UserRole.TEACHER
+                || userRole == UserRole.SUPERADMIN
+                || userRole == UserRole.SECTION_ADMIN) {
+            return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
+        }
+
+        // Parent members see ALL + PARENTS_ONLY
+        if (roomRole == RoomRole.PARENT_MEMBER || userRole == UserRole.PARENT) {
+            return Set.of("ALL", "PARENTS_ONLY");
+        }
+
+        // Students (MEMBER role) see ALL + STUDENTS_ONLY
+        if (userRole == UserRole.STUDENT) {
+            return Set.of("ALL", "STUDENTS_ONLY");
+        }
+
+        // Guests and others see ALL only
+        return Set.of("ALL");
+    }
+
     private FileInfo toFileInfo(RoomFile f) {
         String uploaderName = userModuleApi.findById(f.getUploadedBy())
                 .map(u -> u.firstName() + " " + u.lastName())
@@ -226,6 +290,7 @@ public class FileService implements FilesModuleApi {
                 f.getFileSize(),
                 f.getUploadedBy(),
                 uploaderName,
+                f.getAudience(),
                 f.getCreatedAt()
         );
     }

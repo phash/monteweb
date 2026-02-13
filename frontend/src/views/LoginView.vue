@@ -84,22 +84,22 @@ function loginWithSso() {
       <form @submit.prevent="submit" class="login-form">
         <template v-if="!isLogin">
           <div class="form-field">
-            <label for="firstName">{{ t('auth.firstName') }}</label>
+            <label for="firstName" class="required">{{ t('auth.firstName') }}</label>
             <InputText id="firstName" v-model="form.firstName" required class="w-full" />
           </div>
           <div class="form-field">
-            <label for="lastName">{{ t('auth.lastName') }}</label>
+            <label for="lastName" class="required">{{ t('auth.lastName') }}</label>
             <InputText id="lastName" v-model="form.lastName" required class="w-full" />
           </div>
         </template>
 
         <div class="form-field">
-          <label for="email">{{ t('auth.email') }}</label>
+          <label for="email" class="required">{{ t('auth.email') }}</label>
           <InputText id="email" v-model="form.email" type="email" required class="w-full" />
         </div>
 
         <div class="form-field">
-          <label for="password">{{ t('auth.password') }}</label>
+          <label for="password" class="required">{{ t('auth.password') }}</label>
           <Password
             id="password"
             v-model="form.password"

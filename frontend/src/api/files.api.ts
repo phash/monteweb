@@ -9,10 +9,11 @@ export const filesApi = {
     })
   },
 
-  uploadFile(roomId: string, file: File, folderId?: string) {
+  uploadFile(roomId: string, file: File, folderId?: string, audience?: string) {
     const formData = new FormData()
     formData.append('file', file)
     if (folderId) formData.append('folderId', folderId)
+    if (audience) formData.append('audience', audience)
     return client.post<ApiResponse<FileInfo>>(`/rooms/${roomId}/files`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })

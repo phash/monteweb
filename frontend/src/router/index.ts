@@ -132,6 +132,12 @@ const router = createRouter({
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),
         },
+        {
+          path: 'section-admin',
+          name: 'section-admin',
+          component: () => import('@/views/admin/SectionAdminView.vue'),
+          meta: { requiresSectionAdmin: true },
+        },
         // Admin routes
         {
           path: 'admin',
@@ -218,6 +224,10 @@ router.beforeEach(async (to) => {
     } else {
       return { name: 'dashboard' }
     }
+  }
+
+  if (to.meta.requiresSectionAdmin && !auth.isSectionAdmin && !auth.isAdmin) {
+    return { name: 'dashboard' }
   }
 })
 

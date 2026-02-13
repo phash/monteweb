@@ -67,4 +67,16 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, UU
             @Param("from") LocalDate from,
             @Param("to") LocalDate to,
             Pageable pageable);
+
+    @Query("""
+            SELECT e FROM CalendarEvent e
+            WHERE e.id IN :eventIds
+              AND e.cancelled = false
+              AND e.startDate <= :to AND e.endDate >= :from
+            ORDER BY e.startDate ASC, e.startTime ASC NULLS FIRST
+            """)
+    List<CalendarEvent> findByIdsAndDateRange(
+            @Param("eventIds") List<UUID> eventIds,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }

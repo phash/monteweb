@@ -1,19 +1,27 @@
 package com.monteweb.family.internal.controller;
 
+import com.monteweb.calendar.CalendarModuleApi;
+import com.monteweb.calendar.EventInfo;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.internal.dto.*;
 import com.monteweb.family.internal.service.FamilyService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.util.AvatarUtils;
+import com.monteweb.shared.util.ICalService;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -23,9 +31,15 @@ import java.util.UUID;
 public class FamilyController {
 
     private final FamilyService familyService;
+    private final CalendarModuleApi calendarModuleApi;
+    private final ICalService iCalService;
 
-    public FamilyController(FamilyService familyService) {
+    public FamilyController(FamilyService familyService,
+                            @Autowired(required = false) CalendarModuleApi calendarModuleApi,
+                            @Autowired(required = false) ICalService iCalService) {
         this.familyService = familyService;
+        this.calendarModuleApi = calendarModuleApi;
+        this.iCalService = iCalService;
     }
 
     @GetMapping
@@ -40,6 +54,14 @@ public class FamilyController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var family = familyService.create(request.name(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(family));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteFamily(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        familyService.deleteFamily(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Family deleted"));
     }
 
     @GetMapping("/mine")
@@ -79,6 +101,13 @@ public class FamilyController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         familyService.removeMember(id, memberId, userId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Member removed"));
+    }
+
+    @PostMapping("/{id}/leave")
+    public ResponseEntity<ApiResponse<Void>> leaveFamily(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        familyService.leaveFamily(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Left family"));
     }
 
     @PostMapping("/{id}/avatar")
@@ -140,5 +169,60 @@ public class FamilyController {
             throw new BusinessException("Not a member of this family");
         }
         return ResponseEntity.ok(ApiResponse.ok(familyService.getFamilyInvitations(id)));
+    }
+
+    // -- Family Calendar -------------------------------------------------------
+
+    @GetMapping("/{id}/calendar")
+    public ResponseEntity<ApiResponse<List<EventInfo>>> getFamilyCalendar(
+            @PathVariable UUID id,
+            @RequestParam LocalDate from,
+            @RequestParam LocalDate to) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        if (!familyService.isUserInFamily(userId, id)) {
+            throw new BusinessException("Not a member of this family");
+        }
+        if (calendarModuleApi == null) {
+            return ResponseEntity.ok(ApiResponse.ok(List.of()));
+        }
+        var memberUserIds = getFamilyMemberUserIds(id);
+        var events = calendarModuleApi.getEventsForUserIds(memberUserIds, from, to);
+        return ResponseEntity.ok(ApiResponse.ok(events));
+    }
+
+    @GetMapping("/{id}/calendar/ical")
+    public ResponseEntity<byte[]> getFamilyCalendarIcal(
+            @PathVariable UUID id,
+            @RequestParam(required = false) LocalDate from,
+            @RequestParam(required = false) LocalDate to) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        if (!familyService.isUserInFamily(userId, id)) {
+            throw new BusinessException("Not a member of this family");
+        }
+        if (calendarModuleApi == null || iCalService == null) {
+            String empty = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//MonteWeb//Calendar//DE\r\nEND:VCALENDAR\r\n";
+            return buildIcalResponse(empty.getBytes(StandardCharsets.UTF_8));
+        }
+
+        LocalDate effectiveFrom = from != null ? from : LocalDate.now();
+        LocalDate effectiveTo = to != null ? to : LocalDate.now().plusDays(365);
+
+        var memberUserIds = getFamilyMemberUserIds(id);
+        var events = calendarModuleApi.getEventsForUserIds(memberUserIds, effectiveFrom, effectiveTo);
+        String icalContent = iCalService.generateIcal(events);
+        return buildIcalResponse(icalContent.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private List<UUID> getFamilyMemberUserIds(UUID familyId) {
+        return familyService.findById(familyId)
+                .map(f -> f.members().stream().map(FamilyInfo.FamilyMemberInfo::userId).toList())
+                .orElse(List.of());
+    }
+
+    private ResponseEntity<byte[]> buildIcalResponse(byte[] content) {
+        var headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/calendar"));
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=family-calendar.ics");
+        return new ResponseEntity<>(content, headers, HttpStatus.OK);
     }
 }

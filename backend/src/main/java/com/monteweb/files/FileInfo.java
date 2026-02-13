@@ -15,6 +15,7 @@ public record FileInfo(
         long fileSize,
         UUID uploadedBy,
         String uploaderName,
+        String audience,
         Instant createdAt
 ) {
 }

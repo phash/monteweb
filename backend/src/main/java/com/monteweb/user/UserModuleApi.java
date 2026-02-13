@@ -68,4 +68,9 @@ public interface UserModuleApi {
      * Finds users that have a specific special role (e.g. "SECTION_ADMIN:uuid").
      */
     List<UserInfo> findBySpecialRoleContaining(String role);
+
+    /**
+     * Finds multiple users by their IDs. Returns only the ones that exist.
+     */
+    List<UserInfo> findByIds(List<UUID> ids);
 }

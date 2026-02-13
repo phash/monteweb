@@ -145,7 +145,10 @@ public class CleaningAdminController {
             return;
         }
         if (user.specialRoles() != null) {
-            // PUTZORGA special role (section-scoped)
+            // PUTZORGA special role (global or section-scoped)
+            if (user.specialRoles().contains("PUTZORGA")) {
+                return;
+            }
             if (sectionId != null && user.specialRoles().contains("PUTZORGA:" + sectionId)) {
                 return;
             }

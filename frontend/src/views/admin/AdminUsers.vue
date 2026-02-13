@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
@@ -16,7 +16,10 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import Select from 'primevue/select'
+import SelectButton from 'primevue/selectbutton'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
@@ -33,6 +36,12 @@ const totalRecords = ref(0)
 const loading = ref(false)
 const page = ref(0)
 const rows = ref(20)
+
+// Filters
+const filterRole = ref<string | null>(null)
+const filterStatus = ref<string>('all')
+const searchQuery = ref('')
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 // Edit dialog
 const showEdit = ref(false)
@@ -66,6 +75,17 @@ const roleOptions: { label: string; value: UserRole }[] = [
   { label: 'Student', value: 'STUDENT' },
 ]
 
+const filterRoleOptions = computed(() => [
+  { label: t('admin.allRoles'), value: null },
+  ...roleOptions,
+])
+
+const statusOptions = computed(() => [
+  { label: t('admin.allStatuses'), value: 'all' },
+  { label: t('common.active'), value: 'active' },
+  { label: t('common.inactive'), value: 'inactive' },
+])
+
 const roomRoleOptions = computed(() => [
   { label: t('rooms.roles.LEADER'), value: 'LEADER' as RoomRole },
   { label: t('rooms.roles.MEMBER'), value: 'MEMBER' as RoomRole },
@@ -76,12 +96,42 @@ const roomRoleOptions = computed(() => [
 async function loadUsers() {
   loading.value = true
   try {
-    const res = await usersApi.list({ page: page.value, size: rows.value })
+    const params: { page: number; size: number; role?: string; active?: boolean; search?: string } = {
+      page: page.value,
+      size: rows.value,
+    }
+    if (filterRole.value) {
+      params.role = filterRole.value
+    }
+    if (filterStatus.value === 'active') {
+      params.active = true
+    } else if (filterStatus.value === 'inactive') {
+      params.active = false
+    }
+    if (searchQuery.value.trim()) {
+      params.search = searchQuery.value.trim()
+    }
+    const res = await usersApi.list(params)
     users.value = res.data.data.content
     totalRecords.value = res.data.data.totalElements
   } finally {
     loading.value = false
   }
+}
+
+function onFilterChange() {
+  page.value = 0
+  loadUsers()
+}
+
+function onSearchInput() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+  searchDebounceTimer = setTimeout(() => {
+    page.value = 0
+    loadUsers()
+  }, 300)
 }
 
 function onPage(event: { page: number; rows: number }) {
@@ -238,11 +288,45 @@ async function searchRooms(event: { query: string }) {
 }
 
 onMounted(loadUsers)
+
+onUnmounted(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+})
 </script>
 
 <template>
   <div>
     <PageTitle :title="t('admin.users')" />
+
+    <div class="filter-bar">
+      <Select
+        v-model="filterRole"
+        :options="filterRoleOptions"
+        optionLabel="label"
+        optionValue="value"
+        :placeholder="t('admin.filterByRole')"
+        class="filter-role"
+        @change="onFilterChange"
+      />
+      <SelectButton
+        v-model="filterStatus"
+        :options="statusOptions"
+        optionLabel="label"
+        optionValue="value"
+        @change="onFilterChange"
+      />
+      <IconField class="filter-search">
+        <InputIcon class="pi pi-search" />
+        <InputText
+          v-model="searchQuery"
+          :placeholder="t('admin.searchUsers')"
+          class="w-full"
+          @input="onSearchInput"
+        />
+      </IconField>
+    </div>
 
     <LoadingSpinner v-if="loading && users.length === 0" />
 
@@ -259,6 +343,9 @@ onMounted(loadUsers)
       scrollable
       class="card"
     >
+      <template #empty>
+        <div class="empty-table">{{ t('admin.noUsersFound') }}</div>
+      </template>
       <Column field="displayName" :header="t('common.name')" />
       <Column field="email" :header="t('auth.email')" />
       <Column field="role" :header="t('admin.columnRole')">
@@ -391,6 +478,29 @@ onMounted(loadUsers)
 </template>
 
 <style scoped>
+.filter-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-role {
+  min-width: 180px;
+}
+
+.filter-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.empty-table {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--p-text-muted-color);
+}
+
 .dialog-form {
   display: flex;
   flex-direction: column;

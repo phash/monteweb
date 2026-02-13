@@ -14,8 +14,11 @@ const navItems = computed(() => {
   const items = [
     { to: '/', icon: 'pi pi-home', label: t('nav.dashboard'), name: 'dashboard' },
     { to: '/rooms', icon: 'pi pi-th-large', label: t('nav.rooms'), name: 'rooms' },
-    { to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' },
   ]
+
+  if (auth.canHaveFamily) {
+    items.push({ to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' })
+  }
 
   if (admin.isModuleEnabled('messaging')) {
     items.push({ to: '/messages', icon: 'pi pi-comments', label: t('nav.messages'), name: 'messages' })
@@ -31,6 +34,10 @@ const navItems = computed(() => {
   }
   if (admin.isModuleEnabled('forms')) {
     items.push({ to: '/forms', icon: 'pi pi-list-check', label: t('nav.forms'), name: 'forms' })
+  }
+
+  if (auth.isSectionAdmin && !auth.isAdmin) {
+    items.push({ to: '/section-admin', icon: 'pi pi-sitemap', label: t('sectionAdmin.title'), name: 'section-admin' })
   }
 
   if (auth.isPutzOrga && !auth.isAdmin) {

@@ -17,7 +17,11 @@ export const useAuthStore = defineStore('auth', () => {
   )
   const isStudent = computed(() => user.value?.role === 'STUDENT')
   const isPutzOrga = computed(() =>
-    user.value?.specialRoles?.some((r: string) => r.startsWith('PUTZORGA:')) ?? false
+    user.value?.specialRoles?.some((r: string) => r === 'PUTZORGA' || r.startsWith('PUTZORGA:')) ?? false
+  )
+  const isSectionAdmin = computed(() => user.value?.role === 'SECTION_ADMIN')
+  const canHaveFamily = computed(() =>
+    user.value?.role === 'PARENT' || user.value?.role === 'STUDENT' || user.value?.role === 'SUPERADMIN'
   )
 
   async function login(data: LoginRequest) {
@@ -89,6 +93,8 @@ export const useAuthStore = defineStore('auth', () => {
     isTeacher,
     isStudent,
     isPutzOrga,
+    isSectionAdmin,
+    canHaveFamily,
     login,
     register,
     logout,

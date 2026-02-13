@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useDiscussionsStore } from '@/stores/discussions'
@@ -36,12 +36,28 @@ const audienceOptions = [
 ]
 
 const isLeader = ref(false)
+const userRoomRole = ref<string | null>(null)
+
+const filteredThreads = computed(() => {
+  const threads = discussions.threads
+  // LEADER and admins see all threads (backend already filters, this is defense-in-depth)
+  if (isLeader.value) return threads
+
+  const role = userRoomRole.value
+  return threads.filter(thread => {
+    if (!thread.audience || thread.audience === 'ALLE') return true
+    if (thread.audience === 'ELTERN' && role === 'PARENT_MEMBER') return true
+    if (thread.audience === 'KINDER' && role === 'MEMBER') return true
+    return false
+  })
+})
 
 onMounted(async () => {
   await discussions.fetchThreads(props.roomId)
-  // Check if current user is LEADER
+  // Check if current user is LEADER and determine room role
   const member = rooms.currentRoom?.members?.find(m => m.userId === auth.user?.id)
   isLeader.value = member?.role === 'LEADER' || auth.isAdmin
+  userRoomRole.value = member?.role ?? null
 })
 
 function selectThread(threadId: string) {
@@ -97,15 +113,15 @@ function formatDate(date: string) {
         />
       </div>
 
-      <LoadingSpinner v-if="discussions.loading && !discussions.threads.length" />
+      <LoadingSpinner v-if="discussions.loading && !filteredThreads.length" />
       <EmptyState
-        v-else-if="!discussions.threads.length"
+        v-else-if="!filteredThreads.length"
         icon="pi pi-comments"
         :message="t('discussions.noThreads')"
       />
       <div v-else class="thread-list">
         <div
-          v-for="thread in discussions.threads"
+          v-for="thread in filteredThreads"
           :key="thread.id"
           class="thread-item card"
           @click="selectThread(thread.id)"

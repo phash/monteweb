@@ -377,7 +377,7 @@ onMounted(loadData)
     <Dialog v-model:visible="showCreate" :header="t('rooms.create')" modal :style="{ width: '500px', maxWidth: '90vw' }">
       <form @submit.prevent="createRoom" class="dialog-form">
         <div class="form-field">
-          <label>{{ t('rooms.name') }}</label>
+          <label class="required">{{ t('rooms.name') }}</label>
           <InputText v-model="form.name" required class="w-full" />
         </div>
         <div class="form-field">
@@ -419,7 +419,7 @@ onMounted(loadData)
           @remove="onAvatarRemove"
         />
         <div class="form-field">
-          <label>{{ t('rooms.name') }}</label>
+          <label class="required">{{ t('rooms.name') }}</label>
           <InputText v-model="editForm.name" required class="w-full" />
         </div>
         <div class="form-field">

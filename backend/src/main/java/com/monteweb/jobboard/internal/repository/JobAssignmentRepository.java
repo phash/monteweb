@@ -14,6 +14,8 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
 
     List<JobAssignment> findByJobId(UUID jobId);
 
+    void deleteByJobId(UUID jobId);
+
     List<JobAssignment> findByUserId(UUID userId);
 
     List<JobAssignment> findByFamilyId(UUID familyId);

@@ -90,6 +90,18 @@ public class RoomService implements RoomModuleApi {
         return subscriptionRepository.findMutedRoomIdsByUserId(userId);
     }
 
+    @Override
+    public List<RoomInfo> findBySectionId(UUID sectionId) {
+        return roomRepository.findBySectionIdAndArchivedFalse(sectionId,
+                Pageable.unpaged()).stream().map(this::toRoomInfo).toList();
+    }
+
+    @Override
+    @Transactional
+    public RoomInfo createRoom(String name, String description, String type, UUID sectionId, UUID createdBy) {
+        return create(name, description, RoomType.valueOf(type), sectionId, createdBy);
+    }
+
     // --- Internal service methods ---
 
     public Page<RoomInfo> findAll(Pageable pageable) {

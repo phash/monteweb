@@ -141,6 +141,19 @@ public class FormsService implements FormsModuleApi {
         var form = formRepository.findById(formId)
                 .orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
+        var user = userModule.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // SUPERADMIN can delete any form regardless of status
+        if (user.role() == UserRole.SUPERADMIN) {
+            answerRepository.deleteByResponseFormId(formId);
+            responseRepository.deleteByFormId(formId);
+            trackingRepository.deleteByFormId(formId);
+            questionRepository.deleteByFormId(formId);
+            formRepository.delete(form);
+            return;
+        }
+
         if (form.getStatus() != FormStatus.DRAFT) {
             throw new IllegalStateException("Only draft forms can be deleted");
         }
@@ -157,7 +170,7 @@ public class FormsService implements FormsModuleApi {
             throw new IllegalStateException("Only draft forms can be published");
         }
 
-        checkCreatePermission(form.getScope(), form.getScopeId(), userId);
+        checkManagePermission(form, userId);
 
         int qCount = questionRepository.countByFormId(formId);
         if (qCount == 0) {
@@ -188,7 +201,7 @@ public class FormsService implements FormsModuleApi {
             throw new IllegalStateException("Only published forms can be closed");
         }
 
-        checkCreatePermission(form.getScope(), form.getScopeId(), userId);
+        checkManagePermission(form, userId);
 
         form.setStatus(FormStatus.CLOSED);
         form.setClosedAt(Instant.now());
@@ -570,6 +583,14 @@ public class FormsService implements FormsModuleApi {
                 throw new IllegalArgumentException("Only admins can create school-wide forms");
             }
         }
+    }
+
+    private void checkManagePermission(Form form, UUID userId) {
+        var user = userModule.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.role() == UserRole.SUPERADMIN) return;
+        if (form.getCreatedBy().equals(userId)) return;
+        checkCreatePermission(form.getScope(), form.getScopeId(), userId);
     }
 
     private boolean hasSpecialRole(com.monteweb.user.UserInfo user, String roleName, UUID scopeId) {

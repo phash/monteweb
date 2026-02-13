@@ -87,6 +87,10 @@ public class UserService implements UserModuleApi {
         return userRepository.findByActiveTrue(pageable).map(this::toUserInfo);
     }
 
+    public Page<UserInfo> findFiltered(UserRole role, Boolean active, String search, Pageable pageable) {
+        return userRepository.findFiltered(role, active, search, pageable).map(this::toUserInfo);
+    }
+
     public User findEntityById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
@@ -193,6 +197,14 @@ public class UserService implements UserModuleApi {
 
     public List<UserInfo> findBySpecialRoleContaining(String rolePrefix) {
         return userRepository.findBySpecialRoleContaining(rolePrefix).stream()
+                .map(this::toUserInfo)
+                .toList();
+    }
+
+    @Override
+    public List<UserInfo> findByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return userRepository.findAllById(ids).stream()
                 .map(this::toUserInfo)
                 .toList();
     }

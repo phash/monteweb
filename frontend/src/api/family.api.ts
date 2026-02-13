@@ -1,5 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
+import type { CalendarEvent } from '@/types/calendar'
 import type { FamilyInfo, FamilyInvitationInfo } from '@/types/family'
 
 export const familyApi = {
@@ -33,6 +34,10 @@ export const familyApi = {
     return client.delete<ApiResponse<void>>(`/families/${familyId}/members/${memberId}`)
   },
 
+  leaveFamily(familyId: string) {
+    return client.post<ApiResponse<void>>(`/families/${familyId}/leave`)
+  },
+
   uploadAvatar(familyId: string, file: File) {
     const form = new FormData()
     form.append('file', file)
@@ -62,5 +67,16 @@ export const familyApi = {
 
   getFamilyInvitations(familyId: string) {
     return client.get<ApiResponse<FamilyInvitationInfo[]>>(`/families/${familyId}/invitations`)
+  },
+
+  // Family Calendar
+  getFamilyCalendar(familyId: string, from: string, to: string) {
+    return client.get<ApiResponse<CalendarEvent[]>>(`/families/${familyId}/calendar`, {
+      params: { from, to },
+    })
+  },
+
+  downloadFamilyIcal(familyId: string) {
+    return client.get(`/families/${familyId}/calendar/ical`, { responseType: 'blob' })
   },
 }

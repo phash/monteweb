@@ -10,6 +10,7 @@ import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import Tag from 'primevue/tag'
 
 const { t } = useI18n()
 const auth = useAuthStore()
@@ -50,6 +51,23 @@ async function handleAvatarUpload(file: File) {
 async function handleAvatarRemove() {
   await usersApi.removeAvatar()
   await auth.fetchUser()
+}
+
+function roleSeverity(role: string): string {
+  const map: Record<string, string> = {
+    SUPERADMIN: 'danger',
+    SECTION_ADMIN: 'warn',
+    TEACHER: 'info',
+    PARENT: 'success',
+    STUDENT: 'secondary',
+  }
+  return map[role] ?? 'secondary'
+}
+
+function specialRoleSeverity(role: string): string {
+  if (role.startsWith('PUTZORGA')) return 'warn'
+  if (role.startsWith('ELTERNBEIRAT')) return 'info'
+  return 'secondary'
 }
 
 async function togglePush() {
@@ -106,6 +124,24 @@ async function togglePush() {
       </form>
     </div>
 
+    <!-- Roles -->
+    <div class="card profile-card roles-card">
+      <h3>{{ t('profile.roles') }}</h3>
+      <div class="roles-list">
+        <Tag
+          v-if="auth.user?.role"
+          :value="t('profile.roleLabels.' + auth.user.role)"
+          :severity="roleSeverity(auth.user.role) as any"
+        />
+        <Tag
+          v-for="sr in (auth.user?.specialRoles || [])"
+          :key="sr"
+          :value="sr"
+          :severity="specialRoleSeverity(sr) as any"
+        />
+      </div>
+    </div>
+
     <!-- Push Notifications -->
     <div v-if="pushSupported" class="card profile-card push-card">
       <h3>{{ t('profile.pushNotifications') }}</h3>
@@ -150,6 +186,21 @@ async function togglePush() {
   color: var(--mw-text-secondary);
 }
 
+
+.roles-card {
+  margin-top: 1rem;
+}
+
+.roles-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.roles-list {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
 
 .push-card {
   margin-top: 1rem;

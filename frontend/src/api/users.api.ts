@@ -34,7 +34,7 @@ export const usersApi = {
   },
 
   // Admin
-  list(params?: { page?: number; size?: number }) {
+  list(params?: { page?: number; size?: number; role?: string; active?: boolean; search?: string }) {
     return client.get<ApiResponse<PageResponse<UserInfo>>>('/admin/users', { params })
   },
 

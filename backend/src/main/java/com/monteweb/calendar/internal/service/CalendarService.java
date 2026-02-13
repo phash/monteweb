@@ -217,6 +217,20 @@ public class CalendarService implements CalendarModuleApi {
                 .map(e -> toEventInfo(e, null));
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventInfo> getEventsForUserIds(List<UUID> userIds, LocalDate from, LocalDate to) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+        var eventIds = rsvpRepository.findEventIdsByUserIdsAndAccepted(userIds);
+        if (eventIds.isEmpty()) {
+            return List.of();
+        }
+        return eventRepository.findByIdsAndDateRange(eventIds, from, to)
+                .stream().map(e -> toEventInfo(e, null)).toList();
+    }
+
     private void checkCreatePermission(EventScope scope, UUID scopeId, UUID userId) {
         var user = userModule.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

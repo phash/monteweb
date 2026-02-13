@@ -81,6 +81,31 @@ const isLeader = computed(() => {
 })
 const canEditRoom = computed(() => isLeader.value || auth.isAdmin)
 
+// Member grouping computeds
+const leaderMembers = computed(() => {
+  if (!rooms.currentRoom?.members) return []
+  return rooms.currentRoom.members.filter(m => m.role === 'LEADER')
+})
+
+const familyGroups = computed(() => {
+  if (!rooms.currentRoom?.members) return []
+  const nonLeaders = rooms.currentRoom.members.filter(m => m.role !== 'LEADER' && m.familyId)
+  const grouped = new Map<string, { familyId: string; familyName: string; members: typeof nonLeaders }>()
+  for (const member of nonLeaders) {
+    const key = member.familyId!
+    if (!grouped.has(key)) {
+      grouped.set(key, { familyId: key, familyName: member.familyName || key, members: [] })
+    }
+    grouped.get(key)!.members.push(member)
+  }
+  return Array.from(grouped.values())
+})
+
+const otherMembers = computed(() => {
+  if (!rooms.currentRoom?.members) return []
+  return rooms.currentRoom.members.filter(m => m.role !== 'LEADER' && !m.familyId)
+})
+
 onMounted(async () => {
   try {
     await rooms.fetchRoom(props.id)
@@ -443,14 +468,56 @@ async function toggleMute() {
               </div>
             </div>
 
-            <div v-if="rooms.currentRoom.members?.length" class="members-list">
-              <div v-for="member in rooms.currentRoom.members" :key="member.userId" class="member-item">
-                <div class="member-avatar">
-                  <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
-                  <i v-else class="pi pi-user" />
+            <div v-if="rooms.currentRoom.members?.length" class="members-grouped">
+              <!-- Teachers / Leaders -->
+              <div v-if="leaderMembers.length" class="member-group">
+                <h3 class="member-group-title">{{ t('rooms.teachers') }}</h3>
+                <div class="members-list">
+                  <div v-for="member in leaderMembers" :key="member.userId" class="member-item">
+                    <div class="member-avatar">
+                      <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                      <i v-else class="pi pi-user" />
+                    </div>
+                    <span>{{ member.displayName }}</span>
+                    <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                  </div>
                 </div>
-                <span>{{ member.displayName }}</span>
-                <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+              </div>
+
+              <!-- Families -->
+              <div v-if="familyGroups.length" class="member-group">
+                <h3 class="member-group-title">{{ t('rooms.families') }}</h3>
+                <div v-for="family in familyGroups" :key="family.familyId" class="family-group">
+                  <div class="family-group-header">
+                    <i class="pi pi-users" />
+                    <span class="family-group-name">{{ family.familyName }}</span>
+                  </div>
+                  <div class="members-list">
+                    <div v-for="member in family.members" :key="member.userId" class="member-item">
+                      <div class="member-avatar">
+                        <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                        <i v-else class="pi pi-user" />
+                      </div>
+                      <span>{{ member.displayName }}</span>
+                      <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Other members -->
+              <div v-if="otherMembers.length" class="member-group">
+                <h3 class="member-group-title">{{ t('rooms.otherMembers') }}</h3>
+                <div class="members-list">
+                  <div v-for="member in otherMembers" :key="member.userId" class="member-item">
+                    <div class="member-avatar">
+                      <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                      <i v-else class="pi pi-user" />
+                    </div>
+                    <span>{{ member.displayName }}</span>
+                    <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                  </div>
+                </div>
               </div>
             </div>
             <p v-else class="text-muted">{{ t('rooms.noMembers') }}</p>
@@ -624,6 +691,41 @@ async function toggleMute() {
 .text-center {
   text-align: center;
   padding: 2rem;
+}
+
+.members-grouped {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.member-group-title {
+  font-size: var(--mw-font-size-base, 1rem);
+  font-weight: 600;
+  color: var(--mw-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.family-group {
+  margin-bottom: 0.75rem;
+}
+
+.family-group:last-child {
+  margin-bottom: 0;
+}
+
+.family-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.375rem;
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+}
+
+.family-group-name {
+  font-weight: 500;
 }
 
 .members-list {

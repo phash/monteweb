@@ -42,9 +42,10 @@ public class FileController {
     public ResponseEntity<ApiResponse<FileInfo>> uploadFile(
             @PathVariable UUID roomId,
             @RequestParam(required = false) UUID folderId,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(required = false, defaultValue = "ALL") String audience) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var fileInfo = fileService.uploadFile(roomId, folderId, userId, file);
+        var fileInfo = fileService.uploadFile(roomId, folderId, userId, file, audience);
         return ResponseEntity.ok(ApiResponse.ok(fileInfo));
     }
 

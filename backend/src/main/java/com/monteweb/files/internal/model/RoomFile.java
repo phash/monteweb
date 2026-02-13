@@ -43,6 +43,9 @@ public class RoomFile {
     @Column(name = "uploaded_by", nullable = false)
     private UUID uploadedBy;
 
+    @Column(name = "audience", nullable = false, length = 20)
+    private String audience = "ALL";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

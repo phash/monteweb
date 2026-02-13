@@ -18,4 +18,10 @@ public interface CalendarModuleApi {
     List<EventInfo> getUpcomingEventsForSchool(LocalDate from, LocalDate to);
 
     Optional<EventInfo> findById(UUID eventId);
+
+    /**
+     * Returns events where any of the given user IDs has an RSVP with status ATTENDING or MAYBE.
+     * Used by the family calendar to show events for all family members.
+     */
+    List<EventInfo> getEventsForUserIds(List<UUID> userIds, LocalDate from, LocalDate to);
 }

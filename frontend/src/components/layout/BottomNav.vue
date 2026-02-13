@@ -16,7 +16,9 @@ const showMore = ref(false)
 const primaryItems = computed(() => [
   { to: '/', icon: 'pi pi-home', label: t('nav.dashboard'), name: 'dashboard' },
   { to: '/rooms', icon: 'pi pi-th-large', label: t('nav.rooms'), name: 'rooms' },
-  { to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' },
+  ...(auth.canHaveFamily
+    ? [{ to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' }]
+    : []),
   ...(admin.isModuleEnabled('messaging')
     ? [{ to: '/messages', icon: 'pi pi-comments', label: t('nav.messages'), name: 'messages' }]
     : []),
@@ -39,6 +41,10 @@ const moreItems = computed(() => {
   }
 
   items.push({ to: '/profile', icon: 'pi pi-user', label: t('nav.profile'), name: 'profile' })
+
+  if (auth.isSectionAdmin && !auth.isAdmin) {
+    items.push({ to: '/section-admin', icon: 'pi pi-sitemap', label: t('sectionAdmin.title'), name: 'section-admin' })
+  }
 
   if (auth.isPutzOrga && !auth.isAdmin) {
     items.push({ to: '/admin/cleaning', icon: 'pi pi-wrench', label: t('cleaning.admin.putzOrgaManagement'), name: 'admin-cleaning' })

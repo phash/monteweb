@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -33,4 +34,21 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query(value = "SELECT * FROM users WHERE is_active = true AND :role = ANY(special_roles)", nativeQuery = true)
     java.util.List<User> findBySpecialRoleContaining(String role);
+
+    @Query("""
+        SELECT u FROM User u
+        WHERE (:role IS NULL OR u.role = :role)
+        AND (:active IS NULL OR u.active = :active)
+        AND (:search IS NULL OR :search = ''
+            OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))
+        ORDER BY u.lastName ASC, u.firstName ASC
+        """)
+    Page<User> findFiltered(
+            @Param("role") UserRole role,
+            @Param("active") Boolean active,
+            @Param("search") String search,
+            Pageable pageable
+    );
 }

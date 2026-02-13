@@ -2,16 +2,22 @@
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import { useAuthStore } from '@/stores/auth'
+import { useRoomsStore } from '@/stores/rooms'
 import { filesApi } from '@/api/files.api'
-import type { FileInfo, FolderInfo } from '@/types/files'
+import type { FileInfo, FolderInfo, FileAudience } from '@/types/files'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import FileUpload from 'primevue/fileupload'
+import Select from 'primevue/select'
+import Tag from 'primevue/tag'
 
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
 const { formatShortDate } = useLocaleDate()
+const auth = useAuthStore()
+const rooms = useRoomsStore()
 
 const files = ref<FileInfo[]>([])
 const folders = ref<FolderInfo[]>([])
@@ -20,8 +26,20 @@ const folderPath = ref<{ id: string | undefined; name: string }[]>([{ id: undefi
 const loading = ref(false)
 const showNewFolder = ref(false)
 const newFolderName = ref('')
+const uploadAudience = ref<FileAudience>('ALL')
+const isLeader = ref(false)
 
-onMounted(() => loadContent())
+const audienceOptions = [
+  { label: t('files.audienceAll'), value: 'ALL' as FileAudience },
+  { label: t('files.audienceParents'), value: 'PARENTS_ONLY' as FileAudience },
+  { label: t('files.audienceStudents'), value: 'STUDENTS_ONLY' as FileAudience },
+]
+
+onMounted(async () => {
+  const member = rooms.currentRoom?.members?.find(m => m.userId === auth.user?.id)
+  isLeader.value = member?.role === 'LEADER' || auth.isAdmin
+  await loadContent()
+})
 
 async function loadContent() {
   loading.value = true
@@ -65,7 +83,7 @@ async function createFolder() {
 async function handleUpload(event: any) {
   const file = event.files?.[0]
   if (!file) return
-  await filesApi.uploadFile(props.roomId, file, currentFolderId.value)
+  await filesApi.uploadFile(props.roomId, file, currentFolderId.value, uploadAudience.value)
   await loadContent()
 }
 
@@ -98,6 +116,22 @@ function formatSize(bytes: number) {
 function formatDate(date: string) {
   return formatShortDate(date)
 }
+
+function audienceSeverity(audience: string): 'info' | 'warn' | 'secondary' {
+  switch (audience) {
+    case 'PARENTS_ONLY': return 'warn'
+    case 'STUDENTS_ONLY': return 'info'
+    default: return 'secondary'
+  }
+}
+
+function audienceLabel(audience: string): string {
+  switch (audience) {
+    case 'PARENTS_ONLY': return t('files.audienceParents')
+    case 'STUDENTS_ONLY': return t('files.audienceStudents')
+    default: return t('files.audienceAll')
+  }
+}
 </script>
 
 <template>
@@ -126,6 +160,16 @@ function formatDate(date: string) {
         :chooseLabel="t('files.upload')"
         class="upload-btn"
       />
+      <Select
+        v-if="isLeader"
+        v-model="uploadAudience"
+        :options="audienceOptions"
+        optionLabel="label"
+        optionValue="value"
+        :placeholder="t('files.audience')"
+        class="audience-select"
+        size="small"
+      />
       <Button
         icon="pi pi-folder-plus"
         :label="t('files.newFolder')"
@@ -150,6 +194,12 @@ function formatDate(date: string) {
       <div v-for="file in files" :key="file.id" class="file-item" @click="downloadFile(file)">
         <i class="pi pi-file" />
         <span class="file-name">{{ file.originalName }}</span>
+        <Tag
+          v-if="file.audience && file.audience !== 'ALL'"
+          :value="audienceLabel(file.audience)"
+          :severity="audienceSeverity(file.audience)"
+          size="small"
+        />
         <span class="file-size">{{ formatSize(file.fileSize) }}</span>
         <span class="file-date">{{ formatDate(file.createdAt) }}</span>
         <span class="file-uploader">{{ file.uploaderName }}</span>
@@ -237,6 +287,10 @@ function formatDate(date: string) {
   font-size: var(--mw-font-size-xs);
   color: var(--mw-text-muted);
   white-space: nowrap;
+}
+
+.audience-select {
+  min-width: 10rem;
 }
 
 .empty-state {

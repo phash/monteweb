@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useCleaningStore } from '@/stores/cleaning'
+import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -16,9 +18,13 @@ import Tag from 'primevue/tag'
 import ProgressBar from 'primevue/progressbar'
 
 const { t } = useI18n()
+const router = useRouter()
 const { formatDate: formatLocaleDate } = useLocaleDate()
+const auth = useAuthStore()
 const cleaningStore = useCleaningStore()
 const activeTab = ref('0')
+
+const canManageCleaning = auth.isAdmin || auth.isPutzOrga || auth.isSectionAdmin
 
 onMounted(() => {
   cleaningStore.loadUpcomingSlots()
@@ -48,7 +54,17 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
 
 <template>
   <div>
-    <PageTitle :title="t('cleaning.title')" />
+    <div class="cleaning-header">
+      <PageTitle :title="t('cleaning.title')" />
+      <Button
+        v-if="canManageCleaning"
+        :label="t('cleaning.manage')"
+        icon="pi pi-cog"
+        severity="secondary"
+        size="small"
+        @click="router.push({ name: 'admin-cleaning' })"
+      />
+    </div>
 
     <Tabs v-model:value="activeTab">
       <TabList>
@@ -146,6 +162,14 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
 </template>
 
 <style scoped>
+.cleaning-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
 .slot-list {
   display: flex;
   flex-direction: column;

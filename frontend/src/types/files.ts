@@ -1,3 +1,5 @@
+export type FileAudience = 'ALL' | 'PARENTS_ONLY' | 'STUDENTS_ONLY'
+
 export interface FileInfo {
   id: string
   roomId: string
@@ -7,6 +9,7 @@ export interface FileInfo {
   fileSize: number
   uploadedBy: string
   uploaderName: string
+  audience: FileAudience
   createdAt: string
 }
 

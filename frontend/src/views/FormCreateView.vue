@@ -242,7 +242,7 @@ async function handleSubmit(publish: boolean) {
     <div class="form-card card">
       <div class="form-grid">
         <div class="field">
-          <label for="form-title">{{ t('forms.formTitle') }} *</label>
+          <label for="form-title" class="required">{{ t('forms.formTitle') }}</label>
           <InputText id="form-title" v-model="title" :placeholder="t('forms.titlePlaceholder')" class="w-full" />
         </div>
 
@@ -253,7 +253,7 @@ async function handleSubmit(publish: boolean) {
 
         <div class="field-row" v-if="!isEdit">
           <div class="field">
-            <label for="form-type">{{ t('forms.formType') }} *</label>
+            <label for="form-type" class="required">{{ t('forms.formType') }}</label>
             <Select
               id="form-type"
               v-model="formType"
@@ -264,7 +264,7 @@ async function handleSubmit(publish: boolean) {
             />
           </div>
           <div class="field">
-            <label for="form-scope">{{ t('forms.scope') }} *</label>
+            <label for="form-scope" class="required">{{ t('forms.scope') }}</label>
             <Select
               id="form-scope"
               v-model="scope"
@@ -343,7 +343,7 @@ async function handleSubmit(publish: boolean) {
             </div>
 
             <div class="field">
-              <label :for="`q-label-${idx}`">{{ t('forms.questionLabel') }} *</label>
+              <label :for="`q-label-${idx}`" class="required">{{ t('forms.questionLabel') }}</label>
               <InputText :id="`q-label-${idx}`" v-model="q.label" class="w-full" />
             </div>
 

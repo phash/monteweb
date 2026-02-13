@@ -165,7 +165,7 @@ async function handleSubmit() {
     <div class="form-card card">
       <div class="form-grid">
         <div class="field">
-          <label for="event-title">{{ t('calendar.eventTitle') }} *</label>
+          <label for="event-title" class="required">{{ t('calendar.eventTitle') }}</label>
           <InputText id="event-title" v-model="title" :placeholder="t('calendar.titlePlaceholder')" class="w-full" />
         </div>
 
@@ -188,7 +188,7 @@ async function handleSubmit() {
 
         <div class="field-row">
           <div class="field">
-            <label for="event-start-date">{{ t('calendar.startDate') }} *</label>
+            <label for="event-start-date" class="required">{{ t('calendar.startDate') }}</label>
             <DatePicker id="event-start-date" v-model="startDate" dateFormat="dd.mm.yy" class="w-full" />
           </div>
           <div v-if="!allDay" class="field">
@@ -199,7 +199,7 @@ async function handleSubmit() {
 
         <div class="field-row">
           <div class="field">
-            <label for="event-end-date">{{ t('calendar.endDate') }} *</label>
+            <label for="event-end-date" class="required">{{ t('calendar.endDate') }}</label>
             <DatePicker id="event-end-date" v-model="endDate" dateFormat="dd.mm.yy" class="w-full" />
           </div>
           <div v-if="!allDay" class="field">
@@ -210,7 +210,7 @@ async function handleSubmit() {
 
         <div class="field-row" v-if="!isEdit">
           <div class="field">
-            <label for="event-scope">{{ t('calendar.scope') }} *</label>
+            <label for="event-scope" class="required">{{ t('calendar.scope') }}</label>
             <Select
               id="event-scope"
               v-model="scope"

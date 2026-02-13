@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useJobboardStore } from '@/stores/jobboard'
+import { jobboardApi } from '@/api/jobboard.api'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
@@ -21,9 +22,20 @@ const auth = useAuthStore()
 const jobboard = useJobboardStore()
 
 const showCompleteDialog = ref(false)
+const showDeleteDialog = ref(false)
 const completeAssignmentId = ref<string | null>(null)
 const actualHours = ref<number>(0)
 const completeNotes = ref('')
+
+async function handleDeleteJob() {
+  try {
+    await jobboardApi.deleteJob(props.id)
+    showDeleteDialog.value = false
+    router.push({ name: 'jobs' })
+  } catch {
+    // error handled by interceptor
+  }
+}
 
 onMounted(async () => {
   await Promise.all([
@@ -180,6 +192,13 @@ function formatDate(date: string | null) {
           severity="success"
           @click="openComplete"
         />
+        <Button
+          v-if="auth.isAdmin"
+          :label="t('common.delete')"
+          icon="pi pi-trash"
+          severity="danger"
+          @click="showDeleteDialog = true"
+        />
       </div>
 
       <!-- Assignments -->
@@ -209,6 +228,15 @@ function formatDate(date: string | null) {
         <p v-else class="text-muted">{{ t('jobboard.noAssignmentsYet') }}</p>
       </div>
     </template>
+
+    <!-- Delete Dialog -->
+    <Dialog v-model:visible="showDeleteDialog" :header="t('jobboard.deleteConfirmTitle')" modal :style="{ width: '400px', maxWidth: '90vw' }">
+      <p>{{ t('jobboard.deleteConfirm') }}</p>
+      <template #footer>
+        <Button :label="t('common.no')" severity="secondary" text @click="showDeleteDialog = false" />
+        <Button :label="t('common.yes')" severity="danger" @click="handleDeleteJob" />
+      </template>
+    </Dialog>
 
     <!-- Complete Dialog -->
     <Dialog v-model:visible="showCompleteDialog" :header="t('jobboard.completeTask')" modal :style="{ width: '450px', maxWidth: '90vw' }">

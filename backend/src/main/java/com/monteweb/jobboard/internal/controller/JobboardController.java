@@ -98,9 +98,15 @@ public class JobboardController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> cancelJob(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> deleteOrCancelJob(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "false") boolean permanent) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        jobboardService.cancelJob(id, userId);
+        if (permanent) {
+            jobboardService.deleteJob(id, userId);
+        } else {
+            jobboardService.cancelJob(id, userId);
+        }
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 

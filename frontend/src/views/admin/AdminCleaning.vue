@@ -27,6 +27,7 @@ const toast = useToast()
 const showCreateDialog = ref(false)
 const showGenerateDialog = ref(false)
 const showQrExportDialog = ref(false)
+const showPutzOrgaDialog = ref(false)
 const selectedConfig = ref<CleaningConfigInfo | null>(null)
 
 const dayOptions = [
@@ -206,7 +207,11 @@ async function removePutzOrga(user: UserInfo) {
   <div class="p-4">
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold">{{ t('cleaning.admin.title') }}</h1>
-      <Button :label="t('cleaning.admin.newConfig')" icon="pi pi-plus" @click="showCreateDialog = true" />
+      <div class="flex gap-2">
+        <Button :label="t('cleaning.admin.putzOrgaManagement')" icon="pi pi-users" severity="secondary"
+                @click="showPutzOrgaDialog = true" />
+        <Button :label="t('cleaning.admin.newConfig')" icon="pi pi-plus" @click="showCreateDialog = true" />
+      </div>
     </div>
 
     <!-- Configs Table -->
@@ -256,9 +261,11 @@ async function removePutzOrga(user: UserInfo) {
           <InputText v-model="newConfig.title" class="w-full" />
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.sectionId') }}</label>
-          <InputText v-model="newConfig.sectionId" class="w-full"
-                     :placeholder="t('cleaning.admin.sectionIdPlaceholder')" />
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.section') }}</label>
+          <Select v-model="newConfig.sectionId" :options="sections"
+                  optionLabel="name" optionValue="id"
+                  :placeholder="t('cleaning.admin.selectSection')"
+                  class="w-full" />
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.day') }}</label>
@@ -340,9 +347,9 @@ async function removePutzOrga(user: UserInfo) {
       </template>
     </Dialog>
 
-    <!-- PutzOrga Management Section -->
-    <div class="mt-6">
-      <h2 class="text-xl font-bold mb-3">{{ t('cleaning.admin.putzOrgaManagement') }}</h2>
+    <!-- PutzOrga Management Dialog -->
+    <Dialog v-model:visible="showPutzOrgaDialog" :header="t('cleaning.admin.putzOrgaManagement')" modal
+            style="width: 600px; max-width: 95vw">
       <p class="text-sm text-muted mb-3">{{ t('cleaning.admin.putzOrgaHint') }}</p>
 
       <div class="flex gap-3 items-end mb-4">
@@ -400,6 +407,6 @@ async function removePutzOrga(user: UserInfo) {
           </Column>
         </DataTable>
       </template>
-    </div>
+    </Dialog>
   </div>
 </template>

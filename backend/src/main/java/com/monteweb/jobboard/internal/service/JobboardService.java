@@ -141,10 +141,21 @@ public class JobboardService implements JobboardModuleApi {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
         if (!job.getCreatedBy().equals(userId)) {
-            var user = userModuleApi.findById(userId);
-            if (user.isEmpty() || (user.get().role() != com.monteweb.user.UserRole.SUPERADMIN
-                    && user.get().role() != com.monteweb.user.UserRole.TEACHER)) {
-                throw new ForbiddenException("Only the creator, teachers, or admins can link jobs");
+            var user = userModuleApi.findById(userId)
+                    .orElseThrow(() -> new ForbiddenException("User not found"));
+            boolean allowed = user.role() == com.monteweb.user.UserRole.SUPERADMIN
+                    || user.role() == com.monteweb.user.UserRole.TEACHER
+                    || (user.specialRoles() != null && user.specialRoles().stream()
+                        .anyMatch(r -> r.startsWith("ELTERNBEIRAT")));
+            // Also allow the event creator to link jobs
+            if (!allowed && calendarModuleApi != null) {
+                var event = calendarModuleApi.findById(eventId);
+                if (event.isPresent() && event.get().createdBy().equals(userId)) {
+                    allowed = true;
+                }
+            }
+            if (!allowed) {
+                throw new ForbiddenException("Only the creator, teachers, Elternbeirat, or admins can link jobs");
             }
         }
         job.setEventId(eventId);
@@ -204,6 +215,20 @@ public class JobboardService implements JobboardModuleApi {
         job.setStatus(JobStatus.CANCELLED);
         job.setClosedAt(Instant.now());
         jobRepository.save(job);
+    }
+
+    public void deleteJob(UUID jobId, UUID userId) {
+        var job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
+        // Only creator or SUPERADMIN can permanently delete
+        if (!job.getCreatedBy().equals(userId)) {
+            var user = userModuleApi.findById(userId);
+            if (user.isEmpty() || user.get().role() != com.monteweb.user.UserRole.SUPERADMIN) {
+                throw new ForbiddenException("Only the creator or SUPERADMIN can delete this job");
+            }
+        }
+        assignmentRepository.deleteByJobId(jobId);
+        jobRepository.delete(job);
     }
 
     // ---- Assignment operations ----

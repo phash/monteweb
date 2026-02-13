@@ -9,4 +9,6 @@ import java.util.UUID;
 public interface FormResponseTrackingRepository extends JpaRepository<FormResponseTracking, FormResponseTrackingId> {
 
     boolean existsByFormIdAndUserId(UUID formId, UUID userId);
+
+    void deleteByFormId(UUID formId);
 }

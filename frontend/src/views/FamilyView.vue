@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFamilyStore } from '@/stores/family'
+import { useAdminStore } from '@/stores/admin'
 import type { FamilyInvitationInfo } from '@/types/family'
+import type { CalendarEvent } from '@/types/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -18,11 +20,16 @@ import { useToast } from 'primevue/usetoast'
 
 const { t } = useI18n()
 const family = useFamilyStore()
+const admin = useAdminStore()
 const toast = useToast()
+
+const calendarEnabled = computed(() => admin.config?.modules?.calendar ?? false)
 
 const showCreateDialog = ref(false)
 const showJoinDialog = ref(false)
 const showInviteDialog = ref(false)
+const showLeaveDialog = ref(false)
+const leaveFamilyId = ref('')
 const inviteFamilyId = ref('')
 const familyName = ref('')
 const inviteCode = ref('')
@@ -32,9 +39,14 @@ const generatedCode = ref('')
 const myInvitations = ref<FamilyInvitationInfo[]>([])
 const sentInvitations = ref<FamilyInvitationInfo[]>([])
 
+// Calendar
+const familyCalendarEvents = ref<Record<string, CalendarEvent[]>>({})
+const calendarLoading = ref(false)
+
 onMounted(async () => {
   await family.fetchFamilies()
   await loadInvitations()
+  await loadFamilyCalendars()
 })
 
 async function loadInvitations() {
@@ -111,6 +123,22 @@ async function declineInvitation(id: string) {
   }
 }
 
+function openLeaveDialog(familyId: string) {
+  leaveFamilyId.value = familyId
+  showLeaveDialog.value = true
+}
+
+async function leaveFamily() {
+  try {
+    await familyApi.leaveFamily(leaveFamilyId.value)
+    toast.add({ severity: 'success', summary: t('family.leftFamily'), life: 3000 })
+    showLeaveDialog.value = false
+    await family.fetchFamilies()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
 async function handleFamilyAvatarUpload(familyId: string, file: File) {
   await familyApi.uploadAvatar(familyId, file)
   await family.fetchFamilies()
@@ -119,6 +147,60 @@ async function handleFamilyAvatarUpload(familyId: string, file: File) {
 async function handleFamilyAvatarRemove(familyId: string) {
   await familyApi.removeAvatar(familyId)
   await family.fetchFamilies()
+}
+
+// Calendar functions
+async function loadFamilyCalendars() {
+  if (!calendarEnabled.value) return
+  calendarLoading.value = true
+  try {
+    const now = new Date()
+    const from = now.toISOString().split('T')[0]!
+    const futureDate = new Date(now)
+    futureDate.setDate(futureDate.getDate() + 30)
+    const to = futureDate.toISOString().split('T')[0]!
+
+    for (const fam of family.families) {
+      try {
+        const res = await familyApi.getFamilyCalendar(fam.id, from, to)
+        familyCalendarEvents.value[fam.id] = res.data.data
+      } catch {
+        familyCalendarEvents.value[fam.id] = []
+      }
+    }
+  } finally {
+    calendarLoading.value = false
+  }
+}
+
+async function downloadIcal(familyId: string) {
+  try {
+    const res = await familyApi.downloadFamilyIcal(familyId)
+    const blob = new Blob([res.data], { type: 'text/calendar' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'family-calendar.ics'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch {
+    toast.add({ severity: 'error', summary: 'Download failed', life: 5000 })
+  }
+}
+
+function formatEventDate(event: CalendarEvent): string {
+  const date = new Date(event.startDate + 'T00:00:00')
+  const formatted = date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
+  if (event.allDay) return formatted
+  if (event.startTime) return `${formatted}, ${event.startTime.substring(0, 5)}`
+  return formatted
 }
 </script>
 
@@ -176,6 +258,14 @@ async function handleFamilyAvatarRemove(familyId: string) {
               size="small"
               @click="generateCode(fam.id)"
             />
+            <Button
+              icon="pi pi-sign-out"
+              :label="t('family.leave')"
+              severity="danger"
+              text
+              size="small"
+              @click="openLeaveDialog(fam.id)"
+            />
           </div>
         </div>
 
@@ -209,6 +299,62 @@ async function handleFamilyAvatarRemove(familyId: string) {
             <Tag :value="t(`family.roles.${member.role}`)" :severity="member.role === 'PARENT' ? 'info' : 'secondary'" size="small" />
           </div>
         </div>
+
+        <!-- Family Calendar -->
+        <div v-if="calendarEnabled" class="family-calendar-section">
+          <div class="calendar-header">
+            <h3><i class="pi pi-calendar" /> {{ t('family.calendar') }}</h3>
+            <Button
+              icon="pi pi-download"
+              :label="t('family.downloadIcal')"
+              severity="secondary"
+              size="small"
+              @click="downloadIcal(fam.id)"
+            />
+          </div>
+          <p class="calendar-desc text-sm text-muted">{{ t('family.calendarDesc') }}</p>
+
+          <div v-if="calendarLoading" class="calendar-loading">
+            <LoadingSpinner />
+          </div>
+          <div v-else-if="(familyCalendarEvents[fam.id] ?? []).length === 0" class="calendar-empty">
+            <p class="text-muted">{{ t('family.noCalendarEvents') }}</p>
+          </div>
+          <div v-else class="calendar-events-list">
+            <div
+              v-for="event in familyCalendarEvents[fam.id]"
+              :key="event.id"
+              class="calendar-event-item"
+            >
+              <div class="event-date-badge">
+                <i class="pi pi-calendar" />
+              </div>
+              <div class="event-details">
+                <span class="event-title">{{ event.title }}</span>
+                <span class="event-meta text-sm text-muted">
+                  {{ formatEventDate(event) }}
+                  <template v-if="event.location"> &middot; {{ event.location }}</template>
+                </span>
+              </div>
+              <div class="event-rsvp-counts">
+                <Tag
+                  v-if="event.attendingCount > 0"
+                  :value="`${event.attendingCount}`"
+                  severity="success"
+                  size="small"
+                  icon="pi pi-check"
+                />
+                <Tag
+                  v-if="event.maybeCount > 0"
+                  :value="`${event.maybeCount}`"
+                  severity="warn"
+                  size="small"
+                  icon="pi pi-question"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -226,7 +372,7 @@ async function handleFamilyAvatarRemove(familyId: string) {
     <!-- Create Dialog -->
     <Dialog v-model:visible="showCreateDialog" :header="t('family.create')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="form-field">
-        <label for="family-name">{{ t('family.name') }}</label>
+        <label for="family-name" class="required">{{ t('family.name') }}</label>
         <InputText id="family-name" v-model="familyName" class="w-full" />
       </div>
       <template #footer>
@@ -238,12 +384,21 @@ async function handleFamilyAvatarRemove(familyId: string) {
     <!-- Join Dialog -->
     <Dialog v-model:visible="showJoinDialog" :header="t('family.join')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="form-field">
-        <label for="invite-code">{{ t('family.inviteCode') }}</label>
+        <label for="invite-code" class="required">{{ t('family.inviteCode') }}</label>
         <InputText id="invite-code" v-model="inviteCode" class="w-full" />
       </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" @click="showJoinDialog = false" />
         <Button :label="t('family.join')" @click="joinFamily" />
+      </template>
+    </Dialog>
+
+    <!-- Leave Family Dialog -->
+    <Dialog v-model:visible="showLeaveDialog" :header="t('family.leaveConfirmTitle')" modal :style="{ width: '400px', maxWidth: '90vw' }">
+      <p>{{ t('family.leaveConfirmMessage') }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" @click="showLeaveDialog = false" />
+        <Button :label="t('family.leave')" severity="danger" @click="leaveFamily" />
       </template>
     </Dialog>
 
@@ -406,5 +561,87 @@ h3 {
 
 .text-muted {
   color: var(--mw-text-muted);
+}
+
+.family-calendar-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mw-border-light);
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.calendar-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0;
+}
+
+.calendar-desc {
+  margin-bottom: 0.75rem;
+}
+
+.calendar-loading {
+  padding: 1rem 0;
+}
+
+.calendar-empty {
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.calendar-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-event-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--mw-bg);
+  border-radius: var(--mw-border-radius-sm);
+}
+
+.event-date-badge {
+  color: var(--mw-primary, #3b82f6);
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.event-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.event-title {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-meta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-rsvp-counts {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
 }
 </style>

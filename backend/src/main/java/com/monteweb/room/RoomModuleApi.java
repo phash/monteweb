@@ -27,4 +27,15 @@ public interface RoomModuleApi {
      * Returns room IDs that the user has muted (feed posts from these rooms should be hidden).
      */
     List<UUID> getMutedRoomIds(UUID userId);
+
+    /**
+     * Returns all non-archived rooms belonging to a given section.
+     */
+    List<RoomInfo> findBySectionId(UUID sectionId);
+
+    /**
+     * Creates a new room and makes the given user its LEADER.
+     * Used by section admin to create rooms within their sections.
+     */
+    RoomInfo createRoom(String name, String description, String type, UUID sectionId, UUID createdBy);
 }

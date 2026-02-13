@@ -7,6 +7,7 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.user.UserInfo;
+import com.monteweb.user.UserRole;
 import com.monteweb.user.internal.dto.AdminUpdateProfileRequest;
 import com.monteweb.user.internal.dto.UpdateRoleRequest;
 import com.monteweb.user.internal.service.UserService;
@@ -40,8 +41,11 @@ public class AdminUserController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<UserInfo>>> listUsers(
+            @RequestParam(required = false) UserRole role,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable) {
-        var page = userService.findAll(pageable);
+        var page = userService.findFiltered(role, active, search, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 

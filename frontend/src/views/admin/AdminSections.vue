@@ -339,7 +339,7 @@ onMounted(loadData)
     >
       <form @submit.prevent="saveSection" class="create-form">
         <div class="form-field">
-          <label>{{ t('admin.sectionName') }}</label>
+          <label class="required">{{ t('admin.sectionName') }}</label>
           <InputText v-model="form.name" required class="w-full" />
         </div>
         <div class="form-field">

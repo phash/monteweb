@@ -85,12 +85,12 @@ async function submit() {
 
     <div class="create-form card">
       <div class="form-field">
-        <label for="job-title">{{ t('jobboard.titleLabel') }} *</label>
+        <label for="job-title" class="required">{{ t('jobboard.titleLabel') }}</label>
         <InputText id="job-title" v-model="title" :placeholder="t('jobboard.create_form.titlePlaceholder')" class="full-width" />
       </div>
 
       <div class="form-field">
-        <label for="job-category">{{ t('jobboard.category') }} *</label>
+        <label for="job-category" class="required">{{ t('jobboard.category') }}</label>
         <InputText id="job-category" v-model="category" :placeholder="t('jobboard.create_form.categoryPlaceholder')" class="full-width" list="category-suggestions" />
         <datalist id="category-suggestions">
           <option v-for="cat in jobboard.categories" :key="cat" :value="cat" />

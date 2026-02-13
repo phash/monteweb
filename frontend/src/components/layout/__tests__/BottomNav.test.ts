@@ -3,6 +3,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import BottomNav from '@/components/layout/BottomNav.vue'
+import { useAuthStore } from '@/stores/auth'
 
 vi.mock('vue-router', () => ({
   useRoute: vi.fn(() => ({ name: 'dashboard', path: '/', matched: [] })),
@@ -40,8 +41,11 @@ const i18n = createI18n({
   },
 })
 
-function mountBottomNav() {
+function mountBottomNav(role = 'PARENT') {
   const pinia = createPinia()
+  setActivePinia(pinia)
+  const auth = useAuthStore()
+  auth.$patch({ user: { id: '1', email: 'test@test.de', firstName: 'Test', lastName: 'User', displayName: 'Test User', role, active: true } as any })
   return mount(BottomNav, {
     global: {
       plugins: [i18n, pinia],

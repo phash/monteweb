@@ -1,5 +1,7 @@
 package com.monteweb.room.internal.controller;
 
+import com.monteweb.family.FamilyInfo;
+import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomRole;
 import com.monteweb.room.internal.dto.*;
@@ -33,10 +35,13 @@ public class RoomController {
 
     private final RoomService roomService;
     private final UserModuleApi userModuleApi;
+    private final FamilyModuleApi familyModuleApi;
 
-    public RoomController(RoomService roomService, UserModuleApi userModuleApi) {
+    public RoomController(RoomService roomService, UserModuleApi userModuleApi,
+                          @org.springframework.beans.factory.annotation.Autowired(required = false) FamilyModuleApi familyModuleApi) {
         this.roomService = roomService;
         this.userModuleApi = userModuleApi;
+        this.familyModuleApi = familyModuleApi;
     }
 
     @GetMapping("/mine")
@@ -327,12 +332,27 @@ public class RoomController {
                 .map(uid -> {
                     var userOpt = userModuleApi.findById(uid);
                     var roleOpt = roomService.getUserRoleInRoom(uid, roomId);
+
+                    // Look up the first family for this user (if family module is available)
+                    UUID familyId = null;
+                    String familyName = null;
+                    if (familyModuleApi != null) {
+                        var families = familyModuleApi.findByUserId(uid);
+                        if (families != null && !families.isEmpty()) {
+                            FamilyInfo family = families.get(0);
+                            familyId = family.id();
+                            familyName = family.name();
+                        }
+                    }
+
                     return new RoomDetailResponse.MemberResponse(
                             uid,
                             userOpt.map(UserInfo::displayName).orElse("Unknown"),
                             userOpt.map(UserInfo::avatarUrl).orElse(null),
                             roleOpt.orElse(RoomRole.MEMBER),
-                            null
+                            null,
+                            familyId,
+                            familyName
                     );
                 })
                 .toList();
