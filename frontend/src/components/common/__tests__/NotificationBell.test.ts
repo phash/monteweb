@@ -10,6 +10,7 @@ vi.mock('@/api/notifications.api', () => ({
     getUnreadCount: vi.fn().mockResolvedValue({ data: { data: { count: 0 } } }),
     markAsRead: vi.fn().mockResolvedValue({}),
     markAllAsRead: vi.fn().mockResolvedValue({}),
+    deleteNotification: vi.fn().mockResolvedValue({}),
   },
 }))
 

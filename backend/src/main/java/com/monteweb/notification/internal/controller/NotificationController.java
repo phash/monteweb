@@ -51,4 +51,11 @@ public class NotificationController {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        notificationService.deleteNotification(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
 }

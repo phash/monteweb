@@ -18,4 +18,8 @@ export const notificationsApi = {
   markAllAsRead() {
     return client.put<ApiResponse<void>>('/notifications/read-all')
   },
+
+  deleteNotification(id: string) {
+    return client.delete<ApiResponse<void>>(`/notifications/${id}`)
+  },
 }

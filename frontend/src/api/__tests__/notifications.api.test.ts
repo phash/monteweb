@@ -53,4 +53,11 @@ describe('notificationsApi', () => {
       expect(client.put).toHaveBeenCalledWith('/notifications/read-all')
     })
   })
+
+  describe('deleteNotification', () => {
+    it('should DELETE /notifications/{id}', async () => {
+      await notificationsApi.deleteNotification('notif-1')
+      expect(client.delete).toHaveBeenCalledWith('/notifications/notif-1')
+    })
+  })
 })

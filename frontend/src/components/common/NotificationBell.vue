@@ -36,6 +36,10 @@ function handleClick(link: string | null, id: string) {
   if (link) router.push(link)
 }
 
+async function handleDelete(id: string) {
+  await notifications.deleteNotification(id)
+}
+
 function formatTime(date: string) {
   const diff = Date.now() - new Date(date).getTime()
   const minutes = Math.floor(diff / 60000)
@@ -95,7 +99,19 @@ function formatTime(date: string) {
             <strong>{{ n.title }}</strong>
             <p>{{ n.message }}</p>
           </div>
-          <span class="notification-time">{{ formatTime(n.createdAt) }}</span>
+          <div class="notification-right">
+            <span class="notification-time">{{ formatTime(n.createdAt) }}</span>
+            <Button
+              icon="pi pi-times"
+              text
+              rounded
+              severity="secondary"
+              size="small"
+              class="delete-btn"
+              :aria-label="t('common.delete')"
+              @click.stop="handleDelete(n.id)"
+            />
+          </div>
         </div>
 
         <p v-if="!notifications.notifications.length" class="empty-state">
@@ -167,10 +183,28 @@ function formatTime(date: string) {
   margin-top: 0.125rem;
 }
 
+.notification-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
 .notification-time {
   font-size: var(--mw-font-size-xs);
   color: var(--mw-text-muted);
   white-space: nowrap;
+}
+
+.delete-btn {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.notification-item:hover .delete-btn {
+  opacity: 1;
 }
 
 .empty-state {

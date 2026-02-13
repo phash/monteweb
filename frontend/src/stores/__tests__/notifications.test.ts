@@ -8,6 +8,7 @@ vi.mock('@/api/notifications.api', () => ({
     getUnreadCount: vi.fn(),
     markAsRead: vi.fn(),
     markAllAsRead: vi.fn(),
+    deleteNotification: vi.fn(),
   },
 }))
 
@@ -98,6 +99,38 @@ describe('Notifications Store', () => {
 
     expect(store.notifications.every(n => n.read)).toBe(true)
     expect(store.unreadCount).toBe(0)
+  })
+
+  it('should delete unread notification and decrement counter', async () => {
+    const store = useNotificationsStore()
+    store.notifications = [
+      { id: 'n1', message: 'Unread', read: false },
+      { id: 'n2', message: 'Read', read: true },
+    ] as any
+    store.unreadCount = 1
+
+    vi.mocked(notificationsApi.deleteNotification).mockResolvedValue({} as any)
+
+    await store.deleteNotification('n1')
+
+    expect(store.notifications).toHaveLength(1)
+    expect(store.notifications[0].id).toBe('n2')
+    expect(store.unreadCount).toBe(0)
+  })
+
+  it('should delete read notification without decrementing counter', async () => {
+    const store = useNotificationsStore()
+    store.notifications = [
+      { id: 'n1', message: 'Read', read: true },
+    ] as any
+    store.unreadCount = 2
+
+    vi.mocked(notificationsApi.deleteNotification).mockResolvedValue({} as any)
+
+    await store.deleteNotification('n1')
+
+    expect(store.notifications).toHaveLength(0)
+    expect(store.unreadCount).toBe(2)
   })
 
   it('should add notification and increment counter', () => {

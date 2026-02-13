@@ -78,6 +78,11 @@ public class NotificationService implements NotificationModuleApi {
         repository.markAllAsRead(userId);
     }
 
+    @Transactional
+    public void deleteNotification(UUID notificationId, UUID userId) {
+        repository.deleteByIdAndUserId(notificationId, userId);
+    }
+
     private NotificationInfo toInfo(Notification n) {
         return new NotificationInfo(
                 n.getId(), n.getUserId(), n.getType(), n.getTitle(), n.getMessage(),

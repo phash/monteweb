@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoomsStore } from '@/stores/rooms'
 import { useAuthStore } from '@/stores/auth'
@@ -134,7 +134,10 @@ const otherMembers = computed(() => {
   return rooms.currentRoom.members.filter(m => m.role !== 'LEADER' && !m.familyId)
 })
 
-onMounted(async () => {
+async function loadRoom() {
+  activeTab.value = '0'
+  roomPosts.value = []
+  pendingRequests.value = []
   try {
     await rooms.fetchRoom(props.id)
     if (rooms.currentRoom) {
@@ -146,7 +149,11 @@ onMounted(async () => {
   } catch {
     // Room not accessible
   }
-})
+}
+
+onMounted(() => loadRoom())
+
+watch(() => props.id, () => loadRoom())
 
 async function loadPosts() {
   postsLoading.value = true
