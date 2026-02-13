@@ -25,9 +25,6 @@ const formsEnabled = adminStore.isModuleEnabled('forms')
 
 onMounted(() => {
   feed.fetchBanners()
-  if (jobboardEnabled && !familyStore.hasFamily) {
-    familyStore.fetchFamilies()
-  }
 })
 
 async function handlePost(data: { title?: string; content: string }) {

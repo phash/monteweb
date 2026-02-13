@@ -2,12 +2,14 @@
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
+import { useFamilyStore } from '@/stores/family'
 import { useRoute } from 'vue-router'
 import { computed } from 'vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()
 const admin = useAdminStore()
+const familyStore = useFamilyStore()
 const route = useRoute()
 
 const navItems = computed(() => {
@@ -23,7 +25,7 @@ const navItems = computed(() => {
   if (admin.isModuleEnabled('messaging')) {
     items.push({ to: '/messages', icon: 'pi pi-comments', label: t('nav.messages'), name: 'messages' })
   }
-  if (admin.isModuleEnabled('jobboard')) {
+  if (admin.isModuleEnabled('jobboard') && (auth.isAdmin || auth.isTeacher || auth.isSectionAdmin || familyStore.hasFamily)) {
     items.push({ to: '/jobs', icon: 'pi pi-briefcase', label: t('nav.jobs'), name: 'jobs' })
   }
   if (admin.isModuleEnabled('cleaning')) {
