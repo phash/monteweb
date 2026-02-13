@@ -74,7 +74,24 @@ const memberSearchQuery = ref('')
 const memberSearchResults = ref<UserInfo[]>([])
 const memberSearchLoading = ref(false)
 const addingMemberId = ref<string | null>(null)
+const memberRoleFilter = ref<string>('ALL')
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
+
+const isKlasse = computed(() => rooms.currentRoom?.type === 'KLASSE')
+
+const roleFilterOptions = computed(() => [
+  { label: t('rooms.filterAll'), value: 'ALL' },
+  { label: t('rooms.filterTeacher'), value: 'TEACHER' },
+  { label: t('rooms.filterParent'), value: 'PARENT' },
+  { label: t('rooms.filterStudent'), value: 'STUDENT' },
+  { label: t('rooms.filterFamily'), value: 'FAMILIE' },
+])
+
+const filteredSearchResults = computed(() => {
+  const role = isKlasse.value ? 'TEACHER' : memberRoleFilter.value
+  if (role === 'ALL') return memberSearchResults.value
+  return memberSearchResults.value.filter(u => u.role === role)
+})
 
 const filesEnabled = admin.config?.modules?.files ?? false
 const calendarEnabled = admin.config?.modules?.calendar ?? false
@@ -256,7 +273,16 @@ async function addFamilyToRoom() {
 function openAddMemberDialog() {
   memberSearchQuery.value = ''
   memberSearchResults.value = []
+  memberRoleFilter.value = isKlasse.value ? 'TEACHER' : 'ALL'
   showAddMemberDialog.value = true
+}
+
+function onRoleFilterChange() {
+  if (memberRoleFilter.value === 'FAMILIE') {
+    showAddMemberDialog.value = false
+    memberRoleFilter.value = 'ALL'
+    openAddFamilyDialog()
+  }
 }
 
 function onMemberSearch() {
@@ -496,7 +522,7 @@ async function toggleMute() {
             <h2 class="sr-only">{{ t('rooms.members') }}</h2>
             <div v-if="canEditRoom || auth.isTeacher" class="member-actions mb-3">
               <Button
-                :label="t('rooms.addMember')"
+                :label="isKlasse ? t('rooms.addTeacher') : t('rooms.addMember')"
                 icon="pi pi-user-plus"
                 size="small"
                 @click="openAddMemberDialog"
@@ -628,8 +654,17 @@ async function toggleMute() {
     </Dialog>
 
     <!-- Add Member Dialog -->
-    <Dialog v-model:visible="showAddMemberDialog" :header="t('rooms.addMember')" modal :style="{ width: '500px', maxWidth: '90vw' }">
+    <Dialog v-model:visible="showAddMemberDialog" :header="isKlasse ? t('rooms.addTeacher') : t('rooms.addMember')" modal :style="{ width: '500px', maxWidth: '90vw' }">
       <div class="add-member-form">
+        <Select
+          v-if="!isKlasse"
+          v-model="memberRoleFilter"
+          :options="roleFilterOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full"
+          @change="onRoleFilterChange"
+        />
         <InputText
           v-model="memberSearchQuery"
           :placeholder="t('rooms.searchMemberPlaceholder')"
@@ -639,8 +674,8 @@ async function toggleMute() {
         <div v-if="memberSearchLoading" class="text-muted text-sm" style="padding: 0.5rem 0;">
           <i class="pi pi-spinner pi-spin" /> {{ t('rooms.searchMember') }}...
         </div>
-        <div v-else-if="memberSearchResults.length" class="member-search-results">
-          <div v-for="user in memberSearchResults" :key="user.id" class="member-search-item">
+        <div v-else-if="filteredSearchResults.length" class="member-search-results">
+          <div v-for="user in filteredSearchResults" :key="user.id" class="member-search-item">
             <div class="member-search-info">
               <strong>{{ user.displayName }}</strong>
               <span class="text-muted text-sm">{{ user.email }}</span>
@@ -657,7 +692,7 @@ async function toggleMute() {
             <Tag v-else :value="t('rooms.alreadyMember')" severity="info" size="small" />
           </div>
         </div>
-        <p v-else-if="memberSearchQuery.trim().length >= 2" class="text-muted text-sm" style="padding: 0.5rem 0;">
+        <p v-else-if="memberSearchQuery.trim().length >= 2 && !memberSearchLoading" class="text-muted text-sm" style="padding: 0.5rem 0;">
           {{ t('common.noResults') }}
         </p>
       </div>
