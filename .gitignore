@@ -46,7 +46,6 @@ data/
 
 # Plan files
 docs/plankonzept.md
-planung/
 
 # Serena / Claude
 .serena/
