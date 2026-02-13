@@ -428,6 +428,8 @@ export default {
     postCreated: 'Post published',
     comment: 'Comment',
     pinned: 'Pinned',
+    pin: 'Pin',
+    unpin: 'Unpin',
     noPosts: 'No posts yet.',
     loadMore: 'Load more',
     deleteConfirm: 'Really delete this post?',

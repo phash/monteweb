@@ -80,13 +80,21 @@ public class FeedController {
         return ResponseEntity.ok(ApiResponse.ok(post));
     }
 
+    @GetMapping("/posts/{id}/comments")
+    public ResponseEntity<ApiResponse<PageResponse<CommentResponse>>> getComments(
+            @PathVariable UUID id,
+            @PageableDefault(size = 20) Pageable pageable) {
+        var page = feedService.getComments(id, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+    }
+
     @PostMapping("/posts/{id}/comments")
-    public ResponseEntity<ApiResponse<Void>> addComment(
+    public ResponseEntity<ApiResponse<CommentResponse>> addComment(
             @PathVariable UUID id,
             @Valid @RequestBody CreateCommentRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        feedService.addComment(id, userId, request.content());
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(null, "Comment added"));
+        var comment = feedService.addComment(id, userId, request.content());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(comment));
     }
 
     @GetMapping("/rooms/{roomId}/posts")

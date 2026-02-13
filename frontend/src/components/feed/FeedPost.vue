@@ -72,6 +72,15 @@ function handleDelete() {
         @click="toggleComments"
       />
       <Button
+        v-if="auth.isAdmin || auth.isSectionAdmin"
+        :icon="post.pinned ? 'pi pi-thumbtack' : 'pi pi-thumbtack'"
+        :label="post.pinned ? t('feed.unpin') : t('feed.pin')"
+        text
+        size="small"
+        :severity="post.pinned ? 'warn' : 'secondary'"
+        @click="feed.pinPost(post.id)"
+      />
+      <Button
         v-if="post.authorId === auth.user?.id || auth.isAdmin"
         icon="pi pi-trash"
         text

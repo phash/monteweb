@@ -428,6 +428,8 @@ export default {
     postCreated: 'Beitrag veröffentlicht',
     comment: 'Kommentieren',
     pinned: 'Angeheftet',
+    pin: 'Anheften',
+    unpin: 'Loslösen',
     noPosts: 'Noch keine Beiträge vorhanden.',
     loadMore: 'Weitere laden',
     deleteConfirm: 'Beitrag wirklich löschen?',

@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { roomsApi } from '@/api/rooms.api'
 import { usersApi } from '@/api/users.api'
-import type { RoomInfo, RoomDetail, CreateRoomRequest, RoomType, RoomRole, RoomMember } from '@/types/room'
+import type { RoomInfo, RoomDetail, RoomType, RoomRole, RoomMember } from '@/types/room'
 import type { UserInfo } from '@/types/user'
 import { sectionsApi } from '@/api/sections.api'
 import type { SchoolSectionInfo } from '@/types/family'
@@ -38,11 +38,11 @@ const selectedRoom = ref<RoomInfo | null>(null)
 const sectionFilter = ref<string[]>([])
 const typeFilter = ref<RoomType | null>(null)
 
-const form = ref<CreateRoomRequest>({
+const form = ref<{ name: string; type: RoomType; description: string; sectionIds: string[] }>({
   name: '',
   type: 'KLASSE',
   description: '',
-  sectionId: undefined,
+  sectionIds: [],
 })
 
 const editForm = ref<{
@@ -125,15 +125,24 @@ function openCreate() {
     name: '',
     type: 'KLASSE',
     description: '',
-    sectionId: sectionFilter.value.length === 1 ? sectionFilter.value[0] : undefined,
+    sectionIds: [],
   }
   showCreate.value = true
 }
 
 async function createRoom() {
-  await roomsApi.create(form.value)
+  const ids = form.value.sectionIds.length > 0 ? form.value.sectionIds : [undefined]
+  for (const sectionId of ids) {
+    await roomsApi.create({
+      name: form.value.name,
+      description: form.value.description,
+      type: form.value.type,
+      sectionId: sectionId as string | undefined,
+    })
+  }
   showCreate.value = false
-  form.value = { name: '', type: 'KLASSE', description: '', sectionId: undefined }
+  form.value = { name: '', type: 'KLASSE', description: '', sectionIds: [] }
+  toast.add({ severity: 'success', summary: t('discover.created'), life: 3000 })
   await loadData()
 }
 
@@ -397,13 +406,12 @@ onMounted(loadData)
         </div>
         <div class="form-field">
           <label for="create-room-section">{{ t('rooms.section') }}</label>
-          <Select
-            v-model="form.sectionId"
+          <MultiSelect
+            v-model="form.sectionIds"
             :options="sections"
             optionLabel="name"
             optionValue="id"
             :placeholder="t('admin.noSection')"
-            showClear
             inputId="create-room-section"
             class="w-full"
           />

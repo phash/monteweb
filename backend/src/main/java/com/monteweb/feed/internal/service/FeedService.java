@@ -184,15 +184,21 @@ public class FeedService implements FeedModuleApi {
         return toPostInfo(postRepository.save(post));
     }
 
+    public Page<com.monteweb.feed.internal.dto.CommentResponse> getComments(UUID postId, Pageable pageable) {
+        return commentRepository.findByPostIdOrderByCreatedAtAsc(postId, pageable)
+                .map(this::toCommentResponse);
+    }
+
     @Transactional
-    public void addComment(UUID postId, UUID authorId, String content) {
+    public com.monteweb.feed.internal.dto.CommentResponse addComment(UUID postId, UUID authorId, String content) {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
         var comment = new FeedPostComment();
         comment.setPost(post);
         comment.setAuthorId(authorId);
         comment.setContent(content);
-        commentRepository.save(comment);
+        comment = commentRepository.save(comment);
+        return toCommentResponse(comment);
     }
 
     public Page<FeedPostInfo> getPostsBySource(SourceType sourceType, UUID sourceId, Pageable pageable) {
@@ -236,6 +242,15 @@ public class FeedService implements FeedModuleApi {
                 attachments,
                 post.getPublishedAt(),
                 post.getCreatedAt()
+        );
+    }
+
+    private com.monteweb.feed.internal.dto.CommentResponse toCommentResponse(FeedPostComment c) {
+        String authorName = userModuleApi.findById(c.getAuthorId())
+                .map(UserInfo::displayName)
+                .orElse("Unknown");
+        return new com.monteweb.feed.internal.dto.CommentResponse(
+                c.getId(), c.getPost().getId(), c.getAuthorId(), authorName, c.getContent(), c.getCreatedAt()
         );
     }
 
