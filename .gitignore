@@ -51,5 +51,14 @@ docs/plankonzept.md
 .serena/
 .claude/
 
+# Screenshots & generated docs
+screenshots*/
+screenshot-*.png
+docs/audit-screenshots/
+docs/*.html
+docs/*.pdf
+docs/handbuch*.png
+planung/produkthandbuch.*
+
 # Misc
 nul
