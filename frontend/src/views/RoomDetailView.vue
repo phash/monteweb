@@ -331,6 +331,32 @@ async function addMemberToRoom(userId: string) {
   }
 }
 
+const roomRoleOptions = [
+  { label: 'LEADER', value: 'LEADER' },
+  { label: 'MEMBER', value: 'MEMBER' },
+  { label: 'PARENT_MEMBER', value: 'PARENT_MEMBER' },
+]
+
+async function removeMemberFromRoom(userId: string) {
+  try {
+    await roomsApi.removeMember(props.id, userId)
+    toast.add({ severity: 'success', summary: t('rooms.memberRemoved'), life: 3000 })
+    await rooms.fetchRoom(props.id)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
+async function changeMemberRole(userId: string, newRole: string) {
+  try {
+    await roomsApi.updateMemberRole(props.id, userId, newRole as any)
+    toast.add({ severity: 'success', summary: t('rooms.roleChanged'), life: 3000 })
+    await rooms.fetchRoom(props.id)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
 async function toggleMute() {
   try {
     if (roomMuted.value) {
@@ -527,7 +553,7 @@ async function toggleMute() {
           <!-- Members Tab -->
           <TabPanel value="1">
             <h2 class="sr-only">{{ t('rooms.members') }}</h2>
-            <div v-if="canEditRoom || auth.isTeacher" class="member-actions mb-3">
+            <div v-if="canEditRoom" class="member-actions mb-3">
               <Button
                 :label="isKlasse ? t('rooms.addTeacher') : t('rooms.addMember')"
                 icon="pi pi-user-plus"
@@ -573,8 +599,26 @@ async function toggleMute() {
                       <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
                       <i v-else class="pi pi-user" />
                     </div>
-                    <span>{{ member.displayName }}</span>
-                    <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                    <span class="member-name">{{ member.displayName }}</span>
+                    <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                      <Select
+                        :modelValue="member.role"
+                        :options="roomRoleOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        size="small"
+                        class="role-select"
+                        @update:modelValue="changeMemberRole(member.userId, $event)"
+                      />
+                      <Button
+                        icon="pi pi-times"
+                        text rounded
+                        severity="danger"
+                        size="small"
+                        @click="removeMemberFromRoom(member.userId)"
+                      />
+                    </div>
+                    <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
                   </div>
                 </div>
               </div>
@@ -593,8 +637,26 @@ async function toggleMute() {
                         <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
                         <i v-else class="pi pi-user" />
                       </div>
-                      <span>{{ member.displayName }}</span>
-                      <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                      <span class="member-name">{{ member.displayName }}</span>
+                      <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                        <Select
+                          :modelValue="member.role"
+                          :options="roomRoleOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          size="small"
+                          class="role-select"
+                          @update:modelValue="changeMemberRole(member.userId, $event)"
+                        />
+                        <Button
+                          icon="pi pi-times"
+                          text rounded
+                          severity="danger"
+                          size="small"
+                          @click="removeMemberFromRoom(member.userId)"
+                        />
+                      </div>
+                      <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
                     </div>
                   </div>
                 </div>
@@ -609,8 +671,26 @@ async function toggleMute() {
                       <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
                       <i v-else class="pi pi-user" />
                     </div>
-                    <span>{{ member.displayName }}</span>
-                    <Tag :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                    <span class="member-name">{{ member.displayName }}</span>
+                    <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                      <Select
+                        :modelValue="member.role"
+                        :options="roomRoleOptions"
+                        optionLabel="label"
+                        optionValue="value"
+                        size="small"
+                        class="role-select"
+                        @update:modelValue="changeMemberRole(member.userId, $event)"
+                      />
+                      <Button
+                        icon="pi pi-times"
+                        text rounded
+                        severity="danger"
+                        size="small"
+                        @click="removeMemberFromRoom(member.userId)"
+                      />
+                    </div>
+                    <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
                   </div>
                 </div>
               </div>
@@ -904,6 +984,22 @@ async function toggleMute() {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.member-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.role-select {
+  width: 10rem;
 }
 
 .pending-requests {

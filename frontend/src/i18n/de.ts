@@ -126,6 +126,8 @@ export default {
     searchMemberPlaceholder: 'Name oder E-Mail eingeben...',
     memberAdded: 'Mitglied hinzugefügt',
     alreadyMember: 'Ist bereits Mitglied',
+    roleChanged: 'Rolle geändert',
+    confirmRemoveMember: 'Mitglied wirklich entfernen?',
     filterAll: 'Alle Rollen',
     filterTeacher: 'Lehrkraft',
     filterParent: 'Elternteil',

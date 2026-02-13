@@ -312,14 +312,26 @@ public class RoomController {
         var user = userModuleApi.findById(userId);
         if (user.isPresent()) {
             var userRole = user.get().role();
-            if (userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN || userRole == UserRole.TEACHER) {
+            if (userRole == UserRole.SUPERADMIN) {
                 return;
+            }
+            if (userRole == UserRole.SECTION_ADMIN) {
+                var room = roomService.findById(roomId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Room", roomId));
+                if (room.sectionId() != null && isAdminForSection(user.get(), room.sectionId())) {
+                    return;
+                }
             }
         }
         var role = roomService.getUserRoleInRoom(userId, roomId);
         if (role.isEmpty() || role.get() != RoomRole.LEADER) {
-            throw new ForbiddenException("Only room leaders or teachers can perform this action");
+            throw new ForbiddenException("Only room leaders or administrators can perform this action");
         }
+    }
+
+    private boolean isAdminForSection(UserInfo user, UUID sectionId) {
+        if (user.specialRoles() == null) return false;
+        return user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
     }
 
     private RoomDetailResponse buildDetailResponse(UUID roomId) {

@@ -126,6 +126,8 @@ export default {
     searchMemberPlaceholder: 'Enter name or email...',
     memberAdded: 'Member added',
     alreadyMember: 'Already a member',
+    roleChanged: 'Role changed',
+    confirmRemoveMember: 'Really remove this member?',
     filterAll: 'All roles',
     filterTeacher: 'Teacher',
     filterParent: 'Parent',
