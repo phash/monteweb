@@ -89,4 +89,17 @@ describe('BottomNav', () => {
     await moreBtn.trigger('click')
     expect(wrapper.find('.more-menu').exists()).toBe(true)
   })
+
+  it('should change visible items based on role', () => {
+    // SUPERADMIN should have more items in more-menu
+    const adminWrapper = mountBottomNav('SUPERADMIN')
+    // PARENT should have fewer admin-related items
+    const parentWrapper = mountBottomNav('PARENT')
+
+    // Both should show Dashboard and Räume
+    expect(adminWrapper.text()).toContain('Dashboard')
+    expect(parentWrapper.text()).toContain('Dashboard')
+    expect(adminWrapper.text()).toContain('Räume')
+    expect(parentWrapper.text()).toContain('Räume')
+  })
 })

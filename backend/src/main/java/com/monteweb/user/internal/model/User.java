@@ -59,6 +59,10 @@ public class User {
     @JdbcTypeCode(SqlTypes.ARRAY)
     private String[] specialRoles = {};
 
+    @Column(name = "assigned_roles", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] assignedRoles = {};
+
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
@@ -94,5 +98,10 @@ public class User {
     public Set<String> getSpecialRolesAsSet() {
         if (specialRoles == null) return Set.of();
         return new HashSet<>(Set.of(specialRoles));
+    }
+
+    public Set<String> getAssignedRolesAsSet() {
+        if (assignedRoles == null) return Set.of();
+        return new HashSet<>(Set.of(assignedRoles));
     }
 }

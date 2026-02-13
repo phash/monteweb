@@ -9,6 +9,7 @@ import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserRole;
 import com.monteweb.user.internal.dto.AdminUpdateProfileRequest;
+import com.monteweb.user.internal.dto.UpdateAssignedRolesRequest;
 import com.monteweb.user.internal.dto.UpdateRoleRequest;
 import com.monteweb.user.internal.service.UserService;
 import jakarta.validation.Valid;
@@ -101,6 +102,14 @@ public class AdminUserController {
             @PathVariable UUID familyId) {
         familyModuleApi.adminRemoveMember(familyId, id);
         return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @PutMapping("/{id}/assigned-roles")
+    public ResponseEntity<ApiResponse<UserInfo>> updateAssignedRoles(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateAssignedRolesRequest request) {
+        var user = userService.updateAssignedRoles(id, request.roles());
+        return ResponseEntity.ok(ApiResponse.ok(user));
     }
 
     @GetMapping("/search-special")

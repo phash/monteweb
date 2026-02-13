@@ -27,6 +27,7 @@ import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import AutoComplete from 'primevue/autocomplete'
+import Checkbox from 'primevue/checkbox'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -53,6 +54,17 @@ const editLoading = ref(false)
 const profileForm = ref({ email: '', firstName: '', lastName: '', phone: '' })
 const editRole = ref<UserRole>('PARENT')
 const editActive = ref(true)
+const editAssignedRoles = ref<string[]>([])
+
+const assignableRoleOptions = [
+  { label: 'Teacher', value: 'TEACHER' },
+  { label: 'Parent', value: 'PARENT' },
+  { label: 'Section Admin', value: 'SECTION_ADMIN' },
+]
+
+const isFixedRoleUser = computed(() =>
+  editUser.value?.role === 'SUPERADMIN' || editUser.value?.role === 'STUDENT'
+)
 
 // Rooms tab
 const userRooms = ref<RoomInfo[]>([])
@@ -162,6 +174,7 @@ function openEdit(user: UserInfo) {
   }
   editRole.value = user.role
   editActive.value = user.active
+  editAssignedRoles.value = [...(user.assignedRoles || [])]
   userRooms.value = []
   userFamilies.value = []
   selectedRoom.value = null
@@ -178,6 +191,14 @@ async function saveProfile() {
     }
     if (editActive.value !== editUser.value.active) {
       await usersApi.setActive(editUser.value.id, editActive.value)
+    }
+    // Save assigned roles (only for non-fixed-role users)
+    if (!isFixedRoleUser.value) {
+      const currentAssigned = editUser.value.assignedRoles || []
+      const newAssigned = editAssignedRoles.value
+      if (JSON.stringify([...currentAssigned].sort()) !== JSON.stringify([...newAssigned].sort())) {
+        await usersApi.updateAssignedRoles(editUser.value.id, newAssigned)
+      }
     }
     toast.add({ severity: 'success', summary: t('admin.userSaved'), life: 3000 })
     showEdit.value = false
@@ -408,6 +429,20 @@ onUnmounted(() => {
                 <label>{{ t('common.active') }}</label>
                 <ToggleSwitch v-model="editActive" />
               </div>
+              <div v-if="!isFixedRoleUser" class="form-field">
+                <label>{{ t('admin.assignedRoles') }}</label>
+                <small class="assigned-roles-hint">{{ t('admin.assignedRolesHint') }}</small>
+                <div class="assigned-roles-checkboxes">
+                  <div v-for="opt in assignableRoleOptions" :key="opt.value" class="assigned-role-item">
+                    <Checkbox
+                      v-model="editAssignedRoles"
+                      :inputId="'ar-' + opt.value"
+                      :value="opt.value"
+                    />
+                    <label :for="'ar-' + opt.value">{{ opt.label }}</label>
+                  </div>
+                </div>
+              </div>
               <div class="form-actions">
                 <Button :label="t('common.save')" type="submit" :loading="editLoading" />
               </div>
@@ -601,5 +636,27 @@ onUnmounted(() => {
   padding: 2rem 0;
   font-size: 1.5rem;
   color: var(--p-text-muted-color);
+}
+
+.assigned-roles-hint {
+  color: var(--p-text-muted-color);
+  font-size: var(--mw-font-size-xs, 0.75rem);
+}
+
+.assigned-roles-checkboxes {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.assigned-role-item {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.assigned-role-item label {
+  font-size: var(--mw-font-size-sm);
+  cursor: pointer;
 }
 </style>

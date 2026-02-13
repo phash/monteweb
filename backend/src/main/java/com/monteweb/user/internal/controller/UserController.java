@@ -1,10 +1,13 @@
 package com.monteweb.user.internal.controller;
 
+import com.monteweb.auth.AuthModuleApi;
+import com.monteweb.auth.TokenResponse;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.AvatarUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
+import com.monteweb.user.internal.dto.SwitchRoleRequest;
 import com.monteweb.user.internal.dto.UpdateProfileRequest;
 import com.monteweb.user.internal.service.UserService;
 import com.monteweb.shared.exception.ResourceNotFoundException;
@@ -23,9 +26,11 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final AuthModuleApi authModuleApi;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, AuthModuleApi authModuleApi) {
         this.userService = userService;
+        this.authModuleApi = authModuleApi;
     }
 
     @GetMapping("/me")
@@ -34,6 +39,14 @@ public class UserController {
         var user = userService.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    @PutMapping("/me/active-role")
+    public ResponseEntity<ApiResponse<TokenResponse>> switchActiveRole(@Valid @RequestBody SwitchRoleRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var updatedUser = userService.switchActiveRole(userId, request.role());
+        var tokenResponse = authModuleApi.generateTokensForUser(updatedUser);
+        return ResponseEntity.ok(ApiResponse.ok(tokenResponse));
     }
 
     @PutMapping("/me")

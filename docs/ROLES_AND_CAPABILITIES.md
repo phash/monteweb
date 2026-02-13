@@ -32,6 +32,24 @@ Ebene 5: Modul-Berechtigungen (z.B. Fotobox) — gilt pro Raum/Modul
 
 Die Systemrolle bestimmt die Grundrechte. Sonderrollen erweitern diese punktuell. Raum-Rollen regeln den Zugriff innerhalb einzelner Räume.
 
+### Multi-Role (Mehrfachrollenzuweisung)
+
+Benutzer mit den Rollen TEACHER, PARENT oder SECTION_ADMIN können mehrere zugewiesene Rollen haben (`assigned_roles`) und zwischen diesen zur Laufzeit wechseln. Die aktive Rolle (`role`) bestimmt alle Berechtigungen.
+
+**Regeln:**
+- **SUPERADMIN** und **STUDENT** sind feste Rollen (keine Mehrfachzuweisung)
+- Nur TEACHER, PARENT und SECTION_ADMIN sind als zuweisbare Rollen erlaubt
+- Der Rollenwechsel erzeugt neue JWT-Tokens (Access + Refresh)
+- Alle bestehenden Berechtigungsprüfungen verwenden weiterhin `user.role` (die aktive Rolle)
+- SUPERADMIN weist zugewiesene Rollen im Admin-Panel zu (Mehrfachauswahl mit Checkboxen)
+
+**API:**
+- `PUT /api/v1/users/me/active-role` — Aktive Rolle wechseln (gibt neue Tokens zurück)
+- `PUT /api/v1/admin/users/{id}/assigned-roles` — Zugewiesene Rollen setzen (nur SUPERADMIN)
+
+**Datenmodell:**
+- `users.assigned_roles` — `text[]` Spalte (Migration V042)
+
 ---
 
 ## 2. Systemrollen (UserRole)
@@ -480,6 +498,7 @@ Alle Admin-Endpoints erfordern die Systemrolle **SUPERADMIN**.
 | Audit-Log einsehen | SUPERADMIN |
 | Alle Benutzer auflisten | SUPERADMIN |
 | Benutzer-Rollen ändern | SUPERADMIN |
+| Zugewiesene Rollen verwalten (Multi-Role) | SUPERADMIN |
 | Sonderrollen zuweisen | SUPERADMIN |
 | Schulbereiche erstellen/bearbeiten/löschen | SUPERADMIN |
 | Kommunikationsregeln konfigurieren | SUPERADMIN |
@@ -496,6 +515,7 @@ Alle Admin-Endpoints erfordern die Systemrolle **SUPERADMIN**.
 | Nutzer-Suche (für Messaging/Einladungen) | Alle authentifizierten Nutzer |
 | Alle Nutzer auflisten | SUPERADMIN |
 | Rollen ändern | SUPERADMIN |
+| Zugewiesene Rollen (Multi-Role) verwalten | SUPERADMIN |
 
 ---
 
@@ -530,6 +550,9 @@ Alle Admin-Endpoints erfordern die Systemrolle **SUPERADMIN**.
 | **Nachrichten an Schüler** | Ja | Ja | Ja | — | Konfig. |
 | **Push-Benachrichtigungen** | Ja | Ja | Ja | Ja | Ja |
 | **DSGVO-Datenexport** | Ja | Ja | Ja | Ja | Ja |
+| **Rollenwechsel (Multi-Role)** | **Nein** | Ja* | Ja* | Ja* | **Nein** |
+
+\* Nur wenn mehrere zugewiesene Rollen vorhanden sind (`assigned_roles.length > 1`). SUPERADMIN und STUDENT sind feste Rollen ohne Wechselmöglichkeit.
 
 ### Sonderrollen-Erweiterungen
 

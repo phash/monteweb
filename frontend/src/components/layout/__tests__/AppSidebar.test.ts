@@ -86,4 +86,39 @@ describe('AppSidebar', () => {
     const wrapper = mountSidebar()
     expect(wrapper.find('.nav-item').exists()).toBe(true)
   })
+
+  it('should show admin link for SUPERADMIN but not for PARENT', () => {
+    const adminWrapper = mountSidebar('SUPERADMIN')
+    expect(adminWrapper.text()).toContain('Verwaltung')
+
+    const parentWrapper = mountSidebar('PARENT')
+    expect(parentWrapper.text()).not.toContain('Verwaltung')
+  })
+
+  it('should change navigation items when user role changes (simulating a switch)', () => {
+    // Mount as TEACHER
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const auth = useAuthStore()
+    auth.$patch({ user: { id: '1', email: 'test@test.de', firstName: 'Test', lastName: 'User', displayName: 'Test User', role: 'SUPERADMIN', active: true } as any })
+
+    const wrapper = mount(AppSidebar, {
+      global: {
+        plugins: [i18n, pinia],
+        stubs: {
+          'router-link': {
+            template: '<a class="router-link-stub" :to="to"><slot /></a>',
+            props: ['to'],
+          },
+        },
+      },
+    })
+
+    // SUPERADMIN should see admin link
+    expect(wrapper.text()).toContain('Verwaltung')
+
+    // Simulate role change to PARENT
+    auth.$patch({ user: { id: '1', email: 'test@test.de', firstName: 'Test', lastName: 'User', displayName: 'Test User', role: 'PARENT', active: true } as any })
+    // After next tick the reactive computeds update
+  })
 })

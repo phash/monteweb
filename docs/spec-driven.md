@@ -1,8 +1,8 @@
 # MonteWeb -- Spec-Driven Documentation
 
-**Version:** 1.1
-**Date:** 2026-02-12
-**Status:** All 19 phases complete, production-ready
+**Version:** 1.2
+**Date:** 2026-02-13
+**Status:** All 19 phases complete + Feedback Batch 1 + Multi-Role, production-ready
 
 ---
 
@@ -45,6 +45,7 @@ Family (accounting unit)
 
 User
   ├── Roles: SUPERADMIN | SECTION_ADMIN | TEACHER | PARENT | STUDENT
+  ├── Assigned Roles: subset of {TEACHER, PARENT, SECTION_ADMIN} for role switching
   ├── Special roles: ELTERNBEIRAT, PUTZORGA (optional, string-based)
   ├── Rooms membership
   ├── Family membership
@@ -104,12 +105,14 @@ POST /api/v1/auth/oidc/token   -> ApiResponse<AuthInfo>
 ```
 GET    /api/v1/users/me              -> ApiResponse<UserInfo>
 PUT    /api/v1/users/me              -> ApiResponse<UserInfo>
+PUT    /api/v1/users/me/active-role  -> ApiResponse<TokenResponse>  (switch active role, returns new JWT)
 GET    /api/v1/users/me/data-export  -> ApiResponse<DataExport>
 DELETE /api/v1/users/me              -> ApiResponse<void>
 GET    /api/v1/users/{id}            -> ApiResponse<UserInfo>  (restricted fields)
 GET    /api/v1/users?page=&size=     -> ApiResponse<Page<UserInfo>>  (SUPERADMIN)
 GET    /api/v1/users/search?q=       -> ApiResponse<List<UserInfo>>
 PUT    /api/v1/users/{id}/roles      -> ApiResponse<UserInfo>  (SUPERADMIN)
+PUT    /api/v1/admin/users/{id}/assigned-roles -> ApiResponse<UserInfo>  (SUPERADMIN)
 ```
 
 ---
@@ -392,6 +395,44 @@ GET    /api/v1/fotobox/images/{imageId}/thumbnail                 -> Download th
 
 ---
 
+### FEAT-015: Multi-Role Support
+
+**What:** Users (except SUPERADMIN and STUDENT) can have multiple assigned roles and switch between them at runtime.
+**Why:** In Montessori schools, a person can be both a teacher and a parent. They need to switch perspective without separate accounts.
+
+**Acceptance Criteria:**
+- Users have an `assigned_roles` field storing which roles they can switch to (TEACHER, PARENT, SECTION_ADMIN)
+- Active role (`role`) determines all permissions — existing permission checks remain unchanged
+- Users with multiple assigned roles see a role badge in the header that opens a role switcher
+- Switching role issues new JWT tokens (access + refresh) with the new active role
+- ProfileView shows role switcher card when user has multiple assigned roles
+- SUPERADMIN can assign roles to users via multi-select checkboxes in admin user edit dialog
+- SUPERADMIN and STUDENT are fixed-role users (no multi-role)
+
+**API Contract:**
+```
+PUT /api/v1/users/me/active-role           -> ApiResponse<TokenResponse>  {accessToken, refreshToken, userId, email, role}
+PUT /api/v1/admin/users/{id}/assigned-roles -> ApiResponse<UserInfo>      (SUPERADMIN only)
+```
+
+**Data Model:**
+```sql
+-- V042: assigned_roles column on users table
+ALTER TABLE users ADD COLUMN assigned_roles text[] NOT NULL DEFAULT '{}';
+-- Backfill: existing users get their current role as assigned role
+-- SUPERADMIN and STUDENT keep empty assigned_roles (fixed-role users)
+```
+
+**Business Rules:**
+- Only TEACHER, PARENT, SECTION_ADMIN are valid assignable roles
+- If active `role` is removed from `assignedRoles`, user is switched to the first remaining assigned role
+- Role switch returns new JWT tokens — frontend stores them and re-fetches user profile
+- Sidebar, BottomNav, and all permission-based UI automatically update via reactive auth store computeds
+
+**Migration:** V042
+
+---
+
 ## 3. Technical Specifications
 
 ### 3.1 Technology Matrix
@@ -421,7 +462,7 @@ GET    /api/v1/fotobox/images/{imageId}/thumbnail                 -> Download th
 
 ### 3.2 Database Schema
 
-39 Flyway migrations (V001-V039) managing:
+42 Flyway migrations (V001-V042) managing:
 
 | Migration Range | Domain |
 |----------------|--------|
@@ -448,6 +489,9 @@ GET    /api/v1/fotobox/images/{imageId}/thumbnail                 -> Download th
 | V036 | Thread audience (discussion thread visibility scoping) |
 | V037 | Role concept refactoring (JoinPolicy, DiscussionMode, special roles, room subscriptions) |
 | V038-V039 | Fotobox tables (room settings, threads, images) and schema fixes |
+| V040 | Realistic seed data (~220 users) |
+| V041 | Feedback Batch 1 fixes |
+| V042 | Multi-role support (assigned_roles column on users) |
 
 ### 3.3 Security Specification
 
@@ -596,15 +640,15 @@ grafana:3000    -> prometheus:9090                    (query)
 ### 5.1 Frontend Testing
 
 **Tool:** Vitest 4 + @vue/test-utils + jsdom
-**Test count:** 565 tests across 79 test files
+**Test count:** 889 tests across 107 test files
 
 | Test Category | Files | Scope |
 |--------------|-------|-------|
-| Store unit tests | 15 | Pinia store logic (auth, feed, rooms, family, calendar, forms, fotobox, etc.) |
+| Store unit tests | 16 | Pinia store logic (auth, auth-multirole, feed, rooms, family, calendar, forms, fotobox, etc.) |
 | Component tests | 8 | Common components (PageTitle, EmptyState, LanguageSwitcher, etc.) |
 | View tests | 22 | Page-level rendering (Dashboard, Rooms, Calendar, Forms, etc.) |
 | Admin view tests | 7 | Admin panel views |
-| Layout tests | 2 | Sidebar, BottomNav |
+| Layout tests | 3 | Sidebar, BottomNav, AppHeader (with role badge/switcher tests) |
 | Feature component tests | 18 | Feed, room, messaging, family, fotobox |
 | API/composable tests | 4 | Fotobox API, router, useWebSocket, usePushNotifications, useTheme |
 | Type tests | 1 | Room type definitions |
@@ -749,12 +793,14 @@ All core and extension features are implemented and tested, including:
 - Phases 1-6: Core modules (Auth, User, Family, School, Room, Feed, Notifications, Messaging, Files, Jobboard, Cleaning, i18n, Security, DSGVO)
 - Phase 7-8: Messaging inbox with user picker, room discussion threads
 - Phase 9-10: Email (SMTP), English translation + language switcher
-- Phase 11-12: Test coverage (565 FE tests, 37 BE test files), CI/CD pipeline
+- Phase 11-12: Test coverage (889 FE tests, 37 BE test files), CI/CD pipeline
 - Phase 13-14: OIDC/SSO, PDF export
 - Phase 15-16: Web Push notifications, Prometheus/Grafana monitoring
 - Phase 17: Calendar/Events with RSVP
 - Phase 18: Forms & Surveys (Survey/Consent, scopes, anonymous/named, CSV/PDF export)
 - Phase 19: Fotobox (photo threads in rooms, thumbnails, lightbox, permission system)
+- Feedback Batch 1: 13 fixes (V041, room/admin/member improvements, seed data)
+- Multi-Role Support: Users can have multiple assigned roles (TEACHER/PARENT/SECTION_ADMIN) and switch at runtime (V042)
 
 ### Potential Future Enhancements
 

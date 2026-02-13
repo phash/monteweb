@@ -1,12 +1,16 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { UserInfo } from '@/types/user'
+import type { UserInfo, LoginResponse } from '@/types/user'
 import type { RoomInfo } from '@/types/room'
 import type { FamilyInfo } from '@/types/family'
 
 export const usersApi = {
   getMe() {
     return client.get<ApiResponse<UserInfo>>('/users/me')
+  },
+
+  switchActiveRole(role: string) {
+    return client.put<ApiResponse<LoginResponse>>('/users/me/active-role', { role })
   },
 
   updateMe(data: { firstName?: string; lastName?: string; phone?: string }) {
@@ -80,5 +84,9 @@ export const usersApi = {
     return client.get<ApiResponse<UserInfo[]>>('/admin/users/search-special', {
       params: { role },
     })
+  },
+
+  updateAssignedRoles(userId: string, roles: string[]) {
+    return client.put<ApiResponse<UserInfo>>(`/admin/users/${userId}/assigned-roles`, { roles })
   },
 }

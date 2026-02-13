@@ -1,5 +1,7 @@
 package com.monteweb.auth.internal.service;
 
+import com.monteweb.auth.AuthModuleApi;
+import com.monteweb.auth.TokenResponse;
 import com.monteweb.auth.internal.dto.*;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.user.UserInfo;
@@ -9,7 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-public class AuthService {
+public class AuthService implements AuthModuleApi {
 
     private final UserModuleApi userModuleApi;
     private final JwtService jwtService;
@@ -79,6 +81,13 @@ public class AuthService {
         if (refreshToken != null) {
             refreshTokenService.revoke(refreshToken);
         }
+    }
+
+    @Override
+    public TokenResponse generateTokensForUser(UserInfo user) {
+        String accessToken = jwtService.generateAccessToken(user.id(), user.email(), user.role().name());
+        String refreshToken = refreshTokenService.createRefreshToken(user.id());
+        return new TokenResponse(accessToken, refreshToken, user.id(), user.email(), user.role().name());
     }
 
     private LoginResponse generateTokenResponse(UserInfo user) {

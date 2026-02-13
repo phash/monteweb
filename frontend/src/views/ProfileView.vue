@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
 import { usePushNotifications } from '@/composables/usePushNotifications'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -11,13 +13,17 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
+import type { UserRole } from '@/types/user'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const router = useRouter()
+const toast = useToast()
 const { isSupported: pushSupported, isSubscribed: pushSubscribed, permission: pushPermission,
         checkSubscription, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications()
 
 const pushEnabled = ref(false)
+const switching = ref(false)
 
 const form = ref({
   firstName: '',
@@ -68,6 +74,19 @@ function specialRoleSeverity(role: string): string {
   if (role.startsWith('PUTZORGA')) return 'warn'
   if (role.startsWith('ELTERNBEIRAT')) return 'info'
   return 'secondary'
+}
+
+async function onSwitchRole(role: string) {
+  switching.value = true
+  try {
+    await auth.switchRole(role as UserRole)
+    toast.add({ severity: 'success', summary: t('profile.roleSwitched', { role: t('profile.roleLabels.' + role) }), life: 3000 })
+    router.go(0)
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+  } finally {
+    switching.value = false
+  }
 }
 
 async function togglePush() {
@@ -122,6 +141,27 @@ async function togglePush() {
 
         <Button type="submit" :label="t('common.save')" />
       </form>
+    </div>
+
+    <!-- Active Role Switcher -->
+    <div v-if="auth.canSwitchRole" class="card profile-card role-switcher-card">
+      <h3>{{ t('profile.activeRole') }}</h3>
+      <div class="role-switcher-buttons">
+        <button
+          v-for="role in auth.assignedRoles"
+          :key="role"
+          class="role-switch-btn"
+          :class="{ active: role === auth.user?.role }"
+          :disabled="switching || role === auth.user?.role"
+          @click="onSwitchRole(role)"
+        >
+          <Tag
+            :value="t('profile.roleLabels.' + role)"
+            :severity="roleSeverity(role) as any"
+            class="role-switch-tag"
+          />
+        </button>
+      </div>
     </div>
 
     <!-- Roles -->
@@ -186,6 +226,43 @@ async function togglePush() {
   color: var(--mw-text-secondary);
 }
 
+.role-switcher-card {
+  margin-top: 1rem;
+}
+
+.role-switcher-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.role-switcher-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.role-switch-btn {
+  background: none;
+  border: 2px solid transparent;
+  padding: 0.25rem;
+  cursor: pointer;
+  border-radius: var(--p-border-radius);
+  transition: border-color 0.15s;
+}
+
+.role-switch-btn:hover:not(:disabled) {
+  border-color: var(--mw-primary);
+}
+
+.role-switch-btn.active {
+  border-color: var(--mw-primary);
+  cursor: default;
+}
+
+.role-switch-btn:disabled:not(.active) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .roles-card {
   margin-top: 1rem;

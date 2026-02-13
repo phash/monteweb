@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth.api'
 import { usersApi } from '@/api/users.api'
 import { useAdminStore } from '@/stores/admin'
-import type { UserInfo, LoginRequest, RegisterRequest } from '@/types/user'
+import type { UserInfo, UserRole, LoginRequest, RegisterRequest } from '@/types/user'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(null)
@@ -23,6 +23,8 @@ export const useAuthStore = defineStore('auth', () => {
   const canHaveFamily = computed(() =>
     user.value?.role === 'PARENT' || user.value?.role === 'STUDENT' || user.value?.role === 'SUPERADMIN'
   )
+  const assignedRoles = computed(() => user.value?.assignedRoles ?? [])
+  const canSwitchRole = computed(() => assignedRoles.value.length > 1)
 
   async function login(data: LoginRequest) {
     loading.value = true
@@ -62,6 +64,18 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function switchRole(role: UserRole) {
+    loading.value = true
+    try {
+      const res = await usersApi.switchActiveRole(role)
+      const { accessToken: token, refreshToken } = res.data.data
+      setTokens(token, refreshToken)
+      await fetchUser()
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchUser() {
     if (!accessToken.value) return
     try {
@@ -95,9 +109,12 @@ export const useAuthStore = defineStore('auth', () => {
     isPutzOrga,
     isSectionAdmin,
     canHaveFamily,
+    assignedRoles,
+    canSwitchRole,
     login,
     register,
     logout,
     fetchUser,
+    switchRole,
   }
 })

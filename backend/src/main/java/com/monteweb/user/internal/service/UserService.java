@@ -261,6 +261,41 @@ public class UserService implements UserModuleApi {
         userRepository.save(user);
     }
 
+    @Override
+    @Transactional
+    public UserInfo switchActiveRole(UUID userId, UserRole newRole) {
+        var user = findEntityById(userId);
+        if (user.getRole() == UserRole.SUPERADMIN || user.getRole() == UserRole.STUDENT) {
+            throw new com.monteweb.shared.exception.BusinessException("Fixed-role users cannot switch roles");
+        }
+        if (!user.getAssignedRolesAsSet().contains(newRole.name())) {
+            throw new com.monteweb.shared.exception.BusinessException("Role not in assigned roles");
+        }
+        user.setRole(newRole);
+        return toUserInfo(userRepository.save(user));
+    }
+
+    @Transactional
+    public UserInfo updateAssignedRoles(UUID userId, Set<String> roles) {
+        var user = findEntityById(userId);
+        if (user.getRole() == UserRole.SUPERADMIN || user.getRole() == UserRole.STUDENT) {
+            throw new com.monteweb.shared.exception.BusinessException("Cannot assign switchable roles to SUPERADMIN or STUDENT");
+        }
+        // Validate all roles are valid switchable roles
+        var validRoles = Set.of("TEACHER", "PARENT", "SECTION_ADMIN");
+        for (String r : roles) {
+            if (!validRoles.contains(r)) {
+                throw new com.monteweb.shared.exception.BusinessException("Invalid assignable role: " + r);
+            }
+        }
+        user.setAssignedRoles(roles.toArray(new String[0]));
+        // If active role is not in the new assigned roles, switch to first
+        if (!roles.contains(user.getRole().name()) && !roles.isEmpty()) {
+            user.setRole(UserRole.valueOf(roles.iterator().next()));
+        }
+        return toUserInfo(userRepository.save(user));
+    }
+
     private UserInfo toUserInfo(User user) {
         return new UserInfo(
                 user.getId(),
@@ -272,6 +307,7 @@ public class UserService implements UserModuleApi {
                 user.getAvatarUrl(),
                 user.getRole(),
                 user.getSpecialRolesAsSet(),
+                user.getAssignedRolesAsSet(),
                 user.isActive()
         );
     }

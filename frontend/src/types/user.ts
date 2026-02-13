@@ -10,6 +10,7 @@ export interface UserInfo {
   avatarUrl: string | null
   role: UserRole
   specialRoles: string[]
+  assignedRoles: string[]
   active: boolean
 }
 

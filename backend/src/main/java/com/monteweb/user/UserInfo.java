@@ -16,6 +16,7 @@ public record UserInfo(
         String avatarUrl,
         UserRole role,
         Set<String> specialRoles,
+        Set<String> assignedRoles,
         boolean active
 ) {
 }
