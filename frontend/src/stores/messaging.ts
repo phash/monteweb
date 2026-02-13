@@ -73,6 +73,15 @@ export const useMessagingStore = defineStore('messaging', () => {
     }
   }
 
+  async function deleteConversation(conversationId: string) {
+    await messagingApi.deleteConversation(conversationId)
+    conversations.value = conversations.value.filter(c => c.id !== conversationId)
+    if (currentConversation.value?.id === conversationId) {
+      currentConversation.value = null
+      messages.value = []
+    }
+  }
+
   function addIncomingMessage(message: MessageInfo) {
     if (currentConversation.value?.id === message.conversationId) {
       messages.value.push(message)
@@ -100,6 +109,7 @@ export const useMessagingStore = defineStore('messaging', () => {
     startDirectConversation,
     fetchUnreadCount,
     markAsRead,
+    deleteConversation,
     addIncomingMessage,
   }
 })

@@ -81,6 +81,13 @@ public class MessagingController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @DeleteMapping("/conversations/{conversationId}")
+    public ResponseEntity<ApiResponse<Void>> deleteConversation(@PathVariable UUID conversationId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        messagingService.deleteConversation(conversationId, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getUnreadCount() {
         UUID userId = SecurityUtils.requireCurrentUserId();

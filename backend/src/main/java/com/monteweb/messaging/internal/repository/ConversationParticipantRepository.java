@@ -24,4 +24,8 @@ public interface ConversationParticipantRepository
             WHERE cp.conversationId = :conversationId AND cp.userId = :userId
             """)
     int markAsRead(UUID conversationId, UUID userId, Instant now);
+
+    void deleteByConversationIdAndUserId(UUID conversationId, UUID userId);
+
+    long countByConversationId(UUID conversationId);
 }

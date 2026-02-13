@@ -99,6 +99,7 @@ const canApply = computed(() => {
   if (!jobboard.currentJob) return false
   if (jobboard.currentJob.status !== 'OPEN') return false
   if (myAssignment.value) return false
+  if (auth.isTeacher) return false
   return true
 })
 

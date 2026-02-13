@@ -475,6 +475,8 @@ export default {
     searchUserPlaceholder: 'Name oder E-Mail eingeben...',
     startConversation: 'Konversation starten',
     communicationNotAllowed: 'Kommunikation zwischen diesen Nutzern ist nicht erlaubt',
+    deleteTitle: 'Konversation löschen',
+    deleteConfirm: 'Möchten Sie diese Konversation wirklich löschen? Sie wird aus Ihrer Liste entfernt.',
   },
   cleaning: {
     title: 'Putz-Orga',

@@ -29,7 +29,10 @@ const submitting = ref(false)
 const answers = ref<Record<string, AnswerRequest>>({})
 
 function getAnswer(questionId: string): AnswerRequest {
-  return answers.value[questionId]!
+  if (!answers.value[questionId]) {
+    answers.value[questionId] = { questionId, selectedOptions: [] }
+  }
+  return answers.value[questionId]
 }
 
 const isCreator = computed(() =>

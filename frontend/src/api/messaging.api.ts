@@ -29,6 +29,10 @@ export const messagingApi = {
     return client.put<ApiResponse<void>>(`/messages/conversations/${conversationId}/read`)
   },
 
+  deleteConversation(conversationId: string) {
+    return client.delete<ApiResponse<void>>(`/messages/conversations/${conversationId}`)
+  },
+
   getUnreadCount() {
     return client.get<ApiResponse<{ count: number }>>('/messages/unread-count')
   },

@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import NewMessageDialog from '@/components/messaging/NewMessageDialog.vue'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Textarea from 'primevue/textarea'
 
 const { t } = useI18n()
@@ -22,6 +23,7 @@ const selectedConversationId = ref<string | null>(null)
 const messageText = ref('')
 const showNewMessage = ref(false)
 const showMessages = ref(false)
+const showDeleteDialog = ref(false)
 
 onMounted(async () => {
   await messaging.fetchConversations()
@@ -64,6 +66,14 @@ async function sendMessage() {
   if (!messageText.value.trim() || !selectedConversationId.value) return
   await messaging.sendMessage(selectedConversationId.value, messageText.value.trim())
   messageText.value = ''
+}
+
+async function handleDeleteConversation() {
+  if (!selectedConversationId.value) return
+  await messaging.deleteConversation(selectedConversationId.value)
+  selectedConversationId.value = null
+  showMessages.value = false
+  showDeleteDialog.value = false
 }
 
 function onConversationStarted(conversationId: string) {
@@ -132,7 +142,15 @@ function formatTime(date: string | null) {
               :aria-label="t('common.back')"
               @click="goBackToList"
             />
-            <strong>{{ selectedConversation ? getConversationName(selectedConversation) : '' }}</strong>
+            <strong class="header-title">{{ selectedConversation ? getConversationName(selectedConversation) : '' }}</strong>
+            <Button
+              icon="pi pi-trash"
+              text
+              severity="danger"
+              size="small"
+              :aria-label="t('common.delete')"
+              @click="showDeleteDialog = true"
+            />
           </div>
 
           <div class="messages-list">
@@ -174,6 +192,14 @@ function formatTime(date: string | null) {
         />
       </div>
     </div>
+
+    <Dialog v-model:visible="showDeleteDialog" :header="t('messages.deleteTitle')" modal :style="{ width: '400px', maxWidth: '90vw' }">
+      <p>{{ t('messages.deleteConfirm') }}</p>
+      <template #footer>
+        <Button :label="t('common.no')" severity="secondary" text @click="showDeleteDialog = false" />
+        <Button :label="t('common.yes')" severity="danger" @click="handleDeleteConversation" />
+      </template>
+    </Dialog>
 
     <NewMessageDialog
       v-model:visible="showNewMessage"
@@ -295,6 +321,10 @@ function formatTime(date: string | null) {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--mw-border-light);
+}
+
+.header-title {
+  flex: 1;
 }
 
 .back-button {

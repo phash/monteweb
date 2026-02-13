@@ -475,6 +475,8 @@ export default {
     searchUserPlaceholder: 'Enter name or email...',
     startConversation: 'Start conversation',
     communicationNotAllowed: 'Communication between these users is not allowed',
+    deleteTitle: 'Delete conversation',
+    deleteConfirm: 'Are you sure you want to delete this conversation? It will be removed from your list.',
   },
   cleaning: {
     title: 'Cleaning',

@@ -204,6 +204,15 @@ public class MessagingService implements MessagingModuleApi {
         participantRepository.markAsRead(conversationId, userId, Instant.now());
     }
 
+    public void deleteConversation(UUID conversationId, UUID userId) {
+        requireParticipant(conversationId, userId);
+        participantRepository.deleteByConversationIdAndUserId(conversationId, userId);
+        // If no participants remain, delete the conversation entirely
+        if (participantRepository.countByConversationId(conversationId) == 0) {
+            conversationRepository.deleteById(conversationId);
+        }
+    }
+
     // ---- Communication Rules ----
 
     private void enforceCommRules(UUID userId, UUID otherUserId) {
