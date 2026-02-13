@@ -5,9 +5,10 @@ import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
 import { roomsApi } from '@/api/rooms.api'
 import { familyApi } from '@/api/family.api'
+import { sectionsApi } from '@/api/sections.api'
 import type { UserInfo, UserRole } from '@/types/user'
 import type { RoomInfo, RoomRole } from '@/types/room'
-import type { FamilyInfo } from '@/types/family'
+import type { FamilyInfo, SchoolSectionInfo } from '@/types/family'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import DataTable from 'primevue/datatable'
@@ -18,6 +19,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
+import MultiSelect from 'primevue/multiselect'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
 import ToggleSwitch from 'primevue/toggleswitch'
@@ -40,9 +42,14 @@ const rows = ref(20)
 
 // Filters
 const filterRole = ref<string | null>(null)
+const filterSpecialRole = ref<string | null>(null)
 const filterStatus = ref<string>('all')
 const searchQuery = ref('')
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// Sections (for SECTION_ADMIN assignment)
+const allSections = ref<SchoolSectionInfo[]>([])
+const editSectionIds = ref<string[]>([])
 
 // Edit dialog
 const showEdit = ref(false)
@@ -91,6 +98,13 @@ const filterRoleOptions = computed(() => [
   ...roleOptions,
 ])
 
+const specialRoleFilterOptions = computed(() => [
+  { label: t('admin.allSpecialRoles'), value: null },
+  { label: 'Putz-Orga', value: 'PUTZORGA' },
+  { label: 'Elternbeirat', value: 'ELTERNBEIRAT' },
+  { label: 'Section Admin', value: 'SECTION_ADMIN' },
+])
+
 const statusOptions = computed(() => [
   { label: t('admin.allStatuses'), value: 'all' },
   { label: t('common.active'), value: 'active' },
@@ -103,6 +117,13 @@ const roomRoleOptions = computed(() => [
   { label: t('rooms.roles.PARENT_MEMBER'), value: 'PARENT_MEMBER' as RoomRole },
   { label: t('rooms.roles.GUEST'), value: 'GUEST' as RoomRole },
 ])
+
+const displayedUsers = computed(() => {
+  if (!filterSpecialRole.value) return users.value
+  return users.value.filter(u =>
+    u.specialRoles?.some(r => r === filterSpecialRole.value || r.startsWith(filterSpecialRole.value + ':'))
+  )
+})
 
 async function loadUsers() {
   loading.value = true
@@ -162,7 +183,7 @@ function roleSeverity(role: string): string {
   return map[role] ?? 'secondary'
 }
 
-function openEdit(user: UserInfo) {
+async function openEdit(user: UserInfo) {
   editUser.value = user
   editTab.value = '0'
   profileForm.value = {
@@ -173,10 +194,21 @@ function openEdit(user: UserInfo) {
   }
   editActive.value = user.active
   editAssignedRoles.value = [...(user.assignedRoles || [])]
+  // Extract SECTION_ADMIN:<sectionId> entries
+  editSectionIds.value = (user.specialRoles || [])
+    .filter(r => r.startsWith('SECTION_ADMIN:'))
+    .map(r => r.substring('SECTION_ADMIN:'.length))
   userRooms.value = []
   userFamilies.value = []
   selectedRoom.value = null
   showEdit.value = true
+  // Load sections if needed
+  if (allSections.value.length === 0) {
+    try {
+      const res = await sectionsApi.getAll()
+      allSections.value = res.data.data
+    } catch { /* ignore */ }
+  }
 }
 
 async function saveProfile() {
@@ -193,6 +225,24 @@ async function saveProfile() {
       const newAssigned = editAssignedRoles.value
       if (JSON.stringify([...currentAssigned].sort()) !== JSON.stringify([...newAssigned].sort())) {
         await usersApi.updateAssignedRoles(editUser.value.id, newAssigned)
+      }
+    }
+    // Save SECTION_ADMIN section assignments
+    if (editAssignedRoles.value.includes('SECTION_ADMIN')) {
+      const currentSectionRoles = (editUser.value.specialRoles || [])
+        .filter(r => r.startsWith('SECTION_ADMIN:'))
+      const newSectionRoles = editSectionIds.value.map(id => `SECTION_ADMIN:${id}`)
+      // Remove old section assignments
+      for (const role of currentSectionRoles) {
+        if (!newSectionRoles.includes(role)) {
+          await usersApi.removeSpecialRole(editUser.value.id, role)
+        }
+      }
+      // Add new section assignments
+      for (const role of newSectionRoles) {
+        if (!currentSectionRoles.includes(role)) {
+          await usersApi.addSpecialRole(editUser.value.id, role)
+        }
       }
     }
     toast.add({ severity: 'success', summary: t('admin.userSaved'), life: 3000 })
@@ -303,7 +353,18 @@ async function searchRooms(event: { query: string }) {
     .filter((r: RoomInfo) => !userRooms.value.some(ur => ur.id === r.id))
 }
 
-onMounted(loadUsers)
+function getSectionName(sectionId: string): string {
+  const section = allSections.value.find(s => s.id === sectionId)
+  return section?.name || sectionId.substring(0, 8) + '...'
+}
+
+onMounted(async () => {
+  loadUsers()
+  try {
+    const res = await sectionsApi.getAll()
+    allSections.value = res.data.data
+  } catch { /* ignore */ }
+})
 
 onUnmounted(() => {
   if (searchDebounceTimer) {
@@ -323,6 +384,15 @@ onUnmounted(() => {
         optionLabel="label"
         optionValue="value"
         :placeholder="t('admin.filterByRole')"
+        class="filter-role"
+        @change="onFilterChange"
+      />
+      <Select
+        v-model="filterSpecialRole"
+        :options="specialRoleFilterOptions"
+        optionLabel="label"
+        optionValue="value"
+        :placeholder="t('admin.filterBySpecialRole')"
         class="filter-role"
         @change="onFilterChange"
       />
@@ -348,12 +418,12 @@ onUnmounted(() => {
 
     <DataTable
       v-else
-      :value="users"
+      :value="displayedUsers"
       :loading="loading"
       :paginator="true"
       :rows="rows"
-      :totalRecords="totalRecords"
-      :lazy="true"
+      :totalRecords="filterSpecialRole ? displayedUsers.length : totalRecords"
+      :lazy="!filterSpecialRole"
       @page="onPage"
       stripedRows
       scrollable
@@ -366,7 +436,26 @@ onUnmounted(() => {
       <Column field="email" :header="t('auth.email')" />
       <Column field="role" :header="t('admin.columnRole')">
         <template #body="{ data }">
-          <Tag :value="data.role" :severity="roleSeverity(data.role) as any" />
+          <div class="role-tags">
+            <Tag :value="data.role" :severity="roleSeverity(data.role) as any" />
+            <template v-for="sr in (data.specialRoles || [])" :key="sr">
+              <Tag
+                v-if="sr.startsWith('PUTZORGA')"
+                value="Putz-Orga"
+                severity="warn"
+              />
+              <Tag
+                v-else-if="sr.startsWith('ELTERNBEIRAT')"
+                value="Elternbeirat"
+                severity="info"
+              />
+              <Tag
+                v-else-if="sr.startsWith('SECTION_ADMIN:')"
+                :value="'Bereich: ' + getSectionName(sr.substring('SECTION_ADMIN:'.length))"
+                severity="warn"
+              />
+            </template>
+          </div>
         </template>
       </Column>
       <Column field="active" :header="t('common.status')">
@@ -433,6 +522,18 @@ onUnmounted(() => {
                     <label :for="'ar-' + opt.value">{{ opt.label }}</label>
                   </div>
                 </div>
+              </div>
+              <div v-if="editAssignedRoles.includes('SECTION_ADMIN')" class="form-field">
+                <label>{{ t('admin.sectionAdminSections') }}</label>
+                <MultiSelect
+                  v-model="editSectionIds"
+                  :options="allSections.map(s => ({ label: s.name, value: s.id }))"
+                  optionLabel="label"
+                  optionValue="value"
+                  :placeholder="t('admin.selectSections')"
+                  class="w-full"
+                  display="chip"
+                />
               </div>
               <div class="form-actions">
                 <Button :label="t('common.save')" type="submit" :loading="editLoading" />
@@ -649,5 +750,11 @@ onUnmounted(() => {
 .assigned-role-item label {
   font-size: var(--mw-font-size-sm);
   cursor: pointer;
+}
+
+.role-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 </style>

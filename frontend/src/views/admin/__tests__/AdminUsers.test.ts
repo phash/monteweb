@@ -38,6 +38,11 @@ vi.mock('@/api/family.api', () => ({
     getMine: vi.fn().mockResolvedValue({ data: { data: [] } }),
   },
 }))
+vi.mock('@/api/sections.api', () => ({
+  sectionsApi: {
+    getAll: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
 
 const i18n = createI18n({
   legacy: false,
@@ -80,6 +85,7 @@ const stubs = {
   Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity'] },
   Dialog: { template: '<div v-if="visible" class="dialog-stub"><slot /><slot name="footer" /></div>', props: ['visible', 'header', 'modal'] },
   Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options'] },
+  MultiSelect: { template: '<div class="multiselect-stub" />', props: ['modelValue', 'options'] },
   DataTable: { template: '<div class="datatable-stub"><slot /></div>', props: ['value', 'loading', 'paginator', 'rows', 'totalRecords', 'lazy'] },
   Column: { template: '<div class="column-stub"><slot /></div>', props: ['field', 'header', 'sortable'] },
   Checkbox: { template: '<input type="checkbox" class="checkbox-stub" />', props: ['modelValue', 'binary'] },
