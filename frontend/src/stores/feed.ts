@@ -7,7 +7,7 @@ export const useFeedStore = defineStore('feed', () => {
   const posts = ref<FeedPost[]>([])
   const banners = ref<SystemBanner[]>([])
   const currentPost = ref<FeedPost | null>(null)
-  const comments = ref<FeedComment[]>([])
+  const commentsByPost = ref<Record<string, FeedComment[]>>({})
   const loading = ref(false)
   const hasMore = ref(true)
   const page = ref(0)
@@ -60,12 +60,15 @@ export const useFeedStore = defineStore('feed', () => {
 
   async function fetchComments(postId: string) {
     const res = await feedApi.getComments(postId)
-    comments.value = res.data.data.content
+    commentsByPost.value[postId] = res.data.data.content
   }
 
   async function addComment(postId: string, content: string) {
     const res = await feedApi.addComment(postId, { content })
-    comments.value.push(res.data.data)
+    if (!commentsByPost.value[postId]) {
+      commentsByPost.value[postId] = []
+    }
+    commentsByPost.value[postId].push(res.data.data)
     const post = posts.value.find(p => p.id === postId)
     if (post) post.commentCount++
   }
@@ -74,7 +77,7 @@ export const useFeedStore = defineStore('feed', () => {
     posts,
     banners,
     currentPost,
-    comments,
+    commentsByPost,
     loading,
     hasMore,
     fetchFeed,

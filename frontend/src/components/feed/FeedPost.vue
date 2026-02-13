@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
@@ -18,6 +18,7 @@ const feed = useFeedStore()
 const showComments = ref(false)
 const commentText = ref('')
 const showDeleteConfirm = ref(false)
+const postComments = computed(() => feed.commentsByPost[props.post.id] || [])
 
 function formatDate(date: string) {
   return formatCompactDateTime(date)
@@ -92,7 +93,7 @@ function handleDelete() {
     </div>
 
     <div v-if="showComments" class="comments-section">
-      <div v-for="comment in feed.comments" :key="comment.id" class="comment-item">
+      <div v-for="comment in postComments" :key="comment.id" class="comment-item">
         <div class="comment-header">
           <strong>{{ comment.authorName }}</strong>
           <span class="comment-date">{{ formatDate(comment.createdAt) }}</span>

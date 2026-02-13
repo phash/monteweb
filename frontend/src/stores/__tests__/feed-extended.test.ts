@@ -139,8 +139,8 @@ describe('Feed Store - Extended', () => {
 
       await store.fetchComments('post-1')
 
-      expect(store.comments).toHaveLength(2)
-      expect(store.comments[0].content).toBe('Comment 1')
+      expect(store.commentsByPost['post-1']).toHaveLength(2)
+      expect(store.commentsByPost['post-1'][0].content).toBe('Comment 1')
     })
   })
 
@@ -202,7 +202,7 @@ describe('Feed Store - Extended', () => {
 
       await store.addComment('unknown-post', 'Comment')
 
-      expect(store.comments).toHaveLength(1)
+      expect(store.commentsByPost['unknown-post']).toHaveLength(1)
       // No crash even though post not found
     })
   })

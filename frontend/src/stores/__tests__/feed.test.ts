@@ -136,7 +136,7 @@ describe('Feed Store', () => {
 
     await store.addComment('p1', 'Nice!')
 
-    expect(store.comments).toHaveLength(1)
+    expect(store.commentsByPost['p1']).toHaveLength(1)
     expect(store.posts[0].commentCount).toBe(3)
   })
 })
