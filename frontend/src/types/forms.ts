@@ -14,6 +14,8 @@ export interface FormInfo {
   scope: FormScope
   scopeId: string | null
   scopeName: string | null
+  sectionIds: string[]
+  sectionNames: string[]
   status: FormStatus
   anonymous: boolean
   deadline: string | null
@@ -60,6 +62,7 @@ export interface CreateFormRequest {
   type: FormType
   scope: FormScope
   scopeId?: string
+  sectionIds?: string[]
   anonymous: boolean
   deadline?: string
   questions: QuestionRequest[]

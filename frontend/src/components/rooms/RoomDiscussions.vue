@@ -38,19 +38,8 @@ const audienceOptions = [
 const isLeader = ref(false)
 const userRoomRole = ref<string | null>(null)
 
-const filteredThreads = computed(() => {
-  const threads = discussions.threads
-  // LEADER and admins see all threads (backend already filters, this is defense-in-depth)
-  if (isLeader.value) return threads
-
-  const role = userRoomRole.value
-  return threads.filter(thread => {
-    if (!thread.audience || thread.audience === 'ALLE') return true
-    if (thread.audience === 'ELTERN' && role === 'PARENT_MEMBER') return true
-    if (thread.audience === 'KINDER' && role === 'MEMBER') return true
-    return false
-  })
-})
+// Backend already filters threads by audience based on both room role and global user role
+const filteredThreads = computed(() => discussions.threads)
 
 onMounted(async () => {
   await discussions.fetchThreads(props.roomId)

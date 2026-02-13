@@ -8,7 +8,6 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import FileUpload from 'primevue/fileupload'
 import Select from 'primevue/select'
-import DatePicker from 'primevue/datepicker'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import { useToast } from 'primevue/usetoast'
@@ -204,18 +203,18 @@ async function uploadLogo(event: { files: File[] }) {
           <span class="text-gray-400">{{ t('common.noData') }}</span>
         </template>
         <Column :header="t('admin.vacationName')">
-          <template #body="{ data, index }">
-            <InputText v-model="schoolVacations[index].name" class="w-full" />
+          <template #body="{ data }">
+            <InputText v-model="data.name" class="w-full" />
           </template>
         </Column>
         <Column :header="t('admin.vacationFrom')">
-          <template #body="{ data, index }">
-            <InputText v-model="schoolVacations[index].from" placeholder="YYYY-MM-DD" class="w-full" />
+          <template #body="{ data }">
+            <InputText v-model="data.from" placeholder="YYYY-MM-DD" class="w-full" />
           </template>
         </Column>
         <Column :header="t('admin.vacationTo')">
-          <template #body="{ data, index }">
-            <InputText v-model="schoolVacations[index].to" placeholder="YYYY-MM-DD" class="w-full" />
+          <template #body="{ data }">
+            <InputText v-model="data.to" placeholder="YYYY-MM-DD" class="w-full" />
           </template>
         </Column>
         <Column :header="t('common.actions')" style="width: 80px">

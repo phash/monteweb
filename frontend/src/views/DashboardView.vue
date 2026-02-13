@@ -11,6 +11,7 @@ import SystemBanner from '@/components/feed/SystemBanner.vue'
 import PostComposer from '@/components/feed/PostComposer.vue'
 import FeedList from '@/components/feed/FeedList.vue'
 import FamilyHoursWidget from '@/components/family/FamilyHoursWidget.vue'
+import DashboardFormsWidget from '@/components/forms/DashboardFormsWidget.vue'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -20,6 +21,7 @@ const adminStore = useAdminStore()
 const familyStore = useFamilyStore()
 
 const jobboardEnabled = adminStore.isModuleEnabled('jobboard')
+const formsEnabled = adminStore.isModuleEnabled('forms')
 
 onMounted(() => {
   feed.fetchBanners()
@@ -50,6 +52,8 @@ async function handlePost(data: { title?: string; content: string }) {
       v-if="jobboardEnabled && familyStore.primaryFamily"
       :familyId="familyStore.primaryFamily.id"
     />
+
+    <DashboardFormsWidget v-if="formsEnabled" />
 
     <PostComposer
       v-if="auth.isTeacher || auth.isAdmin"

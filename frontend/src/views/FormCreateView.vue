@@ -6,6 +6,8 @@ import { useFormsStore } from '@/stores/forms'
 import { useRoomsStore } from '@/stores/rooms'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'primevue/usetoast'
+import { sectionsApi } from '@/api/sections.api'
+import type { SchoolSectionInfo } from '@/types/family'
 import type { FormType, FormScope, QuestionType, QuestionRequest, CreateFormRequest } from '@/types/forms'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
@@ -13,6 +15,7 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import Checkbox from 'primevue/checkbox'
 import Divider from 'primevue/divider'
 
@@ -32,6 +35,8 @@ const description = ref('')
 const formType = ref<FormType>('SURVEY')
 const scope = ref<FormScope>('ROOM')
 const scopeId = ref<string | undefined>(undefined)
+const selectedSectionIds = ref<string[]>([])
+const sections = ref<SchoolSectionInfo[]>([])
 const anonymous = ref(false)
 const deadline = ref<Date | null>(null)
 const saving = ref(false)
@@ -78,13 +83,24 @@ const roomOptions = computed(() =>
   rooms.myRooms.map(r => ({ label: r.name, value: r.id }))
 )
 
+const sectionOptions = computed(() =>
+  sections.value.map(s => ({ label: s.name, value: s.id }))
+)
+
 const canSubmit = computed(() =>
   title.value.trim() &&
-  (scope.value === 'SCHOOL' || scopeId.value)
+  (scope.value === 'SCHOOL' || scope.value === 'ROOM' && scopeId.value || scope.value === 'SECTION' && selectedSectionIds.value.length > 0)
 )
 
 onMounted(async () => {
   await rooms.fetchMyRooms()
+
+  if (auth.isTeacher || auth.isAdmin) {
+    try {
+      const res = await sectionsApi.getAll()
+      sections.value = res.data.data
+    } catch { /* sections not available */ }
+  }
 
   if (isEdit.value && formId.value) {
     await forms.fetchForm(formId.value)
@@ -95,6 +111,7 @@ onMounted(async () => {
       formType.value = f.type
       scope.value = f.scope
       scopeId.value = f.scopeId || undefined
+      selectedSectionIds.value = f.sectionIds || []
       anonymous.value = f.anonymous
       deadline.value = f.deadline ? new Date(f.deadline) : null
 
@@ -205,7 +222,8 @@ async function handleSubmit(publish: boolean) {
         description: description.value.trim() || undefined,
         type: formType.value,
         scope: scope.value,
-        scopeId: scope.value === 'SCHOOL' ? undefined : scopeId.value,
+        scopeId: scope.value === 'ROOM' ? scopeId.value : undefined,
+        sectionIds: scope.value === 'SECTION' ? selectedSectionIds.value : undefined,
         anonymous: anonymous.value,
         deadline: deadline.value ? formatDateToISO(deadline.value) : undefined,
         questions: questionReqs,
@@ -285,6 +303,20 @@ async function handleSubmit(publish: boolean) {
             optionLabel="label"
             optionValue="value"
             :placeholder="t('forms.selectRoom')"
+            class="w-full"
+          />
+        </div>
+
+        <div v-if="scope === 'SECTION' && !isEdit" class="field">
+          <label for="form-sections">{{ t('forms.selectSections') }}</label>
+          <MultiSelect
+            id="form-sections"
+            v-model="selectedSectionIds"
+            :options="sectionOptions"
+            optionLabel="label"
+            optionValue="value"
+            :placeholder="t('forms.selectSections')"
+            display="chip"
             class="w-full"
           />
         </div>

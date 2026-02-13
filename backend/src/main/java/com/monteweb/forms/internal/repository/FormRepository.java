@@ -14,16 +14,30 @@ import java.util.UUID;
 
 public interface FormRepository extends JpaRepository<Form, UUID> {
 
-    @Query("""
-            SELECT f FROM Form f
+    @Query(value = """
+            SELECT * FROM forms f
             WHERE f.status = 'PUBLISHED'
               AND (
                 (f.scope = 'SCHOOL')
-                OR (f.scope = 'SECTION' AND f.scopeId IN :sectionIds)
-                OR (f.scope = 'ROOM' AND f.scopeId IN :roomIds)
+                OR (f.scope = 'SECTION' AND EXISTS (
+                    SELECT 1 FROM unnest(f.section_ids) AS sid WHERE sid IN (:sectionIds)
+                ))
+                OR (f.scope = 'ROOM' AND f.scope_id IN (:roomIds))
               )
-            ORDER BY f.publishedAt DESC
-            """)
+            ORDER BY f.published_at DESC
+            """,
+            countQuery = """
+            SELECT count(*) FROM forms f
+            WHERE f.status = 'PUBLISHED'
+              AND (
+                (f.scope = 'SCHOOL')
+                OR (f.scope = 'SECTION' AND EXISTS (
+                    SELECT 1 FROM unnest(f.section_ids) AS sid WHERE sid IN (:sectionIds)
+                ))
+                OR (f.scope = 'ROOM' AND f.scope_id IN (:roomIds))
+              )
+            """,
+            nativeQuery = true)
     Page<Form> findAvailableForms(
             @Param("roomIds") List<UUID> roomIds,
             @Param("sectionIds") List<UUID> sectionIds,
@@ -32,6 +46,13 @@ public interface FormRepository extends JpaRepository<Form, UUID> {
     Page<Form> findByCreatedByOrderByCreatedAtDesc(UUID createdBy, Pageable pageable);
 
     List<Form> findByScopeAndScopeIdAndStatus(FormScope scope, UUID scopeId, FormStatus status);
+
+    @Query(value = """
+            SELECT * FROM forms f
+            WHERE f.scope = 'SECTION' AND f.status = 'PUBLISHED'
+              AND :sectionId = ANY(f.section_ids)
+            """, nativeQuery = true)
+    List<Form> findPublishedForSection(@Param("sectionId") UUID sectionId);
 
     List<Form> findByScopeAndStatus(FormScope scope, FormStatus status);
 }

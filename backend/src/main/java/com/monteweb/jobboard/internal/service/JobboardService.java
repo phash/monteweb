@@ -148,6 +148,7 @@ public class JobboardService implements JobboardModuleApi {
             var user = userModuleApi.findById(userId)
                     .orElseThrow(() -> new ForbiddenException("User not found"));
             boolean allowed = user.role() == com.monteweb.user.UserRole.SUPERADMIN
+                    || user.role() == com.monteweb.user.UserRole.SECTION_ADMIN
                     || user.role() == com.monteweb.user.UserRole.TEACHER
                     || (user.specialRoles() != null && user.specialRoles().stream()
                         .anyMatch(r -> r.startsWith("ELTERNBEIRAT")));

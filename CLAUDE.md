@@ -24,7 +24,7 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (891 tests, 107 files)
+npm test               # vitest run (892 tests, 107 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
@@ -88,7 +88,7 @@ frontend/src/
 
 ### Database
 
-- **Flyway** V001–V044. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V046. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
@@ -96,6 +96,9 @@ frontend/src/
 - `cleaning_configs.specific_date`: optional DATE for one-time Putzaktionen
 - `tenant_config.bundesland`: VARCHAR(5) default `'BY'`, determines public holidays
 - `tenant_config.school_vacations`: JSONB array of `{name, from, to}`
+- `room_folders.audience`: VARCHAR(20) default `'ALL'` — visibility: ALL, PARENTS_ONLY, STUDENTS_ONLY
+- `fotobox_threads.audience`: VARCHAR(20) default `'ALL'` — same visibility as folders
+- `forms.section_ids`: `UUID[]` with GIN index — multi-section targeting for SECTION-scoped forms
 
 ### Testing
 
@@ -116,12 +119,12 @@ frontend/src/
 | notification | In-App + Push (VAPID) | Push: `monteweb.push.enabled` |
 | admin | System-Config, Audit-Log, Module | - |
 | messaging | DM & Chat, Kommunikationsregeln | `monteweb.modules.messaging.enabled` |
-| files | Dateiablage via MinIO | `monteweb.modules.files.enabled` |
+| files | Dateiablage via MinIO, Folder-Audience | `monteweb.modules.files.enabled` |
 | jobboard | Jobboerse, Elternstunden, PDF-Export | `monteweb.modules.jobboard.enabled` |
 | cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen | `monteweb.modules.cleaning.enabled` |
 | calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed | `monteweb.modules.calendar.enabled` |
-| forms | Survey/Consent, Scopes, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
-| fotobox | Foto-Threads, Thumbnails, Lightbox | `monteweb.modules.fotobox.enabled` |
+| forms | Survey/Consent, Multi-Section Scopes, Dashboard Widget, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
+| fotobox | Foto-Threads, Thumbnails, Lightbox, Thread-Audience | `monteweb.modules.fotobox.enabled` |
 
 Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.enabled`), Push (`monteweb.push.enabled`)
 
@@ -138,6 +141,8 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 9. **Familien-Einladungen:** Per User-Suche mit Rollenwahl (PARENT/CHILD), Annehmen/Ablehnen via Notification
 10. **Fotobox:** VIEW_ONLY < POST_IMAGES < CREATE_THREADS. LEADER/SUPERADMIN = CREATE_THREADS. MinIO, Thumbnails auto, Content-Type aus Magic Bytes, max 20 Dateien/Upload
 11. **Targeted Feed Posts:** `feed_posts.target_user_ids UUID[]` — NULL=fuer alle sichtbar, gefuellt=nur fuer diese User
+12. **Audience-Sichtbarkeit:** Ordner und Fotobox-Threads haben `audience` (ALL, PARENTS_ONLY, STUDENTS_ONLY). Parents erstellen automatisch PARENTS_ONLY; Teachers/Leaders/Admins waehlen
+13. **Multi-Section Forms:** SECTION-scoped Formulare koennen mehrere Schulbereiche via `section_ids UUID[]` targeten. Dashboard-Widget zeigt offene Formulare
 
 ## Conventions
 

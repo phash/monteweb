@@ -53,6 +53,7 @@ onMounted(async () => {
     for (const q of forms.currentForm.questions) {
       answers.value[q.id] = {
         questionId: q.id,
+        selectedOptions: [],
       }
     }
   }
@@ -165,7 +166,8 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
       </p>
 
       <div class="form-meta-bar card">
-        <span v-if="forms.currentForm.form.scopeName"><i class="pi pi-tag" /> {{ forms.currentForm.form.scopeName }}</span>
+        <span v-if="forms.currentForm.form.sectionNames?.length"><i class="pi pi-tag" /> {{ forms.currentForm.form.sectionNames.join(', ') }}</span>
+        <span v-else-if="forms.currentForm.form.scopeName"><i class="pi pi-tag" /> {{ forms.currentForm.form.scopeName }}</span>
         <span><i class="pi pi-user" /> {{ forms.currentForm.form.creatorName }}</span>
         <span v-if="forms.currentForm.form.deadline"><i class="pi pi-calendar" /> {{ t('forms.deadlineLabel') }}: {{ formatShortDate(forms.currentForm.form.deadline) }}</span>
         <span><i class="pi pi-inbox" /> {{ forms.currentForm.form.responseCount }} {{ t('forms.responsesCount') }}</span>

@@ -1,8 +1,8 @@
 # MonteWeb -- Spec-Driven Documentation
 
-**Version:** 1.2
+**Version:** 1.3
 **Date:** 2026-02-13
-**Status:** All 19 phases complete + Feedback Batch 1 + Multi-Role, production-ready
+**Status:** All 19 phases complete + post-phase features, production-ready
 
 ---
 
@@ -34,8 +34,8 @@ School
               ├── Files (via MinIO)
               ├── Chat (WebSocket, channels: MAIN/PARENTS/STUDENTS)
               ├── Calendar Events (RSVP)
-              ├── Fotobox (photo threads, thumbnails, lightbox)
-              └── Forms/Surveys (scoped distribution, CSV/PDF export)
+              ├── Fotobox (photo threads, thumbnails, lightbox, audience visibility)
+              └── Forms/Surveys (multi-section scoping, dashboard widget, CSV/PDF export)
 
 Family (accounting unit)
   ├── Parents (PARENT role)
@@ -173,7 +173,7 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 - Browse all rooms where user is not a member
 - Send join requests to rooms; leaders approve/decline
 - Discussion threads (LEADER creates/archives/deletes, members reply)
-- File upload/download (via MinIO)
+- File upload/download (via MinIO) with folder audience visibility (ALL, PARENTS_ONLY, STUDENTS_ONLY)
 - Real-time chat (WebSocket)
 - Room-scoped calendar events
 
@@ -272,8 +272,8 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 
 ### FEAT-011: Forms & Surveys [Conditional Module]
 
-**What:** Scoped forms and surveys with anonymous/named responses and export.
-**Why:** Schools need digital consent forms, feedback surveys, and parent polls.
+**What:** Scoped forms and surveys with multi-section targeting, dashboard integration, anonymous/named responses and export.
+**Why:** Schools need digital consent forms, feedback surveys, and parent polls distributed to specific sections.
 
 **Toggle:** `monteweb.modules.forms.enabled` (default: `true`)
 
@@ -284,19 +284,31 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 **Question Types:** TEXT, SINGLE_CHOICE, MULTIPLE_CHOICE, RATING, YES_NO
 
 **Form Scopes & Permissions:**
-| Scope | Can Create |
-|-------|-----------|
-| ROOM | Room LEADER, SUPERADMIN, ELTERNBEIRAT |
-| SECTION | TEACHER, SECTION_ADMIN, SUPERADMIN, ELTERNBEIRAT |
-| SCHOOL | SUPERADMIN, ELTERNBEIRAT |
+| Scope | Can Create | Target |
+|-------|-----------|--------|
+| ROOM | Room LEADER, SUPERADMIN, ELTERNBEIRAT | Single room |
+| SECTION | TEACHER, SECTION_ADMIN, SUPERADMIN, ELTERNBEIRAT | Multiple sections (MultiSelect) |
+| SCHOOL | SUPERADMIN, ELTERNBEIRAT | All users |
+
+**Multi-Section Support (V046):**
+- SECTION-scoped forms store `section_ids UUID[]` for multi-section targeting
+- Form creation UI shows MultiSelect for school sections when SECTION scope is selected
+- Available forms query uses `unnest(section_ids)` to match users' section memberships
+- Section names resolved and displayed on form detail and forms list views
+
+**Dashboard Widget:**
+- `DashboardFormsWidget` shows up to 5 pending (not yet responded) forms on the dashboard
+- Displays form title, type tag, scope label, and deadline
+- Links to form detail view; "Alle anzeigen" links to forms list
+- Only visible when forms module is enabled
 
 **Form Lifecycle:** DRAFT -> PUBLISHED -> CLOSED -> ARCHIVED
 
 **API Contract:**
 ```
-GET    /api/v1/forms                 -> Available forms (paginated)
+GET    /api/v1/forms                 -> Available forms (paginated, filtered by user's rooms/sections)
 GET    /api/v1/forms/mine            -> Own forms
-POST   /api/v1/forms                 -> Create form
+POST   /api/v1/forms                 -> Create form (sectionIds[] for SECTION scope)
 GET    /api/v1/forms/{id}            -> Form detail with questions
 PUT    /api/v1/forms/{id}            -> Edit form (DRAFT only)
 DELETE /api/v1/forms/{id}            -> Delete form (DRAFT only)
@@ -313,10 +325,20 @@ GET    /api/v1/forms/{id}/results/pdf -> PDF export
 
 ### FEAT-012: Fotobox [Conditional Module]
 
-**What:** Photo gallery threads within rooms with upload, thumbnails, and lightbox viewer.
-**Why:** Teachers and parents want to share event photos in an organized, room-scoped gallery.
+**What:** Photo gallery threads within rooms with upload, thumbnails, lightbox viewer, and audience-based visibility.
+**Why:** Teachers and parents want to share event photos in an organized, room-scoped gallery with role-appropriate visibility.
 
 **Toggle:** `monteweb.modules.fotobox.enabled` (default: `true`)
+
+**Audience Visibility (V045):**
+| Audience | Visible To |
+|----------|-----------|
+| ALL | All room members |
+| PARENTS_ONLY | Parents, teachers, leaders, admins |
+| STUDENTS_ONLY | Students, teachers, leaders, admins |
+
+- Parents creating threads: audience auto-set to `PARENTS_ONLY` (no selector shown)
+- Teachers/Leaders/Admins creating threads: choose from ALL, PARENTS_ONLY, STUDENTS_ONLY
 
 **Permission Levels (hierarchical):**
 | Level | Can Do |
@@ -462,7 +484,7 @@ ALTER TABLE users ADD COLUMN assigned_roles text[] NOT NULL DEFAULT '{}';
 
 ### 3.2 Database Schema
 
-42 Flyway migrations (V001-V042) managing:
+46 Flyway migrations (V001-V046) managing:
 
 | Migration Range | Domain |
 |----------------|--------|
@@ -492,6 +514,10 @@ ALTER TABLE users ADD COLUMN assigned_roles text[] NOT NULL DEFAULT '{}';
 | V040 | Realistic seed data (~220 users) |
 | V041 | Feedback Batch 1 fixes |
 | V042 | Multi-role support (assigned_roles column on users) |
+| V043 | Cleaning: specific_date for one-time Putzaktionen, Bundesland config for holidays |
+| V044 | Feed: target_user_ids UUID[] for targeted feed posts |
+| V045 | Audience visibility for room_folders and fotobox_threads |
+| V046 | Multi-section forms: section_ids UUID[] with GIN index |
 
 ### 3.3 Security Specification
 
@@ -640,7 +666,7 @@ grafana:3000    -> prometheus:9090                    (query)
 ### 5.1 Frontend Testing
 
 **Tool:** Vitest 4 + @vue/test-utils + jsdom
-**Test count:** 889 tests across 107 test files
+**Test count:** 892 tests across 107 test files
 
 | Test Category | Files | Scope |
 |--------------|-------|-------|
@@ -801,6 +827,9 @@ All core and extension features are implemented and tested, including:
 - Phase 19: Fotobox (photo threads in rooms, thumbnails, lightbox, permission system)
 - Feedback Batch 1: 13 fixes (V041, room/admin/member improvements, seed data)
 - Multi-Role Support: Users can have multiple assigned roles (TEACHER/PARENT/SECTION_ADMIN) and switch at runtime (V042)
+- Post-batch features: Putzaktion rename, specific date cleaning configs (V043), Bundesland/holiday config, calendar→feed integration, targeted feed posts (V044)
+- Audience visibility: Folders and fotobox threads with role-based visibility (V045)
+- Multi-section forms: Forms can target multiple school sections, dashboard widget for pending forms (V046)
 
 ### Potential Future Enhancements
 

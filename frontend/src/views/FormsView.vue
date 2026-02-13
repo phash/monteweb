@@ -97,7 +97,8 @@ function responseProgress(form: { responseCount: number; targetCount: number }) 
               <Tag v-if="form.anonymous" :value="t('forms.anonymous')" severity="secondary" size="small" icon="pi pi-eye-slash" />
             </div>
             <div class="form-meta">
-              <span v-if="form.scopeName">{{ form.scopeName }}</span>
+              <span v-if="form.sectionNames?.length">{{ form.sectionNames.join(', ') }}</span>
+              <span v-else-if="form.scopeName">{{ form.scopeName }}</span>
               <span v-if="form.deadline" class="separator">·</span>
               <span v-if="form.deadline"><i class="pi pi-calendar" /> {{ formatShortDate(form.deadline) }}</span>
               <span class="separator">·</span>

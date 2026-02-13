@@ -94,6 +94,10 @@ public class FormsService implements FormsModuleApi {
         form.setType(request.type());
         form.setScope(request.scope());
         form.setScopeId(request.scopeId());
+        if (request.scope() == FormScope.SECTION && request.sectionIds() != null && !request.sectionIds().isEmpty()) {
+            form.setSectionIds(request.sectionIds().toArray(new UUID[0]));
+            form.setScopeId(request.sectionIds().get(0));
+        }
         form.setAnonymous(request.anonymous());
         form.setDeadline(request.deadline());
         form.setCreatedBy(userId);
@@ -187,6 +191,7 @@ public class FormsService implements FormsModuleApi {
         eventPublisher.publishEvent(new FormPublishedEvent(
                 form.getId(), form.getTitle(), form.getType(),
                 form.getScope(), form.getScopeId(),
+                form.getSectionIds() != null ? List.of(form.getSectionIds()) : List.of(),
                 userId, publisherName
         ));
 
@@ -208,7 +213,8 @@ public class FormsService implements FormsModuleApi {
         form = formRepository.save(form);
 
         eventPublisher.publishEvent(new FormClosedEvent(
-                form.getId(), form.getTitle(), form.getScope(), form.getScopeId()
+                form.getId(), form.getTitle(), form.getScope(), form.getScopeId(),
+                form.getSectionIds() != null ? List.of(form.getSectionIds()) : List.of()
         ));
 
         return toFormInfo(form, userId);
@@ -360,7 +366,7 @@ public class FormsService implements FormsModuleApi {
     @Override
     @Transactional(readOnly = true)
     public List<FormInfo> getPublishedFormsForSection(UUID sectionId) {
-        return formRepository.findByScopeAndScopeIdAndStatus(FormScope.SECTION, sectionId, FormStatus.PUBLISHED)
+        return formRepository.findPublishedForSection(sectionId)
                 .stream().map(f -> toFormInfo(f, null)).toList();
     }
 
@@ -621,6 +627,12 @@ public class FormsService implements FormsModuleApi {
         String creatorName = creator != null ? creator.displayName() : "Unknown";
         String scopeName = resolveScopeName(form.getScope(), form.getScopeId());
 
+        List<UUID> sectionIdList = form.getSectionIds() != null ? List.of(form.getSectionIds()) : List.of();
+        List<String> sectionNameList = sectionIdList.stream()
+                .map(id -> schoolModule.findById(id).map(s -> s.name()).orElse(null))
+                .filter(Objects::nonNull)
+                .toList();
+
         int questionCount = questionRepository.countByFormId(form.getId());
         int responseCount = responseRepository.countByFormId(form.getId());
         int targetCount = calculateTargetCount(form);
@@ -642,6 +654,8 @@ public class FormsService implements FormsModuleApi {
                 form.getScope(),
                 form.getScopeId(),
                 scopeName,
+                sectionIdList,
+                sectionNameList,
                 form.getStatus(),
                 form.isAnonymous(),
                 form.getDeadline(),
@@ -659,10 +673,9 @@ public class FormsService implements FormsModuleApi {
     }
 
     private String resolveScopeName(FormScope scope, UUID scopeId) {
-        if (scopeId == null) return null;
         return switch (scope) {
-            case ROOM -> roomModule.findById(scopeId).map(r -> r.name()).orElse(null);
-            case SECTION -> schoolModule.findById(scopeId).map(s -> s.name()).orElse(null);
+            case ROOM -> scopeId != null ? roomModule.findById(scopeId).map(r -> r.name()).orElse(null) : null;
+            case SECTION -> scopeId != null ? schoolModule.findById(scopeId).map(s -> s.name()).orElse(null) : null;
             case SCHOOL -> null;
         };
     }

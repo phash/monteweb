@@ -15,6 +15,7 @@ public record CreateFormRequest(
         @NotNull FormType type,
         @NotNull FormScope scope,
         UUID scopeId,
+        List<UUID> sectionIds,
         boolean anonymous,
         LocalDate deadline,
         @Valid List<QuestionRequest> questions

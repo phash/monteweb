@@ -40,6 +40,10 @@ public class Form {
     @Column(name = "scope_id")
     private UUID scopeId;
 
+    @Column(name = "section_ids", columnDefinition = "uuid[]")
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.ARRAY)
+    private UUID[] sectionIds;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private FormStatus status = FormStatus.DRAFT;

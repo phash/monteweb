@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
@@ -28,7 +28,7 @@ const adminStore = useAdminStore()
 const toast = useToast()
 
 const currentYear = ref(new Date().getFullYear())
-const { isHoliday, isVacation, getDateClass, getDateTooltip } = useHolidays(currentYear)
+const { getDateClass, getDateTooltip } = useHolidays(currentYear)
 
 const showCreateDialog = ref(false)
 const showGenerateDialog = ref(false)

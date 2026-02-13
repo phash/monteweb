@@ -1,8 +1,8 @@
 # MonteWeb -- arc42 Architecture Documentation
 
-**Version:** 1.1
-**Date:** 2026-02-12
-**Status:** All 19 phases complete
+**Version:** 1.2
+**Date:** 2026-02-13
+**Status:** All 19 phases complete + post-phase features
 
 ---
 
@@ -147,7 +147,7 @@ MonteWeb is a modular, self-hosted school intranet for Montessori school complex
 | **Spring Modulith** | Enforces module boundaries at compile time while keeping deployment as single artifact. Easier than microservices for school IT. |
 | **Module toggle via `@ConditionalOnProperty`** | Schools can disable unused features without code changes. All beans in optional modules carry this annotation. |
 | **JWT + Redis sessions** | Stateless API authentication with short-lived access tokens (15min) and long-lived refresh tokens (7d) stored in Redis. |
-| **Flyway migrations** | Schema changes are versioned (V001-V039). Hibernate only validates (`ddl-auto: validate`). |
+| **Flyway migrations** | Schema changes are versioned (V001-V046). Hibernate only validates (`ddl-auto: validate`). |
 | **Vue 3 + PrimeVue SPA** | Rich component library reduces custom UI code. PWA for mobile-first experience. |
 | **Docker Compose as deployment unit** | Single command deploys all infrastructure. No Kubernetes needed for typical school deployment. |
 | **Facade pattern for inter-module communication** | `*ModuleApi` interfaces provide stable contracts. Spring Events for async decoupling. |
@@ -215,11 +215,11 @@ com.monteweb.{module}/
 | **notification** | In-app, WebSocket, Web Push notifications | `NotificationModuleApi` |
 | **calendar** | Events (room/section/school scope), RSVP | `CalendarModuleApi` |
 | **messaging** | Direct messages, conversations, communication rules | `MessagingModuleApi` |
-| **files** | File upload/download via MinIO | `FilesModuleApi` |
+| **files** | File upload/download via MinIO, folder audience visibility | `FilesModuleApi` |
 | **jobboard** | Volunteer jobs, assignments, hour tracking, PDF reports | `JobboardModuleApi` |
 | **cleaning** | Cleaning schedules, QR check-in, PDF QR codes | `CleaningModuleApi` |
-| **forms** | Surveys, consent forms, scoped distribution, CSV/PDF export | `FormsModuleApi` |
-| **fotobox** | Photo gallery threads in rooms, thumbnails, lightbox | `FotoboxModuleApi` |
+| **forms** | Surveys, consent forms, multi-section scoping, dashboard widget, CSV/PDF export | `FormsModuleApi` |
+| **fotobox** | Photo gallery threads in rooms, thumbnails, lightbox, thread audience visibility | `FotoboxModuleApi` |
 | **admin** | System config, theme, modules, audit log | (internal only) |
 | **shared** | CORS, security, rate limiting, error handling, PDF util | `@NamedInterface` exports |
 
@@ -354,7 +354,7 @@ Frontend Dockerfile:
 
 ### 8.4 Internationalization (i18n)
 
-- Frontend: `vue-i18n` with `de.ts` (~375+ keys) and `en.ts`
+- Frontend: `vue-i18n` with `de.ts` (~400+ keys) and `en.ts`
 - Browser locale detection with manual override via LanguageSwitcher
 - No hardcoded strings in `.vue` files
 
@@ -393,7 +393,7 @@ Every bean (Service, Controller, Component) in optional modules carries this ann
 
 | Layer | Tool | Coverage |
 |-------|------|----------|
-| Frontend Unit/Component | Vitest + @vue/test-utils | 565 tests, 79 test files |
+| Frontend Unit/Component | Vitest + @vue/test-utils | 892 tests, 107 test files |
 | Backend Integration | Spring Boot Test + Testcontainers | 37 test files |
 | CI/CD | GitHub Actions | Backend, frontend, Docker build jobs |
 
@@ -428,7 +428,7 @@ Every bean (Service, Controller, Component) in optional modules carries this ann
 ### ADR-5: Flyway-Only Schema Management
 
 **Context:** Need reproducible database state across environments.
-**Decision:** All schema changes as Flyway migrations (V001-V039). Hibernate set to `validate` only.
+**Decision:** All schema changes as Flyway migrations (V001-V046). Hibernate set to `validate` only.
 **Consequences:** Explicit migration history. No surprise schema changes. Rollback requires manual down-migration.
 
 ### ADR-6: Self-Hosted with No External Dependencies
@@ -472,7 +472,7 @@ Quality
 │   ├── Health checks on all services
 │   └── Prometheus/Grafana monitoring
 └── Maintainability
-    ├── 565 frontend tests across 79 files
+    ├── 892 frontend tests across 107 files
     ├── 37 backend test files with Testcontainers
     └── CI/CD pipeline with automated checks
 ```
@@ -537,6 +537,8 @@ Quality
 | **DiscussionMode** | Room setting controlling discussion behavior: FULL, ANNOUNCEMENTS_ONLY, or DISABLED. |
 | **ThreadAudience** | Discussion thread visibility scope: ALLE (all members), ELTERN (parents + staff), or KINDER (students + staff). |
 | **Fotobox** | Photo gallery feature within rooms, with permission levels (VIEW_ONLY, POST_IMAGES, CREATE_THREADS). |
+| **Audience** | Visibility scope for folders and fotobox threads: `ALL` (all room members), `PARENTS_ONLY`, `STUDENTS_ONLY`. Parents auto-set to `PARENTS_ONLY` on creation; teachers/leaders/admins choose. |
+| **Multi-Section Forms** | Forms with `SECTION` scope can target multiple school sections via `section_ids UUID[]`. Available sections selected via MultiSelect on form creation. |
 | **Conditional Module** | Feature module that can be enabled/disabled via `monteweb.modules.{name}.enabled` property. Currently: messaging, files, jobboard, cleaning, calendar, forms, fotobox. |
 | **Spring Modulith** | Framework enforcing module boundaries within a monolithic Spring application. |
 | **Facade / ModuleApi** | Public interface exposing a module's capabilities to other modules. |
