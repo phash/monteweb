@@ -148,7 +148,7 @@ async function addSectionAdmin(sectionId: string, user: UserInfo) {
     const res = await usersApi.findBySpecialRole(`SECTION_ADMIN:${sectionId}`)
     sectionAdmins.value[sectionId] = res.data.data
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -159,7 +159,7 @@ async function removeSectionAdmin(sectionId: string, userId: string) {
     const res = await usersApi.findBySpecialRole(`SECTION_ADMIN:${sectionId}`)
     sectionAdmins.value[sectionId] = res.data.data
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -170,7 +170,7 @@ async function changeRoomSection(room: RoomInfo, newSectionId: string | null) {
     toast.add({ severity: 'success', summary: t('admin.roomSectionChanged'), life: 3000 })
     await loadData()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -352,7 +352,7 @@ onMounted(loadData)
         </div>
       </form>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="showDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showDialog = false" />
         <Button :label="editingSection ? t('common.save') : t('common.create')" @click="saveSection" />
       </template>
     </Dialog>
@@ -370,7 +370,7 @@ onMounted(loadData)
         {{ t('admin.deleteSectionWarn') }}
       </p>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="confirmDeleteSection = null" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="confirmDeleteSection = null" />
         <Button :label="t('common.delete')" severity="danger" @click="deleteSection" />
       </template>
     </Dialog>

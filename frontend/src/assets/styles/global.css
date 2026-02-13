@@ -36,6 +36,16 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.25;
 }
 
+/* Page header: title + action buttons */
+.mw-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
 /* Page title utility */
 .page-title {
   font-size: var(--mw-font-size-2xl);
@@ -44,12 +54,33 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--mw-text);
 }
 
+.mw-page-header .page-title {
+  margin-bottom: 0;
+}
+
 /* Card utility */
 .card {
   background: var(--mw-bg-card);
   border-radius: var(--mw-border-radius);
   box-shadow: var(--mw-shadow);
   padding: 1.5rem;
+}
+
+/* Card list with consistent spacing */
+.mw-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Interactive card hover effect */
+.mw-card-interactive {
+  transition: background-color 0.15s ease;
+  cursor: pointer;
+}
+
+.mw-card-interactive:hover {
+  background: var(--mw-bg-hover);
 }
 
 /* Responsive container */
@@ -74,10 +105,23 @@ h1, h2, h3, h4, h5, h6 {
   margin-bottom: 1rem;
 }
 
+/* Form action buttons */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 /* Hide on mobile/desktop utilities */
 @media (max-width: 767px) {
   .hide-mobile {
     display: none !important;
+  }
+  .hide-mobile-column {
+    display: none !important;
+  }
+  .mw-grid-responsive {
+    grid-template-columns: 1fr !important;
   }
   .form-actions {
     position: sticky;

@@ -184,7 +184,7 @@ async function savePublicDesc() {
   await roomsApi.update(props.id, { publicDescription: publicDescDraft.value })
   await rooms.fetchRoom(props.id)
   editingPublicDesc.value = false
-  toast.add({ severity: 'success', summary: t('common.save'), life: 2000 })
+  toast.add({ severity: 'success', summary: t('common.save'), life: 3000 })
 }
 
 async function joinRoom() {
@@ -329,11 +329,11 @@ async function toggleMute() {
     if (roomMuted.value) {
       await rooms.unmuteRoom(props.id)
       roomMuted.value = false
-      toast.add({ severity: 'success', summary: t('rooms.unmuted'), life: 2000 })
+      toast.add({ severity: 'success', summary: t('rooms.unmuted'), life: 3000 })
     } else {
       await rooms.muteRoom(props.id)
       roomMuted.value = true
-      toast.add({ severity: 'success', summary: t('rooms.muted'), life: 2000 })
+      toast.add({ severity: 'success', summary: t('rooms.muted'), life: 3000 })
     }
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
@@ -478,7 +478,7 @@ async function toggleMute() {
             rows="3"
           />
           <div class="public-desc-actions">
-            <Button :label="t('common.cancel')" text size="small" @click="editingPublicDesc = false" />
+            <Button :label="t('common.cancel')" severity="secondary" text size="small" @click="editingPublicDesc = false" />
             <Button :label="t('common.save')" size="small" @click="savePublicDesc" />
           </div>
         </template>
@@ -647,7 +647,7 @@ async function toggleMute() {
                   class="w-full" rows="3" />
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showJoinRequestDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showJoinRequestDialog = false" />
         <Button :label="t('rooms.requestJoin')" icon="pi pi-send"
                 :loading="joinRequestLoading" @click="submitJoinRequest" />
       </template>

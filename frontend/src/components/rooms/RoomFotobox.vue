@@ -10,6 +10,7 @@ import type { FotoboxPermissionLevel } from '@/types/fotobox'
 import type { FileAudience } from '@/types/files'
 import FotoboxThread from './FotoboxThread.vue'
 import FotoboxSettings from './FotoboxSettings.vue'
+import { audienceSeverity } from '@/utils/audienceSeverity'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Button from 'primevue/button'
@@ -19,6 +20,7 @@ import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import { useToast } from 'primevue/usetoast'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 
 const props = defineProps<{ roomId: string; isLeader: boolean }>()
 const { t } = useI18n()
@@ -27,6 +29,7 @@ const fotobox = useFotoboxStore()
 const auth = useAuthStore()
 const rooms = useRoomsStore()
 const toast = useToast()
+const { visible: confirmVisible, header: confirmHeader, message: confirmMessage, confirm: confirmDialog, onConfirm, onCancel } = useConfirmDialog()
 
 const selectedThreadId = ref<string | null>(null)
 const showCreateDialog = ref(false)
@@ -92,10 +95,11 @@ async function createThread() {
 }
 
 async function deleteThread(threadId: string) {
-  if (!confirm(t('fotobox.confirmDeleteThread'))) return
+  const ok = await confirmDialog({ header: t('common.confirmDeleteTitle'), message: t('fotobox.confirmDeleteThread') })
+  if (!ok) return
   try {
     await fotobox.deleteThread(props.roomId, threadId)
-    toast.add({ severity: 'success', summary: t('fotobox.deleteThread'), life: 2000 })
+    toast.add({ severity: 'success', summary: t('fotobox.deleteThread'), life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   }
@@ -103,14 +107,6 @@ async function deleteThread(threadId: string) {
 
 function formatDate(date: string) {
   return formatCompactDateTime(date)
-}
-
-function audienceSeverity(audience: string): 'info' | 'warn' | 'secondary' {
-  switch (audience) {
-    case 'PARENTS_ONLY': return 'warn'
-    case 'STUDENTS_ONLY': return 'info'
-    default: return 'secondary'
-  }
 }
 
 function audienceLabel(audience: string): string {
@@ -285,6 +281,14 @@ function audienceLabel(audience: string): string {
       :visible="showSettingsDialog"
       @update:visible="showSettingsDialog = $event"
     />
+
+    <Dialog v-model:visible="confirmVisible" :header="confirmHeader" modal :style="{ width: '400px', maxWidth: '90vw' }">
+      <p>{{ confirmMessage }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="onCancel" />
+        <Button :label="t('common.delete')" severity="danger" @click="onConfirm" />
+      </template>
+    </Dialog>
   </div>
 </template>
 

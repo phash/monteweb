@@ -112,7 +112,7 @@ function handleDelete() {
     <div v-if="showDeleteConfirm" class="delete-confirm" role="alertdialog" :aria-label="t('feed.confirmDeleteTitle')">
       <p>{{ t('feed.confirmDeleteMessage') }}</p>
       <div class="delete-confirm-actions">
-        <Button :label="t('common.cancel')" text size="small" @click="showDeleteConfirm = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text size="small" @click="showDeleteConfirm = false" />
         <Button :label="t('common.delete')" severity="danger" size="small" @click="handleDelete" />
       </div>
     </div>

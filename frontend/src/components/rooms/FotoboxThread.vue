@@ -11,7 +11,9 @@ import FotoboxLightbox from './FotoboxLightbox.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import { useToast } from 'primevue/usetoast'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 
 const props = defineProps<{
   roomId: string
@@ -27,6 +29,7 @@ const { formatCompactDateTime } = useLocaleDate()
 const fotobox = useFotoboxStore()
 const auth = useAuthStore()
 const toast = useToast()
+const { visible: confirmVisible, header: confirmHeader, message: confirmMessage, confirm: confirmDialog, onConfirm, onCancel } = useConfirmDialog()
 
 const showUploader = ref(false)
 const lightboxVisible = ref(false)
@@ -52,10 +55,11 @@ async function onUploaded() {
 }
 
 async function deleteImage(imageId: string) {
-  if (!confirm(t('fotobox.confirmDeleteImage'))) return
+  const ok = await confirmDialog({ header: t('common.confirmDeleteTitle'), message: t('fotobox.confirmDeleteImage') })
+  if (!ok) return
   try {
     await fotobox.deleteImage(imageId)
-    toast.add({ severity: 'success', summary: t('fotobox.deleteImage'), life: 2000 })
+    toast.add({ severity: 'success', summary: t('fotobox.deleteImage'), life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   }
@@ -148,6 +152,14 @@ function formatDate(date: string) {
       v-model:currentIndex="lightboxIndex"
       v-model:visible="lightboxVisible"
     />
+
+    <Dialog v-model:visible="confirmVisible" :header="confirmHeader" modal :style="{ width: '400px', maxWidth: '90vw' }">
+      <p>{{ confirmMessage }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="onCancel" />
+        <Button :label="t('common.delete')" severity="danger" @click="onConfirm" />
+      </template>
+    </Dialog>
   </div>
 </template>
 

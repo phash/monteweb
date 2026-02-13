@@ -339,7 +339,7 @@ function barWidth(count: number, max: number): string {
   margin-bottom: 0.75rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .bar-label {
     min-width: 60px;
   }

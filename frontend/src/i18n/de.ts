@@ -33,6 +33,8 @@ export default {
     removeAvatar: 'Avatar entfernen',
     avatarUploaded: 'Avatar hochgeladen',
     avatarRemoved: 'Avatar entfernt',
+    confirmDeleteTitle: 'Löschen bestätigen',
+    confirmDeleteMessage: 'Möchten Sie diesen Eintrag wirklich löschen? Dies kann nicht rückgängig gemacht werden.',
   },
   nav: {
     dashboard: 'Dashboard',

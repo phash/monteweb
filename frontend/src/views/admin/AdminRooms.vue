@@ -227,7 +227,7 @@ async function addMember(user: UserInfo) {
     membersRoom.value = res.data.data
     await loadData()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -240,7 +240,7 @@ async function removeMember(userId: string) {
     membersRoom.value = res.data.data
     await loadData()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -251,7 +251,7 @@ async function updateMemberRole(userId: string, role: RoomRole) {
     const res = await roomsApi.getById(membersRoom.value.id)
     membersRoom.value = res.data.data
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -276,7 +276,7 @@ async function executeMoveCopy() {
     membersRoom.value = res.data.data
     await loadData()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -377,15 +377,15 @@ onMounted(loadData)
     <Dialog v-model:visible="showCreate" :header="t('rooms.create')" modal :style="{ width: '500px', maxWidth: '90vw' }">
       <form @submit.prevent="createRoom" class="dialog-form">
         <div class="form-field">
-          <label class="required">{{ t('rooms.name') }}</label>
-          <InputText v-model="form.name" required class="w-full" />
+          <label for="create-room-name" class="required">{{ t('rooms.name') }}</label>
+          <InputText id="create-room-name" v-model="form.name" required class="w-full" />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.type') }}</label>
-          <Select v-model="form.type" :options="roomTypes" optionLabel="label" optionValue="value" class="w-full" />
+          <label for="create-room-type">{{ t('rooms.type') }}</label>
+          <Select v-model="form.type" :options="roomTypes" optionLabel="label" optionValue="value" inputId="create-room-type" class="w-full" />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.section') }}</label>
+          <label for="create-room-section">{{ t('rooms.section') }}</label>
           <Select
             v-model="form.sectionId"
             :options="sections"
@@ -393,16 +393,17 @@ onMounted(loadData)
             optionValue="id"
             :placeholder="t('admin.noSection')"
             showClear
+            inputId="create-room-section"
             class="w-full"
           />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.description') }}</label>
-          <Textarea v-model="form.description" rows="3" class="w-full" />
+          <label for="create-room-desc">{{ t('rooms.description') }}</label>
+          <Textarea id="create-room-desc" v-model="form.description" rows="3" class="w-full" />
         </div>
       </form>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="showCreate = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showCreate = false" />
         <Button :label="t('common.create')" @click="createRoom" />
       </template>
     </Dialog>
@@ -419,15 +420,15 @@ onMounted(loadData)
           @remove="onAvatarRemove"
         />
         <div class="form-field">
-          <label class="required">{{ t('rooms.name') }}</label>
-          <InputText v-model="editForm.name" required class="w-full" />
+          <label for="edit-room-name" class="required">{{ t('rooms.name') }}</label>
+          <InputText id="edit-room-name" v-model="editForm.name" required class="w-full" />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.type') }}</label>
-          <Select v-model="editForm.type" :options="roomTypes" optionLabel="label" optionValue="value" class="w-full" />
+          <label for="edit-room-type">{{ t('rooms.type') }}</label>
+          <Select v-model="editForm.type" :options="roomTypes" optionLabel="label" optionValue="value" inputId="edit-room-type" class="w-full" />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.section') }}</label>
+          <label for="edit-room-section">{{ t('rooms.section') }}</label>
           <Select
             v-model="editForm.sectionId"
             :options="sections"
@@ -435,20 +436,21 @@ onMounted(loadData)
             optionValue="id"
             :placeholder="t('admin.noSection')"
             showClear
+            inputId="edit-room-section"
             class="w-full"
           />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.description') }}</label>
-          <Textarea v-model="editForm.description" rows="3" class="w-full" />
+          <label for="edit-room-desc">{{ t('rooms.description') }}</label>
+          <Textarea id="edit-room-desc" v-model="editForm.description" rows="3" class="w-full" />
         </div>
         <div class="form-field">
-          <label>{{ t('rooms.publicDescription') }}</label>
-          <Textarea v-model="editForm.publicDescription" rows="2" class="w-full" />
+          <label for="edit-room-pubdesc">{{ t('rooms.publicDescription') }}</label>
+          <Textarea id="edit-room-pubdesc" v-model="editForm.publicDescription" rows="2" class="w-full" />
         </div>
       </form>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="showEdit = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showEdit = false" />
         <Button :label="t('common.save')" @click="saveEdit" />
       </template>
     </Dialog>
@@ -520,19 +522,20 @@ onMounted(loadData)
     <Dialog v-model:visible="showMoveCopy" :header="moveCopyMode === 'move' ? t('admin.moveMember') : t('admin.copyMember')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <p>{{ moveCopyMember?.displayName }}</p>
       <div class="form-field" style="margin-top: 0.75rem;">
-        <label>{{ t('admin.targetRoom') }}</label>
+        <label for="move-copy-target">{{ t('admin.targetRoom') }}</label>
         <Select
           v-model="moveCopyTarget"
           :options="rooms.filter(r => r.id !== membersRoom?.id)"
           optionLabel="name"
           optionValue="id"
           :placeholder="t('admin.selectRoom')"
+          inputId="move-copy-target"
           class="w-full"
           filter
         />
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="showMoveCopy = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showMoveCopy = false" />
         <Button :label="moveCopyMode === 'move' ? t('admin.moveMember') : t('admin.copyMember')" @click="executeMoveCopy" :disabled="!moveCopyTarget" />
       </template>
     </Dialog>
@@ -546,7 +549,7 @@ onMounted(loadData)
         }}
       </p>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="showArchive = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showArchive = false" />
         <Button
           :label="selectedRoom?.archived ? t('admin.reactivateRoom') : t('admin.deactivateRoom')"
           :severity="selectedRoom?.archived ? 'success' : 'warn'"
@@ -560,7 +563,7 @@ onMounted(loadData)
       <p>{{ t('admin.deleteRoomConfirm', { name: selectedRoom?.name }) }}</p>
       <p class="delete-warn">{{ t('admin.deleteRoomWarn') }}</p>
       <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" @click="showDelete = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showDelete = false" />
         <Button :label="t('common.delete')" severity="danger" @click="confirmDelete" />
       </template>
     </Dialog>

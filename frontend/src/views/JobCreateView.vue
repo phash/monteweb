@@ -186,7 +186,7 @@ async function submit() {
   gap: 1rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .form-row {
     grid-template-columns: 1fr;
   }

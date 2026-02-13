@@ -226,7 +226,7 @@ async function doCheckOut() {
       <InputText v-model="scannerInput" :placeholder="t('cleaning.qrPlaceholder')"
                  class="w-full" autofocus @keyup.enter="submitCheckIn" />
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showQrDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showQrDialog = false" />
         <Button :label="t('cleaning.checkIn')" icon="pi pi-check" @click="submitCheckIn"
                 :disabled="!scannerInput" />
       </template>

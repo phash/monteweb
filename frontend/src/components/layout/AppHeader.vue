@@ -70,7 +70,7 @@ async function onSwitchRole(role: string) {
     toast.add({ severity: 'success', summary: t('profile.roleSwitched', { role: t('profile.roleLabels.' + role) }), life: 3000 })
     router.go(0)
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   } finally {
     switching.value = false
   }

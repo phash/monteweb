@@ -242,7 +242,7 @@ async function createInterestRoom() {
         </div>
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showCreateDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showCreateDialog = false" />
         <Button :label="t('common.create')" icon="pi pi-check" @click="createInterestRoom"
                 :disabled="!newRoom.name" />
       </template>
@@ -256,7 +256,7 @@ async function createInterestRoom() {
                   class="w-full" rows="3" />
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showJoinRequestDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showJoinRequestDialog = false" />
         <Button :label="t('rooms.requestJoin')" icon="pi pi-send"
                 :loading="joinRequestLoading" @click="submitJoinRequest" />
       </template>

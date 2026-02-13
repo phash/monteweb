@@ -192,7 +192,7 @@ function formatTime(date: string | null) {
 
 .messages-layout {
   display: grid;
-  grid-template-columns: 320px 1fr;
+  grid-template-columns: minmax(240px, 320px) 1fr;
   gap: 1rem;
   height: calc(100vh - var(--mw-header-height) - 8rem);
 }

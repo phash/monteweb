@@ -204,7 +204,7 @@ async function doAssignRole() {
     showAssignRole.value = false
     await loadUsers()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -214,7 +214,7 @@ async function removeRole(user: UserInfo, role: string) {
     toast.add({ severity: 'success', summary: t('sectionAdmin.roleRemoved'), life: 3000 })
     await loadUsers()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -237,7 +237,7 @@ async function doCreateRoom() {
     showCreateRoom.value = false
     await loadRooms()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   } finally {
     roomCreating.value = false
   }

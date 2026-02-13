@@ -47,7 +47,7 @@ async function save() {
       maxFileSizeMb: maxFileSizeMb.value,
       maxImagesPerThread: maxImagesPerThread.value,
     })
-    toast.add({ severity: 'success', summary: t('common.save'), life: 2000 })
+    toast.add({ severity: 'success', summary: t('common.save'), life: 3000 })
     emit('update:visible', false)
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })

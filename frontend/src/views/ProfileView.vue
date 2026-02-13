@@ -83,7 +83,7 @@ async function onSwitchRole(role: string) {
     toast.add({ severity: 'success', summary: t('profile.roleSwitched', { role: t('profile.roleLabels.' + role) }), life: 3000 })
     router.go(0)
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   } finally {
     switching.value = false
   }
@@ -300,7 +300,7 @@ async function togglePush() {
   margin-top: 0.5rem;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .form-row {
     grid-template-columns: 1fr;
   }

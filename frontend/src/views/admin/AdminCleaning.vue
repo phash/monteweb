@@ -241,7 +241,7 @@ async function removePutzOrga(user: UserInfo) {
     </div>
 
     <!-- Configs Table -->
-    <DataTable :value="cleaningStore.configs" :loading="cleaningStore.loading" stripedRows>
+    <DataTable :value="cleaningStore.configs" :loading="cleaningStore.loading" stripedRows scrollable>
       <Column field="title" :header="t('cleaning.admin.configTitle')" />
       <Column field="sectionName" :header="t('cleaning.admin.section')" />
       <Column :header="t('cleaning.admin.day')">
@@ -285,24 +285,24 @@ async function removePutzOrga(user: UserInfo) {
 
     <!-- Create Config Dialog -->
     <Dialog v-model:visible="showCreateDialog" :header="t('cleaning.admin.newConfig')" modal
-            style="width: 500px">
+            :style="{ width: '500px', maxWidth: '90vw' }">
       <div class="flex flex-col gap-4">
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.configTitle') }}</label>
-          <InputText v-model="newConfig.title" class="w-full" />
+          <label for="cfg-title" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.configTitle') }}</label>
+          <InputText id="cfg-title" v-model="newConfig.title" class="w-full" />
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.section') }}</label>
+          <label for="cfg-section" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.section') }}</label>
           <Select v-model="newConfig.sectionId" :options="sections"
                   optionLabel="name" optionValue="id"
                   :placeholder="t('cleaning.admin.selectSection')"
-                  class="w-full" />
+                  inputId="cfg-section" class="w-full" />
         </div>
         <!-- Specific Date (for one-time actions) -->
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.specificDate') }}</label>
+          <label for="cfg-date" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.specificDate') }}</label>
           <DatePicker v-model="newConfig.specificDate" dateFormat="dd.mm.yy" class="w-full"
-                      showIcon :showOnFocus="false">
+                      inputId="cfg-date" showIcon :showOnFocus="false">
             <template #date="{ date }">
               <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
             </template>
@@ -311,38 +311,38 @@ async function removePutzOrga(user: UserInfo) {
         </div>
         <!-- Day of week (only when no specific date) -->
         <div v-if="!newConfig.specificDate">
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.orRecurring') }}</label>
+          <label for="cfg-day" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.orRecurring') }}</label>
           <Select v-model="newConfig.dayOfWeek" :options="dayOptions"
-                  optionLabel="label" optionValue="value" class="w-full" />
+                  optionLabel="label" optionValue="value" inputId="cfg-day" class="w-full" />
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="time-grid">
           <div>
-            <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.startTime') }}</label>
-            <InputText v-model="newConfig.startTime" class="w-full" />
+            <label for="cfg-start" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.startTime') }}</label>
+            <InputText id="cfg-start" v-model="newConfig.startTime" class="w-full" />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.endTime') }}</label>
-            <InputText v-model="newConfig.endTime" class="w-full" />
+            <label for="cfg-end" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.endTime') }}</label>
+            <InputText id="cfg-end" v-model="newConfig.endTime" class="w-full" />
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="time-grid">
           <div>
-            <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.minParticipants') }}</label>
-            <InputNumber v-model="newConfig.minParticipants" :min="1" class="w-full" />
+            <label for="cfg-min" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.minParticipants') }}</label>
+            <InputNumber v-model="newConfig.minParticipants" :min="1" inputId="cfg-min" class="w-full" />
           </div>
           <div>
-            <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.maxParticipants') }}</label>
-            <InputNumber v-model="newConfig.maxParticipants" :min="1" class="w-full" />
+            <label for="cfg-max" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.maxParticipants') }}</label>
+            <InputNumber v-model="newConfig.maxParticipants" :min="1" inputId="cfg-max" class="w-full" />
           </div>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.hoursCredit') }}</label>
+          <label for="cfg-hours" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.hoursCredit') }}</label>
           <InputNumber v-model="newConfig.hoursCredit" :minFractionDigits="1" :maxFractionDigits="2"
-                       :min="0.5" :step="0.5" class="w-full" />
+                       :min="0.5" :step="0.5" inputId="cfg-hours" class="w-full" />
         </div>
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showCreateDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showCreateDialog = false" />
         <Button :label="t('common.create')" icon="pi pi-check" @click="createConfig"
                 :disabled="!newConfig.title || !newConfig.sectionId" />
       </template>
@@ -350,20 +350,20 @@ async function removePutzOrga(user: UserInfo) {
 
     <!-- Generate Slots Dialog -->
     <Dialog v-model:visible="showGenerateDialog" :header="t('cleaning.admin.generateTitle')" modal
-            style="width: 400px">
+            :style="{ width: '400px', maxWidth: '90vw' }">
       <p class="mb-3">{{ t('cleaning.admin.generateHint', { title: selectedConfig?.title }) }}</p>
       <div class="flex flex-col gap-3">
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
-          <DatePicker v-model="generateRange.from" dateFormat="dd.mm.yy" class="w-full">
+          <label for="gen-from" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
+          <DatePicker v-model="generateRange.from" dateFormat="dd.mm.yy" inputId="gen-from" class="w-full">
             <template #date="{ date }">
               <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
             </template>
           </DatePicker>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
-          <DatePicker v-model="generateRange.to" dateFormat="dd.mm.yy" class="w-full">
+          <label for="gen-to" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
+          <DatePicker v-model="generateRange.to" dateFormat="dd.mm.yy" inputId="gen-to" class="w-full">
             <template #date="{ date }">
               <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
             </template>
@@ -371,7 +371,7 @@ async function removePutzOrga(user: UserInfo) {
         </div>
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showGenerateDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showGenerateDialog = false" />
         <Button :label="t('cleaning.admin.generate')" icon="pi pi-calendar-plus" @click="generateSlots"
                 :disabled="!generateRange.from || !generateRange.to" />
       </template>
@@ -379,20 +379,20 @@ async function removePutzOrga(user: UserInfo) {
 
     <!-- QR Code PDF Export Dialog -->
     <Dialog v-model:visible="showQrExportDialog" :header="t('cleaning.admin.exportQrCodesTitle')" modal
-            style="width: 400px">
+            :style="{ width: '400px', maxWidth: '90vw' }">
       <p class="mb-3">{{ t('cleaning.admin.exportQrCodesHint', { title: selectedConfig?.title }) }}</p>
       <div class="flex flex-col gap-3">
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
-          <DatePicker v-model="qrExportRange.from" dateFormat="dd.mm.yy" class="w-full">
+          <label for="qr-from" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
+          <DatePicker v-model="qrExportRange.from" dateFormat="dd.mm.yy" inputId="qr-from" class="w-full">
             <template #date="{ date }">
               <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
             </template>
           </DatePicker>
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
-          <DatePicker v-model="qrExportRange.to" dateFormat="dd.mm.yy" class="w-full">
+          <label for="qr-to" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
+          <DatePicker v-model="qrExportRange.to" dateFormat="dd.mm.yy" inputId="qr-to" class="w-full">
             <template #date="{ date }">
               <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
             </template>
@@ -400,7 +400,7 @@ async function removePutzOrga(user: UserInfo) {
         </div>
       </div>
       <template #footer>
-        <Button :label="t('common.cancel')" text @click="showQrExportDialog = false" />
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showQrExportDialog = false" />
         <Button :label="t('cleaning.admin.exportQrCodes')" icon="pi pi-file-pdf" @click="exportQrCodes"
                 :disabled="!qrExportRange.from || !qrExportRange.to" />
       </template>
@@ -448,7 +448,7 @@ async function removePutzOrga(user: UserInfo) {
           />
         </div>
 
-        <DataTable :value="putzOrgaUsers" :loading="loadingPutzOrga" stripedRows>
+        <DataTable :value="putzOrgaUsers" :loading="loadingPutzOrga" stripedRows scrollable>
           <template #empty>{{ t('cleaning.admin.noPutzOrga') }}</template>
           <Column field="displayName" :header="t('admin.columnName')" />
           <Column field="email" :header="t('admin.columnEmail')" />
@@ -471,6 +471,18 @@ async function removePutzOrga(user: UserInfo) {
 </template>
 
 <style scoped>
+.time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 767px) {
+  .time-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 :deep(.mw-holiday) {
   color: #dc2626;
   font-weight: 700;

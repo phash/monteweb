@@ -13,6 +13,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
+import { audienceSeverity } from '@/utils/audienceSeverity'
 import Select from 'primevue/select'
 import type { ThreadAudience } from '@/types/discussion'
 
@@ -67,13 +68,6 @@ async function createThread() {
   newAudience.value = 'ALLE'
 }
 
-function audienceSeverity(audience: string): 'info' | 'warn' | 'success' | 'secondary' {
-  switch (audience) {
-    case 'ELTERN': return 'warn'
-    case 'KINDER': return 'info'
-    default: return 'secondary'
-  }
-}
 
 function formatDate(date: string) {
   return formatCompactDateTime(date)

@@ -534,7 +534,7 @@ async function handleSubmit(publish: boolean) {
   margin-top: 1.5rem;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 767px) {
   .field-row {
     flex-direction: column;
   }

@@ -33,6 +33,8 @@ export default {
     removeAvatar: 'Remove avatar',
     avatarUploaded: 'Avatar uploaded',
     avatarRemoved: 'Avatar removed',
+    confirmDeleteTitle: 'Confirm deletion',
+    confirmDeleteMessage: 'Are you sure you want to delete this item? This cannot be undone.',
   },
   nav: {
     dashboard: 'Dashboard',

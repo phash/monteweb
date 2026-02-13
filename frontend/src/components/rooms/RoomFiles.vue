@@ -12,6 +12,7 @@ import InputText from 'primevue/inputtext'
 import FileUpload from 'primevue/fileupload'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
+import { audienceSeverity } from '@/utils/audienceSeverity'
 
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
@@ -117,14 +118,6 @@ function formatSize(bytes: number) {
 
 function formatDate(date: string) {
   return formatShortDate(date)
-}
-
-function audienceSeverity(audience: string): 'info' | 'warn' | 'secondary' {
-  switch (audience) {
-    case 'PARENTS_ONLY': return 'warn'
-    case 'STUDENTS_ONLY': return 'info'
-    default: return 'secondary'
-  }
 }
 
 function audienceLabel(audience: string): string {

@@ -199,7 +199,7 @@ async function saveProfile() {
     showEdit.value = false
     await loadUsers()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   } finally {
     editLoading.value = false
   }
@@ -224,7 +224,7 @@ async function addMemberToRoom() {
     selectedRoom.value = null
     await loadUserRooms()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -235,7 +235,7 @@ async function removeFromRoom(roomId: string) {
     toast.add({ severity: 'success', summary: t('admin.memberRemoved'), life: 3000 })
     await loadUserRooms()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -263,7 +263,7 @@ async function addToFamily() {
     addFamilyId.value = ''
     await loadUserFamilies()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 
@@ -274,7 +274,7 @@ async function removeFromFamily(familyId: string) {
     toast.add({ severity: 'success', summary: t('admin.familyMemberRemoved'), life: 3000 })
     await loadUserFamilies()
   } catch {
-    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
 }
 

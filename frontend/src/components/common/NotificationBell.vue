@@ -132,7 +132,7 @@ function formatTime(date: string) {
 .notification-list {
   max-height: 400px;
   overflow-y: auto;
-  min-width: 300px;
+  min-width: min(300px, calc(100vw - 2rem));
 }
 
 .notification-item {
