@@ -1,50 +1,109 @@
-# CLAUDE.md — MonteWeb Schul-Intranet
+# CLAUDE.md
 
-MonteWeb: modulares, selbst-gehostetes Schul-Intranet für Montessori-Schulkomplexe (Krippe bis Oberstufe).
-Räume, Feed, Direktnachrichten, Jobbörse (Elternstunden), Putz-Organisation (QR-Check-in), Kalender, Formulare, Fotobox.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-**GitHub:** https://github.com/phash/monteweb (privat) | **Alle 19 Phasen COMPLETE** | Flyway V001–V044
+## Project Overview
 
-## Tech-Stack
+MonteWeb: modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Krippe bis Oberstufe).
+Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (QR-Check-in), Kalender, Formulare, Fotobox.
 
-**Backend:** Java 21, Spring Boot 3.4.2, Spring Modulith 1.3.2, Spring Security (JWT+Redis), Spring Data JPA + Flyway, PostgreSQL 16, Redis 7, MinIO, Maven, Testcontainers
-**Frontend:** Vue 3.5 (`<script setup>` + TS 5.9), Vite 7.3, PrimeVue 4.5 (Aura), Pinia 3, Vue Router 4.6, vue-i18n 11, Axios, Vitest 4
-**Infra:** Docker Compose, nginx reverse proxy, GitHub Actions CI/CD, Prometheus + Grafana (optional)
+**Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO | Docker Compose + nginx
 
-## Architektur-Regeln
+## Commands
+
+```bash
+# Full stack (Docker) — http://localhost (port 80)
+docker compose up -d
+docker compose build && docker compose up -d          # rebuild all
+docker compose build backend && docker compose up backend -d   # backend only
+docker compose build frontend && docker compose up frontend -d # frontend only
+
+# Dev infrastructure only (postgres:5433, redis:6380, minio:9000/9001)
+docker compose -f docker-compose.dev.yml up -d
+
+# Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
+cd frontend && npm install && npm run dev              # http://localhost:5173
+npm run build          # vue-tsc + vite build
+npm test               # vitest run (891 tests, 107 files)
+npm run test:watch     # vitest watch mode
+npm run test:coverage
+
+# Backend tests (requires Docker for Testcontainers)
+cd backend
+./mvnw test                                            # all tests
+./mvnw test -Dtest=AuthControllerIntegrationTest       # single test class
+./mvnw test -Dtest="AuthControllerIntegrationTest#register_*"  # single method
+
+# Monitoring (optional)
+docker compose --profile monitoring up -d              # Grafana :3000, Prometheus :9090
+```
+
+**Test Accounts** (password: `test1234`): `admin@monteweb.local` (SUPERADMIN), `lehrer@monteweb.local` (TEACHER), `eltern@monteweb.local` (PARENT), `schueler@monteweb.local` (STUDENT), `sectionadmin@monteweb.local` (SECTION_ADMIN). Plus ~220 realistic seed users from V040.
+
+## Architecture
 
 ### Backend (Spring Modulith)
 
-1. **Modulstruktur:** Jedes Modul = direktes Sub-Package von `com.monteweb` (NICHT unter `core/` oder `modules/`).
-   - **Public API** (Root-Package): `*ModuleApi` Facades, `*Info` Records, Events, Enums
-   - **Internal** (`internal/`): Service, Controller, Model, Repository — **niemals** von anderen Modulen importieren!
-   - Inter-Modul: Facades (sync), Spring Events (async)
+Package `com.monteweb`. Each module = direct sub-package (NOT under `core/` or `modules/`):
 
-2. **Shared:** `com.monteweb.shared` = kein Modul, Querschnittsthemen via `@NamedInterface` (`shared-dto`, `shared-exception`, `shared-util`, `shared-config`).
+```
+com.monteweb.<module>/
+├── <Module>ModuleApi.java      # Public facade interface — ONLY cross-module access point
+├── <Module>Info.java           # Public DTO record for cross-module data
+├── <Module>Event.java          # Public event records (async cross-module)
+└── internal/
+    ├── config/                 # @ConditionalOnProperty for optional modules
+    ├── controller/             # REST controllers (/api/v1/...)
+    ├── dto/                    # Request/response DTOs (module-internal)
+    ├── model/                  # JPA entities (Lombok, UUID PKs, Instant timestamps)
+    ├── repository/             # Spring Data JPA
+    └── service/                # Implements *ModuleApi facade
+```
 
-3. **API-Design:** REST `/api/v1/`, Antworten als `ApiResponse<T>`:
-   ```java
-   public record ApiResponse<T>(T data, String message, boolean success) {}
-   ```
+**Critical rules:**
+- **NEVER** import from another module's `internal/` package. Use `*ModuleApi` facades (sync) or Spring `ApplicationEventPublisher` (async)
+- **Shared** (`com.monteweb.shared`): not a module — cross-cutting via `@NamedInterface` (`shared-dto`, `shared-exception`, `shared-util`, `shared-config`). Provides `ApiResponse<T>`, `PageResponse<T>`, `SecurityUtils`, exception hierarchy, `PdfService`
+- **Optional modules:** `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` on **ALL** beans (not just Config). Use `@Autowired(required = false)` for optional injection
+- **Security:** JWT (15min access + 7d refresh), rate-limiting on auth endpoints. Fotobox image endpoints accept JWT via `?token=` query parameter
 
-4. **Optionale Module:** `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` auf **ALLE** Beans, nicht nur Config.
+### Frontend (Vue 3)
 
-5. **Flyway:** V001–V044. Jede Schema-Änderung als neue Migration. Hibernate `ddl-auto: validate`.
+```
+frontend/src/
+├── api/           # Axios modules (authApi, feedApi, roomsApi...) — base /api/v1, auto JWT refresh
+├── components/    # By domain: common/, layout/, feed/, rooms/, family/, messaging/
+├── composables/   # useLocaleDate, useWebSocket, useTheme, usePushNotifications, useHolidays
+├── i18n/          # de.ts + en.ts — ALL user-facing text via t(), German default
+├── router/        # Lazy-loaded routes, auth/admin guards, 404 catch-all
+├── stores/        # Pinia composition stores (one per domain)
+├── types/         # TypeScript interfaces mirroring backend DTOs
+└── views/         # Page components, views/admin/ for admin pages
+```
 
-6. **Security:** JWT (15min Access + 7d Refresh). Rate-Limiting auf Auth-Endpoints. Fotobox-Bild-Endpoints: JWT auch via `?token=` Query-Parameter.
+**Data flow:** View → Pinia store action → API module → shared axios client (`api/client.ts`, auto JWT, token refresh interceptor) → `ApiResponse<T>` response.
 
-### Frontend
+**PrimeVue:** `ToastService` registered globally in `main.ts`, `<Toast />` in `App.vue`, views use `useToast()`. Components imported individually.
 
-1. **Composition API + `<script setup lang="ts">`** — kein Options API
-2. **PrimeVue 4:** Aura-Theme, einzeln importieren. `ToastService` global (`main.ts`), `<Toast />` in `App.vue`, Views: `useToast()`
-3. **Pinia:** Ein Store pro Domäne, Stores rufen API-Funktionen auf
-4. **i18n:** Alle UI-Texte als Keys (`de.ts` + `en.ts`). Browser-Locale-Detection. Keine hardcodierten Strings
-5. **API-Client:** Zentraler Axios-Client (`api/client.ts`) mit JWT-Interceptor (auto-refresh)
-6. **Routing:** Lazy-loaded, Auth-Guards, 404 Catch-all
-7. **Responsive:** BottomNav mobile, Sidebar desktop
-8. **Theming:** CSS Custom Properties `--mw-*`, Theme vom Backend geladen
+**Theming:** CSS custom properties `--mw-*`, theme loaded from backend tenant config.
 
-## Module (Backend-Packages unter `com.monteweb`)
+### Database
+
+- **Flyway** V001–V044. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
+- UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
+- `room_members`: composite PK `(room_id, user_id)` — no `id` column
+- `rooms.is_archived` (not `archived`)
+- `feed_posts.target_user_ids`: `UUID[]` — NULL=visible to all, filled=only listed users
+- `cleaning_configs.specific_date`: optional DATE for one-time Putzaktionen
+- `tenant_config.bundesland`: VARCHAR(5) default `'BY'`, determines public holidays
+- `tenant_config.school_vacations`: JSONB array of `{name, from, to}`
+
+### Testing
+
+**Backend:** `@SpringBootTest @AutoConfigureMockMvc @Import(TestContainerConfig.class)` — Testcontainers spins up Postgres + Redis. `MonteWebModularityTests` verifies no illegal cross-module dependencies. JaCoCo 70% instruction minimum.
+
+**Frontend:** Vitest + jsdom + @vue/test-utils. Setup mocks `localStorage` and PrimeVue `useToast`. Pattern: `vi.mock()` API modules, `setActivePinia(createPinia())` in `beforeEach`. 55% statement coverage threshold.
+
+## Modules
 
 | Modul | Beschreibung | Conditional |
 |-------|-------------|-------------|
@@ -52,97 +111,54 @@ Räume, Feed, Direktnachrichten, Jobbörse (Elternstunden), Putz-Organisation (Q
 | user | Profil, Rollen, Suche, DSGVO | - |
 | family | Familienverbund, Einladungen, Stundenkonto | - |
 | school | Schulbereiche (Krippe–OS) | - |
-| room | Räume, Diskussions-Threads, Beitrittsanfragen | - |
+| room | Raeume, Diskussions-Threads, Beitrittsanfragen | - |
 | feed | Unified Feed, Posts, Kommentare, Banner, Targeted Posts | - |
 | notification | In-App + Push (VAPID) | Push: `monteweb.push.enabled` |
 | admin | System-Config, Audit-Log, Module | - |
 | messaging | DM & Chat, Kommunikationsregeln | `monteweb.modules.messaging.enabled` |
 | files | Dateiablage via MinIO | `monteweb.modules.files.enabled` |
-| jobboard | Jobbörse, Elternstunden, PDF-Export | `monteweb.modules.jobboard.enabled` |
-| cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen (einmalig+wiederkehrend) | `monteweb.modules.cleaning.enabled` |
-| calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed, Delete→Targeted Feed | `monteweb.modules.calendar.enabled` |
+| jobboard | Jobboerse, Elternstunden, PDF-Export | `monteweb.modules.jobboard.enabled` |
+| cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen | `monteweb.modules.cleaning.enabled` |
+| calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed | `monteweb.modules.calendar.enabled` |
 | forms | Survey/Consent, Scopes, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
 | fotobox | Foto-Threads, Thumbnails, Lightbox | `monteweb.modules.fotobox.enabled` |
 
-Weitere conditional Features: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.enabled`), Push (`monteweb.push.enabled`)
+Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.enabled`), Push (`monteweb.push.enabled`)
 
-## Wichtige fachliche Regeln
+## Business Rules
 
-1. **Familienverbund = Abrechnungseinheit.** Stunden aus Jobbörse/Putz werden Familie gutgeschrieben (Putzstunden: Sonder-Unterkonto)
+1. **Familienverbund = Abrechnungseinheit.** Stunden aus Jobboerse/Putz werden Familie gutgeschrieben (Putzstunden: Sonder-Unterkonto)
 2. **Ein Elternteil = ein Familienverbund.** Kind kann mehreren zugeordnet sein (getrennte Eltern)
-3. **Putz-Orga ist Opt-in**, nicht Rotation
-4. **Feed-Banner:** kontextabhängig (Putz-Banner nur für betroffene Eltern)
-5. **Raum-Posts = Feed-Einträge** aller Mitglieder (rollenabhängig)
-6. **Module abschaltbar:** Backend via `@ConditionalOnProperty`, Frontend: Menü nur wenn Modul aktiv
-7. **Kommunikationsregeln:** Lehrer↔Eltern immer erlaubt. Eltern↔Eltern / Schüler↔Schüler: konfigurierbar
-8. **Kalender-Berechtigungen:** ROOM→LEADER/SUPERADMIN, SECTION→TEACHER/SUPERADMIN, SCHOOL→SUPERADMIN. Absage→Feed für alle, Löschung→Feed nur für Zusager
-9. **Raum-Beitrittsanfragen:** Non-Members anfragen, LEADER genehmigt/lehnt ab, auto-MEMBER bei Genehmigung
-10. **Familien-Einladungen:** Per User-Suche mit Rollenwahl (PARENT/CHILD), Annehmen/Ablehnen via Notification
-11. **Fotobox:** VIEW_ONLY < POST_IMAGES < CREATE_THREADS. LEADER/SUPERADMIN = CREATE_THREADS. MinIO, Thumbnails auto, Content-Type aus Magic Bytes, max 20 Dateien/Upload
-12. **Putzaktionen:** Einmalig (mit Datum) oder wiederkehrend (Wochentag). DatePicker zeigt Feiertage (rot) und Schulferien (orange) je Bundesland
-13. **Bundesland-Konfiguration:** Default BY (Bayern), SuperAdmin konfiguriert unter Design & Einstellungen. Bestimmt Feiertage
-14. **Targeted Feed Posts:** `feed_posts.target_user_ids UUID[]` — NULL=für alle sichtbar, gefüllt=nur für diese User
+3. **Putz-Orga ist Opt-in**, nicht Rotation. Einmalig (mit Datum) oder wiederkehrend (Wochentag). DatePicker zeigt Feiertage (rot) und Schulferien (orange) je Bundesland
+4. **Feed-Banner:** kontextabhaengig (Putz-Banner nur fuer betroffene Eltern)
+5. **Module abschaltbar:** Backend via `@ConditionalOnProperty`, Frontend: Menue nur wenn Modul aktiv
+6. **Kommunikationsregeln:** Lehrer↔Eltern immer erlaubt. Eltern↔Eltern / Schueler↔Schueler: konfigurierbar
+7. **Kalender-Berechtigungen:** ROOM→LEADER/SUPERADMIN, SECTION→TEACHER/SUPERADMIN, SCHOOL→SUPERADMIN. Absage→Feed fuer alle, Loeschung→Feed nur fuer Zusager
+8. **Raum-Beitrittsanfragen:** Non-Members anfragen, LEADER genehmigt/lehnt ab, auto-MEMBER bei Genehmigung
+9. **Familien-Einladungen:** Per User-Suche mit Rollenwahl (PARENT/CHILD), Annehmen/Ablehnen via Notification
+10. **Fotobox:** VIEW_ONLY < POST_IMAGES < CREATE_THREADS. LEADER/SUPERADMIN = CREATE_THREADS. MinIO, Thumbnails auto, Content-Type aus Magic Bytes, max 20 Dateien/Upload
+11. **Targeted Feed Posts:** `feed_posts.target_user_ids UUID[]` — NULL=fuer alle sichtbar, gefuellt=nur fuer diese User
 
-## Konventionen
+## Conventions
 
-- **Code:** Englisch. **UI-Texte:** Deutsch + Englisch (i18n). **Git:** Conventional Commits
-- **Java:** `com.monteweb.{modul}` + `.internal`, Records für DTOs, `*Info` Public DTOs, `*ModuleApi` Facades, Entities: Lombok, UUIDs als PK, `Instant` für Timestamps, Bean Validation auf Requests
-- **Vue/TS:** `<script setup lang="ts">`, PascalCase Komponenten, `use`-Prefix Composables, Typen in `types/`, Scoped Styles, `--mw-*` CSS Props
-- **API:** `/api/v1/`, Paginierung `?page=0&size=20&sort=createdAt,desc`, ISO 8601 Datumsformat
+- **Code:** English. **UI-Texte:** German + English (i18n). **Git:** Conventional Commits
+- **Java:** Records for DTOs, `*Info` public DTOs, `*ModuleApi` facades, Lombok entities, UUIDs as PK, `Instant` for timestamps, Bean Validation on requests
+- **Vue/TS:** `<script setup lang="ts">`, `@/` path alias, PascalCase components, `use`-prefix composables, types in `types/`, scoped styles
+- **API:** `/api/v1/`, `ResponseEntity<ApiResponse<T>>`, `SecurityUtils.requireCurrentUserId()` in controllers, pagination `?page=0&size=20&sort=createdAt,desc`
 
-## API-Endpunkte (Kurzreferenz)
+## API Endpoints (Quick Reference)
 
 - **Auth** `/api/v1/auth`: register, login, logout, refresh, password-reset, oidc/config, oidc/token
 - **Users** `/api/v1/users`: /me (GET/PUT), /me/avatar, /me/data-export, DELETE /me (DSGVO), /{id}, /search
-- **Admin Users** `/api/v1/admin/users`: CRUD, Rollen, Status, Familien, Sonderrollen
-- **Families** `/api/v1/families`: CRUD, /mine, /join, invite, children, hours, invitations (send/accept/decline)
-- **Sections** `/api/v1/sections`: CRUD
-- **Rooms** `/api/v1/rooms`: /mine, /browse, /discover, CRUD, settings, avatar, archive, join/leave, members, mute, join-requests (send/approve/deny)
-- **Room Chat** `/api/v1/rooms/{id}/chat`: channels
-- **Threads** `/api/v1/rooms/{id}/threads`: CRUD (LEADER), replies (members), archive
+- **Admin** `/api/v1/admin/users`: CRUD, roles, status | `/api/v1/admin`: config, theme, modules, logo, audit-log
+- **Families** `/api/v1/families`: CRUD, /mine, /join, invite, children, hours, invitations
+- **Rooms** `/api/v1/rooms`: /mine, /browse, /discover, CRUD, settings, avatar, archive, members, mute, join-requests
 - **Feed** `/api/v1/feed`: feed, banners, posts CRUD, pin, comments
+- **Calendar** `/api/v1/calendar`: events CRUD, cancel, rsvp, room events
 - **Messaging** `/api/v1/messages`: conversations, messages, WS `/ws/messages`
 - **Files** `/api/v1/rooms/{id}/files`: upload/download/delete, folders
-- **Jobboard** `/api/v1/jobs`: CRUD, apply, assignments (start/complete/confirm), family hours, report/export/pdf
+- **Jobboard** `/api/v1/jobs`: CRUD, apply, assignments, family hours, report/export/pdf
 - **Cleaning** `/api/v1/cleaning`: slots, register, swap, checkin/checkout, configs, generate, qr-codes, dashboard
-- **Calendar** `/api/v1/calendar`: events CRUD, cancel, rsvp, room events
-- **Forms** `/api/v1/forms`: CRUD, publish, close, respond, results, responses, csv/pdf export
-- **Fotobox** `/api/v1/rooms/{id}/fotobox` + `/api/v1/fotobox`: settings, threads, images (upload/download/thumbnail with `?token=` JWT)
-- **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, WS, push (subscribe/unsubscribe/public-key)
-- **Admin** `/api/v1/admin`: config, theme, modules, logo, audit-log
-- **Actuator**: /health, /info, /prometheus, /metrics
-
-## Entwicklung
-
-**Voraussetzung:** Docker + Node.js 22+. Java NICHT lokal nötig.
-
-```bash
-# Full stack (Production)
-docker compose up -d                    # http://localhost (Port 80)
-docker compose build && docker compose up -d  # Nach Code-Änderungen
-
-# Frontend dev (hot reload) — Backend muss via Docker laufen
-cd frontend && npm install && npm run dev   # http://localhost:5173
-
-# Tests
-cd frontend && npm test                 # 891 Tests, 107 Dateien
-cd backend && mvn test                  # 37 Testdateien, Testcontainers
-
-# Monitoring (optional)
-docker compose --profile monitoring up -d  # Grafana :3000, Prometheus :9090
-```
-
-**Dev-Ports:** PostgreSQL 5433, Redis 6380, MinIO 9000/9001, Backend 8090, Frontend 5173 (dev) / 8091 (Docker)
-
-## Flyway-Migrationen (V001–V044)
-
-V001 tenant_config | V002 users | V003 sections | V004 families | V005 rooms | V006 audit_log | V007 seed_tenant | V008 feed | V009 notifications | V010 conversations | V011 files | V012 event_publication | V013 jobs | V014 assignments | V015 cleaning_configs | V016 cleaning_slots | V017 interest_fields | V018 chat_channels | V019 DSGVO | V020 password_reset | V021 comm_rules | V022 discussions | V023 push_subs | V024 OIDC | V025 calendar | V026 calendar_default | V027 job_event_link | V028 forms | V029 forms_default | V030 target_cleaning_hours | V031 avatars | V032 seed_admin | V033 seed_test_users | V034 join_requests | V035 family_invitations | V036 thread_audience | V037 role_refactoring | V038 fotobox | V039 fotobox_fix | V040 seed_realistic | V041 feedback_batch_1 | V043 cleaning_date_and_bundesland | V044 feed_target_user_ids
-
-## DB-Hinweise
-
-- `room_members`: Composite PK (room_id, user_id) — kein `id`
-- `rooms.is_archived` (nicht `archived`)
-- `feed_posts.target_user_ids`: PostgreSQL `UUID[]` — NULL=alle sehen Post, gefüllt=nur gelistete User
-- `cleaning_configs.specific_date`: Optional `DATE` für einmalige Putzaktionen
-- `tenant_config.bundesland`: `VARCHAR(5)` Default `'BY'`, bestimmt Feiertage
-- `tenant_config.school_vacations`: `JSONB` Array mit `{name, from, to}`
+- **Forms** `/api/v1/forms`: CRUD, publish, close, respond, results, csv/pdf export
+- **Fotobox** `/api/v1/rooms/{id}/fotobox` + `/api/v1/fotobox`: threads, images, thumbnails (`?token=` JWT)
+- **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, push subscribe/unsubscribe
