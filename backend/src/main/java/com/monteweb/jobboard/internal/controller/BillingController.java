@@ -31,29 +31,29 @@ public class BillingController {
 
     @GetMapping("/periods")
     public ResponseEntity<ApiResponse<List<BillingPeriodInfo>>> listPeriods() {
-        return ResponseEntity.ok(ApiResponse.success(billingService.listPeriods()));
+        return ResponseEntity.ok(ApiResponse.ok(billingService.listPeriods()));
     }
 
     @GetMapping("/periods/active")
     public ResponseEntity<ApiResponse<BillingPeriodInfo>> getActivePeriod() {
-        return ResponseEntity.ok(ApiResponse.success(billingService.getActivePeriod()));
+        return ResponseEntity.ok(ApiResponse.ok(billingService.getActivePeriod()));
     }
 
     @PostMapping("/periods")
     public ResponseEntity<ApiResponse<BillingPeriodInfo>> createPeriod(
             @Valid @RequestBody CreateBillingPeriodRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(billingService.createPeriod(request)));
+        return ResponseEntity.ok(ApiResponse.ok(billingService.createPeriod(request)));
     }
 
     @GetMapping("/periods/{id}/report")
     public ResponseEntity<ApiResponse<BillingReportInfo>> getReport(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.success(billingService.getReport(id)));
+        return ResponseEntity.ok(ApiResponse.ok(billingService.getReport(id)));
     }
 
     @PostMapping("/periods/{id}/close")
     public ResponseEntity<ApiResponse<BillingPeriodInfo>> closePeriod(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        return ResponseEntity.ok(ApiResponse.success(billingService.closePeriod(id, userId)));
+        return ResponseEntity.ok(ApiResponse.ok(billingService.closePeriod(id, userId)));
     }
 
     @GetMapping(value = "/periods/{id}/export/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
