@@ -19,4 +19,9 @@ public interface CleaningModuleApi {
      * Returns slots needing more registrations (for feed banners).
      */
     List<CleaningSlotInfo> getSlotsNeedingParticipants(LocalDate from, LocalDate to);
+
+    /**
+     * Returns cleaning hours for a family within a specific date range.
+     */
+    BigDecimal getCleaningHoursForFamilyInRange(UUID familyId, LocalDate from, LocalDate to);
 }

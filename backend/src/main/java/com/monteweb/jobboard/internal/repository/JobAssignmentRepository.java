@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -67,4 +68,26 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             ORDER BY a.completedAt DESC
             """)
     List<JobAssignment> findConfirmedByFamilyId(UUID familyId);
+
+    @Query("""
+            SELECT COALESCE(SUM(a.actualHours), 0)
+            FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED'
+            AND a.confirmed = true
+            AND a.confirmedAt >= :fromInstant
+            AND a.confirmedAt < :toInstant
+            """)
+    BigDecimal sumConfirmedHoursByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
+
+    @Query("""
+            SELECT COALESCE(SUM(a.actualHours), 0)
+            FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED'
+            AND a.confirmed = false
+            AND a.completedAt >= :fromInstant
+            AND a.completedAt < :toInstant
+            """)
+    BigDecimal sumPendingHoursByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
 }

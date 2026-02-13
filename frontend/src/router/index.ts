@@ -185,6 +185,12 @@ const router = createRouter({
               meta: { breadcrumbLabel: 'cleaning.title', allowPutzOrga: true },
             },
             {
+              path: 'billing',
+              name: 'admin-billing',
+              component: () => import('@/views/admin/AdminBilling.vue'),
+              meta: { breadcrumbLabel: 'billing.title' },
+            },
+            {
               path: 'theme',
               name: 'admin-theme',
               component: () => import('@/views/admin/AdminTheme.vue'),

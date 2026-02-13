@@ -405,6 +405,13 @@ public class CleaningService implements CleaningModuleApi {
         return BigDecimal.valueOf(totalMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getCleaningHoursForFamilyInRange(UUID familyId, LocalDate from, LocalDate to) {
+        int totalMinutes = registrationRepository.sumActualMinutesByFamilyInRange(familyId, from, to);
+        return BigDecimal.valueOf(totalMinutes).divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+    }
+
     // ── Dashboard ───────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
