@@ -109,7 +109,9 @@ public class AdminService implements AdminModuleApi {
                 config.isParentToParentMessaging(),
                 config.isStudentToStudentMessaging(),
                 config.getBundesland(),
-                config.getSchoolVacations()
+                config.getSchoolVacations(),
+                config.getGithubRepo(),
+                config.getGithubPat() != null && !config.getGithubPat().isBlank()
         );
     }
 }

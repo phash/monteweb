@@ -87,6 +87,17 @@ client.interceptors.response.use(
       }
     }
 
+    // Report server errors
+    if (error.response?.status >= 500) {
+      window.dispatchEvent(new CustomEvent('monteweb:server-error', {
+        detail: {
+          url: error.config?.url,
+          status: error.response.status,
+          message: error.response?.data?.message || 'Server error',
+        },
+      }))
+    }
+
     return Promise.reject(error)
   }
 )

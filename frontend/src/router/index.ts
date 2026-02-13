@@ -191,6 +191,12 @@ const router = createRouter({
               meta: { breadcrumbLabel: 'billing.title' },
             },
             {
+              path: 'error-reports',
+              name: 'admin-error-reports',
+              component: () => import('@/views/admin/AdminErrorReports.vue'),
+              meta: { breadcrumbLabel: 'errorReports.title' },
+            },
+            {
               path: 'theme',
               name: 'admin-theme',
               component: () => import('@/views/admin/AdminTheme.vue'),

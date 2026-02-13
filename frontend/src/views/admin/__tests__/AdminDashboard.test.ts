@@ -28,6 +28,9 @@ const i18n = createI18n({
           modules: 'Module', modulesDesc: 'Module verwalten',
         },
       },
+      errorReports: {
+        title: 'Fehlermeldungen', subtitle: 'Automatisch erfasste Fehler verwalten',
+      },
     },
   },
 })
@@ -45,7 +48,7 @@ describe('AdminDashboard', () => {
 
   it('should render admin tiles', () => {
     const wrapper = mount(AdminDashboard, { global: { plugins: [i18n], stubs } })
-    expect(wrapper.findAll('.router-link-stub')).toHaveLength(5)
+    expect(wrapper.findAll('.router-link-stub')).toHaveLength(6)
   })
 
   it('should render tile labels', () => {

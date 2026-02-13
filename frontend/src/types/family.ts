@@ -44,4 +44,6 @@ export interface TenantConfig {
   targetCleaningHours: number
   bundesland: string
   schoolVacations: { name: string; from: string; to: string }[]
+  githubRepo?: string
+  githubPatConfigured?: boolean
 }

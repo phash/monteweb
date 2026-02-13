@@ -60,6 +60,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/prometheus").permitAll()
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/error-reports").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated()
                 )

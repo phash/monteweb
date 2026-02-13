@@ -10,6 +10,7 @@ const adminLinks = [
   { to: '/admin/sections', icon: 'pi pi-sitemap', labelKey: 'admin.dashboard.sections', descKey: 'admin.dashboard.sectionsDesc' },
   { to: '/admin/billing', icon: 'pi pi-calculator', labelKey: 'admin.dashboard.billing', descKey: 'admin.dashboard.billingDesc' },
   { to: '/admin/modules', icon: 'pi pi-cog', labelKey: 'admin.dashboard.modules', descKey: 'admin.dashboard.modulesDesc' },
+  { to: '/admin/error-reports', icon: 'pi pi-exclamation-triangle', labelKey: 'errorReports.title', descKey: 'errorReports.subtitle' },
 ]
 </script>
 

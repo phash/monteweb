@@ -19,6 +19,8 @@ public record TenantConfigInfo(
         boolean parentToParentMessaging,
         boolean studentToStudentMessaging,
         String bundesland,
-        List<Map<String, String>> schoolVacations
+        List<Map<String, String>> schoolVacations,
+        String githubRepo,
+        boolean githubPatConfigured
 ) {
 }

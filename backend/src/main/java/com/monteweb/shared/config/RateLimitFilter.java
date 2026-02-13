@@ -28,6 +28,7 @@ public class RateLimitFilter implements Filter {
     private static final int LOGIN_MAX_REQUESTS = 10;
     private static final int REGISTER_MAX_REQUESTS = 5;
     private static final int PASSWORD_RESET_MAX_REQUESTS = 5;
+    private static final int ERROR_REPORT_MAX_REQUESTS = 10;
     private static final long WINDOW_MS = 60_000; // 1 minute
 
     private final Map<String, RateBucket> buckets = new ConcurrentHashMap<>();
@@ -46,6 +47,8 @@ public class RateLimitFilter implements Filter {
             maxRequests = REGISTER_MAX_REQUESTS;
         } else if (path.startsWith("/api/v1/auth/password-reset")) {
             maxRequests = PASSWORD_RESET_MAX_REQUESTS;
+        } else if (path.startsWith("/api/v1/error-reports")) {
+            maxRequests = ERROR_REPORT_MAX_REQUESTS;
         }
 
         if (maxRequests > 0) {

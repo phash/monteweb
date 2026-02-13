@@ -58,6 +58,12 @@ public class TenantConfig {
     @Column(name = "student_to_student_messaging", nullable = false)
     private boolean studentToStudentMessaging = false;
 
+    @Column(name = "github_repo", length = 200)
+    private String githubRepo;
+
+    @Column(name = "github_pat", length = 500)
+    private String githubPat;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
