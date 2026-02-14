@@ -230,6 +230,20 @@ public class FamilyService implements FamilyModuleApi {
     }
 
     @Transactional
+    public FamilyInfo updateFamily(UUID familyId, String name, UUID requestingUserId) {
+        var user = userModuleApi.findById(requestingUserId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new BusinessException("Only SUPERADMIN can update families");
+        }
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+        family.setName(name);
+        family = familyRepository.save(family);
+        return toFamilyInfo(family);
+    }
+
+    @Transactional
     public void deleteFamily(UUID familyId, UUID requestingUserId) {
         var user = userModuleApi.findById(requestingUserId)
                 .orElseThrow(() -> new BusinessException("User not found"));

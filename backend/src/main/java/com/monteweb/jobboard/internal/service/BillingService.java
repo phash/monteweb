@@ -19,8 +19,12 @@ import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.shared.util.PdfService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +42,8 @@ import java.util.UUID;
 @Transactional
 @ConditionalOnProperty(prefix = "monteweb.modules.jobboard", name = "enabled", havingValue = "true")
 public class BillingService {
+
+    private static final Logger log = LoggerFactory.getLogger(BillingService.class);
 
     private final BillingPeriodRepository billingPeriodRepository;
     private final JobAssignmentRepository assignmentRepository;
@@ -61,6 +67,26 @@ public class BillingService {
         this.cleaningModuleApi = cleaningModuleApi;
         this.pdfService = pdfService;
         this.objectMapper = objectMapper;
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void ensureActiveBillingPeriod() {
+        if (billingPeriodRepository.findByStatus("ACTIVE").isPresent()) {
+            return;
+        }
+        // Auto-create school year billing period (Sep-Aug)
+        LocalDate now = LocalDate.now();
+        int startYear = now.getMonthValue() >= 9 ? now.getYear() : now.getYear() - 1;
+        LocalDate start = LocalDate.of(startYear, 9, 1);
+        LocalDate end = LocalDate.of(startYear + 1, 8, 31);
+
+        var period = new BillingPeriod();
+        period.setName("Schuljahr " + startYear + "/" + (startYear + 1));
+        period.setStartDate(start);
+        period.setEndDate(end);
+        period.setStatus("ACTIVE");
+        billingPeriodRepository.save(period);
+        log.info("Auto-created billing period: {}", period.getName());
     }
 
     public BillingPeriodInfo createPeriod(CreateBillingPeriodRequest request) {

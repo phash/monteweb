@@ -167,6 +167,12 @@ const router = createRouter({
               meta: { breadcrumbLabel: 'admin.sections' },
             },
             {
+              path: 'families',
+              name: 'admin-families',
+              component: () => import('@/views/admin/AdminFamilies.vue'),
+              meta: { breadcrumbLabel: 'admin.families' },
+            },
+            {
               path: 'modules',
               name: 'admin-modules',
               component: () => import('@/views/admin/AdminModules.vue'),
