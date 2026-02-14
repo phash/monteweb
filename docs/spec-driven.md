@@ -1,6 +1,6 @@
 # MonteWeb -- Spec-Driven Documentation
 
-**Version:** 1.3
+**Version:** 1.4
 **Date:** 2026-02-13
 **Status:** All 19 phases complete + post-phase features, production-ready
 
@@ -173,6 +173,7 @@ DELETE /api/v1/sections/{id}  -> ApiResponse<void>
 - Browse all rooms where user is not a member
 - Send join requests to rooms; leaders approve/decline
 - Discussion threads (LEADER creates/archives/deletes, members reply)
+- Auto-folder creation: when a KLASSE room is created, the files module automatically creates a default folder via `RoomCreatedEvent`
 - File upload/download (via MinIO) with folder audience visibility (ALL, PARENTS_ONLY, STUDENTS_ONLY)
 - Real-time chat (WebSocket)
 - Room-scoped calendar events
@@ -397,6 +398,11 @@ GET    /api/v1/fotobox/images/{imageId}/thumbnail                 -> Download th
 | Push | VAPID Web Push | Yes (`monteweb.push.enabled`) |
 | Email | SMTP | Yes (`monteweb.email.enabled`) |
 
+**Additional API:**
+```
+DELETE /api/v1/notifications/{id}    -> ApiResponse<void>  (delete single notification)
+```
+
 ---
 
 ### FEAT-014: Admin Panel
@@ -455,6 +461,90 @@ ALTER TABLE users ADD COLUMN assigned_roles text[] NOT NULL DEFAULT '{}';
 
 ---
 
+### FEAT-016: Annual Billing / Jahresabrechnung
+
+**What:** Aggregated billing reports for family volunteer hours across configurable billing periods.
+**Why:** Schools need annual summaries of parent volunteer hour compliance for administrative and reporting purposes.
+
+**Acceptance Criteria:**
+- Billing periods track family hours per year/month with status (OPEN/CLOSED)
+- Admin can generate billing reports for specific periods
+- Report aggregates jobboard hours + cleaning hours per family
+- PDF and CSV export of billing data
+
+**API Contract:**
+```
+GET /api/v1/billing/periods                  -> ApiResponse<List<BillingPeriod>>
+GET /api/v1/billing/report?period=...        -> ApiResponse<BillingReport>
+GET /api/v1/jobs/export/pdf?period=...       -> PDF export
+GET /api/v1/jobs/export/csv?period=...       -> CSV export
+```
+
+**Data Model:**
+```sql
+-- V047: billing_periods
+billing_periods (id, family_id, year, month, status, created_at)
+-- status: OPEN | CLOSED
+```
+
+**Migration:** V047
+
+---
+
+### FEAT-017: Error Reporting
+
+**What:** Automated frontend and backend error capture with fingerprint-based deduplication and optional GitHub Issue integration.
+**Why:** Schools running self-hosted instances need visibility into application errors without requiring technical monitoring expertise.
+
+**Acceptance Criteria:**
+- Frontend errors submitted to public endpoint (rate-limited, 10/min per IP)
+- Fingerprint computed from exception class + message for deduplication
+- Duplicate errors increment occurrence count instead of creating new records
+- Admin views error reports with status management (NEW -> REPORTED -> RESOLVED/IGNORED)
+- Optional GitHub Issue creation via configured `github_repo` + `github_pat` in tenant config
+- Backend unhandled exceptions captured via `GlobalExceptionHandler` publishing `UnhandledExceptionEvent`
+
+**API Contract:**
+```
+POST /api/v1/error-reports                   -> ApiResponse<void>  (public, rate-limited)
+GET  /api/v1/admin/error-reports             -> ApiResponse<Page<ErrorReport>>  (SUPERADMIN)
+PUT  /api/v1/admin/error-reports/{id}/status  -> ApiResponse<ErrorReport>  (SUPERADMIN)
+```
+
+**Data Model:**
+```sql
+-- V048: error_reports
+error_reports (id, fingerprint, exception_class, message, stack_trace, location,
+              status, github_issue_url, occurrence_count, last_occurrence_at, created_at)
+-- fingerprint: UNIQUE, hash of exception_class + message
+-- status: NEW | REPORTED | RESOLVED | IGNORED
+```
+
+**Migration:** V048
+
+---
+
+### FEAT-018: Section Admin Panel
+
+**What:** Dedicated admin interface for SECTION_ADMIN users to manage their assigned school sections.
+**Why:** Section administrators need a focused view for managing rooms and members within their sections without requiring full SUPERADMIN access.
+
+**Acceptance Criteria:**
+- SECTION_ADMIN users see a dedicated section admin panel
+- View and manage rooms within assigned sections
+- View members of rooms in assigned sections
+- Section overview with room counts and member statistics
+
+**API Contract:**
+```
+GET /api/v1/section-admin/rooms              -> ApiResponse<List<RoomInfo>>
+GET /api/v1/section-admin/overview           -> ApiResponse<SectionOverview>
+```
+
+**Migration:** V049 (fix section admin special roles format)
+
+---
+
 ## 3. Technical Specifications
 
 ### 3.1 Technology Matrix
@@ -484,7 +574,7 @@ ALTER TABLE users ADD COLUMN assigned_roles text[] NOT NULL DEFAULT '{}';
 
 ### 3.2 Database Schema
 
-46 Flyway migrations (V001-V046) managing:
+50 Flyway migrations (V001-V050) managing:
 
 | Migration Range | Domain |
 |----------------|--------|
@@ -518,6 +608,10 @@ ALTER TABLE users ADD COLUMN assigned_roles text[] NOT NULL DEFAULT '{}';
 | V044 | Feed: target_user_ids UUID[] for targeted feed posts |
 | V045 | Audience visibility for room_folders and fotobox_threads |
 | V046 | Multi-section forms: section_ids UUID[] with GIN index |
+| V047 | Billing periods (Jahresabrechnung) — family billing with year/month/status |
+| V048 | Error reports — fingerprint dedup, status tracking, GitHub Issue integration |
+| V049 | Fix SECTION_ADMIN special roles format (section-scoped) |
+| V050 | Enable all modules by default in tenant config |
 
 ### 3.3 Security Specification
 
@@ -666,7 +760,7 @@ grafana:3000    -> prometheus:9090                    (query)
 ### 5.1 Frontend Testing
 
 **Tool:** Vitest 4 + @vue/test-utils + jsdom
-**Test count:** 892 tests across 107 test files
+**Test count:** 897 tests across 108 test files
 
 | Test Category | Files | Scope |
 |--------------|-------|-------|
@@ -830,6 +924,12 @@ All core and extension features are implemented and tested, including:
 - Post-batch features: Putzaktion rename, specific date cleaning configs (V043), Bundesland/holiday config, calendar→feed integration, targeted feed posts (V044)
 - Audience visibility: Folders and fotobox threads with role-based visibility (V045)
 - Multi-section forms: Forms can target multiple school sections, dashboard widget for pending forms (V046)
+- Annual billing (Jahresabrechnung): Family hour aggregation with billing periods (V047)
+- Error reporting: Fingerprint-based dedup, admin status management, GitHub Issue integration (V048)
+- Section Admin panel: Dedicated SECTION_ADMIN management views, fixed special roles format (V049)
+- All modules enabled by default: Simplified initial setup (V050)
+- Auto-folder creation: KLASSE rooms get default folders via RoomCreatedEvent cross-module event
+- Notification delete endpoint: Users can delete individual notifications
 
 ### Potential Future Enhancements
 

@@ -22,7 +22,7 @@ const calendar = useCalendarStore()
 
 const title = ref('')
 const description = ref('')
-const category = ref('')
+const category = ref('Normal')
 const location = ref('')
 const estimatedHours = ref(2)
 const maxAssignees = ref(1)
@@ -34,7 +34,6 @@ const submitting = ref(false)
 const calendarEnabled = admin.isModuleEnabled('calendar')
 
 onMounted(async () => {
-  jobboard.fetchCategories()
   if (calendarEnabled) {
     const now = new Date()
     const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -48,7 +47,7 @@ onMounted(async () => {
 })
 
 async function submit() {
-  if (!title.value.trim() || !category.value.trim()) return
+  if (!title.value.trim() || !category.value) return
   submitting.value = true
   try {
     const job = await jobboard.createJob({
@@ -91,10 +90,18 @@ async function submit() {
 
       <div class="form-field">
         <label for="job-category" class="required">{{ t('jobboard.category') }}</label>
-        <InputText id="job-category" v-model="category" :placeholder="t('jobboard.create_form.categoryPlaceholder')" class="full-width" list="category-suggestions" />
-        <datalist id="category-suggestions">
-          <option v-for="cat in jobboard.categories" :key="cat" :value="cat" />
-        </datalist>
+        <Select
+          id="job-category"
+          v-model="category"
+          :options="[
+            { label: t('jobboard.categoryNormal'), value: 'Normal' },
+            { label: t('jobboard.categoryReinigung'), value: 'Reinigung' }
+          ]"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('jobboard.create_form.categoryPlaceholder')"
+          class="full-width"
+        />
       </div>
 
       <div class="form-field">
@@ -153,7 +160,7 @@ async function submit() {
           :label="t('jobboard.create')"
           icon="pi pi-check"
           :loading="submitting"
-          :disabled="!title.trim() || !category.trim()"
+          :disabled="!title.trim() || !category"
           @click="submit"
         />
       </div>

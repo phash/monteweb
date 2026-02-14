@@ -24,4 +24,10 @@ public interface CalendarModuleApi {
      * Used by the family calendar to show events for all family members.
      */
     List<EventInfo> getEventsForUserIds(List<UUID> userIds, LocalDate from, LocalDate to);
+
+    /**
+     * Creates a calendar event from a system/internal source (e.g., cleaning module).
+     * Bypasses normal permission checks since it's system-initiated.
+     */
+    EventInfo createEventFromSystem(CreateEventRequest request, UUID createdBy);
 }

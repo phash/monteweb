@@ -5,21 +5,21 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
-public record CleaningConfigInfo(
-        UUID id,
+/**
+ * Published when a Putzaktion (one-time cleaning action with specificDate) is created.
+ * The jobboard module listens to this event to create a corresponding job.
+ */
+public record PutzaktionCreatedEvent(
+        UUID configId,
         UUID sectionId,
-        String sectionName,
         String title,
         String description,
-        int dayOfWeek,
+        LocalDate date,
         LocalTime startTime,
         LocalTime endTime,
-        int minParticipants,
         int maxParticipants,
         BigDecimal hoursCredit,
-        boolean active,
-        LocalDate specificDate,
         UUID calendarEventId,
-        UUID jobId
+        UUID createdBy
 ) {
 }

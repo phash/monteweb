@@ -24,4 +24,9 @@ public interface CleaningModuleApi {
      * Returns cleaning hours for a family within a specific date range.
      */
     BigDecimal getCleaningHoursForFamilyInRange(UUID familyId, LocalDate from, LocalDate to);
+
+    /**
+     * Links a job ID back to a cleaning config (called by jobboard after creating the job).
+     */
+    void linkJobToConfig(UUID configId, UUID jobId);
 }

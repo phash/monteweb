@@ -64,6 +64,17 @@ public class FamilyController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Family deleted"));
     }
 
+    @PutMapping("/{id}/hours-exempt")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<ApiResponse<FamilyInfo>> setHoursExempt(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Boolean> body) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        boolean exempt = body.getOrDefault("exempt", false);
+        var family = familyService.setHoursExempt(id, exempt, userId);
+        return ResponseEntity.ok(ApiResponse.ok(family));
+    }
+
     @GetMapping("/mine")
     public ResponseEntity<ApiResponse<List<FamilyInfo>>> getMyFamilies() {
         UUID userId = SecurityUtils.requireCurrentUserId();

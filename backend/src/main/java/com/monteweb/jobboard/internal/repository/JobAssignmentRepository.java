@@ -90,4 +90,46 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             AND a.completedAt < :toInstant
             """)
     BigDecimal sumPendingHoursByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
+
+    // Normal hours (all categories except Reinigung)
+    @Query("""
+            SELECT COALESCE(SUM(a.actualHours), 0)
+            FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED' AND a.confirmed = true
+            AND a.jobId NOT IN (SELECT j.id FROM Job j WHERE j.category = 'Reinigung')
+            """)
+    BigDecimal sumConfirmedNormalHoursByFamilyId(UUID familyId);
+
+    // Reinigung hours from jobs
+    @Query("""
+            SELECT COALESCE(SUM(a.actualHours), 0)
+            FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED' AND a.confirmed = true
+            AND a.jobId IN (SELECT j.id FROM Job j WHERE j.category = 'Reinigung')
+            """)
+    BigDecimal sumConfirmedCleaningJobHoursByFamilyId(UUID familyId);
+
+    // Normal hours in date range
+    @Query("""
+            SELECT COALESCE(SUM(a.actualHours), 0)
+            FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED' AND a.confirmed = true
+            AND a.confirmedAt >= :fromInstant AND a.confirmedAt < :toInstant
+            AND a.jobId NOT IN (SELECT j.id FROM Job j WHERE j.category = 'Reinigung')
+            """)
+    BigDecimal sumConfirmedNormalHoursByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
+
+    // Reinigung hours from jobs in date range
+    @Query("""
+            SELECT COALESCE(SUM(a.actualHours), 0)
+            FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED' AND a.confirmed = true
+            AND a.confirmedAt >= :fromInstant AND a.confirmedAt < :toInstant
+            AND a.jobId IN (SELECT j.id FROM Job j WHERE j.category = 'Reinigung')
+            """)
+    BigDecimal sumConfirmedCleaningJobHoursByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
 }

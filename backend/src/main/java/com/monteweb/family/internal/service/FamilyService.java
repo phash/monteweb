@@ -368,6 +368,20 @@ public class FamilyService implements FamilyModuleApi {
                 invitation.getCreatedAt(), invitation.getResolvedAt());
     }
 
+    @Transactional
+    public FamilyInfo setHoursExempt(UUID familyId, boolean exempt, UUID requestingUserId) {
+        var user = userModuleApi.findById(requestingUserId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new BusinessException("Only SUPERADMIN can change hours exemption");
+        }
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+        family.setHoursExempt(exempt);
+        family = familyRepository.save(family);
+        return toFamilyInfo(family);
+    }
+
     private FamilyInfo toFamilyInfo(Family family) {
         var members = family.getMembers().stream()
                 .map(m -> {
@@ -377,6 +391,6 @@ public class FamilyService implements FamilyModuleApi {
                     return new FamilyInfo.FamilyMemberInfo(m.getUserId(), displayName, m.getRole().name());
                 })
                 .toList();
-        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), members);
+        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), family.isHoursExempt(), members);
     }
 }

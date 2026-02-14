@@ -34,7 +34,6 @@ const calendarEnabled = admin.isModuleEnabled('calendar')
 onMounted(async () => {
   const promises: Promise<void>[] = [
     jobboard.fetchJobs(true),
-    jobboard.fetchCategories(),
     jobboard.fetchMyAssignments(),
   ]
   if (calendarEnabled) {
@@ -91,7 +90,11 @@ function formatDate(date: string | null) {
           <div class="filter-bar">
             <Select
               v-model="selectedCategory"
-              :options="[{ label: t('jobboard.allCategories'), value: null }, ...jobboard.categories.map(c => ({ label: c, value: c }))]"
+              :options="[
+                { label: t('jobboard.allCategories'), value: null },
+                { label: t('jobboard.categoryNormal'), value: 'Normal' },
+                { label: t('jobboard.categoryReinigung'), value: 'Reinigung' }
+              ]"
               optionLabel="label"
               optionValue="value"
               :placeholder="t('jobboard.filterCategory')"

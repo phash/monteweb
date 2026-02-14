@@ -46,7 +46,7 @@ async function handlePost(data: { title?: string; content: string }) {
     <SystemBanner :banners="feed.banners" />
 
     <FamilyHoursWidget
-      v-if="jobboardEnabled && familyStore.primaryFamily"
+      v-if="jobboardEnabled && familyStore.primaryFamily && !familyStore.primaryFamily.hoursExempt"
       :familyId="familyStore.primaryFamily.id"
     />
 

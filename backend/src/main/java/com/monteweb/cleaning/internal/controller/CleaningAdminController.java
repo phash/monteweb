@@ -18,7 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -37,9 +39,23 @@ public class CleaningAdminController {
     public ResponseEntity<ApiResponse<List<CleaningConfigInfo>>> getConfigs(
             @RequestParam(required = false) UUID sectionId) {
         requireCleaningAdmin(sectionId);
-        List<CleaningConfigInfo> configs = sectionId != null
-                ? cleaningService.getConfigsBySection(sectionId)
-                : cleaningService.getAllActiveConfigs();
+        List<CleaningConfigInfo> configs;
+        if (sectionId != null) {
+            configs = cleaningService.getConfigsBySection(sectionId);
+        } else {
+            // For PUTZORGA/SECTION_ADMIN: filter to allowed sections only
+            UUID userId = SecurityUtils.requireCurrentUserId();
+            var user = userModuleApi.findById(userId)
+                    .orElseThrow(() -> new ForbiddenException("User not found"));
+            if (user.role() == UserRole.SUPERADMIN || hasGlobalSpecialRole(user, "ELTERNBEIRAT")) {
+                configs = cleaningService.getAllActiveConfigs();
+            } else {
+                Set<UUID> allowedSections = getAllowedSectionIds(user);
+                configs = cleaningService.getAllActiveConfigs().stream()
+                        .filter(c -> allowedSections.contains(c.sectionId()))
+                        .toList();
+            }
+        }
         return ResponseEntity.ok(ApiResponse.ok(configs));
     }
 
@@ -141,26 +157,54 @@ public class CleaningAdminController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new ForbiddenException("User not found"));
-        if (user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN) {
+        if (user.role() == UserRole.SUPERADMIN) {
             return;
         }
-        if (user.specialRoles() != null) {
-            // PUTZORGA special role (global or section-scoped)
-            if (user.specialRoles().contains("PUTZORGA")) {
+        // ELTERNBEIRAT global is always allowed
+        if (hasGlobalSpecialRole(user, "ELTERNBEIRAT")) {
+            return;
+        }
+        // SECTION_ADMIN / PUTZORGA / ELTERNBEIRAT: must be scoped to the right section
+        if (sectionId != null) {
+            if (hasScopedSpecialRole(user, "SECTION_ADMIN", sectionId)
+                    || hasScopedSpecialRole(user, "PUTZORGA", sectionId)
+                    || hasScopedSpecialRole(user, "ELTERNBEIRAT", sectionId)) {
                 return;
             }
-            if (sectionId != null && user.specialRoles().contains("PUTZORGA:" + sectionId)) {
-                return;
+            // SECTION_ADMIN role check (role-based, not special-role based)
+            if (user.role() == UserRole.SECTION_ADMIN) {
+                Set<UUID> allowed = getAllowedSectionIds(user);
+                if (allowed.contains(sectionId)) {
+                    return;
+                }
             }
-            // ELTERNBEIRAT special role (can manage cleaning schedules)
-            if (user.specialRoles().contains("ELTERNBEIRAT")) {
-                return;
-            }
-            if (sectionId != null && user.specialRoles().contains("ELTERNBEIRAT:" + sectionId)) {
+        } else {
+            // sectionId == null: allow if user has any scoped role
+            if (!getAllowedSectionIds(user).isEmpty()) {
                 return;
             }
         }
         throw new ForbiddenException("Not authorized for cleaning administration");
+    }
+
+    private Set<UUID> getAllowedSectionIds(com.monteweb.user.UserInfo user) {
+        Set<UUID> sections = new HashSet<>();
+        if (user.specialRoles() != null) {
+            for (String role : user.specialRoles()) {
+                if (role.startsWith("PUTZORGA:") || role.startsWith("SECTION_ADMIN:")) {
+                    sections.add(UUID.fromString(role.substring(role.indexOf(':') + 1)));
+                }
+            }
+        }
+        return sections;
+    }
+
+    private boolean hasGlobalSpecialRole(com.monteweb.user.UserInfo user, String roleName) {
+        return user.specialRoles() != null && user.specialRoles().contains(roleName);
+    }
+
+    private boolean hasScopedSpecialRole(com.monteweb.user.UserInfo user, String roleName, UUID scopeId) {
+        return user.specialRoles() != null && user.specialRoles().contains(roleName + ":" + scopeId);
     }
 
     private void requireCleaningAdminFromSlot(UUID slotId) {

@@ -33,6 +33,9 @@ public class Family {
     @Column(name = "avatar_url", length = 500)
     private String avatarUrl;
 
+    @Column(name = "is_hours_exempt", nullable = false)
+    private boolean hoursExempt = false;
+
     @OneToMany(mappedBy = "family", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FamilyMember> members = new ArrayList<>();
 

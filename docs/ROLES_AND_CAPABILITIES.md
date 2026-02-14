@@ -125,11 +125,13 @@ Sonderrollen sind keine eigenständigen Rollen, sondern Zusatzberechtigungen, di
 
 ### PUTZORGA
 
-**Format:** `PUTZORGA:{sectionId}` (immer bereichsbezogen)
+**Format:** `PUTZORGA:{sectionId}` (immer bereichsbezogen, z.B. `PUTZORGA:550e8400-e29b-41d4-a716-446655440000`)
 
 | Bereich | Berechtigung |
 |---------|-------------|
 | Putz-Orga | Putztermine erstellen, bearbeiten, löschen; Slots verwalten; QR-Codes generieren; Admin-Dashboard einsehen |
+
+**Hinweis:** Die Sonderrollen-Formate wurden in V049 vereinheitlicht. SECTION_ADMIN verwendet ebenfalls das Format `SECTION_ADMIN:{sectionId}` für bereichsbezogene Zuweisungen.
 
 ---
 
@@ -503,8 +505,26 @@ Alle Admin-Endpoints erfordern die Systemrolle **SUPERADMIN**.
 | Schulbereiche erstellen/bearbeiten/löschen | SUPERADMIN |
 | Kommunikationsregeln konfigurieren | SUPERADMIN |
 | Actuator/Prometheus-Metriken | SUPERADMIN |
+| Fehlerberichte einsehen und verwalten | SUPERADMIN |
+| Fehlerberichte an GitHub melden | SUPERADMIN (wenn github_repo + github_pat konfiguriert) |
+| Jahresabrechnung / Billing-Perioden verwalten | SUPERADMIN |
 
-### 8.8 Benutzerverwaltung (User)
+### 8.8 Section Admin Panel
+
+SECTION_ADMIN-Nutzer haben Zugriff auf ein dediziertes Bereichs-Admin-Panel:
+
+| Aktion | Berechtigung |
+|--------|-------------|
+| Bereichs-Übersicht einsehen (Räume, Mitglieder) | SECTION_ADMIN (eigener Bereich) |
+| Räume im eigenen Bereich verwalten | SECTION_ADMIN |
+| Mitglieder in Bereichs-Räumen einsehen | SECTION_ADMIN |
+| Bereichsweite Events erstellen | SECTION_ADMIN |
+| Bereichsweite Formulare erstellen | SECTION_ADMIN |
+| Putz-Administration für eigenen Bereich | SECTION_ADMIN |
+
+**API:** `/api/v1/section-admin/rooms`, `/api/v1/section-admin/overview`
+
+### 8.9 Benutzerverwaltung (User)
 
 | Aktion | Berechtigung |
 |--------|-------------|

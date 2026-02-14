@@ -51,6 +51,12 @@ public class CleaningConfig {
     @Column(name = "specific_date")
     private LocalDate specificDate;
 
+    @Column(name = "calendar_event_id")
+    private UUID calendarEventId;
+
+    @Column(name = "job_id")
+    private UUID jobId;
+
     @Column(nullable = false)
     private boolean active = true;
 

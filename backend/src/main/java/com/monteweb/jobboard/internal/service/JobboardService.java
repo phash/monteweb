@@ -3,6 +3,7 @@ package com.monteweb.jobboard.internal.service;
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.calendar.CalendarModuleApi;
 import com.monteweb.cleaning.CleaningModuleApi;
+import com.monteweb.cleaning.PutzaktionCreatedEvent;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.*;
@@ -19,6 +20,7 @@ import com.monteweb.user.UserModuleApi;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -86,6 +88,30 @@ public class JobboardService implements JobboardModuleApi {
     @Transactional(readOnly = true)
     public int countJobsForEvent(UUID eventId) {
         return jobRepository.countByEventId(eventId);
+    }
+
+    // ---- Event Listener: Putzaktion → Job ----
+
+    @ApplicationModuleListener
+    public void onPutzaktionCreated(PutzaktionCreatedEvent event) {
+        var job = new Job();
+        job.setTitle(event.title());
+        job.setDescription(event.description());
+        job.setCategory("Reinigung");
+        job.setSectionId(event.sectionId());
+        job.setEstimatedHours(event.hoursCredit());
+        job.setMaxAssignees(event.maxParticipants());
+        job.setScheduledDate(event.date());
+        job.setScheduledTime(event.startTime() + " - " + event.endTime());
+        job.setEventId(event.calendarEventId());
+        job.setCreatedBy(event.createdBy());
+        job.setStatus(JobStatus.OPEN);
+        job = jobRepository.save(job);
+
+        // Link job ID back to cleaning config
+        if (cleaningModuleApi != null) {
+            cleaningModuleApi.linkJobToConfig(event.configId(), job.getId());
+        }
     }
 
     // ---- Job CRUD ----
@@ -443,9 +469,10 @@ public class JobboardService implements JobboardModuleApi {
         long completedJobs = jobRepository.countByStatus(JobStatus.COMPLETED);
 
         var allHours = getAllFamilyHoursReport();
-        long greenCount = allHours.stream().filter(h -> "GREEN".equals(h.trafficLight())).count();
-        long yellowCount = allHours.stream().filter(h -> "YELLOW".equals(h.trafficLight())).count();
-        long redCount = allHours.stream().filter(h -> "RED".equals(h.trafficLight())).count();
+        // Only count non-exempt families for traffic light summary
+        long greenCount = allHours.stream().filter(h -> !h.hoursExempt() && "GREEN".equals(h.trafficLight())).count();
+        long yellowCount = allHours.stream().filter(h -> !h.hoursExempt() && "YELLOW".equals(h.trafficLight())).count();
+        long redCount = allHours.stream().filter(h -> !h.hoursExempt() && "RED".equals(h.trafficLight())).count();
 
         return new ReportSummary(openJobs, activeJobs, completedJobs, greenCount, yellowCount, redCount);
     }
@@ -467,20 +494,36 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     private FamilyHoursInfo buildFamilyHoursInfo(FamilyInfo family) {
+        // If family is exempt from hours, return zero-state with exempt flag
+        if (family.hoursExempt()) {
+            return new FamilyHoursInfo(
+                    family.id(), family.name(),
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                    "GREEN", BigDecimal.ZERO, BigDecimal.ZERO, "GREEN", true
+            );
+        }
+
         var tenantConfig = adminModuleApi.getTenantConfig();
         BigDecimal targetHours = tenantConfig.targetHoursPerFamily();
         if (targetHours == null) targetHours = BigDecimal.ZERO;
         BigDecimal targetCleaningHrs = tenantConfig.targetCleaningHours();
         if (targetCleaningHrs == null) targetCleaningHrs = BigDecimal.ZERO;
 
-        BigDecimal confirmed = assignmentRepository.sumConfirmedHoursByFamilyId(family.id());
+        // Normal job hours (all categories except Reinigung)
+        BigDecimal confirmed = assignmentRepository.sumConfirmedNormalHoursByFamilyId(family.id());
         BigDecimal pending = assignmentRepository.sumPendingHoursByFamilyId(family.id());
 
-        BigDecimal cleaningHrs = BigDecimal.ZERO;
+        // Cleaning hours from Reinigung-category jobs
+        BigDecimal jobCleaningHrs = assignmentRepository.sumConfirmedCleaningJobHoursByFamilyId(family.id());
+
+        // Legacy QR cleaning hours
+        BigDecimal qrCleaningHrs = BigDecimal.ZERO;
         if (cleaningModuleApi != null) {
-            cleaningHrs = cleaningModuleApi.getCleaningHoursForFamily(family.id());
+            qrCleaningHrs = cleaningModuleApi.getCleaningHoursForFamily(family.id());
         }
 
+        BigDecimal cleaningHrs = jobCleaningHrs.add(qrCleaningHrs);
         BigDecimal totalHours = confirmed.add(cleaningHrs);
         BigDecimal remaining = targetHours.subtract(totalHours).max(BigDecimal.ZERO);
         BigDecimal remainingCleaningHrs = targetCleaningHrs.subtract(cleaningHrs).max(BigDecimal.ZERO);
@@ -500,7 +543,8 @@ public class JobboardService implements JobboardModuleApi {
                 trafficLight,
                 targetCleaningHrs,
                 remainingCleaningHrs,
-                cleaningTrafficLight
+                cleaningTrafficLight,
+                false
         );
     }
 

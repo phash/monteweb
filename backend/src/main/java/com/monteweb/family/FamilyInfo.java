@@ -10,6 +10,7 @@ public record FamilyInfo(
         UUID id,
         String name,
         String avatarUrl,
+        boolean hoursExempt,
         List<FamilyMemberInfo> members
 ) {
     public record FamilyMemberInfo(

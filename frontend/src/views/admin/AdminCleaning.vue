@@ -17,6 +17,7 @@ import type { CleaningConfigInfo } from '@/types/cleaning'
 import type { UserInfo } from '@/types/user'
 import type { SchoolSectionInfo } from '@/types/family'
 import * as cleaningApi from '@/api/cleaning.api'
+import { jobboardApi } from '@/api/jobboard.api'
 import { usersApi } from '@/api/users.api'
 import { sectionsApi } from '@/api/sections.api'
 import { useHolidays } from '@/composables/useHolidays'
@@ -32,8 +33,8 @@ const { getDateClass, getDateTooltip } = useHolidays(currentYear)
 
 const showCreateDialog = ref(false)
 const showGenerateDialog = ref(false)
-const showQrExportDialog = ref(false)
 const showPutzOrgaDialog = ref(false)
+const showAssignmentsDialog = ref(false)
 const selectedConfig = ref<CleaningConfigInfo | null>(null)
 
 const dayOptions = [
@@ -62,10 +63,6 @@ const generateRange = ref({
   to: null as Date | null
 })
 
-const qrExportRange = ref({
-  from: null as Date | null,
-  to: null as Date | null
-})
 
 onMounted(async () => {
   if (!adminStore.config) {
@@ -108,30 +105,6 @@ function openGenerate(config: CleaningConfigInfo) {
   selectedConfig.value = config
   generateRange.value = { from: null, to: null }
   showGenerateDialog.value = true
-}
-
-function openQrExport(config: CleaningConfigInfo) {
-  selectedConfig.value = config
-  qrExportRange.value = { from: null, to: null }
-  showQrExportDialog.value = true
-}
-
-async function exportQrCodes() {
-  if (!selectedConfig.value || !qrExportRange.value.from || !qrExportRange.value.to) return
-  try {
-    const from = qrExportRange.value.from!.toISOString().split('T')[0]
-    const to = qrExportRange.value.to!.toISOString().split('T')[0]
-    const res = await cleaningApi.exportQrCodesPdf(selectedConfig.value!.id, from!, to!)
-    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `qr-codes-${selectedConfig.value!.title}.pdf`
-    a.click()
-    window.URL.revokeObjectURL(url)
-    showQrExportDialog.value = false
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
-  }
 }
 
 async function generateSlots() {
@@ -227,6 +200,36 @@ async function removePutzOrga(user: UserInfo) {
   }
 }
 
+// ── Putzaktion Assignments ─────────────────────────────────────────
+const assignmentsConfig = ref<CleaningConfigInfo | null>(null)
+const assignments = ref<any[]>([])
+const loadingAssignments = ref(false)
+
+async function openAssignments(config: CleaningConfigInfo) {
+  if (!config.jobId) return
+  assignmentsConfig.value = config
+  showAssignmentsDialog.value = true
+  loadingAssignments.value = true
+  try {
+    const res = await jobboardApi.getAssignments(config.jobId)
+    assignments.value = res.data.data
+  } catch {
+    assignments.value = []
+  } finally {
+    loadingAssignments.value = false
+  }
+}
+
+function assignmentStatusSeverity(status: string) {
+  switch (status) {
+    case 'ASSIGNED': return 'info'
+    case 'IN_PROGRESS': return 'warn'
+    case 'COMPLETED': return 'success'
+    case 'CANCELLED': return 'danger'
+    default: return 'info'
+  }
+}
+
 </script>
 
 <template>
@@ -265,15 +268,20 @@ async function removePutzOrga(user: UserInfo) {
                :severity="data.active ? 'success' : 'danger'" />
         </template>
       </Column>
+      <Column :header="t('cleaning.admin.registrations')">
+        <template #body="{ data }">
+          <Button v-if="data.jobId" icon="pi pi-users" text rounded size="small"
+                  v-tooltip="t('cleaning.admin.showRegistrations')"
+                  @click="openAssignments(data)" />
+          <span v-else class="text-muted">-</span>
+        </template>
+      </Column>
       <Column :header="t('common.actions')">
         <template #body="{ data }">
           <div class="flex gap-1">
             <Button icon="pi pi-calendar-plus" text rounded size="small"
                     v-tooltip="t('cleaning.admin.generate')"
                     @click="openGenerate(data)" :disabled="!data.active" />
-            <Button icon="pi pi-file-pdf" text rounded size="small"
-                    v-tooltip="t('cleaning.admin.exportQrCodes')"
-                    @click="openQrExport(data)" />
             <Button :icon="data.active ? 'pi pi-ban' : 'pi pi-check'"
                     text rounded size="small"
                     :severity="data.active ? 'danger' : 'success'"
@@ -377,33 +385,32 @@ async function removePutzOrga(user: UserInfo) {
       </template>
     </Dialog>
 
-    <!-- QR Code PDF Export Dialog -->
-    <Dialog v-model:visible="showQrExportDialog" :header="t('cleaning.admin.exportQrCodesTitle')" modal
-            :style="{ width: '400px', maxWidth: '90vw' }">
-      <p class="mb-3">{{ t('cleaning.admin.exportQrCodesHint', { title: selectedConfig?.title }) }}</p>
-      <div class="flex flex-col gap-3">
-        <div>
-          <label for="qr-from" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
-          <DatePicker v-model="qrExportRange.from" dateFormat="dd.mm.yy" inputId="qr-from" class="w-full">
-            <template #date="{ date }">
-              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
-            </template>
-          </DatePicker>
-        </div>
-        <div>
-          <label for="qr-to" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
-          <DatePicker v-model="qrExportRange.to" dateFormat="dd.mm.yy" inputId="qr-to" class="w-full">
-            <template #date="{ date }">
-              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
-            </template>
-          </DatePicker>
-        </div>
-      </div>
-      <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" text @click="showQrExportDialog = false" />
-        <Button :label="t('cleaning.admin.exportQrCodes')" icon="pi pi-file-pdf" @click="exportQrCodes"
-                :disabled="!qrExportRange.from || !qrExportRange.to" />
-      </template>
+    <!-- Assignments Dialog (Issue #19) -->
+    <Dialog v-model:visible="showAssignmentsDialog"
+            :header="t('cleaning.admin.registrationsTitle', { title: assignmentsConfig?.title })" modal
+            :style="{ width: '650px', maxWidth: '95vw' }">
+      <DataTable :value="assignments" :loading="loadingAssignments" stripedRows>
+        <template #empty>{{ t('cleaning.admin.noRegistrations') }}</template>
+        <Column field="userName" :header="t('common.name')" />
+        <Column field="familyName" :header="t('cleaning.admin.family')" />
+        <Column :header="t('cleaning.admin.assignmentStatus')">
+          <template #body="{ data }">
+            <Tag :value="t(`jobboard.assignmentStatuses.${data.status}`)"
+                 :severity="assignmentStatusSeverity(data.status)" size="small" />
+          </template>
+        </Column>
+        <Column :header="t('cleaning.admin.hoursCol')">
+          <template #body="{ data }">
+            {{ data.actualHours != null ? data.actualHours + 'h' : '-' }}
+          </template>
+        </Column>
+        <Column :header="t('jobboard.confirmed')">
+          <template #body="{ data }">
+            <i v-if="data.confirmed" class="pi pi-check" style="color: var(--p-green-500)" />
+            <i v-else class="pi pi-times" style="color: var(--p-gray-400)" />
+          </template>
+        </Column>
+      </DataTable>
     </Dialog>
 
     <!-- PutzOrga Management Dialog -->

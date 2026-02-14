@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useJobboardStore } from '@/stores/jobboard'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -11,6 +11,9 @@ import Tag from 'primevue/tag'
 
 const { t } = useI18n()
 const jobboard = useJobboardStore()
+
+const activeFamilies = computed(() => jobboard.report.filter(f => !f.hoursExempt))
+const exemptFamilies = computed(() => jobboard.report.filter(f => f.hoursExempt))
 
 onMounted(() => {
   jobboard.fetchReport()
@@ -90,7 +93,7 @@ function progressPercent(completed: number, target: number) {
 
     <LoadingSpinner v-if="jobboard.loading" />
 
-    <DataTable v-else :value="jobboard.report" stripedRows class="report-table">
+    <DataTable v-else :value="activeFamilies" stripedRows class="report-table">
       <Column field="familyName" :header="t('admin.familyCol')" sortable />
       <Column :header="t('admin.progressCol')" sortable sortField="totalHours">
         <template #body="{ data }">
@@ -136,6 +139,20 @@ function progressPercent(completed: number, target: number) {
         </template>
       </Column>
     </DataTable>
+
+    <!-- Exempt families -->
+    <div v-if="exemptFamilies.length > 0" class="exempt-section">
+      <h3>{{ t('admin.exemptFamilies') }}</h3>
+      <p class="exempt-hint">{{ t('admin.exemptFamiliesHint') }}</p>
+      <DataTable :value="exemptFamilies" stripedRows class="exempt-table">
+        <Column field="familyName" :header="t('admin.familyCol')" />
+        <Column :header="t('common.status')">
+          <template #body>
+            <Tag :value="t('admin.hoursExempt')" severity="secondary" />
+          </template>
+        </Column>
+      </DataTable>
+    </div>
   </div>
 </template>
 
@@ -201,5 +218,20 @@ function progressPercent(completed: number, target: number) {
   font-size: var(--mw-font-size-xs);
   font-weight: 600;
   color: var(--mw-text);
+}
+
+.exempt-section {
+  margin-top: 2rem;
+}
+
+.exempt-section h3 {
+  font-size: var(--mw-font-size-md);
+  margin-bottom: 0.25rem;
+}
+
+.exempt-hint {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  margin-bottom: 0.75rem;
 }
 </style>

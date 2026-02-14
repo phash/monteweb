@@ -48,6 +48,10 @@ export const familyApi = {
     return client.delete<ApiResponse<void>>(`/families/${familyId}/avatar`)
   },
 
+  setHoursExempt(familyId: string, exempt: boolean) {
+    return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}/hours-exempt`, { exempt })
+  },
+
   // Invitations
   inviteMember(familyId: string, inviteeId: string, role: string) {
     return client.post<ApiResponse<FamilyInvitationInfo>>(`/families/${familyId}/invitations`, { inviteeId, role })

@@ -2,6 +2,7 @@ export interface FamilyInfo {
   id: string
   name: string
   avatarUrl: string | null
+  hoursExempt: boolean
   members: FamilyMemberInfo[]
 }
 

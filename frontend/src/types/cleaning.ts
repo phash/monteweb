@@ -14,6 +14,8 @@ export interface CleaningConfigInfo {
   hoursCredit: number
   active: boolean
   specificDate?: string | null
+  calendarEventId?: string | null
+  jobId?: string | null
 }
 
 export interface RegistrationInfo {

@@ -1,6 +1,6 @@
 # MonteWeb -- arc42 Architecture Documentation
 
-**Version:** 1.2
+**Version:** 1.3
 **Date:** 2026-02-13
 **Status:** All 19 phases complete + post-phase features
 
@@ -147,7 +147,7 @@ MonteWeb is a modular, self-hosted school intranet for Montessori school complex
 | **Spring Modulith** | Enforces module boundaries at compile time while keeping deployment as single artifact. Easier than microservices for school IT. |
 | **Module toggle via `@ConditionalOnProperty`** | Schools can disable unused features without code changes. All beans in optional modules carry this annotation. |
 | **JWT + Redis sessions** | Stateless API authentication with short-lived access tokens (15min) and long-lived refresh tokens (7d) stored in Redis. |
-| **Flyway migrations** | Schema changes are versioned (V001-V046). Hibernate only validates (`ddl-auto: validate`). |
+| **Flyway migrations** | Schema changes are versioned (V001-V050). Hibernate only validates (`ddl-auto: validate`). |
 | **Vue 3 + PrimeVue SPA** | Rich component library reduces custom UI code. PWA for mobile-first experience. |
 | **Docker Compose as deployment unit** | Single command deploys all infrastructure. No Kubernetes needed for typical school deployment. |
 | **Facade pattern for inter-module communication** | `*ModuleApi` interfaces provide stable contracts. Spring Events for async decoupling. |
@@ -216,11 +216,11 @@ com.monteweb.{module}/
 | **calendar** | Events (room/section/school scope), RSVP | `CalendarModuleApi` |
 | **messaging** | Direct messages, conversations, communication rules | `MessagingModuleApi` |
 | **files** | File upload/download via MinIO, folder audience visibility | `FilesModuleApi` |
-| **jobboard** | Volunteer jobs, assignments, hour tracking, PDF reports | `JobboardModuleApi` |
+| **jobboard** | Volunteer jobs, assignments, hour tracking, billing/Jahresabrechnung, PDF reports | `JobboardModuleApi` |
 | **cleaning** | Cleaning schedules, QR check-in, PDF QR codes | `CleaningModuleApi` |
 | **forms** | Surveys, consent forms, multi-section scoping, dashboard widget, CSV/PDF export | `FormsModuleApi` |
 | **fotobox** | Photo gallery threads in rooms, thumbnails, lightbox, thread audience visibility | `FotoboxModuleApi` |
-| **admin** | System config, theme, modules, audit log | (internal only) |
+| **admin** | System config, theme, modules, audit log, error reporting | `AdminModuleApi` |
 | **shared** | CORS, security, rate limiting, error handling, PDF util | `@NamedInterface` exports |
 
 ---
@@ -257,7 +257,41 @@ Backend (any module)     notification module     Redis Pub/Sub     WebSocket    
        |                        |                     |               |-- push ---->|
 ```
 
-### 6.3 Module Toggle Flow
+### 6.3 Cross-Module Event Flow (Auto-Folder Creation)
+
+```
+Room Module              Spring Events          Files Module
+   |                        |                       |
+   |-- createRoom() ------->|                       |
+   |                        |-- RoomCreatedEvent -->|
+   |                        |                       |-- check room type
+   |                        |                       |-- if KLASSE:
+   |                        |                       |     create default folder
+   |                        |                       |-- store in MinIO/DB
+```
+
+When a KLASSE room is created, the files module listens for `RoomCreatedEvent` and automatically creates a default folder for the room. This demonstrates the async cross-module communication pattern via Spring Events.
+
+### 6.4 Error Reporting Flow
+
+```
+Browser (Frontend)      Backend (public)         Admin Module           GitHub API
+   |                        |                        |                      |
+   |-- POST /api/v1/error-reports -->|               |                      |
+   |                        |-- compute fingerprint  |                      |
+   |                        |-- check existing ------>|                      |
+   |                        |   (fingerprint dedup)   |                      |
+   |                        |<-- inc count or create  |                      |
+   |<-- 200 OK ------------|                         |                      |
+   |                        |                         |                      |
+   |  Admin reviews in panel                         |                      |
+   |                        |-- PUT status=REPORTED ->|                      |
+   |                        |                         |-- create GitHub Issue ->|
+   |                        |                         |<-- issue URL -----------|
+   |                        |                         |-- store github_issue_url|
+```
+
+### 6.5 Module Toggle Flow
 
 ```
 Admin UI        Backend (admin)       Spring Context
@@ -389,11 +423,42 @@ Applied at both Spring Security and nginx levels:
 
 Every bean (Service, Controller, Component) in optional modules carries this annotation. Modules can be toggled at runtime via admin config changes (effective on next restart).
 
-### 8.9 Testing Strategy
+### 8.9 Error Reporting
+
+- Frontend errors are submitted to `POST /api/v1/error-reports` (public, rate-limited to 10/min per IP)
+- Backend computes a **fingerprint** (hash of exception class + message) for deduplication
+- Duplicate errors increment `occurrence_count` and update `last_occurrence_at` instead of creating new records
+- Admin reviews error reports in the admin panel with status workflow: `NEW` -> `REPORTED` -> `RESOLVED` / `IGNORED`
+- Optional GitHub Issue creation via configured `tenant_config.github_repo` + `github_pat`
+- Unhandled backend exceptions are captured via `GlobalExceptionHandler` publishing `UnhandledExceptionEvent`
+
+### 8.10 Cross-Module Event Catalog
+
+Spring `ApplicationEventPublisher` enables async communication between modules:
+
+| Event | Source | Consumers | Trigger |
+|-------|--------|-----------|---------|
+| `UserRegisteredEvent` | auth | notification | User registration |
+| `RoomCreatedEvent` | room | files (auto-folder for KLASSE) | Room created |
+| `RoomJoinRequestEvent` | room | notification | Join request sent |
+| `RoomJoinRequestResolvedEvent` | room | notification | Join request approved/denied |
+| `DiscussionThreadCreatedEvent` | room | notification | Thread created |
+| `FeedPostCreatedEvent` | feed | notification | Post created |
+| `FamilyInvitationEvent` | family | notification | Invitation sent |
+| `EventCreatedEvent` | calendar | feed, notification | Event created |
+| `EventCancelledEvent` | calendar | feed (targeted post) | Event cancelled |
+| `EventDeletedEvent` | calendar | feed (cleanup) | Event deleted |
+| `JobCompletedEvent` | jobboard | family (credit hours) | Job completed |
+| `CleaningCompletedEvent` | cleaning | family (credit hours) | Cleaning completed |
+| `FormPublishedEvent` | forms | notification | Form published |
+| `MessageSentEvent` | messaging | notification | Message sent |
+| `UnhandledExceptionEvent` | shared | admin (error report) | Unhandled exception |
+
+### 8.11 Testing Strategy
 
 | Layer | Tool | Coverage |
 |-------|------|----------|
-| Frontend Unit/Component | Vitest + @vue/test-utils | 892 tests, 107 test files |
+| Frontend Unit/Component | Vitest + @vue/test-utils | 897 tests, 108 test files |
 | Backend Integration | Spring Boot Test + Testcontainers | 37 test files |
 | CI/CD | GitHub Actions | Backend, frontend, Docker build jobs |
 
@@ -428,7 +493,7 @@ Every bean (Service, Controller, Component) in optional modules carries this ann
 ### ADR-5: Flyway-Only Schema Management
 
 **Context:** Need reproducible database state across environments.
-**Decision:** All schema changes as Flyway migrations (V001-V046). Hibernate set to `validate` only.
+**Decision:** All schema changes as Flyway migrations (V001-V050). Hibernate set to `validate` only.
 **Consequences:** Explicit migration history. No surprise schema changes. Rollback requires manual down-migration.
 
 ### ADR-6: Self-Hosted with No External Dependencies
@@ -442,6 +507,22 @@ Every bean (Service, Controller, Component) in optional modules carries this ann
 **Context:** Need comprehensive UI components without building from scratch.
 **Decision:** PrimeVue 4 with Aura theme, individual component imports.
 **Consequences:** Consistent UI, reduced development time. Theme customizable via CSS custom properties (`--mw-*`).
+
+### ADR-8: Cross-Module Events for Side Effects
+
+**Context:** Certain actions in one module (e.g., room creation) should trigger side effects in other modules (e.g., creating default folders) without introducing direct dependencies.
+**Decision:** Use Spring `ApplicationEventPublisher` for async cross-module communication. Events are published from the source module and consumed by listeners in target modules.
+**Consequences:** Loose coupling between modules. Side effects (auto-folder creation, feed announcements, notification dispatch) happen asynchronously. Modules remain independently toggleable. Event catalog documents all cross-module events.
+
+**Key Events:**
+| Event | Publisher | Consumer(s) |
+|-------|-----------|-------------|
+| `RoomCreatedEvent` | room | files (auto-folder for KLASSE rooms) |
+| `EventCancelledEvent` | calendar | feed (announcement to attendees) |
+| `FormPublishedEvent` | forms | notification (alert target users) |
+| `JobCompletedEvent` | jobboard | family (credit hours) |
+| `CleaningCompletedEvent` | cleaning | family (credit cleaning hours) |
+| `UnhandledExceptionEvent` | shared | admin (error report ingestion) |
 
 ---
 
@@ -472,7 +553,7 @@ Quality
 │   ├── Health checks on all services
 │   └── Prometheus/Grafana monitoring
 └── Maintainability
-    ├── 892 frontend tests across 107 files
+    ├── 897 frontend tests across 108 files
     ├── 37 backend test files with Testcontainers
     └── CI/CD pipeline with automated checks
 ```
@@ -539,6 +620,10 @@ Quality
 | **Fotobox** | Photo gallery feature within rooms, with permission levels (VIEW_ONLY, POST_IMAGES, CREATE_THREADS). |
 | **Audience** | Visibility scope for folders and fotobox threads: `ALL` (all room members), `PARENTS_ONLY`, `STUDENTS_ONLY`. Parents auto-set to `PARENTS_ONLY` on creation; teachers/leaders/admins choose. |
 | **Multi-Section Forms** | Forms with `SECTION` scope can target multiple school sections via `section_ids UUID[]`. Available sections selected via MultiSelect on form creation. |
-| **Conditional Module** | Feature module that can be enabled/disabled via `monteweb.modules.{name}.enabled` property. Currently: messaging, files, jobboard, cleaning, calendar, forms, fotobox. |
+| **Jahresabrechnung** | Annual billing report aggregating family volunteer hours (jobboard + cleaning) across a billing period (year/month). Managed via `billing_periods` table. |
+| **Error Report** | Frontend or backend error captured with fingerprint-based deduplication. Tracked with status (NEW/REPORTED/RESOLVED/IGNORED) and optional GitHub Issue link. |
+| **Fingerprint** | Hash of exception class + message used for error report deduplication. Duplicate errors increment occurrence count instead of creating new records. |
+| **Auto-Folder** | Default folder automatically created in the files module when a KLASSE room is created, via `RoomCreatedEvent` cross-module event. |
+| **Conditional Module** | Feature module that can be enabled/disabled via `monteweb.modules.{name}.enabled` property. Currently: messaging, files, jobboard, cleaning, calendar, forms, fotobox (all enabled by default since V050). |
 | **Spring Modulith** | Framework enforcing module boundaries within a monolithic Spring application. |
 | **Facade / ModuleApi** | Public interface exposing a module's capabilities to other modules. |

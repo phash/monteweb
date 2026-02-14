@@ -396,6 +396,20 @@ async function removeFromFamily(familyId: string) {
   }
 }
 
+async function toggleHoursExempt(family: FamilyInfo) {
+  try {
+    await familyApi.setHoursExempt(family.id, !family.hoursExempt)
+    family.hoursExempt = !family.hoursExempt
+    toast.add({
+      severity: 'success',
+      summary: family.hoursExempt ? t('admin.familyExempted') : t('admin.familyNotExempted'),
+      life: 3000,
+    })
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
+}
+
 function onTabChange(val: string | number) {
   const tab = String(val)
   if (tab === '1' && userRooms.value.length === 0) {
@@ -694,6 +708,16 @@ onUnmounted(() => {
                 <div v-for="fam in userFamilies" :key="fam.id" class="item-row">
                   <span class="item-name">{{ fam.name }}</span>
                   <span class="item-members">{{ fam.members.length }} {{ t('family.members') }}</span>
+                  <Tag v-if="fam.hoursExempt" :value="t('admin.hoursExempt')" severity="secondary" />
+                  <Button
+                    :icon="fam.hoursExempt ? 'pi pi-check-circle' : 'pi pi-ban'"
+                    :severity="fam.hoursExempt ? 'success' : 'warn'"
+                    text
+                    size="small"
+                    v-tooltip="fam.hoursExempt ? t('admin.requireHours') : t('admin.exemptHours')"
+                    @click="toggleHoursExempt(fam)"
+                    :aria-label="t('admin.toggleHoursExempt')"
+                  />
                   <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeFromFamily(fam.id)" :aria-label="t('common.delete')" />
                 </div>
               </div>

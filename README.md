@@ -10,38 +10,48 @@ Modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Kripp
 
 ## Features
 
-- **Feed & Nachrichten** — Schulweiter Newsfeed mit Posts, Kommentaren und System-Bannern
-- **Raeume** — Klassen, Gruppen und Projekte mit Mitgliederverwaltung, Diskussions-Threads und Chat
-- **Familienverbund** — Familien mit Einladungscodes, Stundenkonto und Kinderzuordnung
-- **Jobboerse** — Elternstunden-Verwaltung mit Anmeldung, Bestaetigungen und PDF-Export
-- **Putz-Organisation** — Putztermine mit QR-Check-in/-out und PDF-Export der QR-Codes
-- **Kalender** — Events auf Raum-, Bereichs- oder Schulebene mit RSVP
+- **Feed & Nachrichten** — Schulweiter Newsfeed mit Posts, Kommentaren, System-Bannern und gezielten Posts fuer bestimmte Nutzer
+- **Raeume** — Klassen, Gruppen und Projekte mit Mitgliederverwaltung, Diskussions-Threads, Chat und Beitrittsanfragen
+- **Familienverbund** — Familien mit Einladungscodes, Stundenkonto, Kinderzuordnung und optionaler Stundenbefreiung
+- **Jobboerse** — Elternstunden-Verwaltung mit Anmeldung, Bestaetigungen, Jahresabrechnung und PDF-Export
+- **Putz-Organisation** — Putzaktionen mit automatischer Kalender-Event- und Job-Erstellung, Familien-Anmeldeliste
+- **Kalender** — Events auf Raum-, Bereichs- oder Schulebene mit RSVP, Absage-Benachrichtigungen und iCal-Export
+- **Formulare** — Umfragen und Einverstaendniserklaerungen mit Multi-Bereichs-Targeting, Dashboard-Widget, CSV/PDF-Export
+- **Fotobox** — Foto-Threads pro Raum mit Thumbnails, Lightbox und Zielgruppen-Sichtbarkeit
 - **Direktnachrichten** — Echtzeit-Chat mit WebSocket und konfigurierbaren Kommunikationsregeln
-- **Dateiverwaltung** — Dateiablage pro Raum via MinIO (S3-kompatibel)
+- **Dateiverwaltung** — Dateiablage pro Raum via MinIO (S3-kompatibel) mit Ordner-Zielgruppen und Auto-Ordner fuer Klassen
 - **Benachrichtigungen** — In-App + optionale Web Push Notifications (VAPID)
+- **PWA** — Installierbar auf Smartphones, Offline-Zwischenspeicherung eigener Inhalte (Termine, Jobs)
+- **Bereichsverwaltung** — Section-Admin-Rolle mit eigenem Verwaltungspanel
 - **OIDC/SSO** — Optionale Anbindung an externe Identity Provider
 - **i18n** — Deutsch + Englisch mit Browser-Locale-Erkennung
+- **Feiertage & Ferien** — Bundesland-abhaengige Feiertage (alle 16 Bundeslaender) und konfigurierbare Schulferien
 - **DSGVO** — Datenexport und Account-Loeschung
-- **Admin** — Benutzerverwaltung, Modulsteuerung, Theme-Anpassung, Audit-Log
+- **Fehlerberichterstattung** — Automatisches Error-Reporting mit GitHub-Issue-Integration
+- **Admin** — Benutzerverwaltung, Modulsteuerung, Theme-Anpassung, Audit-Log, Fehlerberichte
 - **Monitoring** — Prometheus + Grafana Dashboard (optional)
 
 ## Tech-Stack
 
 ### Backend
-Java 21, Spring Boot 3.4, Spring Modulith, Spring Security (JWT), Spring Data JPA + Flyway, Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO
+Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (52 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO
 
 ### Frontend
-Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, vue-i18n, Axios, PWA
+Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, vue-i18n, Axios, PWA (vite-plugin-pwa + Workbox)
 
 ### Infrastruktur
 Docker Compose, nginx (Reverse Proxy), GitHub Actions CI/CD, Prometheus + Grafana
+
+### Tests
+- Frontend: 917 Tests in 109 Dateien (Vitest + vue-test-utils)
+- Backend: 37 Testklassen (Testcontainers + MockMvc)
 
 ## Schnellstart
 
 ### Voraussetzungen
 
 - Docker + Docker Compose
-- Node.js (fuer Frontend-Entwicklung)
+- Node.js 20+ (fuer Frontend-Entwicklung)
 
 ### Production
 
@@ -51,7 +61,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Die Anwendung ist erreichbar unter `http://localhost:8091`.
+Die Anwendung ist erreichbar unter `http://localhost` (Port 80).
 
 ### Entwicklung
 
@@ -59,35 +69,35 @@ Die Anwendung ist erreichbar unter `http://localhost:8091`.
 # 1. Infrastruktur starten (Postgres, Redis, MinIO)
 docker compose -f docker-compose.dev.yml up -d
 
-# 2. Backend starten (via Docker)
-docker compose up backend
+# 2. Full Stack via Docker
+docker compose up -d
 
-# 3. Frontend starten
+# 3. Oder: Frontend mit Hot Reload (erfordert laufendes Backend)
 cd frontend
 npm install
-npm run dev
+npm run dev   # http://localhost:5173
 ```
 
 ## Tests
 
 ```bash
-# Frontend (87 Tests, ~1.5s)
+# Frontend (917 Tests)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker erforderlich)
-cd backend && mvn test
+cd backend && ./mvnw test
 ```
 
-## Port-Belegung (Entwicklung)
+## Port-Belegung
 
-| Service | Port |
-|---------|------|
-| PostgreSQL | 5433 |
-| Redis | 6380 |
-| MinIO API / Console | 9000 / 9001 |
-| Backend | 8090 |
-| Frontend (dev) | 5173 |
-| Frontend (Docker) | 8091 |
+| Service | Entwicklung | Docker Compose |
+|---------|-------------|----------------|
+| PostgreSQL | 5433 | 5432 (intern) |
+| Redis | 6380 | 6379 (intern) |
+| MinIO API / Console | 9000 / 9001 | 9000 / 9001 |
+| Backend | 8080 | 8080 (intern) |
+| Frontend (dev) | 5173 | — |
+| nginx (Production) | — | 80 |
 
 ## Projektstruktur
 
@@ -100,24 +110,26 @@ monteweb/
 │   │   ├── family/        # Familienverbund, Stundenkonto
 │   │   ├── school/        # Schulbereiche (Krippe–Oberstufe)
 │   │   ├── room/          # Raeume, Diskussions-Threads
-│   │   ├── feed/          # Newsfeed, Posts, Kommentare
+│   │   ├── feed/          # Newsfeed, Posts, Kommentare, Banner
 │   │   ├── calendar/      # Kalender, Events, RSVP
 │   │   ├── notification/  # Benachrichtigungen, Web Push
 │   │   ├── messaging/     # Direktnachrichten, Chat
-│   │   ├── files/         # Dateiablage (MinIO)
-│   │   ├── jobboard/      # Jobboerse, Elternstunden
-│   │   ├── cleaning/      # Putz-Organisation, QR-Codes
-│   │   ├── admin/         # Systemkonfiguration, Audit-Log
-│   │   └── shared/        # Security, DTOs, Exceptions
+│   │   ├── files/         # Dateiablage (MinIO), Ordner-Sichtbarkeit
+│   │   ├── jobboard/      # Jobboerse, Elternstunden, Jahresabrechnung
+│   │   ├── cleaning/      # Putzaktionen, Familien-Anmeldung
+│   │   ├── forms/         # Formulare, Umfragen, Export
+│   │   ├── fotobox/       # Foto-Threads, Thumbnails
+│   │   ├── admin/         # Systemkonfiguration, Audit-Log, Error-Reports
+│   │   └── shared/        # Security, DTOs, Exceptions, PDF-Service
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── views/         # Seiten (Login, Dashboard, Rooms, ...)
-│   │   ├── components/    # UI-Komponenten
+│   │   ├── components/    # UI-Komponenten nach Domaene
 │   │   ├── stores/        # Pinia State Management
 │   │   ├── api/           # Axios API-Client
 │   │   ├── types/         # TypeScript Interfaces
-│   │   ├── composables/   # Composables (Auth, WebSocket, ...)
+│   │   ├── composables/   # Composables (Auth, WebSocket, Holidays, ...)
 │   │   └── i18n/          # Deutsch + Englisch
 │   └── Dockerfile
 ├── monitoring/            # Prometheus + Grafana Config
@@ -126,7 +138,7 @@ monteweb/
 └── docker-compose.dev.yml # Entwicklungs-Infrastruktur
 ```
 
-## Optionale Module
+## Module
 
 Module koennen ueber Konfiguration aktiviert/deaktiviert werden:
 
@@ -136,10 +148,24 @@ Module koennen ueber Konfiguration aktiviert/deaktiviert werden:
 | Dateiverwaltung | `monteweb.modules.files.enabled` | `true` |
 | Jobboerse | `monteweb.modules.jobboard.enabled` | `true` |
 | Putz-Organisation | `monteweb.modules.cleaning.enabled` | `true` |
-| Kalender | `monteweb.modules.calendar.enabled` | `false` |
+| Kalender | `monteweb.modules.calendar.enabled` | `true` |
+| Formulare | `monteweb.modules.forms.enabled` | `true` |
+| Fotobox | `monteweb.modules.fotobox.enabled` | `true` |
 | E-Mail-Versand | `monteweb.email.enabled` | `false` |
 | OIDC/SSO | `monteweb.oidc.enabled` | `false` |
 | Push Notifications | `monteweb.push.enabled` | `false` |
+
+## Test-Accounts
+
+| Account | Rolle | Passwort |
+|---------|-------|----------|
+| `admin@monteweb.local` | SUPERADMIN | `test1234` |
+| `lehrer@monteweb.local` | TEACHER | `test1234` |
+| `eltern@monteweb.local` | PARENT | `test1234` |
+| `schueler@monteweb.local` | STUDENT | `test1234` |
+| `sectionadmin@monteweb.local` | SECTION_ADMIN | `test1234` |
+
+Plus ~220 realistische Seed-Benutzer (z.B. `anna.mueller@monteweb.local`).
 
 ## Monitoring (optional)
 

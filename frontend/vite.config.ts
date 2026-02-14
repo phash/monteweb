@@ -8,7 +8,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt'],
+      includeAssets: ['favicon.ico', 'robots.txt', 'icons/icon.svg'],
       manifest: {
         name: 'MonteWeb - Schul-Intranet',
         short_name: 'MonteWeb',
@@ -35,13 +35,47 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable',
           },
+          {
+            src: '/icons/apple-touch-icon.png',
+            sizes: '180x180',
+            type: 'image/png',
+            purpose: 'apple touch icon',
+          },
         ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: 'index.html',
         runtimeCaching: [
           {
-            urlPattern: /^\/api\/v1\//,
+            // User's own data (families, profile, notifications) — cache for offline
+            urlPattern: /\/api\/v1\/(families\/mine|users\/me|notifications)/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'user-data-cache',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 86400, // 24 hours
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Calendar events and jobs — cache for offline viewing
+            urlPattern: /\/api\/v1\/(calendar|jobs|cleaning\/my-slots|cleaning\/dashboard)/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'content-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 3600, // 1 hour
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Feed and other API calls — shorter cache
+            urlPattern: /\/api\/v1\//,
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
@@ -49,9 +83,7 @@ export default defineConfig({
                 maxEntries: 100,
                 maxAgeSeconds: 300, // 5 minutes
               },
-              cacheableResponse: {
-                statuses: [0, 200],
-              },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

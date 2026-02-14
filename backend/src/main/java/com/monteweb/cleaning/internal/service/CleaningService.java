@@ -8,11 +8,15 @@ import com.monteweb.cleaning.internal.model.CleaningSlot;
 import com.monteweb.cleaning.internal.repository.CleaningConfigRepository;
 import com.monteweb.cleaning.internal.repository.CleaningRegistrationRepository;
 import com.monteweb.cleaning.internal.repository.CleaningSlotRepository;
+import com.monteweb.calendar.CalendarModuleApi;
+import com.monteweb.calendar.CreateEventRequest;
+import com.monteweb.calendar.EventScope;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.school.SchoolSectionInfo;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
-import lombok.RequiredArgsConstructor;
+import com.monteweb.shared.util.SecurityUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +37,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 @Transactional
 public class CleaningService implements CleaningModuleApi {
@@ -44,10 +47,28 @@ public class CleaningService implements CleaningModuleApi {
     private final QrTokenService qrTokenService;
     private final SchoolModuleApi schoolModuleApi;
     private final ApplicationEventPublisher eventPublisher;
+    private final CalendarModuleApi calendarModuleApi;
+
+    public CleaningService(CleaningConfigRepository configRepository,
+                           CleaningSlotRepository slotRepository,
+                           CleaningRegistrationRepository registrationRepository,
+                           QrTokenService qrTokenService,
+                           SchoolModuleApi schoolModuleApi,
+                           ApplicationEventPublisher eventPublisher,
+                           @Autowired(required = false) CalendarModuleApi calendarModuleApi) {
+        this.configRepository = configRepository;
+        this.slotRepository = slotRepository;
+        this.registrationRepository = registrationRepository;
+        this.qrTokenService = qrTokenService;
+        this.schoolModuleApi = schoolModuleApi;
+        this.eventPublisher = eventPublisher;
+        this.calendarModuleApi = calendarModuleApi;
+    }
 
     // ── Config Management ───────────────────────────────────────────────
 
     public CleaningConfigInfo createConfig(CreateConfigRequest request) {
+        UUID currentUserId = SecurityUtils.requireCurrentUserId();
         CleaningConfig config = new CleaningConfig();
         config.setSectionId(request.sectionId());
         config.setTitle(request.title());
@@ -64,6 +85,42 @@ public class CleaningService implements CleaningModuleApi {
             config.setDayOfWeek(request.dayOfWeek());
         }
         config = configRepository.save(config);
+
+        // For Putzaktionen (one-time with specificDate): create calendar event + publish event for jobboard
+        if (request.specificDate() != null && calendarModuleApi != null) {
+            var calendarRequest = new CreateEventRequest(
+                    request.title(),
+                    request.description(),
+                    null, // location
+                    false, // allDay
+                    request.specificDate(),
+                    request.startTime(),
+                    request.specificDate(),
+                    request.endTime(),
+                    EventScope.SECTION,
+                    request.sectionId(),
+                    null, // recurrence
+                    null  // recurrenceEnd
+            );
+            var calendarEvent = calendarModuleApi.createEventFromSystem(calendarRequest, currentUserId);
+            config.setCalendarEventId(calendarEvent.id());
+            config = configRepository.save(config);
+
+            eventPublisher.publishEvent(new PutzaktionCreatedEvent(
+                    config.getId(),
+                    request.sectionId(),
+                    request.title(),
+                    request.description(),
+                    request.specificDate(),
+                    request.startTime(),
+                    request.endTime(),
+                    request.maxParticipants(),
+                    request.hoursCredit(),
+                    calendarEvent.id(),
+                    currentUserId
+            ));
+        }
+
         return toConfigInfo(config);
     }
 
@@ -397,6 +454,14 @@ public class CleaningService implements CleaningModuleApi {
     // ── Family Hours ────────────────────────────────────────────────────
 
     @Override
+    public void linkJobToConfig(UUID configId, UUID jobId) {
+        CleaningConfig config = configRepository.findById(configId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", configId));
+        config.setJobId(jobId);
+        configRepository.save(config);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public BigDecimal getCleaningHoursForFamily(UUID familyId) {
         LocalDate yearStart = LocalDate.now().withDayOfYear(1);
@@ -469,7 +534,8 @@ public class CleaningService implements CleaningModuleApi {
                 config.getDayOfWeek(), config.getStartTime(), config.getEndTime(),
                 config.getMinParticipants(), config.getMaxParticipants(),
                 config.getHoursCredit(), config.isActive(),
-                config.getSpecificDate());
+                config.getSpecificDate(),
+                config.getCalendarEventId(), config.getJobId());
     }
 
     private CleaningSlotInfo toSlotInfo(CleaningSlot slot, String configTitle) {

@@ -24,7 +24,7 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (892 tests, 107 files)
+npm test               # vitest run (897 tests, 108 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
@@ -72,7 +72,7 @@ com.monteweb.<module>/
 frontend/src/
 ├── api/           # Axios modules (authApi, feedApi, roomsApi...) — base /api/v1, auto JWT refresh
 ├── components/    # By domain: common/, layout/, feed/, rooms/, family/, messaging/
-├── composables/   # useLocaleDate, useWebSocket, useTheme, usePushNotifications, useHolidays
+├── composables/   # useLocaleDate, useWebSocket, useTheme, usePushNotifications, useHolidays, useConfirmDialog, useErrorReporting
 ├── i18n/          # de.ts + en.ts — ALL user-facing text via t(), German default
 ├── router/        # Lazy-loaded routes, auth/admin guards, 404 catch-all
 ├── stores/        # Pinia composition stores (one per domain)
@@ -88,7 +88,7 @@ frontend/src/
 
 ### Database
 
-- **Flyway** V001–V046. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V050. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
@@ -96,9 +96,13 @@ frontend/src/
 - `cleaning_configs.specific_date`: optional DATE for one-time Putzaktionen
 - `tenant_config.bundesland`: VARCHAR(5) default `'BY'`, determines public holidays
 - `tenant_config.school_vacations`: JSONB array of `{name, from, to}`
+- `tenant_config.github_repo`: VARCHAR — GitHub repo for error report issue creation
+- `tenant_config.github_pat`: VARCHAR — GitHub Personal Access Token for issue creation
 - `room_folders.audience`: VARCHAR(20) default `'ALL'` — visibility: ALL, PARENTS_ONLY, STUDENTS_ONLY
 - `fotobox_threads.audience`: VARCHAR(20) default `'ALL'` — same visibility as folders
 - `forms.section_ids`: `UUID[]` with GIN index — multi-section targeting for SECTION-scoped forms
+- `billing_periods`: family billing with year/month/status (OPEN/CLOSED) — Jahresabrechnung
+- `error_reports`: fingerprint-based dedup, status (NEW/REPORTED/RESOLVED/IGNORED), `github_issue_url`, occurrence tracking
 
 ### Testing
 
@@ -117,10 +121,10 @@ frontend/src/
 | room | Raeume, Diskussions-Threads, Beitrittsanfragen | - |
 | feed | Unified Feed, Posts, Kommentare, Banner, Targeted Posts | - |
 | notification | In-App + Push (VAPID) | Push: `monteweb.push.enabled` |
-| admin | System-Config, Audit-Log, Module | - |
+| admin | System-Config, Audit-Log, Module, Error Reporting | - |
 | messaging | DM & Chat, Kommunikationsregeln | `monteweb.modules.messaging.enabled` |
 | files | Dateiablage via MinIO, Folder-Audience | `monteweb.modules.files.enabled` |
-| jobboard | Jobboerse, Elternstunden, PDF-Export | `monteweb.modules.jobboard.enabled` |
+| jobboard | Jobboerse, Elternstunden, Jahresabrechnung, PDF-Export | `monteweb.modules.jobboard.enabled` |
 | cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen | `monteweb.modules.cleaning.enabled` |
 | calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed | `monteweb.modules.calendar.enabled` |
 | forms | Survey/Consent, Multi-Section Scopes, Dashboard Widget, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
@@ -143,6 +147,8 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 11. **Targeted Feed Posts:** `feed_posts.target_user_ids UUID[]` — NULL=fuer alle sichtbar, gefuellt=nur fuer diese User
 12. **Audience-Sichtbarkeit:** Ordner und Fotobox-Threads haben `audience` (ALL, PARENTS_ONLY, STUDENTS_ONLY). Parents erstellen automatisch PARENTS_ONLY; Teachers/Leaders/Admins waehlen
 13. **Multi-Section Forms:** SECTION-scoped Formulare koennen mehrere Schulbereiche via `section_ids UUID[]` targeten. Dashboard-Widget zeigt offene Formulare
+14. **Auto-Folder Creation:** When a KLASSE room is created (`RoomCreatedEvent`), the files module automatically creates a default folder for the room
+15. **Error Reporting:** Frontend errors are reported via `/api/v1/error-reports` with fingerprint-based deduplication. Admin can view, manage status (NEW/REPORTED/RESOLVED/IGNORED), and optionally create GitHub Issues via configured `github_repo` + `github_pat`
 
 ## Conventions
 
@@ -155,15 +161,18 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 
 - **Auth** `/api/v1/auth`: register, login, logout, refresh, password-reset, oidc/config, oidc/token
 - **Users** `/api/v1/users`: /me (GET/PUT), /me/avatar, /me/data-export, DELETE /me (DSGVO), /{id}, /search
-- **Admin** `/api/v1/admin/users`: CRUD, roles, status | `/api/v1/admin`: config, theme, modules, logo, audit-log
+- **Admin** `/api/v1/admin/users`: CRUD, roles, status | `/api/v1/admin`: config, theme, modules, logo, audit-log, error-reports
 - **Families** `/api/v1/families`: CRUD, /mine, /join, invite, children, hours, invitations
 - **Rooms** `/api/v1/rooms`: /mine, /browse, /discover, CRUD, settings, avatar, archive, members, mute, join-requests
 - **Feed** `/api/v1/feed`: feed, banners, posts CRUD, pin, comments
 - **Calendar** `/api/v1/calendar`: events CRUD, cancel, rsvp, room events
 - **Messaging** `/api/v1/messages`: conversations, messages, WS `/ws/messages`
 - **Files** `/api/v1/rooms/{id}/files`: upload/download/delete, folders
+- **Billing** `/api/v1/billing`: periods, report (Jahresabrechnung)
 - **Jobboard** `/api/v1/jobs`: CRUD, apply, assignments, family hours, report/export/pdf
 - **Cleaning** `/api/v1/cleaning`: slots, register, swap, checkin/checkout, configs, generate, qr-codes, dashboard
 - **Forms** `/api/v1/forms`: CRUD, publish, close, respond, results, csv/pdf export
 - **Fotobox** `/api/v1/rooms/{id}/fotobox` + `/api/v1/fotobox`: threads, images, thumbnails (`?token=` JWT)
-- **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, push subscribe/unsubscribe
+- **Error Reports** `/api/v1/error-reports`: submit (public) | `/api/v1/admin/error-reports`: list, update status
+- **Section Admin** `/api/v1/section-admin`: rooms, members, overview for SECTION_ADMIN role
+- **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, delete, push subscribe/unsubscribe

@@ -230,6 +230,36 @@ public class CalendarService implements CalendarModuleApi {
     }
 
     @Override
+    public EventInfo createEventFromSystem(CreateEventRequest request, UUID createdBy) {
+        var event = new CalendarEvent();
+        event.setTitle(request.title());
+        event.setDescription(request.description());
+        event.setLocation(request.location());
+        event.setAllDay(request.allDay());
+        event.setStartDate(request.startDate());
+        event.setStartTime(request.allDay() ? null : request.startTime());
+        event.setEndDate(request.endDate());
+        event.setEndTime(request.allDay() ? null : request.endTime());
+        event.setScope(request.scope());
+        event.setScopeId(request.scopeId());
+        event.setRecurrence(request.recurrence() != null ? request.recurrence() : EventRecurrence.NONE);
+        event.setRecurrenceEnd(request.recurrenceEnd());
+        event.setCreatedBy(createdBy);
+
+        event = eventRepository.save(event);
+
+        var user = userModule.findById(createdBy).orElse(null);
+        String creatorName = user != null ? user.displayName() : "System";
+
+        eventPublisher.publishEvent(new EventCreatedEvent(
+                event.getId(), event.getTitle(), event.getScope(), event.getScopeId(),
+                createdBy, creatorName
+        ));
+
+        return toEventInfo(event, createdBy);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<EventInfo> getEventsForUserIds(List<UUID> userIds, LocalDate from, LocalDate to) {
         if (userIds == null || userIds.isEmpty()) {

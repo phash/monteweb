@@ -53,6 +53,7 @@ export interface FamilyHoursInfo {
   targetCleaningHours: number
   remainingCleaningHours: number
   cleaningTrafficLight: 'GREEN' | 'YELLOW' | 'RED'
+  hoursExempt: boolean
 }
 
 export interface ReportSummary {

@@ -272,15 +272,24 @@ public class BillingService {
         List<FamilyBillingEntry> entries = new ArrayList<>();
 
         for (FamilyInfo family : allFamilies) {
-            BigDecimal jobHours = assignmentRepository.sumConfirmedHoursByFamilyIdAndDateRange(
+            // Skip families exempt from hours
+            if (family.hoursExempt()) continue;
+            // Normal job hours (all categories except Reinigung)
+            BigDecimal jobHours = assignmentRepository.sumConfirmedNormalHoursByFamilyIdAndDateRange(
                     family.id(), fromInstant, toInstant);
 
-            BigDecimal cleaningHours = BigDecimal.ZERO;
+            // Cleaning hours from Reinigung-category jobs
+            BigDecimal jobCleaningHours = assignmentRepository.sumConfirmedCleaningJobHoursByFamilyIdAndDateRange(
+                    family.id(), fromInstant, toInstant);
+
+            // Legacy QR cleaning hours
+            BigDecimal qrCleaningHours = BigDecimal.ZERO;
             if (cleaningModuleApi != null) {
-                cleaningHours = cleaningModuleApi.getCleaningHoursForFamilyInRange(
+                qrCleaningHours = cleaningModuleApi.getCleaningHoursForFamilyInRange(
                         family.id(), period.getStartDate(), period.getEndDate());
             }
 
+            BigDecimal cleaningHours = jobCleaningHours.add(qrCleaningHours);
             BigDecimal totalHours = jobHours.add(cleaningHours);
             BigDecimal balance = totalHours.subtract(targetHours);
             String trafficLight = calculateTrafficLight(totalHours, targetHours);

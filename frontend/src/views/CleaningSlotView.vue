@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useAuthStore } from '@/stores/auth'
@@ -9,8 +9,6 @@ import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import Dialog from 'primevue/dialog'
-import InputText from 'primevue/inputtext'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import { useToast } from 'primevue/usetoast'
@@ -24,8 +22,6 @@ const authStore = useAuthStore()
 const toast = useToast()
 
 const slotId = route.params.id as string
-const showQrDialog = ref(false)
-const scannerInput = ref('')
 
 onMounted(() => {
   cleaningStore.loadSlot(slotId)
@@ -53,15 +49,6 @@ const canRegister = computed(() => {
 
 const canUnregister = computed(() => {
   return isRegistered.value && myRegistration.value && !myRegistration.value.checkedIn
-})
-
-const canCheckIn = computed(() => {
-  return isRegistered.value && myRegistration.value && !myRegistration.value.checkedIn
-})
-
-const canCheckOut = computed(() => {
-  return isRegistered.value && myRegistration.value
-    && myRegistration.value.checkedIn && !myRegistration.value.checkedOut
 })
 
 function statusSeverity(status: string) {
@@ -107,29 +94,7 @@ async function swap() {
   }
 }
 
-function openQrScanner() {
-  showQrDialog.value = true
-  scannerInput.value = ''
-}
 
-async function submitCheckIn() {
-  try {
-    await cleaningStore.checkIn(slotId, scannerInput.value)
-    showQrDialog.value = false
-    toast.add({ severity: 'success', summary: t('cleaning.checkedIn'), life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Invalid QR', life: 5000 })
-  }
-}
-
-async function doCheckOut() {
-  try {
-    await cleaningStore.checkOut(slotId)
-    toast.add({ severity: 'success', summary: t('cleaning.checkedOut'), life: 3000 })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
-  }
-}
 </script>
 
 <template>
@@ -183,10 +148,6 @@ async function doCheckOut() {
         <Button v-if="canRegister" :label="t('cleaning.register')" icon="pi pi-plus" @click="register" />
         <Button v-if="canUnregister" :label="t('cleaning.unregister')" icon="pi pi-minus"
                 severity="secondary" @click="unregister" />
-        <Button v-if="canCheckIn" :label="t('cleaning.checkIn')" icon="pi pi-qrcode"
-                severity="info" @click="openQrScanner" />
-        <Button v-if="canCheckOut" :label="t('cleaning.checkOut')" icon="pi pi-sign-out"
-                severity="warn" @click="doCheckOut" />
         <Button v-if="isRegistered && canUnregister && !myRegistration?.swapOffered"
                 :label="t('cleaning.offerSwap')" icon="pi pi-sync"
                 severity="secondary" outlined @click="swap" />
@@ -196,21 +157,6 @@ async function doCheckOut() {
       <h2 class="registrations-title">{{ t('cleaning.registrations') }}</h2>
       <DataTable :value="slot.registrations" stripedRows>
         <Column field="userName" :header="t('common.name')" />
-        <Column :header="t('cleaning.checkedInCol')">
-          <template #body="{ data }">
-            <i :class="data.checkedIn ? 'pi pi-check status-check' : 'pi pi-times status-uncheck'" />
-          </template>
-        </Column>
-        <Column :header="t('cleaning.checkedOutCol')">
-          <template #body="{ data }">
-            <i :class="data.checkedOut ? 'pi pi-check status-check' : 'pi pi-times status-uncheck'" />
-          </template>
-        </Column>
-        <Column :header="t('cleaning.duration')">
-          <template #body="{ data }">
-            {{ data.actualMinutes != null ? data.actualMinutes + ' min' : '-' }}
-          </template>
-        </Column>
         <Column :header="t('cleaning.swapCol')">
           <template #body="{ data }">
             <Tag v-if="data.swapOffered" :value="t('cleaning.swapAvailable')" severity="warn" />
@@ -220,17 +166,6 @@ async function doCheckOut() {
       </DataTable>
     </template>
 
-    <!-- QR Check-in Dialog -->
-    <Dialog v-model:visible="showQrDialog" :header="t('cleaning.qrCheckIn')" modal :style="{ width: '400px', maxWidth: '90vw' }">
-      <p class="qr-instructions">{{ t('cleaning.qrInstructions') }}</p>
-      <InputText v-model="scannerInput" :placeholder="t('cleaning.qrPlaceholder')"
-                 class="w-full" autofocus @keyup.enter="submitCheckIn" />
-      <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" text @click="showQrDialog = false" />
-        <Button :label="t('cleaning.checkIn')" icon="pi pi-check" @click="submitCheckIn"
-                :disabled="!scannerInput" />
-      </template>
-    </Dialog>
   </div>
 </template>
 
@@ -294,15 +229,4 @@ async function doCheckOut() {
   margin-bottom: 0.75rem;
 }
 
-.status-check {
-  color: var(--mw-success);
-}
-
-.status-uncheck {
-  color: var(--mw-text-muted);
-}
-
-.qr-instructions {
-  margin-bottom: 0.75rem;
-}
 </style>

@@ -60,6 +60,11 @@ vi.mock('@/api/users.api', () => ({
   },
 }))
 
+vi.mock('@/api/jobboard.api', () => ({
+  jobboardApi: {
+    getAssignments: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
 vi.mock('@/api/admin.api', () => ({
   adminApi: {
@@ -232,8 +237,8 @@ describe('AdminCleaning', () => {
   it('should render config columns', () => {
     const wrapper = mountComponent()
     const columns = wrapper.findAll('.column-stub')
-    // title, section, day, time, participants, hoursCredit, status, actions
-    expect(columns.length).toBe(8)
+    // title, section, day, time, participants, hoursCredit, status, registrations, actions
+    expect(columns.length).toBe(9)
   })
 
   it('should render PutzOrga hint text', async () => {
