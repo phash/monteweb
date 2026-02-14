@@ -175,6 +175,10 @@ docker compose --profile monitoring up -d
 # Prometheus: http://localhost:9090
 ```
 
+## Beitragen
+
+Beitraege sind willkommen! Bitte lies die [CONTRIBUTING.md](CONTRIBUTING.md) fuer Details zu Workflow, Coding-Standards und CLA.
+
 ## Lizenz
 
-Dieses Projekt ist nicht unter einer Open-Source-Lizenz veroeffentlicht. Alle Rechte vorbehalten.
+Dieses Projekt ist lizenziert unter der [Apache License 2.0](LICENSE).
