@@ -56,6 +56,16 @@ public class FamilyController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(family));
     }
 
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<ApiResponse<FamilyInfo>> updateFamily(
+            @PathVariable UUID id,
+            @Valid @RequestBody UpdateFamilyRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var family = familyService.updateFamily(id, request.name(), userId);
+        return ResponseEntity.ok(ApiResponse.ok(family));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteFamily(@PathVariable UUID id) {

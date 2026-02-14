@@ -24,6 +24,7 @@ const i18n = createI18n({
           users: 'Benutzer', usersDesc: 'Benutzer verwalten',
           rooms: 'Räume', roomsDesc: 'Räume verwalten',
           sections: 'Bereiche', sectionsDesc: 'Bereiche verwalten',
+          families: 'Familien', familiesDesc: 'Familien verwalten',
           billing: 'Jahresabrechnung', billingDesc: 'Abrechnung',
           modules: 'Module', modulesDesc: 'Module verwalten',
         },
@@ -48,7 +49,7 @@ describe('AdminDashboard', () => {
 
   it('should render admin tiles', () => {
     const wrapper = mount(AdminDashboard, { global: { plugins: [i18n], stubs } })
-    expect(wrapper.findAll('.router-link-stub')).toHaveLength(6)
+    expect(wrapper.findAll('.router-link-stub')).toHaveLength(7)
   })
 
   it('should render tile labels', () => {

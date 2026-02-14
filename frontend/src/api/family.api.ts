@@ -48,6 +48,14 @@ export const familyApi = {
     return client.delete<ApiResponse<void>>(`/families/${familyId}/avatar`)
   },
 
+  updateName(familyId: string, name: string) {
+    return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}`, { name })
+  },
+
+  deleteFamily(familyId: string) {
+    return client.delete<ApiResponse<void>>(`/families/${familyId}`)
+  },
+
   setHoursExempt(familyId: string, exempt: boolean) {
     return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}/hours-exempt`, { exempt })
   },
