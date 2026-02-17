@@ -103,4 +103,73 @@ describe('Billing Store', () => {
     expect(store.periods).toEqual([])
     expect(store.activePeriod).toBeNull()
   })
+
+  it('should close a period and refresh data', async () => {
+    const store = useBillingStore()
+    const closedPeriod = { id: 'p1', name: 'Schuljahr', status: 'CLOSED' }
+
+    vi.mocked(billingApi.closePeriod).mockResolvedValue({ data: { data: closedPeriod } } as any)
+    vi.mocked(billingApi.listPeriods).mockResolvedValue({ data: { data: [closedPeriod] } } as any)
+    vi.mocked(billingApi.getActivePeriod).mockResolvedValue({ data: { data: null } } as any)
+
+    const result = await store.closePeriod('p1')
+
+    expect(result).toEqual(closedPeriod)
+    expect(billingApi.closePeriod).toHaveBeenCalledWith('p1')
+    expect(billingApi.listPeriods).toHaveBeenCalled()
+  })
+
+  it('should close period and null report when no active period remains', async () => {
+    const store = useBillingStore()
+    store.report = { period: { id: 'p1' } } as any
+
+    vi.mocked(billingApi.closePeriod).mockResolvedValue({ data: { data: {} } } as any)
+    vi.mocked(billingApi.listPeriods).mockResolvedValue({ data: { data: [] } } as any)
+    vi.mocked(billingApi.getActivePeriod).mockResolvedValue({ data: { data: null } } as any)
+
+    await store.closePeriod('p1')
+
+    expect(store.report).toBeNull()
+  })
+
+  it('should export PDF and trigger download', async () => {
+    const store = useBillingStore()
+
+    // Mock window.URL and document.createElement
+    const mockUrl = 'blob:mock-url'
+    const mockAnchor = { href: '', download: '', click: vi.fn() }
+    vi.spyOn(window.URL, 'createObjectURL').mockReturnValue(mockUrl)
+    vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {})
+    vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any)
+
+    vi.mocked(billingApi.exportPdf).mockResolvedValue({ data: new Blob(['pdf']) } as any)
+
+    await store.exportPdf('p1')
+
+    expect(billingApi.exportPdf).toHaveBeenCalledWith('p1')
+    expect(mockAnchor.download).toBe('jahresabrechnung.pdf')
+    expect(mockAnchor.click).toHaveBeenCalled()
+
+    vi.restoreAllMocks()
+  })
+
+  it('should export CSV and trigger download', async () => {
+    const store = useBillingStore()
+
+    const mockUrl = 'blob:mock-csv'
+    const mockAnchor = { href: '', download: '', click: vi.fn() }
+    vi.spyOn(window.URL, 'createObjectURL').mockReturnValue(mockUrl)
+    vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {})
+    vi.spyOn(document, 'createElement').mockReturnValue(mockAnchor as any)
+
+    vi.mocked(billingApi.exportCsv).mockResolvedValue({ data: new Blob(['csv']) } as any)
+
+    await store.exportCsv('p1')
+
+    expect(billingApi.exportCsv).toHaveBeenCalledWith('p1')
+    expect(mockAnchor.download).toBe('jahresabrechnung.csv')
+    expect(mockAnchor.click).toHaveBeenCalled()
+
+    vi.restoreAllMocks()
+  })
 })
