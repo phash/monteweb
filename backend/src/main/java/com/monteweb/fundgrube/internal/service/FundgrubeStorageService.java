@@ -48,7 +48,7 @@ public class FundgrubeStorageService {
             throw new IllegalArgumentException("Not a valid image format. Allowed: JPEG, PNG, WebP, GIF");
         } catch (IllegalArgumentException e) {
             throw e;
-        } catch (Exception e) {
+        } catch (java.io.IOException e) {
             throw new IllegalArgumentException("Could not validate file: " + e.getMessage());
         }
     }

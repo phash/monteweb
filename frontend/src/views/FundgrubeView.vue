@@ -17,10 +17,12 @@ import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import FileUpload from 'primevue/fileupload'
 
 const { t } = useI18n()
 const toast = useToast()
+const { formatDate } = useLocaleDate()
 const { visible: confirmVisible, header: confirmHeader, message: confirmMessage, confirm, onConfirm, onCancel } = useConfirmDialog()
 const store = useFundgrubeStore()
 const auth = useAuthStore()
@@ -135,8 +137,9 @@ async function submitClaim() {
     showClaimDialog.value = false
     toast.add({ severity: 'success', summary: t('fundgrube.claimed'), life: 3000,
       detail: t('fundgrube.claimSuccess') })
-  } catch (err: any) {
-    const msg = err?.response?.data?.message ?? t('common.errorGeneric')
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } }
+    const msg = axiosErr?.response?.data?.message ?? t('common.errorGeneric')
     toast.add({ severity: 'error', summary: t('common.error'), detail: msg, life: 4000 })
   } finally {
     claimSubmitting.value = false
@@ -178,10 +181,6 @@ function canClaimItem(item: FundgrubeItemInfo): boolean {
 
 function thumbnailUrl(imageId: string) {
   return fundgrubeApi.thumbnailUrl(imageId)
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
 
 function onFilesSelected(event: { files: File[] }) {

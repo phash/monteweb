@@ -8,6 +8,11 @@ import type {
   ClaimItemRequest,
 } from '@/types/fundgrube'
 
+function authenticatedUrl(path: string): string {
+  const token = localStorage.getItem('accessToken')
+  return token ? `${path}?token=${encodeURIComponent(token)}` : path
+}
+
 export const fundgrubeApi = {
   // Items
   listItems(sectionId?: string) {
@@ -46,11 +51,9 @@ export const fundgrubeApi = {
 
   // Image URL helpers — JWT via ?token= for <img> tags
   imageUrl(imageId: string) {
-    const token = localStorage.getItem('accessToken')
-    return `/api/v1/fundgrube/images/${imageId}${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    return authenticatedUrl(`/api/v1/fundgrube/images/${imageId}`)
   },
   thumbnailUrl(imageId: string) {
-    const token = localStorage.getItem('accessToken')
-    return `/api/v1/fundgrube/images/${imageId}/thumbnail${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    return authenticatedUrl(`/api/v1/fundgrube/images/${imageId}/thumbnail`)
   },
 }

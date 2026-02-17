@@ -108,10 +108,10 @@ public class FundgrubeService implements FundgrubeModuleApi {
     public FundgrubeItemInfo claimItem(UUID userId, UUID itemId, ClaimItemRequest request) {
         var item = requireItem(itemId);
         if (item.isClaimed()) {
-            throw new BadRequestException("Dieser Gegenstand wurde bereits beansprucht");
+            throw new BadRequestException("Item has already been claimed");
         }
         if (item.getCreatedBy().equals(userId)) {
-            throw new BadRequestException("Du kannst deinen eigenen Fund nicht beanspruchen");
+            throw new BadRequestException("Cannot claim your own item");
         }
         var now = Instant.now();
         item.setClaimedBy(userId);
@@ -127,7 +127,7 @@ public class FundgrubeService implements FundgrubeModuleApi {
     public List<FundgrubeImageInfo> uploadImages(UUID userId, UUID itemId, List<MultipartFile> files) {
         var item = requireItem(itemId);
         requireEditPermission(userId, item);
-        if (files.size() > 10) throw new BadRequestException("Maximal 10 Bilder pro Gegenstand");
+        if (files.size() > 10) throw new BadRequestException("Maximum 10 images per item");
 
         List<FundgrubeImageInfo> result = new ArrayList<>();
         for (MultipartFile file : files) {
@@ -191,7 +191,7 @@ public class FundgrubeService implements FundgrubeModuleApi {
                     .anyMatch(sId -> sId.equals(item.getSectionId()));
             if (adminOfSection) return;
         }
-        throw new ForbiddenException("Keine Berechtigung zum Bearbeiten dieses Eintrags");
+        throw new ForbiddenException("No permission to edit this item");
     }
 
     private FundgrubeItemInfo toInfo(FundgrubeItem item) {
