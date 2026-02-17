@@ -18,6 +18,7 @@ Modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Kripp
 - **Kalender** — Events auf Raum-, Bereichs- oder Schulebene mit RSVP, Absage-Benachrichtigungen und iCal-Export
 - **Formulare** — Umfragen und Einverstaendniserklaerungen mit Multi-Bereichs-Targeting, Dashboard-Widget, CSV/PDF-Export
 - **Fotobox** — Foto-Threads pro Raum mit Thumbnails, Lightbox und Zielgruppen-Sichtbarkeit
+- **Fundgrube** — Schulweite Fundgrube: Verlorene Gegenstaende mit Foto melden, nach Schulbereich filtern, Besitzer koennen beanspruchen (automatische Entfernung nach 24h)
 - **Direktnachrichten** — Echtzeit-Chat mit WebSocket und konfigurierbaren Kommunikationsregeln
 - **Dateiverwaltung** — Dateiablage pro Raum via MinIO (S3-kompatibel) mit Ordner-Zielgruppen und Auto-Ordner fuer Klassen
 - **Benachrichtigungen** — In-App + optionale Web Push Notifications (VAPID)
@@ -34,7 +35,7 @@ Modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Kripp
 ## Tech-Stack
 
 ### Backend
-Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (52 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO
+Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (54 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO
 
 ### Frontend
 Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, vue-i18n, Axios, PWA (vite-plugin-pwa + Workbox)
@@ -43,7 +44,7 @@ Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, v
 Docker Compose, nginx (Reverse Proxy), GitHub Actions CI/CD, Prometheus + Grafana
 
 ### Tests
-- Frontend: 917 Tests in 109 Dateien (Vitest + vue-test-utils)
+- Frontend: 1058 Tests in 118 Dateien (Vitest + vue-test-utils)
 - Backend: 37 Testklassen (Testcontainers + MockMvc)
 
 ## Schnellstart
@@ -81,7 +82,7 @@ npm run dev   # http://localhost:5173
 ## Tests
 
 ```bash
-# Frontend (917 Tests)
+# Frontend (1058 Tests)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker erforderlich)
@@ -119,6 +120,7 @@ monteweb/
 │   │   ├── cleaning/      # Putzaktionen, Familien-Anmeldung
 │   │   ├── forms/         # Formulare, Umfragen, Export
 │   │   ├── fotobox/       # Foto-Threads, Thumbnails
+│   │   ├── fundgrube/     # Fundgrube (Lost & Found)
 │   │   ├── admin/         # Systemkonfiguration, Audit-Log, Error-Reports
 │   │   └── shared/        # Security, DTOs, Exceptions, PDF-Service
 │   └── Dockerfile
@@ -151,6 +153,7 @@ Module koennen ueber Konfiguration aktiviert/deaktiviert werden:
 | Kalender | `monteweb.modules.calendar.enabled` | `true` |
 | Formulare | `monteweb.modules.forms.enabled` | `true` |
 | Fotobox | `monteweb.modules.fotobox.enabled` | `true` |
+| Fundgrube | `monteweb.modules.fundgrube.enabled` | `true` |
 | E-Mail-Versand | `monteweb.email.enabled` | `false` |
 | OIDC/SSO | `monteweb.oidc.enabled` | `false` |
 | Push Notifications | `monteweb.push.enabled` | `false` |
@@ -159,7 +162,7 @@ Module koennen ueber Konfiguration aktiviert/deaktiviert werden:
 
 | Account | Rolle | Passwort |
 |---------|-------|----------|
-| `admin@monteweb.local` | SUPERADMIN | `test1234` |
+| `admin@monteweb.local` | SUPERADMIN | `admin123` |
 | `lehrer@monteweb.local` | TEACHER | `test1234` |
 | `eltern@monteweb.local` | PARENT | `test1234` |
 | `schueler@monteweb.local` | STUDENT | `test1234` |

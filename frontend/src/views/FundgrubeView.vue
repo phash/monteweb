@@ -16,13 +16,12 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
-import ConfirmDialog from 'primevue/confirmdialog'
-import { useConfirm } from 'primevue/useconfirm'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import FileUpload from 'primevue/fileupload'
 
 const { t } = useI18n()
 const toast = useToast()
-const confirm = useConfirm()
+const { visible: confirmVisible, header: confirmHeader, message: confirmMessage, confirm, onConfirm, onCancel } = useConfirmDialog()
 const store = useFundgrubeStore()
 const auth = useAuthStore()
 
@@ -144,22 +143,21 @@ async function submitClaim() {
   }
 }
 
-function confirmDelete(item: FundgrubeItemInfo) {
-  confirm.require({
-    message: t('fundgrube.deleteConfirm'),
+async function confirmDelete(item: FundgrubeItemInfo) {
+  const ok = await confirm({
     header: t('common.confirm'),
-    icon: 'pi pi-exclamation-triangle',
-    acceptLabel: t('common.delete'),
-    rejectLabel: t('common.cancel'),
-    acceptClass: 'p-button-danger',
-    accept: async () => {
-      await store.deleteItem(item.id)
-      if (showDetailDialog.value && selectedItem.value?.id === item.id) {
-        showDetailDialog.value = false
-      }
-      toast.add({ severity: 'success', summary: t('common.deleted'), life: 2000 })
-    },
+    message: t('fundgrube.deleteConfirm'),
   })
+  if (!ok) return
+  try {
+    await store.deleteItem(item.id)
+    if (showDetailDialog.value && selectedItem.value?.id === item.id) {
+      showDetailDialog.value = false
+    }
+    toast.add({ severity: 'success', summary: t('common.deleted'), life: 2000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), detail: t('common.errorGeneric'), life: 3000 })
+  }
 }
 
 function canEditItem(item: FundgrubeItemInfo): boolean {
@@ -193,8 +191,6 @@ function onFilesSelected(event: { files: File[] }) {
 
 <template>
   <div class="fundgrube-view">
-    <ConfirmDialog />
-
     <PageTitle :title="t('fundgrube.title')" :subtitle="t('fundgrube.subtitle')" />
 
     <!-- Filter + New button -->
@@ -423,6 +419,15 @@ function onFilesSelected(event: { files: File[] }) {
           :loading="claimSubmitting"
           @click="submitClaim"
         />
+      </template>
+    </Dialog>
+
+    <!-- Confirm Dialog -->
+    <Dialog v-model:visible="confirmVisible" :header="confirmHeader" modal :style="{ width: '400px' }">
+      <p>{{ confirmMessage }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" @click="onCancel" />
+        <Button :label="t('common.confirm')" severity="danger" @click="onConfirm" />
       </template>
     </Dialog>
   </div>

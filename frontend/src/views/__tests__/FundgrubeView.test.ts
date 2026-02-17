@@ -52,10 +52,6 @@ vi.mock('primevue/usetoast', () => ({
   useToast: vi.fn(() => ({ add: mockToastAdd })),
 }))
 
-const mockConfirmRequire = vi.fn()
-vi.mock('primevue/useconfirm', () => ({
-  useConfirm: vi.fn(() => ({ require: mockConfirmRequire })),
-}))
 
 import FundgrubeView from '@/views/FundgrubeView.vue'
 
@@ -142,7 +138,6 @@ const globalStubs = {
     props: ['mode', 'accept', 'multiple', 'maxFileSize', 'chooseLabel', 'auto', 'customUpload'],
     emits: ['select'],
   },
-  ConfirmDialog: { template: '<div />' },
 }
 
 const sampleItem = {
@@ -423,24 +418,28 @@ describe('FundgrubeView', () => {
 
   // --- confirmDelete ---
 
-  it('confirmDelete should invoke confirm.require', async () => {
+  it('confirmDelete should show confirm dialog', async () => {
     const wrapper = mountView()
     await flushPromises()
     const vm = wrapper.vm as any
+    // Start the confirm, but don't await (it waits for user interaction)
     vm.confirmDelete(sampleItem)
-    expect(mockConfirmRequire).toHaveBeenCalledWith(expect.objectContaining({
-      message: 'Wirklich löschen?',
-    }))
+    await flushPromises()
+    expect(vm.confirmVisible).toBe(true)
+    expect(vm.confirmMessage).toBe('Wirklich löschen?')
     wrapper.unmount()
   })
 
-  it('confirmDelete accept callback should call deleteItem', async () => {
+  it('confirmDelete should call deleteItem when confirmed', async () => {
     const wrapper = mountView()
     await flushPromises()
     const vm = wrapper.vm as any
-    vm.confirmDelete(sampleItem)
-    const callArgs = mockConfirmRequire.mock.calls[0][0]
-    await callArgs.accept()
+    // Start confirm and then accept
+    const deletePromise = vm.confirmDelete(sampleItem)
+    await flushPromises()
+    vm.onConfirm()
+    await deletePromise
+    await flushPromises()
     expect(mockStore.deleteItem).toHaveBeenCalledWith('item-1')
     expect(mockToastAdd).toHaveBeenCalledWith(expect.objectContaining({ summary: 'Gelöscht' }))
     wrapper.unmount()
@@ -452,10 +451,25 @@ describe('FundgrubeView', () => {
     const vm = wrapper.vm as any
     vm.showDetailDialog = true
     vm.selectedItem = sampleItem
-    vm.confirmDelete(sampleItem)
-    const callArgs = mockConfirmRequire.mock.calls[0][0]
-    await callArgs.accept()
+    const deletePromise = vm.confirmDelete(sampleItem)
+    await flushPromises()
+    vm.onConfirm()
+    await deletePromise
+    await flushPromises()
     expect(vm.showDetailDialog).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('confirmDelete should not delete when cancelled', async () => {
+    const wrapper = mountView()
+    await flushPromises()
+    const vm = wrapper.vm as any
+    const deletePromise = vm.confirmDelete(sampleItem)
+    await flushPromises()
+    vm.onCancel()
+    await deletePromise
+    await flushPromises()
+    expect(mockStore.deleteItem).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 
