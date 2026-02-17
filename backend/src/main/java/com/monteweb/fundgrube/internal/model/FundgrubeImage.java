@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import org.springframework.data.domain.Persistable;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -13,10 +15,9 @@ import java.util.UUID;
 @Getter
 @Setter
 @NoArgsConstructor
-public class FundgrubeImage {
+public class FundgrubeImage implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
     @Column(name = "item_id", nullable = false)
@@ -40,8 +41,22 @@ public class FundgrubeImage {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Transient
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();
+    }
+
+    @PostLoad
+    @PostPersist
+    protected void markNotNew() {
+        isNew = false;
     }
 }
