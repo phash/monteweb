@@ -128,6 +128,11 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'fundgrube',
+          name: 'fundgrube',
+          component: () => import('@/views/FundgrubeView.vue'),
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),

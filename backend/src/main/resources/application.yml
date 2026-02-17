@@ -121,3 +121,5 @@ monteweb:
       enabled: true
     fotobox:
       enabled: true
+    fundgrube:
+      enabled: true
