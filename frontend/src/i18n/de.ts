@@ -974,4 +974,10 @@ export default {
     itemUpdated: 'Fundstück wurde aktualisiert',
     deleteConfirm: 'Möchtest du diesen Eintrag wirklich löschen?',
   },
+  pwa: {
+    installTitle: 'MonteWeb installieren',
+    installDescription: 'App auf dem Startbildschirm hinzufügen für schnelleren Zugriff',
+    install: 'Installieren',
+    offline: 'Keine Internetverbindung — Daten werden aus dem Cache angezeigt',
+  },
 }

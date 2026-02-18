@@ -243,8 +243,8 @@ function assignmentStatusSeverity(status: string) {
       </div>
     </div>
 
-    <!-- Configs Table -->
-    <DataTable :value="cleaningStore.configs" :loading="cleaningStore.loading" stripedRows scrollable>
+    <!-- Configs Table (Desktop) -->
+    <DataTable :value="cleaningStore.configs" :loading="cleaningStore.loading" stripedRows scrollable class="hide-mobile">
       <Column field="title" :header="t('cleaning.admin.configTitle')" />
       <Column field="sectionName" :header="t('cleaning.admin.section')" />
       <Column :header="t('cleaning.admin.day')">
@@ -290,6 +290,32 @@ function assignmentStatusSeverity(status: string) {
         </template>
       </Column>
     </DataTable>
+
+    <!-- Configs Cards (Mobile) -->
+    <div class="mobile-cards hide-desktop">
+      <div v-if="cleaningStore.loading" class="text-center p-4"><i class="pi pi-spinner pi-spin" /></div>
+      <div v-for="config in cleaningStore.configs" :key="config.id" class="mobile-card card">
+        <div class="mobile-card-header">
+          <strong>{{ config.title }}</strong>
+          <Tag :value="config.active ? t('common.active') : t('common.inactive')"
+               :severity="config.active ? 'success' : 'danger'" />
+        </div>
+        <div class="mobile-card-details">
+          <span><i class="pi pi-sitemap" /> {{ config.sectionName }}</span>
+          <span><i class="pi pi-calendar" /> {{ config.specificDate ? formatSpecificDate(config.specificDate) : getDayName(config.dayOfWeek) }}</span>
+          <span><i class="pi pi-clock" /> {{ config.startTime }} - {{ config.endTime }}</span>
+          <span><i class="pi pi-users" /> {{ config.minParticipants }}-{{ config.maxParticipants }} | {{ config.hoursCredit }}h</span>
+        </div>
+        <div class="mobile-card-actions">
+          <Button v-if="config.jobId" icon="pi pi-users" text size="small" :label="t('cleaning.admin.registrations')" @click="openAssignments(config)" />
+          <Button icon="pi pi-calendar-plus" text size="small" :label="t('cleaning.admin.generate')" @click="openGenerate(config)" :disabled="!config.active" />
+          <Button :icon="config.active ? 'pi pi-ban' : 'pi pi-check'" text size="small"
+                  :severity="config.active ? 'danger' : 'success'"
+                  :label="config.active ? t('common.inactive') : t('common.active')"
+                  @click="toggleActive(config)" />
+        </div>
+      </div>
+    </div>
 
     <!-- Create Config Dialog -->
     <Dialog v-model:visible="showCreateDialog" :header="t('cleaning.admin.newConfig')" modal
@@ -488,6 +514,57 @@ function assignmentStatusSeverity(status: string) {
   .time-grid {
     grid-template-columns: 1fr;
   }
+  .flex.justify-between {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .flex.gap-2 {
+    flex-direction: column;
+  }
+}
+
+.mobile-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mobile-card {
+  padding: 1rem;
+}
+
+.mobile-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-card-header strong {
+  font-size: var(--mw-font-size-md);
+}
+
+.mobile-card-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.mobile-card-details i {
+  width: 1.25rem;
+  text-align: center;
+  margin-right: 0.375rem;
+}
+
+.mobile-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  border-top: 1px solid var(--mw-border-light);
+  padding-top: 0.75rem;
 }
 
 :deep(.mw-holiday) {

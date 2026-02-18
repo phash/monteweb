@@ -49,6 +49,8 @@ function createWrapper() {
         BottomNav: { template: '<nav class="bottomnav-stub" />' },
         AppBreadcrumb: { template: '<nav class="breadcrumb-stub" />' },
         ErrorBoundary: { template: '<div class="error-boundary-stub"><slot /></div>' },
+        PwaInstallBanner: { template: '<div class="pwa-install-stub" />' },
+        OfflineBanner: { template: '<div class="offline-banner-stub" />' },
         'router-view': { template: '<div class="router-view-stub" />' },
       },
     },

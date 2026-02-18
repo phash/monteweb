@@ -974,4 +974,10 @@ export default {
     itemUpdated: 'Item updated successfully',
     deleteConfirm: 'Are you sure you want to delete this entry?',
   },
+  pwa: {
+    installTitle: 'Install MonteWeb',
+    installDescription: 'Add to home screen for faster access',
+    install: 'Install',
+    offline: 'No internet connection — showing cached data',
+  },
 }

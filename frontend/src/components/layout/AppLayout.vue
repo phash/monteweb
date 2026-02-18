@@ -4,11 +4,15 @@ import AppSidebar from './AppSidebar.vue'
 import BottomNav from './BottomNav.vue'
 import AppBreadcrumb from '@/components/common/AppBreadcrumb.vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
+import PwaInstallBanner from '@/components/common/PwaInstallBanner.vue'
+import OfflineBanner from '@/components/common/OfflineBanner.vue'
 </script>
 
 <template>
   <div class="app-layout">
     <a href="#main-content" class="skip-link">{{ $t('common.skipToContent', 'Zum Inhalt springen') }}</a>
+    <PwaInstallBanner />
+    <OfflineBanner />
     <AppHeader />
     <div class="app-body">
       <AppSidebar class="hide-mobile" />

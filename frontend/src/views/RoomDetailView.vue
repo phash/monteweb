@@ -1092,4 +1092,35 @@ async function toggleMute() {
 .member-search-info span {
   font-size: var(--mw-font-size-xs);
 }
+
+@media (max-width: 767px) {
+  .member-item {
+    flex-wrap: wrap;
+  }
+  .member-controls {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 0.25rem;
+    padding-left: 2.75rem; /* aligned with name after avatar */
+  }
+  .role-select {
+    width: auto;
+    flex: 1;
+  }
+  .member-actions {
+    flex-direction: column;
+  }
+  .member-actions :deep(.p-button) {
+    width: 100%;
+    justify-content: center;
+  }
+  .request-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .request-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
 </style>

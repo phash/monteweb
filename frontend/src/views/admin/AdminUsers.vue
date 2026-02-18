@@ -514,8 +514,15 @@ onUnmounted(() => {
       <template #empty>
         <div class="empty-table">{{ t('admin.noUsersFound') }}</div>
       </template>
-      <Column field="displayName" :header="t('common.name')" />
-      <Column field="email" :header="t('auth.email')" />
+      <Column field="displayName" :header="t('common.name')">
+        <template #body="{ data }">
+          <div>
+            <span>{{ data.displayName }}</span>
+            <span class="mobile-email hide-desktop">{{ data.email }}</span>
+          </div>
+        </template>
+      </Column>
+      <Column field="email" :header="t('auth.email')" class="hide-mobile-column" />
       <Column field="role" :header="t('admin.columnRole')">
         <template #body="{ data }">
           <div class="role-tags">
@@ -902,5 +909,42 @@ onUnmounted(() => {
 
 .special-role-sections {
   margin-left: 1.5rem;
+}
+
+.mobile-email {
+  display: block;
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+  margin-top: 0.125rem;
+}
+
+@media (max-width: 767px) {
+  :deep(.hide-mobile-column) {
+    display: none !important;
+  }
+  .filter-role {
+    min-width: 0;
+    width: 100%;
+  }
+  .filter-search {
+    min-width: 0;
+    width: 100%;
+  }
+  .filter-bar {
+    flex-direction: column;
+  }
+  .form-row {
+    flex-direction: column;
+  }
+  .add-row {
+    flex-direction: column;
+  }
+  .add-row .room-autocomplete {
+    min-width: 0;
+    width: 100%;
+  }
+  .item-row {
+    flex-wrap: wrap;
+  }
 }
 </style>

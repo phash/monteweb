@@ -251,32 +251,38 @@ function truncate(str: string | null, maxLen: number): string {
           <Tag :value="statusLabel(data.status)" :severity="statusSeverity(data.status)" />
         </template>
       </Column>
-      <Column :header="t('errorReports.source')" style="width: 7rem">
+      <Column :header="t('errorReports.source')" style="width: 7rem" class="hide-mobile-column">
         <template #body="{ data }">
           <Tag :value="data.source" :severity="sourceSeverity(data.source)" />
         </template>
       </Column>
-      <Column field="errorType" :header="t('errorReports.errorType')" style="width: 10rem">
+      <Column field="errorType" :header="t('errorReports.errorType')" class="hide-mobile-column">
         <template #body="{ data }">
           <span class="error-type">{{ data.errorType || '-' }}</span>
         </template>
       </Column>
       <Column field="message" :header="t('errorReports.message')">
         <template #body="{ data }">
-          <span class="error-message" :title="data.message">{{ truncate(data.message, 60) }}</span>
+          <div>
+            <span class="error-message" :title="data.message">{{ truncate(data.message, 60) }}</span>
+            <div class="mobile-meta hide-desktop">
+              <Tag :value="data.source" :severity="sourceSeverity(data.source)" size="small" />
+              <span class="text-xs text-muted">{{ data.occurrenceCount }}x · {{ formatDateTime(data.lastSeenAt) }}</span>
+            </div>
+          </div>
         </template>
       </Column>
-      <Column :header="t('errorReports.occurrenceCount')" style="width: 6rem; text-align: center">
+      <Column :header="t('errorReports.occurrenceCount')" style="width: 6rem; text-align: center" class="hide-mobile-column">
         <template #body="{ data }">
           <span class="occurrence-count">{{ data.occurrenceCount }}</span>
         </template>
       </Column>
-      <Column :header="t('errorReports.lastSeen')" style="width: 10rem">
+      <Column :header="t('errorReports.lastSeen')" style="width: 10rem" class="hide-mobile-column">
         <template #body="{ data }">
           {{ formatDateTime(data.lastSeenAt) }}
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 16rem">
+      <Column :header="t('common.actions')" style="width: auto">
         <template #body="{ data }">
           <div class="action-buttons">
             <Button
@@ -495,13 +501,38 @@ function truncate(str: string | null, maxLen: number): string {
   color: var(--mw-text-muted);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .filter-bar {
     flex-direction: column;
   }
 
+  .filter-select {
+    min-width: 0;
+    width: 100%;
+  }
+
   .action-buttons {
     flex-wrap: wrap;
+    gap: 0.25rem;
   }
+
+  .status-select {
+    width: 100px;
+  }
+
+  :deep(.hide-mobile-column) {
+    display: none !important;
+  }
+}
+
+.mobile-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.text-xs {
+  font-size: var(--mw-font-size-xs);
 }
 </style>

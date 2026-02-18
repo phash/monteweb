@@ -226,18 +226,33 @@ function formatTime(date: string | null) {
 @media (max-width: 767px) {
   .messages-layout {
     grid-template-columns: 1fr;
+    height: calc(100vh - var(--mw-header-height) - var(--mw-bottom-nav-height) - 3rem);
   }
   .messages-panel {
     display: none;
   }
   .messages-panel.mobile-visible {
     display: flex;
+    position: fixed;
+    top: var(--mw-header-height);
+    left: 0;
+    right: 0;
+    bottom: var(--mw-bottom-nav-height);
+    z-index: 50;
+    border-radius: 0;
+    margin: 0;
   }
   .conversations-panel.mobile-hidden {
     display: none;
   }
   .back-button {
     display: inline-flex;
+  }
+  .message-bubble {
+    max-width: 85%;
+  }
+  .page-header {
+    flex-wrap: wrap;
   }
 }
 
