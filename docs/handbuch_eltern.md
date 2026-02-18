@@ -63,6 +63,8 @@ MonteWeb ist das Schul-Intranet Ihrer Montessori-Schule. Als Elternteil nutzen S
 2. Geben Sie Ihre **E-Mail-Adresse** und Ihr **Passwort** ein
 3. Klicken Sie auf **Anmelden**
 
+![Login-Seite](screenshots/login.png)
+
 > **Tipp:** Falls Ihre Schule Single Sign-On (SSO) nutzt, koennen Sie alternativ **Mit SSO anmelden** verwenden.
 
 ### 2.2 Erstmalige Registrierung
@@ -102,6 +104,8 @@ Falls die Selbstregistrierung aktiviert ist:
 
 Das Dashboard ist die erste Seite nach dem Anmelden. Hier sehen Sie:
 
+![Dashboard (Eltern-Ansicht)](screenshots/eltern_dashboard.png)
+
 ### 3.1 Systembanner
 
 Oben erscheinen wichtige Hinweise, z.B.:
@@ -136,6 +140,8 @@ Unter den Widgets erscheint der Feed mit Beitraegen aus allen Raeumen, denen Sie
 ## 4. Familienverbund
 
 Der Familienverbund ist die zentrale Einheit fuer die Abrechnung Ihrer Elternstunden. Alle Stunden, die Sie oder Ihr Partner leisten, werden auf dem gemeinsamen Familienkonto gesammelt.
+
+![Familienverbund-Ansicht](screenshots/eltern_familie.png)
 
 ### 4.1 Familie erstellen
 
@@ -203,10 +209,14 @@ Raeume sind die Gruppen in MonteWeb -- z.B. die Klasse Ihres Kindes, eine Arbeit
 ### 5.1 Meine Raeume
 
 Unter **Raeume** in der Navigation sehen Sie alle Raeume, denen Sie angehoeren:
+
+![Meine Raeume](screenshots/eltern_raeume.png)
 - Raum-Avatar und Name
 - Raumtyp (Klasse, Gruppe, Projekt)
 
 ### 5.2 Raeume entdecken
+
+![Raeume entdecken](screenshots/eltern_entdecken.png)
 
 Moechten Sie einem weiteren Raum beitreten?
 
@@ -265,6 +275,8 @@ Im Info-Board eines Raumes sehen Sie nur Beitraege aus diesem Raum. Als Elternte
 
 ## 7. Nachrichten
 
+![Nachrichten-Ansicht](screenshots/eltern_nachrichten.png)
+
 ### 7.1 Neue Nachricht senden
 
 1. Gehen Sie zu **Nachrichten** in der Navigation
@@ -306,6 +318,8 @@ Sie koennen auf eine bestimmte Nachricht antworten:
 ## 8. Jobboerse -- Elternstunden sammeln
 
 Die Jobboerse ist der zentrale Ort, um **Elternstunden** zu sammeln. Lehrkraefte und Admins stellen Jobs ein, fuer die Sie sich bewerben koennen.
+
+![Jobboerse (Eltern-Ansicht)](screenshots/eltern_jobboerse.png)
 
 ### 8.1 Jobs finden
 
@@ -354,6 +368,8 @@ Unter **"Abgeschlossene Jobs"** sehen Sie Ihre erledigten Aufgaben mit den gutge
 ## 9. Putz-Orga -- Putzstunden leisten
 
 Die Putz-Orga organisiert Reinigungsdienste an der Schule. Putzstunden werden auf einem separaten Konto gutgeschrieben.
+
+![Putz-Orga (Eltern-Ansicht)](screenshots/eltern_putzorga.png)
 
 ### 9.1 Putztermine finden
 
@@ -405,6 +421,8 @@ So funktioniert der Putztag:
 
 ### 10.1 Kalender einsehen
 
+![Kalender-Ansicht](screenshots/eltern_kalender.png)
+
 Unter **Kalender** in der Navigation sehen Sie:
 - Monatsnavigation (vor/zurueck, "Heute"-Button)
 - Termine als Liste, geordnet nach Datum
@@ -432,6 +450,8 @@ Im Familienverbund gibt es den **Familienkalender**:
 ---
 
 ## 11. Formulare und Umfragen
+
+![Formulare-Ansicht](screenshots/eltern_formulare.png)
 
 ### 11.1 Formulare finden
 
@@ -506,6 +526,8 @@ Sie sehen immer nur die Inhalte, die fuer Ihre Rolle freigegeben sind.
 
 Die Fundgrube ist eine schulweite Funktion fuer verlorene Gegenstaende.
 
+![Fundgrube](screenshots/eltern_fundgrube.png)
+
 ### 13.1 Fundgrube einsehen
 
 Unter **Fundgrube** in der Navigation sehen Sie alle gemeldeten Gegenstaende:
@@ -540,6 +562,8 @@ Erkennen Sie einen Gegenstand als Ihren?
 ---
 
 ## 14. Profil und Einstellungen
+
+![Profil-Ansicht](screenshots/eltern_profil.png)
 
 ### 14.1 Profil bearbeiten
 

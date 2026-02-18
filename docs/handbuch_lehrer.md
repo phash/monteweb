@@ -84,6 +84,8 @@ Als Lehrkraft koennen Sie in Raeumen die Rolle **LEADER** (Leitung) haben. Das g
 
 ## 3. Dashboard
 
+![Dashboard (Lehrer-Ansicht)](screenshots/lehrer_dashboard.png)
+
 Als Lehrkraft sehen Sie auf dem Dashboard:
 
 ### 3.1 Post-Composer
@@ -106,7 +108,11 @@ Beitraege aus allen Raeumen, denen Sie angehoeren, chronologisch sortiert.
 
 ## 4. Raeume erstellen und verwalten
 
+![Meine Raeume (Lehrer-Ansicht)](screenshots/lehrer_raeume.png)
+
 ### 4.1 Raum erstellen
+
+![Raeume entdecken (Lehrer-Ansicht)](screenshots/lehrer_entdecken.png)
 
 1. Gehen Sie zu **Raeume** > **"Raeume entdecken"**
 2. Klicken Sie auf **"Raum erstellen"**
@@ -307,6 +313,8 @@ Im Tab **Fotobox** > Einstellungen:
 
 ## 9. Kalender und Termine
 
+![Kalender (Lehrer-Ansicht)](screenshots/lehrer_kalender.png)
+
 ### 9.1 Termine erstellen
 
 Als Lehrkraft koennen Sie Termine auf zwei Ebenen erstellen:
@@ -360,6 +368,8 @@ So koennen Eltern sich fuer Helfertaetigkeiten bei Veranstaltungen anmelden.
 ---
 
 ## 10. Formulare und Umfragen
+
+![Formulare (Lehrer-Ansicht)](screenshots/lehrer_formulare.png)
 
 ### 10.1 Formular erstellen
 
@@ -423,6 +433,8 @@ Entwurf → Veroeffentlicht → Geschlossen → Archiviert
 
 ## 11. Jobboerse -- Jobs erstellen
 
+![Jobboerse (Lehrer-Ansicht)](screenshots/lehrer_jobboerse.png)
+
 ### 11.1 Job erstellen
 
 1. Gehen Sie zu **Jobbboerse** > **"Job erstellen"**
@@ -470,6 +482,8 @@ Nach Abschluss eines Jobs durch ein Elternteil:
 
 ## 12. Nachrichten
 
+![Nachrichten (Lehrer-Ansicht)](screenshots/lehrer_nachrichten.png)
+
 ### 12.1 Kommunikationsmoeglichkeiten
 
 Als Lehrkraft koennen Sie mit allen Rollen kommunizieren:
@@ -493,6 +507,8 @@ Im Tab **Chat** eines Raumes:
 ---
 
 ## 13. Putz-Orga und Fundgrube
+
+![Putz-Orga (Lehrer-Ansicht)](screenshots/lehrer_putzorga.png)
 
 ### 13.1 Putz-Orga
 

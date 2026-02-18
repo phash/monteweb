@@ -238,6 +238,17 @@ function buildCss(accentColor) {
       margin: 2px 0;
     }
 
+    /* Images / Screenshots */
+    img {
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin: 12px 0;
+      display: block;
+    }
+
     /* Links */
     a {
       color: var(--accent);

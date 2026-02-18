@@ -61,6 +61,8 @@
 
 ## 2. Section Admin -- Bereichsverwaltung
 
+![Bereichsverwaltung (Section Admin)](screenshots/sectionadmin_panel.png)
+
 ### 2.1 Zugang
 
 Die Bereichsverwaltung erreichen Sie ueber **"Bereichsverwaltung"** in der Seitenleiste.
@@ -117,6 +119,8 @@ Der Raeume-Tab zeigt alle Raeume des gewaehlten Bereichs:
 
 ### 3.1 Admin-Dashboard
 
+![Admin-Dashboard](screenshots/admin_dashboard.png)
+
 Unter **Verwaltung** erreichen Sie das Admin-Dashboard mit Schnellzugriff auf:
 
 | Kachel | Beschreibung |
@@ -131,6 +135,8 @@ Unter **Verwaltung** erreichen Sie das Admin-Dashboard mit Schnellzugriff auf:
 ---
 
 ## 4. Benutzerverwaltung
+
+![Benutzerverwaltung](screenshots/admin_benutzer.png)
 
 ### 4.1 Benutzerliste
 
@@ -193,6 +199,8 @@ Wenn Sie einem Nutzer die Rolle SECTION_ADMIN zuweisen:
 
 ## 5. Raumverwaltung
 
+![Raumverwaltung](screenshots/admin_raeume.png)
+
 ### 5.1 Raumuebersicht
 
 Unter **Verwaltung > Raeume**:
@@ -241,6 +249,8 @@ Im Admin-Kontext koennen Sie:
 ## 6. Schulbereiche verwalten
 
 *(Nur SUPERADMIN)*
+
+![Schulbereiche](screenshots/admin_bereiche.png)
 
 ### 6.1 Bereiche verwalten
 
@@ -292,6 +302,8 @@ Section Admins fuer einen Bereich weisen Sie ueber die **Benutzerverwaltung** zu
 
 *(Nur SUPERADMIN)*
 
+![Familienverwaltung](screenshots/admin_familien.png)
+
 ### 7.1 Familienuebersicht
 
 Unter **Verwaltung > Familien**:
@@ -336,6 +348,8 @@ Befreite Familien:
 
 *(Nur SUPERADMIN)*
 
+![Module verwalten](screenshots/admin_module.png)
+
 ### 8.1 Module aktivieren/deaktivieren
 
 Unter **Verwaltung > Module**:
@@ -361,6 +375,8 @@ Unter **Verwaltung > Module**:
 ## 9. Putz-Organisation konfigurieren
 
 *(SUPERADMIN oder Nutzer mit Sonderrolle PUTZORGA)*
+
+![Putz-Orga Verwaltung](screenshots/admin_putzorga.png)
 
 ### 9.1 Zugang
 
@@ -434,6 +450,8 @@ Unter **Verwaltung > Design & Branding** (Abschnitt "Stundenregelung"):
 
 ### 10.2 Stundenbericht
 
+![Stundenbericht](screenshots/admin_stundenbericht.png)
+
 Unter **Verwaltung > Stundenbericht**:
 
 Der Bericht zeigt alle Familien mit:
@@ -449,6 +467,8 @@ Der Bericht zeigt alle Familien mit:
 **Export:** CSV oder PDF
 
 ### 10.3 Jahresabrechnung (Billing)
+
+![Jahresabrechnung](screenshots/admin_jahresabrechnung.png)
 
 Unter **Verwaltung > Jahresabrechnung**:
 
@@ -477,6 +497,8 @@ Die Jahresabrechnung ermoeglicht eine periodenbasierte Abrechnung:
 *(Nur SUPERADMIN)*
 
 ### 11.1 Theme konfigurieren
+
+![Design & Branding](screenshots/admin_design.png)
 
 Unter **Verwaltung > Design & Branding**:
 
@@ -531,6 +553,8 @@ Konfigurieren Sie, wer mit wem kommunizieren darf:
 *(Nur SUPERADMIN)*
 
 ### 12.1 Fehlermeldungen
+
+![Fehlermeldungen](screenshots/admin_fehlermeldungen.png)
 
 Unter **Verwaltung > Fehlermeldungen**:
 

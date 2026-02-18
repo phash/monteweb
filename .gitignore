@@ -53,10 +53,12 @@ docs/plankonzept.md
 
 # Screenshots & generated docs
 screenshots*/
+!docs/screenshots/
 screenshot-*.png
 docs/audit-screenshots/
 docs/*.html
 docs/*.pdf
+!docs/pdf/
 docs/handbuch*.png
 planung/produkthandbuch.*
 
