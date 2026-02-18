@@ -51,6 +51,7 @@ function createWrapper() {
         ErrorBoundary: { template: '<div class="error-boundary-stub"><slot /></div>' },
         PwaInstallBanner: { template: '<div class="pwa-install-stub" />' },
         OfflineBanner: { template: '<div class="offline-banner-stub" />' },
+        HelpButton: { template: '<div class="help-button-stub" />' },
         'router-view': { template: '<div class="router-view-stub" />' },
       },
     },

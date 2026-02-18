@@ -1000,4 +1000,548 @@ export default {
     install: 'Installieren',
     offline: 'Keine Internetverbindung — Daten werden aus dem Cache angezeigt',
   },
+  help: {
+    contextHelp: 'Kontexthilfe',
+    whatCanIDo: 'Was kann ich hier?',
+    tips: 'Tipps',
+    noContextHelp: 'Für diese Seite ist keine Kontexthilfe verfügbar.',
+    openHandbook: 'Handbuch öffnen',
+    nav: 'Hilfe',
+    pages: {
+      dashboard: {
+        title: 'Dashboard',
+        parent: {
+          action1: 'Neuigkeiten aus den Räumen deiner Kinder im Feed sehen',
+          action2: 'Offene Formulare direkt ausfüllen',
+          action3: 'Kommende Termine und Putzaktionen einsehen',
+          action4: 'Benachrichtigungen über neue Nachrichten und Einladungen prüfen',
+          tip1: 'Das Dashboard zeigt nur Inhalte aus Räumen, in denen du Mitglied bist.',
+          tip2: 'Banner weisen dich auf wichtige anstehende Aufgaben hin.',
+        },
+        student: {
+          action1: 'Feed-Beiträge aus deinen Räumen lesen',
+          action2: 'Kommende Termine im Kalender sehen',
+          action3: 'Offene Formulare ausfüllen',
+          tip1: 'Du siehst nur Inhalte, die für Schüler freigegeben sind.',
+        },
+        teacher: {
+          action1: 'Überblick über alle Räume und deren Aktivitäten erhalten',
+          action2: 'Feed-Beiträge erstellen und verwalten',
+          action3: 'Beitrittsanfragen für deine Räume bearbeiten',
+          action4: 'Offene Formulare und Termine verwalten',
+          tip1: 'Du kannst im Feed gezielt einzelne Nutzer ansprechen (Targeted Posts).',
+          tip2: 'Über die Glocke siehst du neue Benachrichtigungen.',
+        },
+        sectionAdmin: {
+          action1: 'Deinen Schulbereich überblicken',
+          action2: 'Räume und Mitglieder deines Bereichs verwalten',
+          action3: 'Feed und Termine einsehen',
+          tip1: 'Im Bereichs-Admin-Panel findest du erweiterte Verwaltungsoptionen.',
+        },
+        admin: {
+          action1: 'Systemstatus und Statistiken einsehen',
+          action2: 'Alle Module und Bereiche verwalten',
+          action3: 'Benutzer und Registrierungen überprüfen',
+          action4: 'Fehlermeldungen und Audit-Log prüfen',
+          tip1: 'Über das Admin-Menü erreichst du alle Verwaltungsbereiche.',
+        },
+      },
+      rooms: {
+        title: 'Meine Räume',
+        parent: {
+          action1: 'Räume deiner Kinder sehen und öffnen',
+          action2: 'Weitere Räume über "Entdecken" finden und beitreten',
+          tip1: 'Räume, in denen du Mitglied bist, werden hier angezeigt.',
+        },
+        student: {
+          action1: 'Deine Gruppenräume sehen und öffnen',
+          action2: 'Neue Räume entdecken und Beitritt anfragen',
+          tip1: 'Bei archivierten Räumen kannst du noch lesen, aber nicht mehr schreiben.',
+        },
+        teacher: {
+          action1: 'Deine Räume verwalten und neue erstellen',
+          action2: 'Mitglieder und Einstellungen deiner Räume bearbeiten',
+          action3: 'Beitrittsanfragen genehmigen oder ablehnen',
+          tip1: 'Als Raumleitung hast du erweiterte Rechte in deinen Räumen.',
+        },
+        admin: {
+          action1: 'Alle Räume der Schule sehen und verwalten',
+          action2: 'Neue Räume erstellen und zuordnen',
+          action3: 'Räume archivieren oder löschen',
+          tip1: 'Im Admin-Bereich unter "Räume" findest du die vollständige Verwaltung.',
+        },
+      },
+      roomDetail: {
+        title: 'Raum-Detail',
+        parent: {
+          action1: 'Feed-Beiträge lesen und kommentieren',
+          action2: 'Dateien und Fotos ansehen',
+          action3: 'Diskussionen im Raum verfolgen',
+          tip1: 'Einige Ordner sind nur für Eltern sichtbar (z.B. Elterninfos).',
+        },
+        student: {
+          action1: 'Feed-Beiträge lesen und kommentieren',
+          action2: 'An Diskussionen teilnehmen',
+          tip1: 'Inhalte, die nur für Eltern bestimmt sind, siehst du nicht.',
+        },
+        teacher: {
+          action1: 'Feed-Beiträge erstellen, bearbeiten und anpinnen',
+          action2: 'Dateien hochladen und Ordner verwalten',
+          action3: 'Fotobox-Threads erstellen und verwalten',
+          action4: 'Mitglieder verwalten und Raumeinstellungen ändern',
+          tip1: 'Du kannst Beiträge oben anpinnen, damit sie immer sichtbar sind.',
+        },
+        admin: {
+          action1: 'Alle Raumfunktionen nutzen und verwalten',
+          action2: 'Raumeinstellungen und Mitglieder bearbeiten',
+          action3: 'Raum archivieren oder Mitglieder entfernen',
+          action4: 'Alle Dateien und Fotobox-Inhalte verwalten',
+          tip1: 'Als Admin hast du vollen Zugriff auf alle Raum-Funktionen.',
+        },
+      },
+      discover: {
+        title: 'Räume entdecken',
+        action1: 'Verfügbare Räume durchsuchen und filtern',
+        action2: 'Beitritt zu einem Raum anfragen',
+        tip1: 'Die Raumleitung entscheidet über deine Beitrittsanfrage.',
+      },
+      family: {
+        title: 'Familie',
+        parent: {
+          action1: 'Familienverbund erstellen oder beitreten',
+          action2: 'Familienmitglieder einladen (Partner, Kinder)',
+          action3: 'Elternstunden-Konto einsehen',
+          action4: 'Einladungen annehmen oder ablehnen',
+          tip1: 'Jedes Elternteil hat einen eigenen Familienverbund.',
+          tip2: 'Kinder können mehreren Familien zugeordnet sein (getrennte Eltern).',
+        },
+        student: {
+          action1: 'Deinen Familienverbund und Mitglieder sehen',
+          action2: 'Familien-Einladungen annehmen oder ablehnen',
+          tip1: 'Du kannst mehreren Familien zugeordnet sein.',
+        },
+        admin: {
+          action1: 'Alle Familien der Schule einsehen',
+          action2: 'Familien verwalten und Stunden korrigieren',
+          tip1: 'Im Admin-Bereich unter "Familien" findest du die vollständige Verwaltung.',
+        },
+      },
+      messages: {
+        title: 'Nachrichten',
+        parent: {
+          action1: 'Direktnachrichten an Lehrkräfte senden',
+          action2: 'Bilder in Nachrichten versenden',
+          action3: 'Auf Nachrichten antworten (Reply-Funktion)',
+          tip1: 'Ob du andere Eltern anschreiben kannst, hängt von den Kommunikationsregeln ab.',
+        },
+        student: {
+          action1: 'Nachrichten an Lehrkräfte senden',
+          action2: 'Auf Nachrichten antworten',
+          tip1: 'Die Kommunikationsregeln bestimmen, wen du anschreiben kannst.',
+        },
+        teacher: {
+          action1: 'Nachrichten an Eltern und Schüler senden',
+          action2: 'Gruppengespräche starten',
+          action3: 'Bilder teilen und auf Nachrichten antworten',
+          tip1: 'Du kannst immer mit Eltern und Schülern kommunizieren.',
+        },
+        admin: {
+          action1: 'Alle Kommunikationsfunktionen nutzen',
+          action2: 'Kommunikationsregeln in den Einstellungen anpassen',
+          tip1: 'Unter Admin → Module kannst du Kommunikationsregeln konfigurieren.',
+        },
+      },
+      jobs: {
+        title: 'Jobbörse / Elternstunden',
+        parent: {
+          action1: 'Verfügbare Jobs durchsuchen und sich bewerben',
+          action2: 'Eigene Bewerbungen und zugewiesene Jobs einsehen',
+          action3: 'Geleistete Stunden im Familienkonto nachverfolgen',
+          tip1: 'Jobs werden deinem Familien-Stundenkonto gutgeschrieben.',
+          tip2: 'Du kannst dich auch für Jobs in anderen Räumen bewerben.',
+        },
+        teacher: {
+          action1: 'Jobs für deinen Raum erstellen und verwalten',
+          action2: 'Bewerbungen prüfen und zuweisen',
+          action3: 'Geleistete Stunden bestätigen',
+          tip1: 'Erstelle Jobs mit klaren Beschreibungen und Zeitangaben.',
+        },
+        admin: {
+          action1: 'Alle Jobs der Schule einsehen und verwalten',
+          action2: 'Stunden-Berichte und Statistiken abrufen',
+          action3: 'Jahresabrechnung erstellen und exportieren',
+          tip1: 'Im Admin-Bereich findest du den vollständigen Job-Report.',
+        },
+      },
+      cleaning: {
+        title: 'Putz-Orga',
+        parent: {
+          action1: 'Verfügbare Putztermine einsehen und eintragen',
+          action2: 'Eigene Putztermine im Kalender sehen',
+          action3: 'Am Putztag per QR-Code einchecken',
+          tip1: 'Putzstunden werden gesondert auf deinem Familienkonto erfasst.',
+          tip2: 'Putzaktionen erscheinen auch im Kalender und als Feed-Banner.',
+        },
+        teacher: {
+          action1: 'Putztermine und Eintragungen einsehen',
+          action2: 'Putzaktionen im Kalender verfolgen',
+          tip1: 'Die Putz-Organisation wird über den Admin-Bereich verwaltet.',
+        },
+        admin: {
+          action1: 'Putzaktionen erstellen (einmalig oder wiederkehrend)',
+          action2: 'Putzslots und Familien-Zuordnungen verwalten',
+          action3: 'QR-Codes generieren und Check-in-Status prüfen',
+          tip1: 'Putzaktionen erzeugen automatisch Kalendereinträge und Jobs.',
+        },
+      },
+      calendar: {
+        title: 'Kalender',
+        parent: {
+          action1: 'Termine deiner Räume und der Schule einsehen',
+          action2: 'Zu Terminen zu- oder absagen (RSVP)',
+          tip1: 'Abgesagte Termine erscheinen als Info im Feed.',
+        },
+        student: {
+          action1: 'Schultermine und Raumtermine sehen',
+          action2: 'Zu Terminen zu- oder absagen',
+          tip1: 'Feiertage und Ferien werden farbig markiert.',
+        },
+        teacher: {
+          action1: 'Raum-Termine erstellen und verwalten',
+          action2: 'Bereichs-Termine für deinen Schulbereich erstellen',
+          action3: 'Zu- und Absagen der Teilnehmer einsehen',
+          tip1: 'Abgesagte Termine erzeugen automatisch Feed-Beiträge.',
+        },
+        admin: {
+          action1: 'Schulweite Termine erstellen',
+          action2: 'Alle Termin-Typen verwalten (Raum, Bereich, Schule)',
+          action3: 'Feiertage und Ferien konfigurieren',
+          tip1: 'Unter Admin → Design kannst du das Bundesland für Feiertage einstellen.',
+        },
+      },
+      forms: {
+        title: 'Formulare',
+        parent: {
+          action1: 'Offene Formulare ausfüllen und absenden',
+          action2: 'Eigene Antworten einsehen',
+          tip1: 'Formulare können Umfragen oder Einverständniserklärungen sein.',
+        },
+        student: {
+          action1: 'Für dich freigegebene Formulare ausfüllen',
+          tip1: 'Nicht alle Formulare sind für Schüler sichtbar.',
+        },
+        teacher: {
+          action1: 'Formulare erstellen (Umfragen, Einverständnis)',
+          action2: 'Ergebnisse und Antworten auswerten',
+          action3: 'Formulare als CSV oder PDF exportieren',
+          tip1: 'Du kannst Formulare für einzelne Räume oder ganze Bereiche erstellen.',
+        },
+        admin: {
+          action1: 'Alle Formulare einsehen und verwalten',
+          action2: 'Schulweite Formulare erstellen',
+          action3: 'Ergebnisse exportieren (CSV/PDF)',
+          tip1: 'Formulare können mehrere Schulbereiche gleichzeitig abdecken.',
+        },
+      },
+      fundgrube: {
+        title: 'Fundgrube',
+        action1: 'Gefundene Gegenstände melden und Fotos hochladen',
+        action2: 'Nach verlorenen Gegenständen suchen',
+        action3: 'Eigene Gegenstände beanspruchen ("Das gehört mir!")',
+        tip1: 'Beanspruchte Gegenstände werden nach 24 Stunden automatisch entfernt.',
+      },
+      profile: {
+        title: 'Profil',
+        action1: 'Persönliche Daten und Profilbild bearbeiten',
+        action2: 'Passwort ändern',
+        action3: 'Benachrichtigungs-Einstellungen anpassen',
+        action4: 'Datenexport anfordern (DSGVO)',
+        tip1: 'Du kannst dein Profilbild per Klick auf den Avatar ändern.',
+      },
+      adminDashboard: {
+        title: 'Admin-Dashboard',
+        action1: 'Systemstatistiken und Aktivitätsübersicht einsehen',
+        action2: 'Neue Registrierungen genehmigen oder ablehnen',
+        action3: 'Fehlermeldungen und Systemstatus prüfen',
+        tip1: 'Hier siehst du auf einen Blick den Zustand des gesamten Systems.',
+      },
+      adminUsers: {
+        title: 'Benutzerverwaltung',
+        action1: 'Benutzer suchen, filtern und verwalten',
+        action2: 'Rollen zuweisen und ändern',
+        action3: 'Benutzer aktivieren, deaktivieren oder löschen',
+        action4: 'Neue Registrierungen genehmigen',
+        tip1: 'Benutzer können mehrere Rollen haben und zwischen ihnen wechseln.',
+      },
+      adminRooms: {
+        title: 'Raumverwaltung',
+        action1: 'Alle Räume der Schule einsehen und verwalten',
+        action2: 'Neue Räume erstellen und Schulbereichen zuordnen',
+        action3: 'Räume archivieren oder Mitglieder verwalten',
+        tip1: 'KLASSE-Räume erhalten automatisch einen Standard-Ordner.',
+      },
+      adminSections: {
+        title: 'Schulbereiche',
+        action1: 'Schulbereiche (Krippe bis Oberstufe) verwalten',
+        action2: 'Bereichs-Admins zuweisen',
+        tip1: 'Bereiche bilden die organisatorische Grundstruktur der Schule.',
+      },
+      adminFamilies: {
+        title: 'Familienverwaltung',
+        action1: 'Alle Familienverbünde einsehen',
+        action2: 'Stunden korrigieren und Familien verwalten',
+        action3: 'Stunden-Befreiung aktivieren/deaktivieren',
+        tip1: 'Befreite Familien erscheinen nicht in der Stundenbilanz.',
+      },
+      adminModules: {
+        title: 'Modulverwaltung',
+        action1: 'Module aktivieren oder deaktivieren',
+        action2: 'Kommunikationsregeln und Systemeinstellungen konfigurieren',
+        tip1: 'Deaktivierte Module werden aus der Navigation entfernt.',
+      },
+      adminCleaning: {
+        title: 'Putz-Orga Verwaltung',
+        action1: 'Putzaktionen erstellen (einmalig mit Datum oder wiederkehrend)',
+        action2: 'Slots und Zuordnungen verwalten',
+        action3: 'Check-in-Status überwachen',
+        action4: 'QR-Codes für Putztermine generieren',
+        tip1: 'Putzaktionen erzeugen automatisch Kalender-Events und Jobs.',
+      },
+      adminTheme: {
+        title: 'Design & Einstellungen',
+        action1: 'Schulfarben und Logo anpassen',
+        action2: 'Bundesland für Feiertagsberechnung einstellen',
+        action3: 'Schulferien konfigurieren',
+        tip1: 'Änderungen am Design werden sofort für alle Nutzer sichtbar.',
+      },
+      adminBilling: {
+        title: 'Jahresabrechnung',
+        action1: 'Abrechnungsperioden erstellen und verwalten',
+        action2: 'Familien-Stundenbilanz einsehen',
+        action3: 'Berichte als PDF exportieren',
+        tip1: 'Geschlossene Perioden können nicht mehr verändert werden.',
+      },
+      sectionAdmin: {
+        title: 'Bereichsverwaltung',
+        action1: 'Räume des eigenen Bereichs verwalten',
+        action2: 'Mitglieder des Bereichs einsehen',
+        action3: 'Bereichsüberblick und Statistiken ansehen',
+        tip1: 'Du siehst nur die Räume und Mitglieder deines Schulbereichs.',
+      },
+    },
+    handbook: {
+      title: 'Handbuch',
+      subtitle: 'Anleitung für {role}',
+      searchPlaceholder: 'Hilfethemen durchsuchen...',
+      noResults: 'Keine passenden Hilfethemen gefunden.',
+      roleLabel: {
+        PARENT: 'Eltern',
+        STUDENT: 'Schüler',
+        TEACHER: 'Lehrkräfte',
+        SECTION_ADMIN: 'Bereichsadmins',
+        SUPERADMIN: 'Administratoren',
+      },
+      parent: {
+        gettingStarted: {
+          title: 'Erste Schritte',
+          login: {
+            title: 'Anmeldung',
+            content: 'Melde dich mit deiner E-Mail-Adresse und deinem Passwort an. Falls du noch kein Konto hast, registriere dich über die Anmeldeseite. Nach der Registrierung muss ein Administrator deinen Zugang freigeben.',
+          },
+          dashboard: {
+            title: 'Das Dashboard',
+            content: 'Nach der Anmeldung siehst du das Dashboard mit dem Feed deiner Räume, anstehenden Terminen, offenen Formularen und wichtigen Bannern. Das Dashboard zeigt nur Inhalte aus Räumen, in denen du oder deine Kinder Mitglied sind.',
+          },
+          profile: {
+            title: 'Profil bearbeiten',
+            content: 'Unter "Profil" kannst du dein Profilbild ändern, deine persönlichen Daten aktualisieren und dein Passwort ändern. Hier findest du auch die Möglichkeit, einen Datenexport nach DSGVO anzufordern.',
+          },
+        },
+        family: {
+          title: 'Familienverbund',
+          create: {
+            title: 'Familie erstellen',
+            content: 'Erstelle deinen Familienverbund unter "Familie". Jedes Elternteil hat einen eigenen Familienverbund. Dein Familien-Stundenkonto (Elternstunden) ist an diesen Verbund gekoppelt.',
+          },
+          invite: {
+            title: 'Mitglieder einladen',
+            content: 'Lade deinen Partner oder deine Kinder über die Suchfunktion ein. Wähle die passende Rolle (Elternteil oder Kind). Die eingeladene Person erhält eine Benachrichtigung und kann die Einladung annehmen oder ablehnen. Kinder können auch mehreren Familien zugeordnet werden.',
+          },
+          hours: {
+            title: 'Stundenkonto',
+            content: 'Das Familien-Stundenkonto zeigt die geleisteten Elternstunden aus der Jobbörse und die Putzstunden. Die Putzstunden werden in einem separaten Unterkonto geführt. Am Jahresende werden die Stunden in der Jahresabrechnung zusammengefasst.',
+          },
+        },
+        rooms: {
+          title: 'Räume',
+          overview: {
+            title: 'Raumübersicht',
+            content: 'Unter "Meine Räume" siehst du alle Räume, in denen du Mitglied bist — typischerweise die Gruppen deiner Kinder. Über "Entdecken" kannst du weitere Räume finden und einen Beitritt anfragen.',
+          },
+          feed: {
+            title: 'Feed & Diskussionen',
+            content: 'In jedem Raum findest du einen Feed mit aktuellen Beiträgen und Ankündigungen. Du kannst Beiträge kommentieren und an Diskussionen teilnehmen. Angepinnte Beiträge stehen immer oben.',
+          },
+          files: {
+            title: 'Dateien & Fotobox',
+            content: 'Im Dateibereich findest du Dokumente und Informationen zum Raum. Manche Ordner sind nur für Eltern sichtbar. In der Fotobox kannst du Fotos von Veranstaltungen ansehen und eigene hochladen.',
+          },
+        },
+        communication: {
+          title: 'Kommunikation',
+          messages: {
+            title: 'Direktnachrichten',
+            content: 'Unter "Nachrichten" kannst du Direktnachrichten an Lehrkräfte senden. Du kannst auch Bilder versenden und auf einzelne Nachrichten antworten (Reply). Ob du andere Eltern anschreiben kannst, legen die Kommunikationsregeln der Schule fest.',
+          },
+          feed: {
+            title: 'Feed-Benachrichtigungen',
+            content: 'Neue Feed-Beiträge und Kommentare erscheinen in deinen Benachrichtigungen. Du kannst Push-Benachrichtigungen aktivieren, um auch unterwegs informiert zu bleiben.',
+          },
+        },
+        services: {
+          title: 'Dienste & Funktionen',
+          jobs: {
+            title: 'Jobbörse (Elternstunden)',
+            content: 'In der Jobbörse findest du verfügbare Aufgaben, für die Elternstunden gutgeschrieben werden. Bewirb dich auf Jobs und verfolge deine geleisteten Stunden im Familien-Stundenkonto.',
+          },
+          cleaning: {
+            title: 'Putz-Orga',
+            content: 'Trage dich für Putztermine ein und checke am Putztag ein. Putzstunden werden separat auf deinem Familienkonto erfasst. Putztermine erscheinen auch im Kalender.',
+          },
+          calendar: {
+            title: 'Kalender',
+            content: 'Im Kalender siehst du alle Termine deiner Räume, des Schulbereichs und der gesamten Schule. Du kannst zu Terminen zu- oder absagen. Feiertage und Schulferien werden farbig markiert.',
+          },
+          forms: {
+            title: 'Formulare',
+            content: 'Hier findest du offene Formulare wie Umfragen oder Einverständniserklärungen. Fülle sie aus und sende sie ab. Offene Formulare werden auch im Dashboard angezeigt.',
+          },
+          fundgrube: {
+            title: 'Fundgrube',
+            content: 'In der schulweiten Fundgrube kannst du verlorene Gegenstände suchen oder gefundene Sachen melden. Wenn du etwas findest, lade ein Foto hoch. Erkennst du deinen Gegenstand, klicke auf "Das gehört mir!".',
+          },
+        },
+      },
+      teacher: {
+        gettingStarted: {
+          title: 'Erste Schritte',
+          login: {
+            title: 'Anmeldung',
+            content: 'Melde dich mit deinen Zugangsdaten an. Als Lehrkraft hast du erweiterte Rechte in deinen Räumen und kannst Inhalte erstellen und verwalten.',
+          },
+          dashboard: {
+            title: 'Das Dashboard',
+            content: 'Das Dashboard zeigt dir eine Übersicht über die Aktivitäten in deinen Räumen, anstehende Termine, Beitrittsanfragen und offene Aufgaben.',
+          },
+        },
+        rooms: {
+          title: 'Raumverwaltung',
+          manage: {
+            title: 'Räume verwalten',
+            content: 'Als Raumleitung kannst du Raumeinstellungen ändern, Mitglieder verwalten und Beitrittsanfragen genehmigen oder ablehnen. Du kannst auch das Raumbild und die Beschreibung anpassen.',
+          },
+          feed: {
+            title: 'Feed-Beiträge',
+            content: 'Erstelle Beiträge für deinen Raum, pinne wichtige Ankündigungen an und moderiere Kommentare. Du kannst Beiträge auch gezielt an einzelne Nutzer richten (Targeted Posts).',
+          },
+          files: {
+            title: 'Dateien verwalten',
+            content: 'Lade Dokumente hoch, erstelle Ordner und lege die Sichtbarkeit fest (Alle, nur Eltern, nur Schüler). Ordner können für verschiedene Zielgruppen unterschiedliche Inhalte bereitstellen.',
+          },
+          fotobox: {
+            title: 'Fotobox',
+            content: 'Erstelle Foto-Threads für Veranstaltungen und lade Bilder hoch. Du kannst die Sichtbarkeit der Threads festlegen und Thumbnails werden automatisch erstellt.',
+          },
+        },
+        communication: {
+          title: 'Kommunikation',
+          messages: {
+            title: 'Direktnachrichten',
+            content: 'Schreibe Nachrichten an Eltern und Schüler. Du kannst Bilder versenden und die Reply-Funktion für übersichtliche Gesprächsverläufe nutzen.',
+          },
+          feed: {
+            title: 'Feed nutzen',
+            content: 'Der Feed ist der zentrale Informationskanal. Erstelle Beiträge mit Ankündigungen, pinne wichtige Infos an und kommentiere Beiträge anderer.',
+          },
+        },
+        tools: {
+          title: 'Werkzeuge',
+          calendar: {
+            title: 'Kalender',
+            content: 'Erstelle Termine für deinen Raum oder deinen Schulbereich. Teilnehmer können zu- und absagen. Bei Absage eines Termins wird automatisch ein Feed-Beitrag erstellt.',
+          },
+          forms: {
+            title: 'Formulare',
+            content: 'Erstelle Umfragen und Einverständniserklärungen für deinen Raum oder Bereich. Du kannst Formulare auch für mehrere Bereiche gleichzeitig erstellen und die Ergebnisse als CSV oder PDF exportieren.',
+          },
+          jobs: {
+            title: 'Jobbörse',
+            content: 'Erstelle Jobs für Elternstunden, prüfe Bewerbungen und weise Aufgaben zu. Nach Erledigung bestätigst du die geleisteten Stunden.',
+          },
+        },
+      },
+      admin: {
+        overview: {
+          title: 'Überblick',
+          dashboard: {
+            title: 'Admin-Dashboard',
+            content: 'Das Admin-Dashboard zeigt Systemstatistiken, aktuelle Aktivitäten, ausstehende Registrierungen und Fehlermeldungen. Von hier aus erreichst du alle Verwaltungsbereiche.',
+          },
+          navigation: {
+            title: 'Admin-Navigation',
+            content: 'Der Admin-Bereich umfasst: Benutzerverwaltung, Raumverwaltung, Schulbereiche, Familien, Modulverwaltung, Putz-Orga, Jahresabrechnung, Design-Einstellungen und Fehlermeldungen.',
+          },
+        },
+        users: {
+          title: 'Benutzerverwaltung',
+          manage: {
+            title: 'Benutzer verwalten',
+            content: 'Suche, filtere und verwalte alle Benutzer. Du kannst Benutzer aktivieren, deaktivieren, löschen und deren Rollen ändern.',
+          },
+          roles: {
+            title: 'Rollen',
+            content: 'Verfügbare Rollen: Superadmin (voller Zugriff), Bereichsadmin (Bereichsverwaltung), Lehrkraft (Raumverwaltung), Elternteil (Familienfunktionen) und Schüler. Benutzer können mehrere Rollen haben und zwischen ihnen wechseln.',
+          },
+          approval: {
+            title: 'Registrierungen',
+            content: 'Neue Registrierungen müssen von einem Administrator genehmigt werden. Im Admin-Dashboard siehst du ausstehende Genehmigungen und kannst Registrierungen annehmen oder ablehnen.',
+          },
+        },
+        structure: {
+          title: 'Schulstruktur',
+          sections: {
+            title: 'Schulbereiche',
+            content: 'Verwalte die Schulbereiche (z.B. Krippe, Kindergarten, Grundstufe, Mittelstufe, Oberstufe). Bereiche bilden die organisatorische Grundstruktur und werden Räumen zugeordnet.',
+          },
+          rooms: {
+            title: 'Räume',
+            content: 'Erstelle und verwalte alle Räume der Schule. Ordne Räume Schulbereichen zu, setze Raumleitungen ein und verwalte Mitgliedschaften. KLASSE-Räume erhalten automatisch einen Standard-Ordner.',
+          },
+          families: {
+            title: 'Familien',
+            content: 'Überblick über alle Familienverbünde, deren Stundenkontostände und Mitglieder. Du kannst Stunden korrigieren und die Stunden-Befreiung für einzelne Familien aktivieren.',
+          },
+        },
+        system: {
+          title: 'Systemeinstellungen',
+          modules: {
+            title: 'Module',
+            content: 'Aktiviere oder deaktiviere einzelne Module wie Nachrichten, Dateien, Jobbörse, Putz-Orga, Kalender, Formulare, Fotobox und Fundgrube. Deaktivierte Module werden aus der Navigation entfernt.',
+          },
+          theme: {
+            title: 'Design & Feiertage',
+            content: 'Passe die Schulfarben und das Logo an. Stelle das Bundesland für die korrekte Feiertagsberechnung ein und konfiguriere die Schulferien-Zeiträume.',
+          },
+          cleaning: {
+            title: 'Putz-Organisation',
+            content: 'Erstelle Putzaktionen (einmalig mit bestimmtem Datum oder wiederkehrend an Wochentagen). Verwalte Putzslots, überwache Check-ins und generiere QR-Codes. Putzaktionen erzeugen automatisch Kalender-Events und Jobs.',
+          },
+          billing: {
+            title: 'Jahresabrechnung',
+            content: 'Erstelle Abrechnungsperioden und generiere Jahresabrechnungen für alle Familien. Exportiere Berichte als PDF. Geschlossene Perioden können nicht mehr verändert werden.',
+          },
+        },
+      },
+    },
+  },
 }

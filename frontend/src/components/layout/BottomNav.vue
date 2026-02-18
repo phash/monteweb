@@ -54,6 +54,8 @@ const moreItems = computed(() => {
     items.push({ to: '/admin', icon: 'pi pi-cog', label: t('nav.admin'), name: 'admin' })
   }
 
+  items.push({ to: '/help', icon: 'pi pi-question-circle', label: t('help.nav'), name: 'help' })
+
   return items
 })
 

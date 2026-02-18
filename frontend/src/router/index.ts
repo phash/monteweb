@@ -138,6 +138,11 @@ const router = createRouter({
           component: () => import('@/views/ProfileView.vue'),
         },
         {
+          path: 'help',
+          name: 'help',
+          component: () => import('@/views/HelpView.vue'),
+        },
+        {
           path: 'section-admin',
           name: 'section-admin',
           component: () => import('@/views/admin/SectionAdminView.vue'),

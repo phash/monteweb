@@ -43,6 +43,7 @@ desktop.ini
 
 # Docker volumes
 data/
+!frontend/src/data/
 
 # Plan files
 docs/plankonzept.md

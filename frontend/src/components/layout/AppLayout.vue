@@ -4,6 +4,7 @@ import AppSidebar from './AppSidebar.vue'
 import BottomNav from './BottomNav.vue'
 import AppBreadcrumb from '@/components/common/AppBreadcrumb.vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
+import HelpButton from '@/components/common/HelpButton.vue'
 import PwaInstallBanner from '@/components/common/PwaInstallBanner.vue'
 import OfflineBanner from '@/components/common/OfflineBanner.vue'
 </script>
@@ -24,6 +25,7 @@ import OfflineBanner from '@/components/common/OfflineBanner.vue'
       </main>
     </div>
     <BottomNav class="hide-desktop" />
+    <HelpButton />
   </div>
 </template>
 
