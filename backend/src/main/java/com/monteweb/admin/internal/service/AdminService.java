@@ -38,7 +38,8 @@ public class AdminService implements AdminModuleApi {
     @Transactional
     public TenantConfigInfo updateConfig(String schoolName, String logoUrl, BigDecimal targetHours, BigDecimal targetCleaningHours,
                                           String bundesland, java.util.List<java.util.Map<String, String>> schoolVacations,
-                                          Boolean requireAssignmentConfirmation) {
+                                          Boolean requireAssignmentConfirmation, Boolean multilanguageEnabled,
+                                          String defaultLanguage, Boolean requireUserApproval) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -47,6 +48,9 @@ public class AdminService implements AdminModuleApi {
         if (bundesland != null) config.setBundesland(bundesland);
         if (schoolVacations != null) config.setSchoolVacations(schoolVacations);
         if (requireAssignmentConfirmation != null) config.setRequireAssignmentConfirmation(requireAssignmentConfirmation);
+        if (multilanguageEnabled != null) config.setMultilanguageEnabled(multilanguageEnabled);
+        if (defaultLanguage != null) config.setDefaultLanguage(defaultLanguage);
+        if (requireUserApproval != null) config.setRequireUserApproval(requireUserApproval);
         return toInfo(configRepository.save(config));
     }
 
@@ -114,7 +118,10 @@ public class AdminService implements AdminModuleApi {
                 config.getSchoolVacations(),
                 config.getGithubRepo(),
                 config.getGithubPat() != null && !config.getGithubPat().isBlank(),
-                config.isRequireAssignmentConfirmation()
+                config.isRequireAssignmentConfirmation(),
+                config.isMultilanguageEnabled(),
+                config.getDefaultLanguage(),
+                config.isRequireUserApproval()
         );
     }
 }

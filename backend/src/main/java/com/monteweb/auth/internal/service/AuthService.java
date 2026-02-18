@@ -1,5 +1,6 @@
 package com.monteweb.auth.internal.service;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.auth.AuthModuleApi;
 import com.monteweb.auth.TokenResponse;
 import com.monteweb.auth.internal.dto.*;
@@ -14,15 +15,18 @@ import org.springframework.stereotype.Service;
 public class AuthService implements AuthModuleApi {
 
     private final UserModuleApi userModuleApi;
+    private final AdminModuleApi adminModuleApi;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
 
     public AuthService(UserModuleApi userModuleApi,
+                       AdminModuleApi adminModuleApi,
                        JwtService jwtService,
                        RefreshTokenService refreshTokenService,
                        PasswordEncoder passwordEncoder) {
         this.userModuleApi = userModuleApi;
+        this.adminModuleApi = adminModuleApi;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.passwordEncoder = passwordEncoder;
@@ -43,8 +47,11 @@ public class AuthService implements AuthModuleApi {
                 UserRole.PARENT
         );
 
-        // New users must be approved by an admin before they can log in
-        userModuleApi.setActive(user.id(), false);
+        // Deactivate new users only if admin requires approval
+        boolean requireApproval = adminModuleApi.getTenantConfig().requireUserApproval();
+        if (requireApproval) {
+            userModuleApi.setActive(user.id(), false);
+        }
     }
 
     public LoginResponse login(LoginRequest request) {

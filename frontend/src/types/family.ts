@@ -48,4 +48,7 @@ export interface TenantConfig {
   githubRepo?: string
   githubPatConfigured?: boolean
   requireAssignmentConfirmation: boolean
+  multilanguageEnabled: boolean
+  defaultLanguage: string
+  requireUserApproval: boolean
 }

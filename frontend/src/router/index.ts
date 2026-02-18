@@ -220,6 +220,12 @@ const router = createRouter({
               component: () => import('@/views/admin/AdminTheme.vue'),
               meta: { breadcrumbLabel: 'admin.themeTitle' },
             },
+            {
+              path: 'settings',
+              name: 'admin-settings',
+              component: () => import('@/views/admin/AdminSettings.vue'),
+              meta: { breadcrumbLabel: 'admin.settings.title' },
+            },
           ],
         },
       ],

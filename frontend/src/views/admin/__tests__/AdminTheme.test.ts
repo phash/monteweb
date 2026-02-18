@@ -250,7 +250,6 @@ describe('AdminTheme', () => {
       expect(adminApi.updateConfig).toHaveBeenCalledWith({
         targetHoursPerFamily: 30,
         targetCleaningHours: 3,
-        requireAssignmentConfirmation: true,
       })
     }
   })

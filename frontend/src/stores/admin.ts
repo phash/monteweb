@@ -19,6 +19,11 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function updateConfig(data: Parameters<typeof adminApi.updateConfig>[0]) {
+    const res = await adminApi.updateConfig(data)
+    config.value = res.data.data
+  }
+
   async function updateModules(modules: Record<string, boolean>) {
     const res = await adminApi.updateModules(modules)
     config.value = res.data.data
@@ -37,6 +42,7 @@ export const useAdminStore = defineStore('admin', () => {
     config,
     loading,
     fetchConfig,
+    updateConfig,
     updateModules,
     updateTheme,
     isModuleEnabled,

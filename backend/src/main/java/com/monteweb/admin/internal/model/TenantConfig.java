@@ -67,6 +67,15 @@ public class TenantConfig {
     @Column(name = "require_assignment_confirmation", nullable = false)
     private boolean requireAssignmentConfirmation = true;
 
+    @Column(name = "multilanguage_enabled", nullable = false)
+    private boolean multilanguageEnabled = true;
+
+    @Column(name = "default_language", nullable = false, length = 5)
+    private String defaultLanguage = "de";
+
+    @Column(name = "require_user_approval", nullable = false)
+    private boolean requireUserApproval = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

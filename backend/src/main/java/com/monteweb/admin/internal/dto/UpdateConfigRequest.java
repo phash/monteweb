@@ -11,6 +11,9 @@ public record UpdateConfigRequest(
         BigDecimal targetCleaningHours,
         String bundesland,
         List<Map<String, String>> schoolVacations,
-        Boolean requireAssignmentConfirmation
+        Boolean requireAssignmentConfirmation,
+        Boolean multilanguageEnabled,
+        String defaultLanguage,
+        Boolean requireUserApproval
 ) {
 }

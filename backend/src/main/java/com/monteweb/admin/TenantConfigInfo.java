@@ -22,6 +22,9 @@ public record TenantConfigInfo(
         List<Map<String, String>> schoolVacations,
         String githubRepo,
         boolean githubPatConfigured,
-        boolean requireAssignmentConfirmation
+        boolean requireAssignmentConfirmation,
+        boolean multilanguageEnabled,
+        String defaultLanguage,
+        boolean requireUserApproval
 ) {
 }
