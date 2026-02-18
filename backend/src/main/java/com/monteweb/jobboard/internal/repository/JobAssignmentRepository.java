@@ -132,4 +132,12 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             AND a.jobId IN (SELECT j.id FROM Job j WHERE j.category = 'Reinigung')
             """)
     BigDecimal sumConfirmedCleaningJobHoursByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
+
+    @Query("""
+            SELECT a FROM JobAssignment a
+            WHERE a.status = 'COMPLETED'
+            AND a.confirmed = false
+            ORDER BY a.completedAt ASC
+            """)
+    List<JobAssignment> findPendingConfirmation();
 }

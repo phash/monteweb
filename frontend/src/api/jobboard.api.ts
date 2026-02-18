@@ -77,6 +77,10 @@ export const jobboardApi = {
     return client.put<ApiResponse<JobAssignmentInfo>>(`/jobs/assignments/${assignmentId}/confirm`)
   },
 
+  getPendingConfirmations() {
+    return client.get<ApiResponse<JobAssignmentInfo[]>>('/jobs/assignments/pending-confirmation')
+  },
+
   cancelAssignment(assignmentId: string) {
     return client.delete<ApiResponse<void>>(`/jobs/assignments/${assignmentId}`)
   },

@@ -592,6 +592,13 @@ public class JobboardService implements JobboardModuleApi {
         };
     }
 
+
+    public List<JobAssignmentInfo> getPendingConfirmations() {
+        return assignmentRepository.findPendingConfirmation().stream()
+                .map(this::toAssignmentInfo)
+                .toList();
+    }
+
     private JobInfo toJobInfo(Job job) {
         long currentAssignees = assignmentRepository.countByJobIdAndStatusNot(job.getId(), AssignmentStatus.CANCELLED);
 

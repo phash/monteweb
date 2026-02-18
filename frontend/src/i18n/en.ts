@@ -438,6 +438,8 @@ export default {
     pendingConfirmation: 'Awaiting confirmation',
     assignments: 'Assignments',
     noAssignmentsYet: 'No assignments yet',
+    pendingTab: 'Pending Confirmation',
+    noPendingConfirmations: 'No pending confirmations.',
     completedJobs: 'Completed Jobs',
     noCompletedJobs: 'No completed jobs found.',
     returnJob: 'Return',

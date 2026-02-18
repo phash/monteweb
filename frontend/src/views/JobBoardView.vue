@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
+import { useToast } from 'primevue/usetoast'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
@@ -37,6 +38,29 @@ const calendarEnabled = admin.isModuleEnabled('calendar')
 const completedJobs = ref<import('@/types/jobboard').JobInfo[]>([])
 const completedLoading = ref(false)
 const canSeeCompleted = computed(() => auth.isAdmin || auth.isSectionAdmin || auth.isTeacher)
+const toast = useToast()
+const showPendingTab = computed(() =>
+  canSeeCompleted.value && admin.config?.requireAssignmentConfirmation !== false
+)
+const pendingLoaded = ref(false)
+const confirmingId = ref<string | null>(null)
+
+watch(activeTab, (val) => {
+  if (val === 'pending' && !pendingLoaded.value) {
+    pendingLoaded.value = true
+    jobboard.fetchPendingConfirmations()
+  }
+})
+
+async function handleConfirm(assignmentId: string) {
+  confirmingId.value = assignmentId
+  try {
+    await jobboard.confirmAssignment(assignmentId)
+    toast.add({ severity: 'success', summary: t('jobboard.hoursConfirmed'), life: 3000 })
+  } finally {
+    confirmingId.value = null
+  }
+}
 
 onMounted(async () => {
   const promises: Promise<any>[] = [
@@ -122,10 +146,14 @@ function formatDate(date: string | null) {
       />
     </div>
 
-    <Tabs :value="activeTab">
+    <Tabs v-model:value="activeTab">
       <TabList>
         <Tab value="0">{{ t('jobboard.openJobs') }}</Tab>
         <Tab value="1">{{ t('jobboard.myAssignments') }}</Tab>
+        <Tab v-if="showPendingTab" value="pending">
+          {{ t('jobboard.pendingTab') }}
+          <span v-if="jobboard.pendingConfirmations.length" class="pending-badge">{{ jobboard.pendingConfirmations.length }}</span>
+        </Tab>
         <Tab v-if="canSeeCompleted" value="2">{{ t('jobboard.completedJobs') }}</Tab>
       </TabList>
       <TabPanels>
@@ -254,6 +282,44 @@ function formatDate(date: string | null) {
                 <Tag v-else-if="a.status === 'COMPLETED'" :value="t('jobboard.pendingConfirmation')" severity="warn" size="small" />
               </div>
             </router-link>
+          </div>
+        </TabPanel>
+
+        <!-- Pending Confirmations -->
+        <TabPanel v-if="showPendingTab" value="pending">
+          <LoadingSpinner v-if="!pendingLoaded" />
+          <EmptyState
+            v-else-if="!jobboard.pendingConfirmations.length"
+            icon="pi pi-check-circle"
+            :message="t('jobboard.noPendingConfirmations')"
+          />
+          <div v-else class="assignments-list">
+            <div
+              v-for="a in jobboard.pendingConfirmations"
+              :key="a.id"
+              class="assignment-card card"
+            >
+              <div class="assignment-header">
+                <router-link :to="{ name: 'job-detail', params: { id: a.jobId } }" class="job-link">
+                  <h3>{{ a.jobTitle }}</h3>
+                </router-link>
+              </div>
+              <div class="assignment-meta">
+                <span><i class="pi pi-user" /> {{ a.userName }}</span>
+                <span><i class="pi pi-users" /> {{ a.familyName }}</span>
+                <span v-if="a.actualHours"><i class="pi pi-clock" /> {{ a.actualHours }}h</span>
+                <span v-if="a.completedAt"><i class="pi pi-calendar" /> {{ formatDate(a.completedAt) }}</span>
+              </div>
+              <div class="pending-actions">
+                <Button
+                  :label="t('common.confirm')"
+                  icon="pi pi-check"
+                  size="small"
+                  :loading="confirmingId === a.id"
+                  @click="handleConfirm(a.id)"
+                />
+              </div>
+            </div>
           </div>
         </TabPanel>
 
@@ -401,5 +467,30 @@ function formatDate(date: string | null) {
   display: flex;
   justify-content: center;
   padding: 1rem;
+}
+
+.pending-badge {
+  background: var(--p-orange-500);
+  color: white;
+  border-radius: 999px;
+  font-size: var(--mw-font-size-xs);
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.35rem;
+  font-weight: 600;
+}
+
+.pending-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.job-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.job-link:hover h3 {
+  text-decoration: underline;
 }
 </style>

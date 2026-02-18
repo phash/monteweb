@@ -40,6 +40,8 @@ const i18n = createI18n({
         allCategories: 'Alle Kategorien',
         filterCategory: 'Kategorie filtern',
         noAssignments: 'Sie haben keine aktiven Aufgaben.',
+        pendingTab: 'Zu bestätigen',
+        noPendingConfirmations: 'Keine offenen Bestätigungen.',
         allEvents: 'Alle Events',
         jobCount: '{n} Jobs',
       },

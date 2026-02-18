@@ -438,6 +438,8 @@ export default {
     pendingConfirmation: 'Warte auf Bestätigung',
     assignments: 'Zuweisungen',
     noAssignmentsYet: 'Noch keine Zuweisungen',
+    pendingTab: 'Zu bestätigen',
+    noPendingConfirmations: 'Keine offenen Bestätigungen.',
     completedJobs: 'Abgeschlossene Jobs',
     noCompletedJobs: 'Keine abgeschlossenen Jobs vorhanden.',
     returnJob: 'Zurückgeben',

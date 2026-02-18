@@ -150,6 +150,19 @@ public class JobboardController {
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.confirmAssignment(assignmentId, userId)));
     }
 
+    @GetMapping("/assignments/pending-confirmation")
+    public ResponseEntity<ApiResponse<List<JobAssignmentInfo>>> getPendingConfirmations() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (!user.roles().contains(UserRole.TEACHER)
+                && !user.roles().contains(UserRole.SECTION_ADMIN)
+                && !user.roles().contains(UserRole.SUPERADMIN)) {
+            throw new ForbiddenException("Not authorized");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(jobboardService.getPendingConfirmations()));
+    }
+
     @DeleteMapping("/assignments/{assignmentId}")
     public ResponseEntity<ApiResponse<Void>> cancelAssignment(@PathVariable UUID assignmentId) {
         UUID userId = SecurityUtils.requireCurrentUserId();

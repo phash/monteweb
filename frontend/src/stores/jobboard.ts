@@ -15,6 +15,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
   const currentJob = ref<JobInfo | null>(null)
   const assignments = ref<JobAssignmentInfo[]>([])
   const myAssignments = ref<JobAssignmentInfo[]>([])
+  const pendingConfirmations = ref<JobAssignmentInfo[]>([])
   const categories = ref<string[]>([])
   const familyHours = ref<FamilyHoursInfo | null>(null)
   const report = ref<FamilyHoursInfo[]>([])
@@ -112,6 +113,16 @@ export const useJobboardStore = defineStore('jobboard', () => {
   async function confirmAssignment(assignmentId: string) {
     const res = await jobboardApi.confirmAssignment(assignmentId)
     updateAssignmentInList(res.data.data)
+    pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
+  }
+
+  async function fetchPendingConfirmations() {
+    try {
+      const res = await jobboardApi.getPendingConfirmations()
+      pendingConfirmations.value = res.data.data
+    } catch {
+      pendingConfirmations.value = []
+    }
   }
 
   async function fetchFamilyHours(familyId: string) {
@@ -169,6 +180,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
     currentJob,
     assignments,
     myAssignments,
+    pendingConfirmations,
     categories,
     familyHours,
     report,
@@ -186,6 +198,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
     cancelAssignment,
     completeAssignment,
     confirmAssignment,
+    fetchPendingConfirmations,
     fetchFamilyHours,
     fetchReport,
     exportCsv,
