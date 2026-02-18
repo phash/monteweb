@@ -216,6 +216,7 @@ public class UserService implements UserModuleApi {
         return toUserInfo(userRepository.save(user));
     }
 
+    @Override
     @Transactional
     public UserInfo setActive(UUID userId, boolean active) {
         var user = findEntityById(userId);

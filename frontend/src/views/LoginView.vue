@@ -17,6 +17,7 @@ const auth = useAuthStore()
 
 const isLogin = ref(true)
 const error = ref('')
+const pendingApproval = ref(false)
 const oidcEnabled = ref(false)
 const oidcAuthUri = ref('')
 
@@ -42,9 +43,12 @@ onMounted(async () => {
 
 async function submit() {
   error.value = ''
+  pendingApproval.value = false
   try {
     if (isLogin.value) {
       await auth.login({ email: form.value.email, password: form.value.password })
+      const redirect = (route.query.redirect as string) || '/'
+      router.push(redirect)
     } else {
       await auth.register({
         email: form.value.email,
@@ -53,11 +57,15 @@ async function submit() {
         lastName: form.value.lastName,
         phone: form.value.phone || undefined,
       })
+      pendingApproval.value = true
     }
-    const redirect = (route.query.redirect as string) || '/'
-    router.push(redirect)
   } catch (e: any) {
-    error.value = e?.response?.data?.message || (isLogin.value ? t('auth.loginError') : t('auth.registerError'))
+    const msg = e?.response?.data?.message || ''
+    if (msg === 'PENDING_APPROVAL') {
+      error.value = t('auth.pendingApproval')
+    } else {
+      error.value = msg || (isLogin.value ? t('auth.loginError') : t('auth.registerError'))
+    }
   }
 }
 
@@ -77,11 +85,15 @@ function loginWithSso() {
       <h1 class="login-title">MonteWeb</h1>
       <p class="login-subtitle">{{ isLogin ? t('auth.login') : t('auth.register') }}</p>
 
+      <Message v-if="pendingApproval" severity="success" :closable="false" class="login-error">
+        {{ t('auth.pendingApprovalSuccess') }}
+      </Message>
+
       <Message v-if="error" severity="error" :closable="false" class="login-error">
         {{ error }}
       </Message>
 
-      <form @submit.prevent="submit" class="login-form">
+      <form v-if="!pendingApproval" @submit.prevent="submit" class="login-form">
         <template v-if="!isLogin">
           <div class="form-field">
             <label for="firstName" class="required">{{ t('auth.firstName') }}</label>
@@ -140,11 +152,16 @@ function loginWithSso() {
         />
       </template>
 
-      <div class="login-toggle">
+      <div v-if="!pendingApproval" class="login-toggle">
         <span v-if="isLogin">{{ t('auth.noAccount') }}</span>
         <span v-else>{{ t('auth.hasAccount') }}</span>
         <a href="#" @click.prevent="toggleMode">
           {{ isLogin ? t('auth.register') : t('auth.login') }}
+        </a>
+      </div>
+      <div v-if="pendingApproval" class="login-toggle">
+        <a href="#" @click.prevent="pendingApproval = false; isLogin = true">
+          {{ t('auth.backToLogin') }}
         </a>
       </div>
     </div>

@@ -28,7 +28,7 @@ public class AuthService implements AuthModuleApi {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public LoginResponse register(RegisterRequest request) {
+    public void register(RegisterRequest request) {
         if (userModuleApi.existsByEmail(request.email())) {
             throw new BusinessException("Email already registered");
         }
@@ -43,7 +43,8 @@ public class AuthService implements AuthModuleApi {
                 UserRole.PARENT
         );
 
-        return generateTokenResponse(user);
+        // New users must be approved by an admin before they can log in
+        userModuleApi.setActive(user.id(), false);
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -58,7 +59,7 @@ public class AuthService implements AuthModuleApi {
         }
 
         if (!user.active()) {
-            throw new BusinessException("Account is deactivated");
+            throw new BusinessException("PENDING_APPROVAL");
         }
 
         userModuleApi.updateLastLogin(user.id());

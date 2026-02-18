@@ -40,15 +40,11 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function register(data: RegisterRequest) {
+  async function register(data: RegisterRequest): Promise<'PENDING_APPROVAL'> {
     loading.value = true
     try {
-      const res = await authApi.register(data)
-      const { accessToken: token, refreshToken } = res.data.data
-      setTokens(token, refreshToken)
-      await fetchUser()
-      const admin = useAdminStore()
-      await admin.fetchConfig()
+      await authApi.register(data)
+      return 'PENDING_APPROVAL'
     } finally {
       loading.value = false
     }

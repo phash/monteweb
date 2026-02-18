@@ -282,7 +282,8 @@ public class JobboardService implements JobboardModuleApi {
             throw new BusinessException("This job is no longer open for applications");
         }
 
-        if (assignmentRepository.existsByJobIdAndUserId(jobId, userId)) {
+        var existingAssignment = assignmentRepository.findByJobIdAndUserId(jobId, userId);
+        if (existingAssignment.isPresent() && existingAssignment.get().getStatus() != AssignmentStatus.CANCELLED) {
             throw new BusinessException("You have already applied for this job");
         }
 
@@ -291,19 +292,27 @@ public class JobboardService implements JobboardModuleApi {
             throw new BusinessException("Maximum number of assignees reached");
         }
 
-        // Find user's family
-        var families = familyModuleApi.findByUserId(userId);
-        if (families.isEmpty()) {
-            throw new BusinessException("You must belong to a family to apply for jobs");
-        }
-        UUID familyId = families.get(0).id();
+        JobAssignment assignment;
+        if (existingAssignment.isPresent()) {
+            // Reactivate cancelled assignment
+            assignment = existingAssignment.get();
+            assignment.setStatus(AssignmentStatus.ASSIGNED);
+            assignment = assignmentRepository.save(assignment);
+        } else {
+            // Find user's family
+            var families = familyModuleApi.findByUserId(userId);
+            if (families.isEmpty()) {
+                throw new BusinessException("You must belong to a family to apply for jobs");
+            }
+            UUID familyId = families.get(0).id();
 
-        var assignment = new JobAssignment();
-        assignment.setJobId(jobId);
-        assignment.setUserId(userId);
-        assignment.setFamilyId(familyId);
-        assignment.setStatus(AssignmentStatus.ASSIGNED);
-        assignment = assignmentRepository.save(assignment);
+            assignment = new JobAssignment();
+            assignment.setJobId(jobId);
+            assignment.setUserId(userId);
+            assignment.setFamilyId(familyId);
+            assignment.setStatus(AssignmentStatus.ASSIGNED);
+            assignment = assignmentRepository.save(assignment);
+        }
 
         // Update job status if fully assigned
         if (currentAssignees + 1 >= job.getMaxAssignees()) {

@@ -34,43 +34,25 @@ describe('Auth Store - Extended', () => {
   })
 
   describe('register', () => {
-    it('should register and store tokens', async () => {
+    it('should register and return PENDING_APPROVAL without storing tokens', async () => {
       const auth = useAuthStore()
 
       vi.mocked(authApi.register).mockResolvedValue({
-        data: {
-          data: {
-            accessToken: 'new-access-token',
-            refreshToken: 'new-refresh-token',
-          },
-        },
+        data: { data: null, message: 'PENDING_APPROVAL' },
       } as any)
 
-      vi.mocked(usersApi.getMe).mockResolvedValue({
-        data: {
-          data: {
-            id: 'new-user',
-            email: 'new@example.com',
-            firstName: 'New',
-            lastName: 'User',
-            displayName: 'New User',
-            role: 'PARENT',
-            active: true,
-          },
-        },
-      } as any)
-
-      await auth.register({
+      const result = await auth.register({
         email: 'new@example.com',
         password: 'pass123',
         firstName: 'New',
         lastName: 'User',
       } as any)
 
-      expect(auth.isAuthenticated).toBe(true)
-      expect(auth.user?.email).toBe('new@example.com')
-      expect(localStorage.getItem('accessToken')).toBe('new-access-token')
-      expect(localStorage.getItem('refreshToken')).toBe('new-refresh-token')
+      expect(result).toBe('PENDING_APPROVAL')
+      expect(auth.isAuthenticated).toBe(false)
+      expect(auth.user).toBeNull()
+      expect(localStorage.getItem('accessToken')).toBeNull()
+      expect(localStorage.getItem('refreshToken')).toBeNull()
     })
 
     it('should set loading during registration', async () => {
@@ -85,12 +67,8 @@ describe('Auth Store - Extended', () => {
       expect(auth.loading).toBe(true)
 
       resolveRegister({
-        data: { data: { accessToken: 'token', refreshToken: 'refresh' } },
+        data: { data: null, message: 'PENDING_APPROVAL' },
       })
-
-      vi.mocked(usersApi.getMe).mockResolvedValue({
-        data: { data: { id: '1', email: 'test@test.com', role: 'PARENT' } },
-      } as any)
 
       await registerPromise
       expect(auth.loading).toBe(false)

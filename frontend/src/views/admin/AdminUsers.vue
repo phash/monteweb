@@ -124,6 +124,10 @@ const roomRoleOptions = computed(() => [
   { label: t('rooms.roles.GUEST'), value: 'GUEST' as RoomRole },
 ])
 
+// Pending approval users
+const pendingUsers = ref<UserInfo[]>([])
+const pendingLoading = ref(false)
+
 // When filtering by special role, store results separately
 const specialRoleUsers = ref<UserInfo[]>([])
 const isSpecialRoleFiltering = computed(() => !!filterSpecialRole.value)
@@ -440,8 +444,33 @@ function getSectionName(sectionId: string): string {
   return section?.name || sectionId.substring(0, 8) + '...'
 }
 
+async function loadPendingUsers() {
+  pendingLoading.value = true
+  try {
+    const res = await usersApi.list({ page: 0, size: 100, active: false })
+    pendingUsers.value = res.data.data.content
+  } catch {
+    pendingUsers.value = []
+  } finally {
+    pendingLoading.value = false
+  }
+}
+
+async function approveUser(userId: string) {
+  try {
+    await usersApi.setActive(userId, true)
+    pendingUsers.value = pendingUsers.value.filter(u => u.id !== userId)
+    toast.add({ severity: 'success', summary: t('admin.userApproved'), life: 3000 })
+    loadUsers()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
+}
+
+
 onMounted(async () => {
   loadUsers()
+  loadPendingUsers()
   try {
     const res = await sectionsApi.getAll()
     allSections.value = res.data.data
@@ -458,6 +487,26 @@ onUnmounted(() => {
 <template>
   <div>
     <PageTitle :title="t('admin.users')" />
+
+    <!-- Pending Approval Users -->
+    <div v-if="pendingUsers.length" class="pending-section card">
+      <h3><i class="pi pi-user-plus" /> {{ t('admin.pendingUsers') }} ({{ pendingUsers.length }})</h3>
+      <div class="pending-list">
+        <div v-for="u in pendingUsers" :key="u.id" class="pending-item">
+          <div class="pending-info">
+            <strong>{{ u.displayName }}</strong>
+            <span class="pending-email">{{ u.email }}</span>
+          </div>
+          <Button
+            :label="t('admin.approve')"
+            icon="pi pi-check"
+            severity="success"
+            size="small"
+            @click="approveUser(u.id)"
+          />
+        </div>
+      </div>
+    </div>
 
     <div class="filter-bar">
       <Select
@@ -737,6 +786,50 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.pending-section {
+  margin-bottom: 1.5rem;
+  border-left: 4px solid var(--p-orange-500);
+}
+
+.pending-section h3 {
+  font-size: var(--mw-font-size-md);
+  margin-bottom: 0.75rem;
+  color: var(--p-orange-700);
+}
+
+.pending-section h3 i {
+  margin-right: 0.5rem;
+}
+
+.pending-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--mw-border-light);
+}
+
+.pending-item:last-child {
+  border-bottom: none;
+}
+
+.pending-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--mw-font-size-sm);
+}
+
+.pending-email {
+  color: var(--mw-text-secondary);
+}
+
 .filter-bar {
   display: flex;
   gap: 0.75rem;

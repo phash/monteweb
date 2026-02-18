@@ -79,4 +79,9 @@ public interface UserModuleApi {
      * SUPERADMIN and STUDENT cannot switch roles.
      */
     UserInfo switchActiveRole(UUID userId, UserRole newRole);
+
+    /**
+     * Activates or deactivates a user. Used by auth module after registration.
+     */
+    UserInfo setActive(UUID userId, boolean active);
 }
