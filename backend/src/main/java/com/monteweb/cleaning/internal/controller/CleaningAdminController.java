@@ -160,8 +160,8 @@ public class CleaningAdminController {
         if (user.role() == UserRole.SUPERADMIN) {
             return;
         }
-        // ELTERNBEIRAT global is always allowed
-        if (hasGlobalSpecialRole(user, "ELTERNBEIRAT")) {
+        // Global ELTERNBEIRAT or PUTZORGA (without section scope) is always allowed
+        if (hasGlobalSpecialRole(user, "ELTERNBEIRAT") || hasGlobalSpecialRole(user, "PUTZORGA")) {
             return;
         }
         // SECTION_ADMIN / PUTZORGA / ELTERNBEIRAT: must be scoped to the right section

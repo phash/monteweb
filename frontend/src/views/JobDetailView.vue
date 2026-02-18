@@ -25,6 +25,7 @@ const jobboard = useJobboardStore()
 const showCompleteDialog = ref(false)
 const showDeleteDialog = ref(false)
 const showEditDialog = ref(false)
+const showReturnDialog = ref(false)
 const completeAssignmentId = ref<string | null>(null)
 const actualHours = ref<number>(0)
 const completeNotes = ref('')
@@ -108,10 +109,15 @@ async function apply() {
   await jobboard.fetchAssignments(props.id)
 }
 
-async function start() {
+async function returnJob() {
   if (!myAssignment.value) return
-  await jobboard.startAssignment(myAssignment.value.id)
-  await jobboard.fetchMyAssignments()
+  await jobboard.cancelAssignment(myAssignment.value.id)
+  showReturnDialog.value = false
+  await Promise.all([
+    jobboard.fetchJob(props.id),
+    jobboard.fetchAssignments(props.id),
+    jobboard.fetchMyAssignments(),
+  ])
 }
 
 function openComplete() {
@@ -226,18 +232,18 @@ function formatDate(date: string | null) {
           @click="apply"
         />
         <Button
-          v-if="myAssignment && myAssignment.status === 'ASSIGNED'"
-          :label="t('jobboard.start')"
-          icon="pi pi-play"
-          severity="info"
-          @click="start"
-        />
-        <Button
           v-if="myAssignment && (myAssignment.status === 'ASSIGNED' || myAssignment.status === 'IN_PROGRESS')"
           :label="t('jobboard.complete')"
           icon="pi pi-check-circle"
           severity="success"
           @click="openComplete"
+        />
+        <Button
+          v-if="myAssignment && (myAssignment.status === 'ASSIGNED' || myAssignment.status === 'IN_PROGRESS')"
+          :label="t('jobboard.returnJob')"
+          icon="pi pi-undo"
+          severity="warn"
+          @click="showReturnDialog = true"
         />
         <Button
           v-if="canManageJob"
@@ -289,6 +295,15 @@ function formatDate(date: string | null) {
       <template #footer>
         <Button :label="t('common.no')" severity="secondary" text @click="showDeleteDialog = false" />
         <Button :label="t('common.yes')" severity="danger" @click="handleDeleteJob" />
+      </template>
+    </Dialog>
+
+    <!-- Return Job Dialog -->
+    <Dialog v-model:visible="showReturnDialog" :header="t('jobboard.returnJobTitle')" modal :style="{ width: '400px', maxWidth: '90vw' }">
+      <p>{{ t('jobboard.returnJobConfirm') }}</p>
+      <template #footer>
+        <Button :label="t('common.no')" severity="secondary" text @click="showReturnDialog = false" />
+        <Button :label="t('common.yes')" severity="warn" @click="returnJob" />
       </template>
     </Dialog>
 

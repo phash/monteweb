@@ -82,10 +82,10 @@ const roomTypeFilterOptions = computed(() => [
   { label: t('rooms.types.CUSTOM'), value: 'CUSTOM' },
 ])
 
-const roleOptions = [
-  { label: 'PUTZORGA', value: 'PUTZORGA' },
-  { label: 'ELTERNBEIRAT', value: 'ELTERNBEIRAT' },
-]
+const roleOptions = computed(() => [
+  { label: t('admin.specialRoleLabels.PUTZORGA'), value: 'PUTZORGA' },
+  { label: t('admin.specialRoleLabels.ELTERNBEIRAT'), value: 'ELTERNBEIRAT' },
+])
 
 const filteredUsers = computed(() => {
   let result = users.value

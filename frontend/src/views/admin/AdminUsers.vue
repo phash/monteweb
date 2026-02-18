@@ -68,11 +68,11 @@ const profileForm = ref({ email: '', firstName: '', lastName: '', phone: '' })
 const editActive = ref(true)
 const editAssignedRoles = ref<string[]>([])
 
-const assignableRoleOptions = [
-  { label: 'Teacher', value: 'TEACHER' },
-  { label: 'Parent', value: 'PARENT' },
-  { label: 'Section Admin', value: 'SECTION_ADMIN' },
-]
+const assignableRoleOptions = computed(() => [
+  { label: t('profile.roleLabels.TEACHER'), value: 'TEACHER' },
+  { label: t('profile.roleLabels.PARENT'), value: 'PARENT' },
+  { label: t('profile.roleLabels.SECTION_ADMIN'), value: 'SECTION_ADMIN' },
+])
 
 const isFixedRoleUser = computed(() =>
   editUser.value?.role === 'SUPERADMIN' || editUser.value?.role === 'STUDENT'
@@ -91,24 +91,24 @@ const allFamilies = ref<FamilyInfo[]>([])
 const familiesLoading = ref(false)
 const addFamilyId = ref('')
 
-const roleOptions: { label: string; value: UserRole }[] = [
-  { label: 'Superadmin', value: 'SUPERADMIN' },
-  { label: 'Section Admin', value: 'SECTION_ADMIN' },
-  { label: 'Teacher', value: 'TEACHER' },
-  { label: 'Parent', value: 'PARENT' },
-  { label: 'Student', value: 'STUDENT' },
-]
+const roleOptions = computed<{ label: string; value: UserRole }[]>(() => [
+  { label: t('profile.roleLabels.SUPERADMIN'), value: 'SUPERADMIN' },
+  { label: t('profile.roleLabels.SECTION_ADMIN'), value: 'SECTION_ADMIN' },
+  { label: t('profile.roleLabels.TEACHER'), value: 'TEACHER' },
+  { label: t('profile.roleLabels.PARENT'), value: 'PARENT' },
+  { label: t('profile.roleLabels.STUDENT'), value: 'STUDENT' },
+])
 
 const filterRoleOptions = computed(() => [
   { label: t('admin.allRoles'), value: null },
-  ...roleOptions,
+  ...roleOptions.value,
 ])
 
 const specialRoleFilterOptions = computed(() => [
   { label: t('admin.allSpecialRoles'), value: null },
-  { label: 'Putz-Orga', value: 'PUTZORGA' },
-  { label: 'Elternbeirat', value: 'ELTERNBEIRAT' },
-  { label: 'Section Admin', value: 'SECTION_ADMIN' },
+  { label: t('admin.specialRoleLabels.PUTZORGA'), value: 'PUTZORGA' },
+  { label: t('admin.specialRoleLabels.ELTERNBEIRAT'), value: 'ELTERNBEIRAT' },
+  { label: t('profile.roleLabels.SECTION_ADMIN'), value: 'SECTION_ADMIN' },
 ])
 
 const statusOptions = computed(() => [

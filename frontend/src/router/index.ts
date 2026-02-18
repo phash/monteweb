@@ -146,6 +146,8 @@ const router = createRouter({
         // Admin routes
         {
           path: 'admin',
+          name: 'admin',
+          redirect: { name: 'admin-dashboard' },
           meta: { requiresAdmin: true, breadcrumbLabel: 'nav.admin' },
           children: [
             {

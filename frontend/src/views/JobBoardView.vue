@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
+import { jobboardApi } from '@/api/jobboard.api'
 import { useCalendarStore } from '@/stores/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -30,9 +31,12 @@ const activeTab = ref('0')
 const selectedCategory = ref<string | null>(null)
 const selectedEventId = ref<string | null>(null)
 const calendarEnabled = admin.isModuleEnabled('calendar')
+const completedJobs = ref<import('@/types/jobboard').JobInfo[]>([])
+const completedLoading = ref(false)
+const canSeeCompleted = computed(() => auth.isAdmin || auth.isSectionAdmin || auth.isTeacher)
 
 onMounted(async () => {
-  const promises: Promise<void>[] = [
+  const promises: Promise<any>[] = [
     jobboard.fetchJobs(true),
     jobboard.fetchMyAssignments(),
   ]
@@ -43,11 +47,26 @@ onMounted(async () => {
     const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     promises.push(calendar.fetchEvents(formatDate(from), formatDate(to)))
   }
+  if (canSeeCompleted.value) {
+    promises.push(fetchCompletedJobs())
+  }
   await Promise.all(promises)
 })
 
 function applyFilters() {
   jobboard.fetchJobs(true, selectedCategory.value ?? undefined, selectedEventId.value ?? undefined)
+}
+
+async function fetchCompletedJobs() {
+  completedLoading.value = true
+  try {
+    const res = await jobboardApi.listJobs(0, 100, undefined, ['COMPLETED'] as any)
+    completedJobs.value = res.data.data.content
+  } catch {
+    completedJobs.value = []
+  } finally {
+    completedLoading.value = false
+  }
 }
 
 function statusSeverity(status: string) {
@@ -83,6 +102,7 @@ function formatDate(date: string | null) {
       <TabList>
         <Tab value="0">{{ t('jobboard.openJobs') }}</Tab>
         <Tab value="1">{{ t('jobboard.myAssignments') }}</Tab>
+        <Tab v-if="canSeeCompleted" value="2">{{ t('jobboard.completedJobs') }}</Tab>
       </TabList>
       <TabPanels>
         <!-- Open Jobs -->
@@ -178,6 +198,39 @@ function formatDate(date: string | null) {
                 <span v-if="a.actualHours">{{ a.actualHours }}h {{ t('jobboard.hoursWorked') }}</span>
                 <Tag v-if="a.confirmed" :value="t('jobboard.confirmed')" severity="success" size="small" />
                 <Tag v-else-if="a.status === 'COMPLETED'" :value="t('jobboard.pendingConfirmation')" severity="warn" size="small" />
+              </div>
+            </router-link>
+          </div>
+        </TabPanel>
+
+        <!-- Completed Jobs (Admin/Teacher) -->
+        <TabPanel v-if="canSeeCompleted" value="2">
+          <LoadingSpinner v-if="completedLoading" />
+          <EmptyState
+            v-else-if="!completedJobs.length"
+            icon="pi pi-check-circle"
+            :message="t('jobboard.noCompletedJobs')"
+          />
+          <div v-else class="job-list">
+            <router-link
+              v-for="job in completedJobs"
+              :key="job.id"
+              :to="{ name: 'job-detail', params: { id: job.id } }"
+              class="job-card card"
+            >
+              <div class="job-card-header">
+                <h3>{{ job.title }}</h3>
+                <Tag :value="t(`jobboard.statuses.${job.status}`)" :severity="statusSeverity(job.status)" size="small" />
+              </div>
+              <div class="job-card-meta">
+                <span><i class="pi pi-tag" /> {{ job.category }}</span>
+                <span v-if="job.location"><i class="pi pi-map-marker" /> {{ job.location }}</span>
+                <span><i class="pi pi-clock" /> {{ job.estimatedHours }}h</span>
+                <span v-if="job.scheduledDate"><i class="pi pi-calendar" /> {{ formatDate(job.scheduledDate) }}</span>
+              </div>
+              <div class="job-card-footer">
+                <span class="assignees">{{ job.currentAssignees }}/{{ job.maxAssignees }} {{ t('jobboard.assignees') }}</span>
+                <span class="creator">{{ job.creatorName }}</span>
               </div>
             </router-link>
           </div>
