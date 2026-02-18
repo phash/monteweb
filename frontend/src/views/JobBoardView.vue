@@ -44,6 +44,7 @@ const showPendingTab = computed(() =>
 )
 const pendingLoaded = ref(false)
 const confirmingId = ref<string | null>(null)
+const rejectingId = ref<string | null>(null)
 
 watch(activeTab, (val) => {
   if (val === 'pending' && !pendingLoaded.value) {
@@ -59,6 +60,16 @@ async function handleConfirm(assignmentId: string) {
     toast.add({ severity: 'success', summary: t('jobboard.hoursConfirmed'), life: 3000 })
   } finally {
     confirmingId.value = null
+  }
+}
+
+async function handleReject(assignmentId: string) {
+  rejectingId.value = assignmentId
+  try {
+    await jobboard.rejectAssignment(assignmentId)
+    toast.add({ severity: 'warn', summary: t('jobboard.hoursRejected'), life: 3000 })
+  } finally {
+    rejectingId.value = null
   }
 }
 
@@ -312,6 +323,15 @@ function formatDate(date: string | null) {
               </div>
               <div class="pending-actions">
                 <Button
+                  :label="t('jobboard.reject')"
+                  icon="pi pi-times"
+                  size="small"
+                  severity="danger"
+                  outlined
+                  :loading="rejectingId === a.id"
+                  @click="handleReject(a.id)"
+                />
+                <Button
                   :label="t('common.confirm')"
                   icon="pi pi-check"
                   size="small"
@@ -483,6 +503,7 @@ function formatDate(date: string | null) {
   margin-top: 0.5rem;
   display: flex;
   justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 .job-link {

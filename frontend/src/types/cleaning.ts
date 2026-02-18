@@ -28,6 +28,9 @@ export interface RegistrationInfo {
   actualMinutes: number | null
   noShow: boolean
   swapOffered: boolean
+  confirmed: boolean
+  confirmedBy?: string | null
+  confirmedAt?: string | null
 }
 
 export interface CleaningSlotInfo {

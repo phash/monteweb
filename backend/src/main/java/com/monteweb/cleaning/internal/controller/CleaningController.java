@@ -105,4 +105,46 @@ public class CleaningController {
 
     public record CheckInRequest(String qrToken) {
     }
+
+    @GetMapping("/registrations/pending-confirmation")
+    public ResponseEntity<ApiResponse<List<CleaningSlotInfo.RegistrationInfo>>> getPendingConfirmations() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new com.monteweb.shared.exception.ForbiddenException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.TEACHER
+                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN
+                && user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new com.monteweb.shared.exception.ForbiddenException("Not authorized");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(cleaningService.getPendingCleaningConfirmations()));
+    }
+
+    @PutMapping("/registrations/{registrationId}/confirm")
+    public ResponseEntity<ApiResponse<CleaningSlotInfo.RegistrationInfo>> confirmRegistration(
+            @PathVariable UUID registrationId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new com.monteweb.shared.exception.ForbiddenException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.TEACHER
+                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN
+                && user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new com.monteweb.shared.exception.ForbiddenException("Not authorized");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(cleaningService.confirmCleaningRegistration(registrationId, userId)));
+    }
+
+    @PutMapping("/registrations/{registrationId}/reject")
+    public ResponseEntity<ApiResponse<Void>> rejectRegistration(
+            @PathVariable UUID registrationId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new com.monteweb.shared.exception.ForbiddenException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.TEACHER
+                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN
+                && user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new com.monteweb.shared.exception.ForbiddenException("Not authorized");
+        }
+        cleaningService.rejectCleaningRegistration(registrationId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
 }

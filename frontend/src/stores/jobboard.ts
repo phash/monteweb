@@ -116,6 +116,11 @@ export const useJobboardStore = defineStore('jobboard', () => {
     pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
   }
 
+  async function rejectAssignment(assignmentId: string) {
+    await jobboardApi.rejectAssignment(assignmentId)
+    pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
+  }
+
   async function fetchPendingConfirmations() {
     try {
       const res = await jobboardApi.getPendingConfirmations()
@@ -198,6 +203,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
     cancelAssignment,
     completeAssignment,
     confirmAssignment,
+    rejectAssignment,
     fetchPendingConfirmations,
     fetchFamilyHours,
     fetchReport,

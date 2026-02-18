@@ -52,6 +52,15 @@ public class CleaningRegistration {
     @Column(name = "swap_offered", nullable = false)
     private boolean swapOffered = false;
 
+
+    @Column(nullable = false)
+    private boolean confirmed = false;
+
+    @Column(name = "confirmed_by")
+    private UUID confirmedBy;
+
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

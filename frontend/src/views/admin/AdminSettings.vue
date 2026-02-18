@@ -112,4 +112,13 @@ async function saveSettings() {
   padding-bottom: 1.5rem;
   border-bottom: 1px solid var(--mw-border-light);
 }
+
+.settings-section label {
+  margin-bottom: 0.125rem;
+}
+
+.settings-section small {
+  display: block;
+  line-height: 1.4;
+}
 </style>

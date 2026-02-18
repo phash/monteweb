@@ -1,5 +1,6 @@
 package com.monteweb.cleaning;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -30,7 +31,10 @@ public record CleaningSlotInfo(
             boolean checkedOut,
             Integer actualMinutes,
             boolean noShow,
-            boolean swapOffered
+            boolean swapOffered,
+            boolean confirmed,
+            UUID confirmedBy,
+            Instant confirmedAt
     ) {
     }
 }

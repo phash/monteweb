@@ -430,6 +430,54 @@ public class CleaningService implements CleaningModuleApi {
         return toSlotInfo(slot, config != null ? config.getTitle() : "");
     }
 
+    /**
+     * Get all cleaning registrations that are checked out but not yet confirmed.
+     */
+    public List<CleaningSlotInfo.RegistrationInfo> getPendingCleaningConfirmations() {
+        return registrationRepository.findPendingConfirmation().stream()
+                .map(this::toRegistrationInfo)
+                .toList();
+    }
+
+    /**
+     * Confirm a cleaning registration (admin/teacher/putzorga).
+     */
+    public CleaningSlotInfo.RegistrationInfo confirmCleaningRegistration(UUID registrationId, UUID confirmerId) {
+        CleaningRegistration reg = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
+
+        if (!reg.isCheckedOut()) {
+            throw new BusinessException("Only checked-out registrations can be confirmed");
+        }
+        if (reg.isConfirmed()) {
+            throw new BusinessException("Registration is already confirmed");
+        }
+
+        reg.setConfirmed(true);
+        reg.setConfirmedBy(confirmerId);
+        reg.setConfirmedAt(java.time.Instant.now());
+        registrationRepository.save(reg);
+        return toRegistrationInfo(reg);
+    }
+
+    /**
+     * Reject a cleaning registration – sets noShow=true and resets checkout data.
+     */
+    public void rejectCleaningRegistration(UUID registrationId) {
+        CleaningRegistration reg = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
+
+        if (reg.isConfirmed()) {
+            throw new BusinessException("Cannot reject a confirmed registration");
+        }
+
+        reg.setNoShow(true);
+        reg.setCheckedOut(false);
+        reg.setCheckOutAt(null);
+        reg.setActualMinutes(null);
+        registrationRepository.save(reg);
+    }
+
     // ── Slot Admin ──────────────────────────────────────────────────────
 
     public CleaningSlotInfo updateSlot(UUID slotId, UpdateSlotRequest request) {
@@ -557,7 +605,8 @@ public class CleaningService implements CleaningModuleApi {
         return new CleaningSlotInfo.RegistrationInfo(
                 reg.getId(), reg.getUserId(), reg.getUserName(), reg.getFamilyId(),
                 reg.isCheckedIn(), reg.isCheckedOut(), reg.getActualMinutes(),
-                reg.isNoShow(), reg.isSwapOffered());
+                reg.isNoShow(), reg.isSwapOffered(),
+                reg.isConfirmed(), reg.getConfirmedBy(), reg.getConfirmedAt());
     }
 
     private String getSectionName(UUID sectionId) {

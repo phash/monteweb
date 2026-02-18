@@ -55,4 +55,9 @@ public interface CleaningRegistrationRepository extends JpaRepository<CleaningRe
     long countNoShowsBySectionInRange(@Param("sectionId") UUID sectionId,
                                       @Param("from") LocalDate from,
                                       @Param("to") LocalDate to);
+
+    @Query("SELECT r FROM CleaningRegistration r " +
+            "WHERE r.checkedOut = true AND r.confirmed = false AND r.noShow = false " +
+            "ORDER BY r.checkOutAt ASC")
+    List<CleaningRegistration> findPendingConfirmation();
 }

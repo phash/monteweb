@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { CleaningConfigInfo, CleaningSlotInfo, DashboardInfo } from '@/types/cleaning'
+import type { CleaningConfigInfo, CleaningSlotInfo, DashboardInfo, RegistrationInfo } from '@/types/cleaning'
 import * as cleaningApi from '@/api/cleaning.api'
 
 export const useCleaningStore = defineStore('cleaning', () => {
@@ -9,6 +9,7 @@ export const useCleaningStore = defineStore('cleaning', () => {
   const currentSlot = ref<CleaningSlotInfo | null>(null)
   const configs = ref<CleaningConfigInfo[]>([])
   const dashboard = ref<DashboardInfo | null>(null)
+  const pendingConfirmations = ref<RegistrationInfo[]>([])
   const loading = ref(false)
   const totalPages = ref(0)
   const currentPage = ref(0)
@@ -74,6 +75,27 @@ export const useCleaningStore = defineStore('cleaning', () => {
     return res.data.data
   }
 
+  // ── Confirmations ──────────────────────────────────────────────────
+
+  async function fetchPendingConfirmations() {
+    try {
+      const res = await cleaningApi.getPendingConfirmations()
+      pendingConfirmations.value = res.data.data
+    } catch {
+      pendingConfirmations.value = []
+    }
+  }
+
+  async function confirmRegistration(registrationId: string) {
+    await cleaningApi.confirmRegistration(registrationId)
+    pendingConfirmations.value = pendingConfirmations.value.filter(r => r.id !== registrationId)
+  }
+
+  async function rejectRegistration(registrationId: string) {
+    await cleaningApi.rejectRegistration(registrationId)
+    pendingConfirmations.value = pendingConfirmations.value.filter(r => r.id !== registrationId)
+  }
+
   // ── Admin ───────────────────────────────────────────────────────────
 
   async function loadConfigs(sectionId?: string) {
@@ -112,11 +134,12 @@ export const useCleaningStore = defineStore('cleaning', () => {
   }
 
   return {
-    upcomingSlots, mySlots, currentSlot, configs, dashboard,
+    upcomingSlots, mySlots, currentSlot, configs, dashboard, pendingConfirmations,
     loading, totalPages, currentPage,
     loadUpcomingSlots, loadMySlots, loadSlot,
     registerForSlot, unregisterFromSlot, offerSwap,
     checkIn, checkOut,
+    fetchPendingConfirmations, confirmRegistration, rejectRegistration,
     loadConfigs, createConfig, generateSlots, cancelSlot, loadDashboard
   }
 })

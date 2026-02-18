@@ -71,6 +71,12 @@ import OfflineBanner from '@/components/common/OfflineBanner.vue'
   overflow-x: hidden;
 }
 
+.app-main > * {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 @media (min-width: 768px) and (max-width: 1400px) {
   .app-main {
     padding: 1rem;

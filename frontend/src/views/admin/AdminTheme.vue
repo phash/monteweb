@@ -276,3 +276,11 @@ async function uploadLogo(event: { files: File[] }) {
             @click="saveTheme" />
   </div>
 </template>
+
+<style scoped>
+small {
+  display: block;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+}
+</style>

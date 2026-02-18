@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
@@ -16,15 +16,52 @@ import TabPanel from 'primevue/tabpanel'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import ProgressBar from 'primevue/progressbar'
+import { useAdminStore } from '@/stores/admin'
+import { useToast } from 'primevue/usetoast'
 
 const { t } = useI18n()
 const router = useRouter()
 const { formatDate: formatLocaleDate } = useLocaleDate()
 const auth = useAuthStore()
+const admin = useAdminStore()
 const cleaningStore = useCleaningStore()
+const toast = useToast()
 const activeTab = ref('0')
+const confirmingId = ref<string | null>(null)
+const rejectingId = ref<string | null>(null)
+const pendingLoaded = ref(false)
 
 const canManageCleaning = auth.isAdmin || auth.isPutzOrga || auth.isSectionAdmin
+const showPendingTab = computed(() =>
+  canManageCleaning && admin.config?.requireAssignmentConfirmation !== false
+)
+
+watch(activeTab, (val) => {
+  if (val === 'pending' && !pendingLoaded.value) {
+    pendingLoaded.value = true
+    cleaningStore.fetchPendingConfirmations()
+  }
+})
+
+async function handleConfirmRegistration(registrationId: string) {
+  confirmingId.value = registrationId
+  try {
+    await cleaningStore.confirmRegistration(registrationId)
+    toast.add({ severity: 'success', summary: t('cleaning.hoursConfirmed'), life: 3000 })
+  } finally {
+    confirmingId.value = null
+  }
+}
+
+async function handleRejectRegistration(registrationId: string) {
+  rejectingId.value = registrationId
+  try {
+    await cleaningStore.rejectRegistration(registrationId)
+    toast.add({ severity: 'warn', summary: t('cleaning.hoursRejected'), life: 3000 })
+  } finally {
+    rejectingId.value = null
+  }
+}
 
 onMounted(() => {
   cleaningStore.loadUpcomingSlots()
@@ -70,6 +107,10 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
       <TabList>
         <Tab value="0">{{ t('cleaning.upcomingSlots') }}</Tab>
         <Tab value="1">{{ t('cleaning.mySlots') }}</Tab>
+        <Tab v-if="showPendingTab" value="pending">
+          {{ t('cleaning.pendingTab') }}
+          <span v-if="cleaningStore.pendingConfirmations.length" class="pending-badge">{{ cleaningStore.pendingConfirmations.length }}</span>
+        </Tab>
       </TabList>
 
       <TabPanels>
@@ -156,6 +197,48 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
             </router-link>
           </div>
         </TabPanel>
+
+        <!-- Pending Confirmations -->
+        <TabPanel v-if="showPendingTab" value="pending">
+          <LoadingSpinner v-if="!pendingLoaded" />
+          <EmptyState
+            v-else-if="!cleaningStore.pendingConfirmations.length"
+            icon="pi pi-check-circle"
+            :message="t('cleaning.noPendingConfirmations')"
+          />
+          <div v-else class="slot-list">
+            <div
+              v-for="reg in cleaningStore.pendingConfirmations"
+              :key="reg.id"
+              class="slot-card card"
+            >
+              <div class="slot-header">
+                <h3 class="slot-title">{{ reg.userName }}</h3>
+              </div>
+              <div class="slot-meta">
+                <span v-if="reg.actualMinutes"><i class="pi pi-clock" /> {{ Math.round(reg.actualMinutes / 60 * 10) / 10 }}h</span>
+              </div>
+              <div class="pending-actions">
+                <Button
+                  :label="t('jobboard.reject')"
+                  icon="pi pi-times"
+                  size="small"
+                  severity="danger"
+                  outlined
+                  :loading="rejectingId === reg.id"
+                  @click="handleRejectRegistration(reg.id)"
+                />
+                <Button
+                  :label="t('common.confirm')"
+                  icon="pi pi-check"
+                  size="small"
+                  :loading="confirmingId === reg.id"
+                  @click="handleConfirmRegistration(reg.id)"
+                />
+              </div>
+            </div>
+          </div>
+        </TabPanel>
       </TabPanels>
     </Tabs>
   </div>
@@ -238,5 +321,22 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
   justify-content: center;
   gap: 0.5rem;
   padding-top: 1rem;
+}
+
+.pending-badge {
+  background: var(--p-orange-500);
+  color: white;
+  border-radius: 999px;
+  font-size: var(--mw-font-size-xs);
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.35rem;
+  font-weight: 600;
+}
+
+.pending-actions {
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 </style>

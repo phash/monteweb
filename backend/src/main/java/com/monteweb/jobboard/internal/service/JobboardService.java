@@ -420,6 +420,29 @@ public class JobboardService implements JobboardModuleApi {
         return toAssignmentInfo(assignment);
     }
 
+    public void rejectAssignment(UUID assignmentId, UUID rejecterId) {
+        var assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
+
+        if (assignment.getStatus() != AssignmentStatus.COMPLETED) {
+            throw new BusinessException("Only completed assignments can be rejected");
+        }
+        if (assignment.isConfirmed()) {
+            throw new BusinessException("Cannot reject a confirmed assignment");
+        }
+
+        assignment.setStatus(AssignmentStatus.CANCELLED);
+        assignmentRepository.save(assignment);
+
+        // Re-open job if needed
+        var job = jobRepository.findById(assignment.getJobId()).orElseThrow();
+        long activeAssignees = assignmentRepository.countByJobIdAndStatusNot(job.getId(), AssignmentStatus.CANCELLED);
+        if (activeAssignees < job.getMaxAssignees() && job.getStatus() != JobStatus.COMPLETED && job.getStatus() != JobStatus.CANCELLED) {
+            job.setStatus(JobStatus.OPEN);
+            jobRepository.save(job);
+        }
+    }
+
     public void cancelAssignment(UUID assignmentId, UUID userId) {
         var assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));

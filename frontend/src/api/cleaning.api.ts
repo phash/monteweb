@@ -49,6 +49,20 @@ export function checkOut(slotId: string) {
   return client.post<ApiResponse<CleaningSlotInfo>>(`/cleaning/slots/${slotId}/checkout`)
 }
 
+// ── Confirmations ────────────────────────────────────────────────────
+
+export function getPendingConfirmations() {
+  return client.get<ApiResponse<RegistrationInfo[]>>('/cleaning/registrations/pending-confirmation')
+}
+
+export function confirmRegistration(registrationId: string) {
+  return client.put<ApiResponse<RegistrationInfo>>(`/cleaning/registrations/${registrationId}/confirm`)
+}
+
+export function rejectRegistration(registrationId: string) {
+  return client.put<ApiResponse<void>>(`/cleaning/registrations/${registrationId}/reject`)
+}
+
 // ── Admin: Configs ────────────────────────────────────────────────────
 
 export function getConfigs(sectionId?: string) {
