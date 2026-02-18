@@ -528,6 +528,12 @@ export default {
     communicationNotAllowed: 'Kommunikation zwischen diesen Nutzern ist nicht erlaubt',
     deleteTitle: 'Konversation löschen',
     deleteConfirm: 'Möchten Sie diese Konversation wirklich löschen? Sie wird aus Ihrer Liste entfernt.',
+    image: 'Bild',
+    attachImage: 'Bild anhängen',
+    replyTo: 'Antworten',
+    imageUploadError: 'Fehler beim Hochladen des Bildes',
+    invalidImageType: 'Ungültiges Bildformat. Erlaubt: JPEG, PNG, WebP, GIF',
+    fileTooLarge: 'Datei ist zu groß. Maximal 10 MB erlaubt.',
   },
   cleaning: {
     title: 'Putz-Orga',

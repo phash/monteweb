@@ -15,6 +15,7 @@ import { messagingApi } from '../messaging.api'
 describe('messagingApi', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear()
   })
 
   describe('getConversations', () => {
@@ -56,11 +57,41 @@ describe('messagingApi', () => {
   })
 
   describe('sendMessage', () => {
-    it('should POST /messages/conversations/{id}/messages', async () => {
+    it('should POST FormData with text content', async () => {
       await messagingApi.sendMessage('conv-1', 'Test message')
-      expect(client.post).toHaveBeenCalledWith('/messages/conversations/conv-1/messages', {
-        content: 'Test message',
-      })
+      expect(client.post).toHaveBeenCalledWith(
+        '/messages/conversations/conv-1/messages',
+        expect.any(FormData),
+        { headers: { 'Content-Type': 'multipart/form-data' } },
+      )
+      const formData = vi.mocked(client.post).mock.calls[0][1] as FormData
+      expect(formData.get('content')).toBe('Test message')
+      expect(formData.get('image')).toBeNull()
+      expect(formData.get('replyToId')).toBeNull()
+    })
+
+    it('should POST FormData with image', async () => {
+      const file = new File(['test'], 'photo.jpg', { type: 'image/jpeg' })
+      await messagingApi.sendMessage('conv-1', undefined, file)
+      const formData = vi.mocked(client.post).mock.calls[0][1] as FormData
+      expect(formData.get('image')).toBeTruthy()
+      expect(formData.get('content')).toBeNull()
+    })
+
+    it('should POST FormData with replyToId', async () => {
+      await messagingApi.sendMessage('conv-1', 'Reply text', undefined, 'msg-123')
+      const formData = vi.mocked(client.post).mock.calls[0][1] as FormData
+      expect(formData.get('content')).toBe('Reply text')
+      expect(formData.get('replyToId')).toBe('msg-123')
+    })
+
+    it('should POST FormData with image and text and reply', async () => {
+      const file = new File(['test'], 'photo.jpg', { type: 'image/jpeg' })
+      await messagingApi.sendMessage('conv-1', 'With image', file, 'msg-456')
+      const formData = vi.mocked(client.post).mock.calls[0][1] as FormData
+      expect(formData.get('content')).toBe('With image')
+      expect(formData.get('image')).toBeTruthy()
+      expect(formData.get('replyToId')).toBe('msg-456')
     })
   })
 
@@ -75,6 +106,32 @@ describe('messagingApi', () => {
     it('should GET /messages/unread-count', async () => {
       await messagingApi.getUnreadCount()
       expect(client.get).toHaveBeenCalledWith('/messages/unread-count')
+    })
+  })
+
+  describe('imageUrl', () => {
+    it('should return URL with token when logged in', () => {
+      localStorage.setItem('accessToken', 'abc123')
+      const url = messagingApi.imageUrl('img-1')
+      expect(url).toBe('/api/v1/messages/images/img-1?token=abc123')
+    })
+
+    it('should return URL without token when not logged in', () => {
+      const url = messagingApi.imageUrl('img-1')
+      expect(url).toBe('/api/v1/messages/images/img-1')
+    })
+  })
+
+  describe('thumbnailUrl', () => {
+    it('should return thumbnail URL with token when logged in', () => {
+      localStorage.setItem('accessToken', 'abc123')
+      const url = messagingApi.thumbnailUrl('img-1')
+      expect(url).toBe('/api/v1/messages/images/img-1/thumbnail?token=abc123')
+    })
+
+    it('should return thumbnail URL without token when not logged in', () => {
+      const url = messagingApi.thumbnailUrl('img-1')
+      expect(url).toBe('/api/v1/messages/images/img-1/thumbnail')
     })
   })
 })

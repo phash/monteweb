@@ -15,13 +15,30 @@ export interface ParticipantInfo {
   lastReadAt: string | null
 }
 
+export interface MessageImageInfo {
+  imageId: string
+  originalFilename: string
+  contentType: string
+  fileSize: number
+}
+
+export interface ReplyInfo {
+  messageId: string
+  senderId: string
+  senderName: string
+  contentPreview: string | null
+  hasImage: boolean
+}
+
 export interface MessageInfo {
   id: string
   conversationId: string
   senderId: string
   senderName: string
-  content: string
+  content: string | null
   createdAt: string
+  images: MessageImageInfo[]
+  replyTo: ReplyInfo | null
 }
 
 export interface StartConversationRequest {

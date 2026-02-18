@@ -15,6 +15,11 @@ vi.mock('@/api/messaging.api', () => ({
     getMessages: vi.fn().mockResolvedValue({ data: { data: { content: [] } } }),
     sendMessage: vi.fn(),
     startDirect: vi.fn(),
+    markAsRead: vi.fn().mockResolvedValue({}),
+    getUnreadCount: vi.fn().mockResolvedValue({ data: { data: { count: 0 } } }),
+    deleteConversation: vi.fn().mockResolvedValue({}),
+    imageUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}`),
+    thumbnailUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}/thumbnail`),
   },
 }))
 
@@ -39,9 +44,15 @@ const i18n = createI18n({
         searchUserPlaceholder: 'Name eingeben...',
         startConversation: 'Nachricht senden',
         communicationNotAllowed: 'Kommunikation nicht erlaubt',
+        writePlaceholder: 'Nachricht schreiben...',
+        deleteTitle: 'Konversation löschen',
+        deleteConfirm: 'Wirklich löschen?',
+        image: 'Bild',
+        attachImage: 'Bild anhängen',
+        replyTo: 'Antworten',
       },
       nav: { messages: 'Nachrichten' },
-      common: { cancel: 'Abbrechen', back: 'Zurück' },
+      common: { cancel: 'Abbrechen', back: 'Zurück', delete: 'Löschen', yes: 'Ja', no: 'Nein' },
     },
   },
 })
@@ -51,6 +62,7 @@ const stubs = {
   LoadingSpinner: { template: '<div class="loading-stub" />' },
   EmptyState: { template: '<div class="empty-stub">{{ message }}</div>', props: ['icon', 'message'] },
   NewMessageDialog: { template: '<div class="new-msg-stub" />', props: ['visible'] },
+  Dialog: { template: '<div class="dialog-stub"><slot /><slot name="footer" /></div>', props: ['visible', 'header', 'modal', 'dismissableMask', 'closable', 'style', 'pt'] },
   Button: {
     template: '<button class="button-stub" @click="$emit(\'click\')">{{ label }}</button>',
     props: ['label', 'icon', 'text', 'severity', 'size', 'disabled'],
@@ -94,5 +106,12 @@ describe('MessagesView', () => {
   it('should render new message dialog component', () => {
     const wrapper = mountMessages()
     expect(wrapper.find('.new-msg-stub').exists()).toBe(true)
+  })
+
+  it('should render messages layout with panels', () => {
+    const wrapper = mountMessages()
+    expect(wrapper.find('.messages-layout').exists()).toBe(true)
+    expect(wrapper.find('.conversations-panel').exists()).toBe(true)
+    expect(wrapper.find('.messages-panel').exists()).toBe(true)
   })
 })

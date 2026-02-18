@@ -9,8 +9,10 @@ import com.monteweb.shared.util.SecurityUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -65,12 +67,25 @@ public class MessagingController {
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
-    @PostMapping("/conversations/{conversationId}/messages")
-    public ResponseEntity<ApiResponse<MessageInfo>> sendMessage(
+    @PostMapping(value = "/conversations/{conversationId}/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<MessageInfo>> sendMessageMultipart(
+            @PathVariable UUID conversationId,
+            @RequestPart(value = "content", required = false) String content,
+            @RequestPart(value = "replyToId", required = false) String replyToId,
+            @RequestPart(value = "image", required = false) MultipartFile image) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        UUID replyTo = replyToId != null && !replyToId.isBlank() ? UUID.fromString(replyToId) : null;
+        var message = messagingService.sendMessage(conversationId, userId, content, replyTo, image);
+        return ResponseEntity.ok(ApiResponse.ok(message));
+    }
+
+    @PostMapping(value = "/conversations/{conversationId}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<MessageInfo>> sendMessageJson(
             @PathVariable UUID conversationId,
             @RequestBody SendMessageRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var message = messagingService.sendMessage(conversationId, userId, request.content());
+        UUID replyTo = request.replyToId() != null ? UUID.fromString(request.replyToId()) : null;
+        var message = messagingService.sendMessage(conversationId, userId, request.content(), replyTo, null);
         return ResponseEntity.ok(ApiResponse.ok(message));
     }
 
@@ -95,6 +110,33 @@ public class MessagingController {
         return ResponseEntity.ok(ApiResponse.ok(Map.of("count", count)));
     }
 
+    @GetMapping("/images/{imageId}")
+    public ResponseEntity<byte[]> getImage(@PathVariable UUID imageId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var image = messagingService.getImageEntity(imageId);
+        try (var stream = messagingService.getImageForDownload(imageId, userId, false)) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(image.getContentType()))
+                    .header("Cache-Control", "private, max-age=86400")
+                    .body(stream.readAllBytes());
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read image", e);
+        }
+    }
+
+    @GetMapping("/images/{imageId}/thumbnail")
+    public ResponseEntity<byte[]> getThumbnail(@PathVariable UUID imageId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        try (var stream = messagingService.getImageForDownload(imageId, userId, true)) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.IMAGE_JPEG)
+                    .header("Cache-Control", "private, max-age=86400")
+                    .body(stream.readAllBytes());
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read thumbnail", e);
+        }
+    }
+
     public record StartConversationRequest(
             String title,
             boolean isGroup,
@@ -102,6 +144,6 @@ public class MessagingController {
     ) {
     }
 
-    public record SendMessageRequest(String content) {
+    public record SendMessageRequest(String content, String replyToId) {
     }
 }

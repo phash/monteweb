@@ -11,6 +11,9 @@ vi.mock('@/api/messaging.api', () => ({
     startConversation: vi.fn(),
     getUnreadCount: vi.fn(),
     markAsRead: vi.fn(),
+    deleteConversation: vi.fn(),
+    imageUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}`),
+    thumbnailUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}/thumbnail`),
   },
 }))
 

@@ -528,6 +528,12 @@ export default {
     communicationNotAllowed: 'Communication between these users is not allowed',
     deleteTitle: 'Delete conversation',
     deleteConfirm: 'Are you sure you want to delete this conversation? It will be removed from your list.',
+    image: 'Image',
+    attachImage: 'Attach image',
+    replyTo: 'Reply',
+    imageUploadError: 'Error uploading image',
+    invalidImageType: 'Invalid image format. Allowed: JPEG, PNG, WebP, GIF',
+    fileTooLarge: 'File is too large. Maximum 10 MB allowed.',
   },
   cleaning: {
     title: 'Cleaning',

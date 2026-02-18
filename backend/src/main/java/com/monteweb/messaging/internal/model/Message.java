@@ -25,8 +25,11 @@ public class Message {
     @Column(name = "sender_id", nullable = false)
     private UUID senderId;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "reply_to_id")
+    private UUID replyToId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -5,6 +5,8 @@ import { useRoute } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
+import { messagingApi } from '@/api/messaging.api'
+import type { MessageInfo } from '@/types/messaging'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -24,17 +26,19 @@ const messageText = ref('')
 const showNewMessage = ref(false)
 const showMessages = ref(false)
 const showDeleteDialog = ref(false)
+const selectedImage = ref<File | null>(null)
+const imagePreviewUrl = ref<string | null>(null)
+const fullSizeImageUrl = ref<string | null>(null)
+const showFullImage = ref(false)
 
 onMounted(async () => {
   await messaging.fetchConversations()
-  // Deep-link support: open conversation from route param
   const convId = route.params.conversationId as string | undefined
   if (convId) {
     await selectConversation(convId)
   }
 })
 
-// Watch for route param changes
 watch(() => route.params.conversationId, async (newId) => {
   if (newId && typeof newId === 'string') {
     await selectConversation(newId)
@@ -43,6 +47,10 @@ watch(() => route.params.conversationId, async (newId) => {
 
 const selectedConversation = computed(() =>
   messaging.conversations.find(c => c.id === selectedConversationId.value)
+)
+
+const canSend = computed(() =>
+  (messageText.value.trim().length > 0 || selectedImage.value !== null)
 )
 
 function getConversationName(conv: typeof messaging.conversations[0]) {
@@ -54,6 +62,8 @@ function getConversationName(conv: typeof messaging.conversations[0]) {
 async function selectConversation(id: string) {
   selectedConversationId.value = id
   showMessages.value = true
+  messaging.setReplyTo(null)
+  clearImage()
   await messaging.fetchMessages(id)
   messaging.markAsRead(id)
 }
@@ -63,9 +73,63 @@ function goBackToList() {
 }
 
 async function sendMessage() {
-  if (!messageText.value.trim() || !selectedConversationId.value) return
-  await messaging.sendMessage(selectedConversationId.value, messageText.value.trim())
+  if (!canSend.value || !selectedConversationId.value) return
+  const content = messageText.value.trim() || undefined
+  const image = selectedImage.value || undefined
+  const replyToId = messaging.replyToMessage?.id || undefined
+  await messaging.sendMessage(selectedConversationId.value, content, image, replyToId)
   messageText.value = ''
+  clearImage()
+}
+
+function onImageSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (!allowed.includes(file.type)) {
+    return
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    return
+  }
+
+  selectedImage.value = file
+  imagePreviewUrl.value = URL.createObjectURL(file)
+}
+
+function clearImage() {
+  if (imagePreviewUrl.value) {
+    URL.revokeObjectURL(imagePreviewUrl.value)
+  }
+  selectedImage.value = null
+  imagePreviewUrl.value = null
+}
+
+function triggerImageSelect() {
+  const input = document.getElementById('msg-image-input') as HTMLInputElement
+  input?.click()
+}
+
+function setReplyTo(msg: MessageInfo) {
+  messaging.setReplyTo(msg)
+}
+
+function clearReply() {
+  messaging.setReplyTo(null)
+}
+
+function openFullImage(imageId: string) {
+  fullSizeImageUrl.value = messagingApi.imageUrl(imageId)
+  showFullImage.value = true
+}
+
+function getMessagePreview(msg: MessageInfo) {
+  if (msg.content) return msg.content
+  if (msg.images?.length) return '\uD83D\uDDBC ' + t('messages.image')
+  return ''
 }
 
 async function handleDeleteConversation() {
@@ -162,13 +226,87 @@ function formatTime(date: string | null) {
             >
               <div class="message-bubble">
                 <span v-if="msg.senderId !== auth.user?.id" class="sender-name">{{ msg.senderName }}</span>
-                <p>{{ msg.content }}</p>
-                <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+
+                <!-- Reply reference -->
+                <div v-if="msg.replyTo" class="reply-block" @click.stop>
+                  <div class="reply-sender">{{ msg.replyTo.senderName }}</div>
+                  <div class="reply-content">
+                    <i v-if="msg.replyTo.hasImage" class="pi pi-image reply-image-icon" />
+                    {{ msg.replyTo.contentPreview || (msg.replyTo.hasImage ? t('messages.image') : '') }}
+                  </div>
+                </div>
+
+                <!-- Image -->
+                <div v-if="msg.images?.length" class="message-image-container">
+                  <img
+                    v-for="img in msg.images"
+                    :key="img.imageId"
+                    :src="messagingApi.thumbnailUrl(img.imageId)"
+                    :alt="img.originalFilename"
+                    class="message-image"
+                    @click="openFullImage(img.imageId)"
+                  />
+                </div>
+
+                <p v-if="msg.content">{{ msg.content }}</p>
+
+                <div class="message-footer">
+                  <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+                  <button
+                    class="reply-button"
+                    :title="t('messages.replyTo')"
+                    @click.stop="setReplyTo(msg)"
+                  >
+                    <i class="pi pi-reply" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
+          <!-- Reply preview bar -->
+          <div v-if="messaging.replyToMessage" class="reply-preview-bar">
+            <div class="reply-preview-content">
+              <span class="reply-preview-sender">{{ messaging.replyToMessage.senderName }}</span>
+              <span class="reply-preview-text">{{ getMessagePreview(messaging.replyToMessage) }}</span>
+            </div>
+            <Button
+              icon="pi pi-times"
+              text
+              severity="secondary"
+              size="small"
+              @click="clearReply"
+            />
+          </div>
+
+          <!-- Image preview bar -->
+          <div v-if="imagePreviewUrl" class="image-preview-bar">
+            <img :src="imagePreviewUrl" class="image-preview-thumb" alt="Preview" />
+            <span class="image-preview-name">{{ selectedImage?.name }}</span>
+            <Button
+              icon="pi pi-times"
+              text
+              severity="secondary"
+              size="small"
+              @click="clearImage"
+            />
+          </div>
+
           <div class="message-input">
+            <input
+              id="msg-image-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              class="hidden-file-input"
+              @change="onImageSelect"
+            />
+            <Button
+              icon="pi pi-camera"
+              text
+              severity="secondary"
+              :aria-label="t('messages.attachImage')"
+              @click="triggerImageSelect"
+            />
             <Textarea
               v-model="messageText"
               :placeholder="t('messages.writePlaceholder')"
@@ -179,7 +317,7 @@ function formatTime(date: string | null) {
             />
             <Button
               icon="pi pi-send"
-              :disabled="!messageText.trim()"
+              :disabled="!canSend"
               @click="sendMessage"
             />
           </div>
@@ -192,6 +330,23 @@ function formatTime(date: string | null) {
         />
       </div>
     </div>
+
+    <!-- Full-size image dialog -->
+    <Dialog
+      v-model:visible="showFullImage"
+      modal
+      dismissableMask
+      :closable="true"
+      :style="{ width: '90vw', maxWidth: '900px' }"
+      :pt="{ content: { style: 'padding: 0; display: flex; justify-content: center;' } }"
+    >
+      <img
+        v-if="fullSizeImageUrl"
+        :src="fullSizeImageUrl"
+        class="full-size-image"
+        alt="Full size"
+      />
+    </Dialog>
 
     <Dialog v-model:visible="showDeleteDialog" :header="t('messages.deleteTitle')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <p>{{ t('messages.deleteConfirm') }}</p>
@@ -368,6 +523,7 @@ function formatTime(date: string | null) {
   padding: 0.5rem 0.75rem;
   border-radius: var(--mw-border-radius-sm);
   background: var(--mw-bg-hover);
+  position: relative;
 }
 
 .message-item.own .message-bubble {
@@ -382,12 +538,144 @@ function formatTime(date: string | null) {
   margin-bottom: 0.125rem;
 }
 
+/* Reply block */
+.reply-block {
+  background: rgba(0, 0, 0, 0.08);
+  border-left: 3px solid var(--mw-primary);
+  border-radius: 0 4px 4px 0;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.375rem;
+  font-size: var(--mw-font-size-xs);
+}
+
+.message-item.own .reply-block {
+  background: rgba(255, 255, 255, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.6);
+}
+
+.reply-sender {
+  font-weight: 600;
+  margin-bottom: 0.125rem;
+}
+
+.reply-content {
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.reply-image-icon {
+  font-size: 0.75rem;
+  margin-right: 0.25rem;
+}
+
+/* Message images */
+.message-image-container {
+  margin: 0.25rem 0;
+}
+
+.message-image {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: block;
+}
+
+.message-image:hover {
+  opacity: 0.9;
+}
+
+/* Message footer with time + reply button */
+.message-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+  gap: 0.5rem;
+}
+
 .message-time {
   font-size: 0.625rem;
   opacity: 0.7;
-  display: block;
-  text-align: right;
-  margin-top: 0.25rem;
+}
+
+.reply-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.125rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+  color: inherit;
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.message-bubble:hover .reply-button {
+  opacity: 0.6;
+}
+
+.reply-button:hover {
+  opacity: 1 !important;
+}
+
+/* Reply preview bar */
+.reply-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--mw-bg-hover);
+  border-top: 1px solid var(--mw-border-light);
+  border-left: 3px solid var(--mw-primary);
+}
+
+.reply-preview-content {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--mw-font-size-xs);
+}
+
+.reply-preview-sender {
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.reply-preview-text {
+  opacity: 0.75;
+}
+
+/* Image preview bar */
+.image-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--mw-border-light);
+  background: var(--mw-bg-hover);
+}
+
+.image-preview-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.image-preview-name {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--mw-font-size-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 .message-input {
@@ -400,5 +688,12 @@ function formatTime(date: string | null) {
 
 .input-field {
   flex: 1;
+}
+
+/* Full-size image dialog */
+.full-size-image {
+  max-width: 100%;
+  max-height: 80vh;
+  object-fit: contain;
 }
 </style>

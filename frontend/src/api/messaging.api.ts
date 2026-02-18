@@ -2,6 +2,11 @@ import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
 import type { ConversationInfo, MessageInfo, StartConversationRequest } from '@/types/messaging'
 
+function authenticatedUrl(path: string): string {
+  const token = localStorage.getItem('accessToken')
+  return token ? `${path}?token=${encodeURIComponent(token)}` : path
+}
+
 export const messagingApi = {
   getConversations() {
     return client.get<ApiResponse<ConversationInfo[]>>('/messages/conversations')
@@ -21,8 +26,16 @@ export const messagingApi = {
     })
   },
 
-  sendMessage(conversationId: string, content: string) {
-    return client.post<ApiResponse<MessageInfo>>(`/messages/conversations/${conversationId}/messages`, { content })
+  sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string) {
+    const formData = new FormData()
+    if (content) formData.append('content', content)
+    if (image) formData.append('image', image)
+    if (replyToId) formData.append('replyToId', replyToId)
+    return client.post<ApiResponse<MessageInfo>>(
+      `/messages/conversations/${conversationId}/messages`,
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
   },
 
   markAsRead(conversationId: string) {
@@ -35,5 +48,13 @@ export const messagingApi = {
 
   getUnreadCount() {
     return client.get<ApiResponse<{ count: number }>>('/messages/unread-count')
+  },
+
+  imageUrl(imageId: string) {
+    return authenticatedUrl(`/api/v1/messages/images/${imageId}`)
+  },
+
+  thumbnailUrl(imageId: string) {
+    return authenticatedUrl(`/api/v1/messages/images/${imageId}/thumbnail`)
   },
 }

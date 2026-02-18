@@ -6,26 +6,30 @@ import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.MessageSentEvent;
 import com.monteweb.messaging.MessagingModuleApi;
 import com.monteweb.messaging.internal.model.Conversation;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.messaging.internal.model.ConversationParticipant;
 import com.monteweb.messaging.internal.model.Message;
+import com.monteweb.messaging.internal.model.MessageImage;
 import com.monteweb.messaging.internal.repository.ConversationParticipantRepository;
 import com.monteweb.messaging.internal.repository.ConversationRepository;
+import com.monteweb.messaging.internal.repository.MessageImageRepository;
 import com.monteweb.messaging.internal.repository.MessageRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,25 +41,31 @@ public class MessagingService implements MessagingModuleApi {
     private final ConversationRepository conversationRepository;
     private final ConversationParticipantRepository participantRepository;
     private final MessageRepository messageRepository;
+    private final MessageImageRepository messageImageRepository;
     private final UserModuleApi userModuleApi;
     private final AdminModuleApi adminModuleApi;
     private final SimpMessagingTemplate messagingTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final MessageStorageService storageService;
 
     public MessagingService(ConversationRepository conversationRepository,
                             ConversationParticipantRepository participantRepository,
                             MessageRepository messageRepository,
+                            MessageImageRepository messageImageRepository,
                             UserModuleApi userModuleApi,
                             AdminModuleApi adminModuleApi,
                             SimpMessagingTemplate messagingTemplate,
-                            ApplicationEventPublisher eventPublisher) {
+                            ApplicationEventPublisher eventPublisher,
+                            MessageStorageService storageService) {
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
+        this.messageImageRepository = messageImageRepository;
         this.userModuleApi = userModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.messagingTemplate = messagingTemplate;
         this.eventPublisher = eventPublisher;
+        this.storageService = storageService;
     }
 
     // ---- Public API (MessagingModuleApi) ----
@@ -142,18 +152,87 @@ public class MessagingService implements MessagingModuleApi {
     @Transactional(readOnly = true)
     public Page<MessageInfo> getMessages(UUID conversationId, UUID userId, Pageable pageable) {
         requireParticipant(conversationId, userId);
-        return messageRepository.findByConversationIdOrderByCreatedAtDesc(conversationId, pageable)
-                .map(this::toMessageInfo);
+        var page = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
+
+        // Batch-load images and reply data to avoid N+1
+        var messageIds = page.getContent().stream().map(Message::getId).toList();
+        var allImages = messageImageRepository.findByMessageIdIn(messageIds);
+        var imagesByMessageId = allImages.stream()
+                .collect(java.util.stream.Collectors.groupingBy(MessageImage::getMessageId));
+
+        // Collect reply-to IDs
+        var replyToIds = page.getContent().stream()
+                .map(Message::getReplyToId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        var replyMessages = replyToIds.isEmpty()
+                ? Map.<UUID, Message>of()
+                : messageRepository.findAllById(replyToIds).stream()
+                    .collect(java.util.stream.Collectors.toMap(Message::getId, m -> m));
+        // Images for replied-to messages
+        var replyImagesByMsgId = replyToIds.isEmpty()
+                ? Map.<UUID, List<MessageImage>>of()
+                : messageImageRepository.findByMessageIdIn(replyToIds).stream()
+                    .collect(java.util.stream.Collectors.groupingBy(MessageImage::getMessageId));
+
+        return page.map(m -> toMessageInfo(m,
+                imagesByMessageId.getOrDefault(m.getId(), List.of()),
+                replyMessages, replyImagesByMsgId));
     }
 
-    public MessageInfo sendMessage(UUID conversationId, UUID senderId, String content) {
+    public MessageInfo sendMessage(UUID conversationId, UUID senderId, String content,
+                                    UUID replyToId, MultipartFile image) {
         requireParticipant(conversationId, senderId);
+
+        // Validate: must have content or image
+        boolean hasContent = content != null && !content.isBlank();
+        boolean hasImage = image != null && !image.isEmpty();
+        if (!hasContent && !hasImage) {
+            throw new BusinessException("Message must have text content or an image");
+        }
+
+        // Validate replyToId
+        if (replyToId != null && !messageRepository.existsById(replyToId)) {
+            throw new BusinessException("Reply-to message not found");
+        }
 
         var message = new Message();
         message.setConversationId(conversationId);
         message.setSenderId(senderId);
-        message.setContent(content);
+        message.setContent(hasContent ? content : null);
+        message.setReplyToId(replyToId);
         message = messageRepository.save(message);
+
+        // Handle image upload
+        List<MessageImage> images = List.of();
+        if (hasImage) {
+            // Validate file size (10MB)
+            if (image.getSize() > 10 * 1024 * 1024) {
+                throw new BusinessException("Image file size exceeds 10MB limit");
+            }
+            String contentType = storageService.validateAndDetectContentType(image);
+            String extension = MessageStorageService.extensionFromContentType(contentType);
+
+            var imgEntity = new MessageImage();
+            imgEntity.setMessageId(message.getId());
+            imgEntity.setUploadedBy(senderId);
+            imgEntity.setOriginalFilename(image.getOriginalFilename() != null ? image.getOriginalFilename() : "image." + extension);
+            imgEntity.setFileSize(image.getSize());
+            imgEntity.setContentType(contentType);
+
+            // Pre-generate ID for storage path
+            imgEntity = messageImageRepository.save(imgEntity);
+
+            String storagePath = storageService.uploadOriginal(conversationId, imgEntity.getId(), extension, image, contentType);
+            String thumbPath = storageService.uploadThumbnail(conversationId, imgEntity.getId(), extension, image);
+
+            imgEntity.setStoragePath(storagePath);
+            imgEntity.setThumbnailPath(thumbPath);
+            messageImageRepository.save(imgEntity);
+
+            images = List.of(imgEntity);
+        }
 
         // Update conversation timestamp
         conversationRepository.findById(conversationId).ifPresent(c -> {
@@ -164,7 +243,7 @@ public class MessagingService implements MessagingModuleApi {
         // Mark as read for sender
         participantRepository.markAsRead(conversationId, senderId, Instant.now());
 
-        var messageInfo = toMessageInfo(message);
+        var messageInfo = toMessageInfo(message, images, Map.of(), Map.of());
 
         // Push via WebSocket to all participants
         var participants = participantRepository.findByConversationId(conversationId);
@@ -185,7 +264,12 @@ public class MessagingService implements MessagingModuleApi {
                 .map(u -> u.firstName() + " " + u.lastName())
                 .orElse("Unknown");
 
-        String preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+        String preview;
+        if (hasContent) {
+            preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
+        } else {
+            preview = "\uD83D\uDDBC Bild";
+        }
 
         eventPublisher.publishEvent(new MessageSentEvent(
                 message.getId(),
@@ -193,10 +277,36 @@ public class MessagingService implements MessagingModuleApi {
                 senderId,
                 senderName,
                 preview,
-                recipientIds
+                recipientIds,
+                hasImage
         ));
 
         return messageInfo;
+    }
+
+    /**
+     * Get image for download — verifies the requester is a participant.
+     */
+    @Transactional(readOnly = true)
+    public java.io.InputStream getImageForDownload(UUID imageId, UUID userId, boolean thumbnail) {
+        var image = messageImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("MessageImage", imageId));
+
+        // Check that user is a participant of the conversation containing this message
+        var message = messageRepository.findById(image.getMessageId())
+                .orElseThrow(() -> new ResourceNotFoundException("Message", image.getMessageId()));
+        requireParticipant(message.getConversationId(), userId);
+
+        String path = thumbnail && image.getThumbnailPath() != null
+                ? image.getThumbnailPath()
+                : image.getStoragePath();
+        return storageService.download(path);
+    }
+
+    @Transactional(readOnly = true)
+    public MessageImage getImageEntity(UUID imageId) {
+        return messageImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("MessageImage", imageId));
     }
 
     public void markConversationAsRead(UUID conversationId, UUID userId) {
@@ -278,7 +388,11 @@ public class MessagingService implements MessagingModuleApi {
                 .toList();
 
         var lastMsg = messageRepository.findFirstByConversationIdOrderByCreatedAtDesc(c.getId());
-        String lastMessage = lastMsg.map(Message::getContent).orElse(null);
+        String lastMessage = lastMsg.map(m -> {
+            if (m.getContent() != null) return m.getContent();
+            // Image-only message
+            return "\uD83D\uDDBC Bild";
+        }).orElse(null);
         Instant lastMessageAt = lastMsg.map(Message::getCreatedAt).orElse(null);
 
         // Calculate unread for current user
@@ -305,10 +419,34 @@ public class MessagingService implements MessagingModuleApi {
         );
     }
 
-    private MessageInfo toMessageInfo(Message m) {
+    private MessageInfo toMessageInfo(Message m, List<MessageImage> images,
+                                       Map<UUID, Message> replyMessages,
+                                       Map<UUID, List<MessageImage>> replyImagesByMsgId) {
         String senderName = userModuleApi.findById(m.getSenderId())
                 .map(u -> u.firstName() + " " + u.lastName())
                 .orElse("Unknown");
+
+        List<MessageInfo.MessageImageInfo> imageInfos = images.stream()
+                .map(img -> new MessageInfo.MessageImageInfo(
+                        img.getId(), img.getOriginalFilename(), img.getContentType(), img.getFileSize()))
+                .toList();
+
+        MessageInfo.ReplyInfo replyInfo = null;
+        if (m.getReplyToId() != null) {
+            var replyMsg = replyMessages.get(m.getReplyToId());
+            if (replyMsg != null) {
+                String replySenderName = userModuleApi.findById(replyMsg.getSenderId())
+                        .map(u -> u.firstName() + " " + u.lastName())
+                        .orElse("Unknown");
+                String contentPreview = replyMsg.getContent() != null
+                        ? (replyMsg.getContent().length() > 80 ? replyMsg.getContent().substring(0, 80) + "..." : replyMsg.getContent())
+                        : null;
+                boolean replyHasImage = replyImagesByMsgId.containsKey(replyMsg.getId())
+                        && !replyImagesByMsgId.get(replyMsg.getId()).isEmpty();
+                replyInfo = new MessageInfo.ReplyInfo(
+                        replyMsg.getId(), replyMsg.getSenderId(), replySenderName, contentPreview, replyHasImage);
+            }
+        }
 
         return new MessageInfo(
                 m.getId(),
@@ -316,7 +454,9 @@ public class MessagingService implements MessagingModuleApi {
                 m.getSenderId(),
                 senderName,
                 m.getContent(),
-                m.getCreatedAt()
+                m.getCreatedAt(),
+                imageInfos,
+                replyInfo
         );
     }
 }

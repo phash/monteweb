@@ -150,6 +150,9 @@ function handleDelete() {
   align-items: center;
   gap: 0.5rem;
   font-size: var(--mw-font-size-sm);
+  min-width: 0;
+  flex: 1;
+  flex-wrap: wrap;
 }
 
 .post-meta i {
@@ -238,5 +241,15 @@ function handleDelete() {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+@media (max-width: 767px) {
+  .post-header {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .post-date {
+    white-space: normal;
+  }
 }
 </style>

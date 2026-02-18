@@ -11,6 +11,9 @@ vi.mock('@/api/messaging.api', () => ({
     startConversation: vi.fn(),
     getUnreadCount: vi.fn(),
     markAsRead: vi.fn(),
+    deleteConversation: vi.fn(),
+    imageUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}`),
+    thumbnailUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}/thumbnail`),
   },
 }))
 
@@ -27,6 +30,7 @@ describe('Messaging Store', () => {
     expect(store.conversations).toEqual([])
     expect(store.messages).toEqual([])
     expect(store.unreadCount).toBe(0)
+    expect(store.replyToMessage).toBeNull()
   })
 
   it('should fetch conversations', async () => {
@@ -49,9 +53,9 @@ describe('Messaging Store', () => {
   it('should fetch and reverse messages', async () => {
     const store = useMessagingStore()
     const mockMessages = [
-      { id: '3', content: 'Newest', conversationId: '1' },
-      { id: '2', content: 'Middle', conversationId: '1' },
-      { id: '1', content: 'Oldest', conversationId: '1' },
+      { id: '3', content: 'Newest', conversationId: '1', images: [], replyTo: null },
+      { id: '2', content: 'Middle', conversationId: '1', images: [], replyTo: null },
+      { id: '1', content: 'Oldest', conversationId: '1', images: [], replyTo: null },
     ]
 
     vi.mocked(messagingApi.getMessages).mockResolvedValue({
@@ -65,9 +69,9 @@ describe('Messaging Store', () => {
     expect(store.messages[2].content).toBe('Newest')
   })
 
-  it('should send message and append to list', async () => {
+  it('should send text message and append to list', async () => {
     const store = useMessagingStore()
-    const sentMessage = { id: '5', content: 'Hello!', conversationId: '1' }
+    const sentMessage = { id: '5', content: 'Hello!', conversationId: '1', images: [], replyTo: null }
 
     vi.mocked(messagingApi.sendMessage).mockResolvedValue({
       data: { data: sentMessage },
@@ -77,6 +81,61 @@ describe('Messaging Store', () => {
 
     expect(result.content).toBe('Hello!')
     expect(store.messages).toHaveLength(1)
+    expect(messagingApi.sendMessage).toHaveBeenCalledWith('1', 'Hello!', undefined, undefined)
+  })
+
+  it('should send message with image', async () => {
+    const store = useMessagingStore()
+    const file = new File(['test'], 'photo.jpg', { type: 'image/jpeg' })
+    const sentMessage = {
+      id: '6', content: null, conversationId: '1',
+      images: [{ imageId: 'img-1', originalFilename: 'photo.jpg', contentType: 'image/jpeg', fileSize: 4 }],
+      replyTo: null,
+    }
+
+    vi.mocked(messagingApi.sendMessage).mockResolvedValue({
+      data: { data: sentMessage },
+    } as any)
+
+    const result = await store.sendMessage('1', undefined, file)
+
+    expect(result.images).toHaveLength(1)
+    expect(messagingApi.sendMessage).toHaveBeenCalledWith('1', undefined, file, undefined)
+  })
+
+  it('should send reply message', async () => {
+    const store = useMessagingStore()
+    const replyTarget = {
+      id: 'msg-1', content: 'Original', conversationId: '1', senderId: 'u1', senderName: 'User 1',
+      createdAt: '', images: [], replyTo: null,
+    } as any
+    store.setReplyTo(replyTarget)
+    expect(store.replyToMessage).toBeTruthy()
+
+    const sentMessage = {
+      id: '7', content: 'My reply', conversationId: '1', images: [],
+      replyTo: { messageId: 'msg-1', senderId: 'u1', senderName: 'User 1', contentPreview: 'Original', hasImage: false },
+    }
+
+    vi.mocked(messagingApi.sendMessage).mockResolvedValue({
+      data: { data: sentMessage },
+    } as any)
+
+    await store.sendMessage('1', 'My reply', undefined, 'msg-1')
+
+    // replyToMessage should be cleared after send
+    expect(store.replyToMessage).toBeNull()
+  })
+
+  it('should set and clear reply', () => {
+    const store = useMessagingStore()
+    const msg = { id: 'msg-1', content: 'Test', conversationId: '1' } as any
+
+    store.setReplyTo(msg)
+    expect(store.replyToMessage?.id).toBe('msg-1')
+
+    store.setReplyTo(null)
+    expect(store.replyToMessage).toBeNull()
   })
 
   it('should start direct conversation', async () => {
@@ -107,7 +166,7 @@ describe('Messaging Store', () => {
     expect(store.conversations).toHaveLength(1)
   })
 
-  it('should handle incoming messages', () => {
+  it('should handle incoming text messages', () => {
     const store = useMessagingStore()
     store.conversations = [
       { id: 'conv-1', unreadCount: 0, lastMessage: '', lastMessageAt: '' },
@@ -119,11 +178,34 @@ describe('Messaging Store', () => {
       content: 'Incoming!',
       conversationId: 'conv-1',
       createdAt: new Date().toISOString(),
+      images: [],
+      replyTo: null,
     } as any)
 
     expect(store.messages).toHaveLength(1)
     expect(store.messages[0].content).toBe('Incoming!')
     expect(store.unreadCount).toBe(1)
+    expect(store.conversations[0].lastMessage).toBe('Incoming!')
+  })
+
+  it('should handle incoming image-only messages', () => {
+    const store = useMessagingStore()
+    store.conversations = [
+      { id: 'conv-1', unreadCount: 0, lastMessage: '', lastMessageAt: '' },
+    ] as any
+    store.currentConversation = { id: 'conv-1' } as any
+
+    store.addIncomingMessage({
+      id: 'msg-2',
+      content: null,
+      conversationId: 'conv-1',
+      createdAt: new Date().toISOString(),
+      images: [{ imageId: 'img-1', originalFilename: 'photo.jpg', contentType: 'image/jpeg', fileSize: 1000 }],
+      replyTo: null,
+    } as any)
+
+    expect(store.messages).toHaveLength(1)
+    expect(store.conversations[0].lastMessage).toBe('\uD83D\uDDBC Bild')
   })
 
   it('should mark conversation as read', async () => {

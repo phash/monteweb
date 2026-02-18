@@ -9,6 +9,7 @@ export const useMessagingStore = defineStore('messaging', () => {
   const messages = ref<MessageInfo[]>([])
   const unreadCount = ref(0)
   const loading = ref(false)
+  const replyToMessage = ref<MessageInfo | null>(null)
 
   async function fetchConversations() {
     loading.value = true
@@ -37,10 +38,15 @@ export const useMessagingStore = defineStore('messaging', () => {
     }
   }
 
-  async function sendMessage(conversationId: string, content: string) {
-    const res = await messagingApi.sendMessage(conversationId, content)
+  async function sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string) {
+    const res = await messagingApi.sendMessage(conversationId, content, image, replyToId)
     messages.value.push(res.data.data)
+    replyToMessage.value = null
     return res.data.data
+  }
+
+  function setReplyTo(message: MessageInfo | null) {
+    replyToMessage.value = message
   }
 
   async function startDirectConversation(userId: string) {
@@ -89,7 +95,7 @@ export const useMessagingStore = defineStore('messaging', () => {
     // Update conversation list
     const conv = conversations.value.find(c => c.id === message.conversationId)
     if (conv) {
-      conv.lastMessage = message.content
+      conv.lastMessage = message.content ?? (message.images?.length ? '\uD83D\uDDBC Bild' : null)
       conv.lastMessageAt = message.createdAt
       conv.unreadCount++
       unreadCount.value++
@@ -102,10 +108,12 @@ export const useMessagingStore = defineStore('messaging', () => {
     messages,
     unreadCount,
     loading,
+    replyToMessage,
     fetchConversations,
     fetchConversation,
     fetchMessages,
     sendMessage,
+    setReplyTo,
     startDirectConversation,
     fetchUnreadCount,
     markAsRead,

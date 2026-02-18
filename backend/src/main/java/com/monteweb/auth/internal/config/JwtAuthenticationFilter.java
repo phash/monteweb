@@ -58,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
         // Allow token via query parameter for image endpoints (img tags can't send headers)
         String path = request.getRequestURI();
-        if (path != null && (path.startsWith("/api/v1/fotobox/images/") || path.startsWith("/api/v1/fundgrube/images/"))) {
+        if (path != null && (path.startsWith("/api/v1/fotobox/images/") || path.startsWith("/api/v1/fundgrube/images/") || path.startsWith("/api/v1/messages/images/"))) {
             String queryToken = request.getParameter("token");
             if (StringUtils.hasText(queryToken)) {
                 return queryToken;
