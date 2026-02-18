@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
@@ -201,24 +202,14 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     @Transactional(readOnly = true)
-    public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, UUID eventId, Pageable pageable) {
+    public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, UUID eventId,
+                                  LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         if (statuses == null || statuses.isEmpty()) {
             statuses = List.of(JobStatus.OPEN, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS);
         }
-        if (eventId != null && category != null && !category.isBlank()) {
-            return jobRepository.findByCategoryAndEventIdAndStatusInOrderByScheduledDateAscCreatedAtDesc(
-                    category, eventId, statuses, pageable).map(this::toJobInfo);
-        }
-        if (eventId != null) {
-            return jobRepository.findByEventIdAndStatusInOrderByScheduledDateAscCreatedAtDesc(
-                    eventId, statuses, pageable).map(this::toJobInfo);
-        }
-        if (category != null && !category.isBlank()) {
-            return jobRepository.findByCategoryAndStatusInOrderByScheduledDateAscCreatedAtDesc(
-                    category, statuses, pageable).map(this::toJobInfo);
-        }
-        return jobRepository.findByStatusInOrderByScheduledDateAscCreatedAtDesc(
-                statuses, pageable).map(this::toJobInfo);
+        String cat = (category != null && !category.isBlank()) ? category : null;
+        return jobRepository.findWithFilters(statuses, cat, eventId, fromDate, toDate, pageable)
+                .map(this::toJobInfo);
     }
 
     @Transactional(readOnly = true)

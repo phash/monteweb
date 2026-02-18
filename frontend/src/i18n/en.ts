@@ -469,6 +469,12 @@ export default {
     deleteConfirmTitle: 'Delete job',
     deleted: 'Job deleted',
     jobCount: '{n} job(s)',
+    hoursConfirmed: 'Hours confirmed',
+    hoursConfirmedDetail: '{hours}h have been credited to family {family}.',
+    filterByDate: 'Filter by date',
+    fromDate: 'From',
+    toDate: 'To',
+    clearDateFilter: 'Clear date filter',
     statuses: {
       OPEN: 'Open',
       ASSIGNED: 'Assigned',

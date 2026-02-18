@@ -11,10 +11,12 @@ import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,8 +40,10 @@ public class JobboardController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) List<JobStatus> status,
             @RequestParam(required = false) UUID eventId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             @PageableDefault(size = 20) Pageable pageable) {
-        var page = jobboardService.listJobs(category, status, eventId, pageable);
+        var page = jobboardService.listJobs(category, status, eventId, fromDate, toDate, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 

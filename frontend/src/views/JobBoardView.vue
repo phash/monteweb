@@ -14,6 +14,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
+import DatePicker from 'primevue/datepicker'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -30,6 +31,8 @@ const calendar = useCalendarStore()
 const activeTab = ref('0')
 const selectedCategory = ref<string | null>(null)
 const selectedEventId = ref<string | null>(null)
+const selectedFromDate = ref<Date | null>(null)
+const selectedToDate = ref<Date | null>(null)
 const calendarEnabled = admin.isModuleEnabled('calendar')
 const completedJobs = ref<import('@/types/jobboard').JobInfo[]>([])
 const completedLoading = ref(false)
@@ -53,8 +56,29 @@ onMounted(async () => {
   await Promise.all(promises)
 })
 
+function formatIsoDate(d: Date | null): string | undefined {
+  if (!d) return undefined
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 function applyFilters() {
-  jobboard.fetchJobs(true, selectedCategory.value ?? undefined, selectedEventId.value ?? undefined)
+  jobboard.fetchJobs(
+    true,
+    selectedCategory.value ?? undefined,
+    selectedEventId.value ?? undefined,
+    undefined,
+    formatIsoDate(selectedFromDate.value),
+    formatIsoDate(selectedToDate.value),
+  )
+}
+
+function clearDateFilter() {
+  selectedFromDate.value = null
+  selectedToDate.value = null
+  applyFilters()
 }
 
 async function fetchCompletedJobs() {
@@ -131,6 +155,36 @@ function formatDate(date: string | null) {
               @change="applyFilters"
               class="event-filter"
             />
+            <DatePicker
+              v-model="selectedFromDate"
+              :placeholder="t('jobboard.fromDate')"
+              dateFormat="dd.mm.yy"
+              showIcon
+              :showButtonBar="true"
+              @date-select="applyFilters"
+              @clear-click="applyFilters"
+              class="date-filter"
+            />
+            <DatePicker
+              v-model="selectedToDate"
+              :placeholder="t('jobboard.toDate')"
+              dateFormat="dd.mm.yy"
+              showIcon
+              :showButtonBar="true"
+              :minDate="selectedFromDate ?? undefined"
+              @date-select="applyFilters"
+              @clear-click="applyFilters"
+              class="date-filter"
+            />
+            <Button
+              v-if="selectedFromDate || selectedToDate"
+              :label="t('jobboard.clearDateFilter')"
+              icon="pi pi-times"
+              severity="secondary"
+              text
+              size="small"
+              @click="clearDateFilter"
+            />
           </div>
 
           <LoadingSpinner v-if="jobboard.loading && !jobboard.jobs.length" />
@@ -170,7 +224,7 @@ function formatDate(date: string | null) {
                 :loading="jobboard.loading"
                 severity="secondary"
                 text
-                @click="jobboard.fetchJobs(false, selectedCategory ?? undefined, selectedEventId ?? undefined)"
+                @click="jobboard.fetchJobs(false, selectedCategory ?? undefined, selectedEventId ?? undefined, undefined, formatIsoDate(selectedFromDate), formatIsoDate(selectedToDate))"
               />
             </div>
           </div>
@@ -257,6 +311,11 @@ function formatDate(date: string | null) {
 .category-filter,
 .event-filter {
   min-width: 200px;
+}
+
+.date-filter {
+  min-width: 150px;
+  max-width: 180px;
 }
 
 .job-list {

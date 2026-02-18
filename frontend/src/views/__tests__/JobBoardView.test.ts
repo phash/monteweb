@@ -59,6 +59,7 @@ const stubs = {
   },
   Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity', 'size'] },
   Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder'] },
+  DatePicker: { template: '<input class="datepicker-stub" />', props: ['modelValue', 'placeholder', 'dateFormat', 'showIcon', 'showButtonBar', 'minDate'] },
   Tabs: { template: '<div class="tabs-stub"><slot /></div>', props: ['modelValue'] },
   TabList: { template: '<div class="tablist-stub"><slot /></div>' },
   Tab: { template: '<div class="tab-stub"><slot /></div>', props: ['value'] },

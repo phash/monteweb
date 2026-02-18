@@ -10,9 +10,10 @@ import type {
 } from '@/types/jobboard'
 
 export const jobboardApi = {
-  listJobs(page = 0, size = 20, category?: string, status?: JobStatus[], eventId?: string) {
+  listJobs(page = 0, size = 20, category?: string, status?: JobStatus[], eventId?: string,
+           fromDate?: string, toDate?: string) {
     return client.get<ApiResponse<PageResponse<JobInfo>>>('/jobs', {
-      params: { page, size, category, status: status?.join(','), eventId },
+      params: { page, size, category, status: status?.join(','), eventId, fromDate, toDate },
     })
   },
 

@@ -14,6 +14,7 @@ import Dialog from 'primevue/dialog'
 import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
+import { useToast } from 'primevue/usetoast'
 
 const props = defineProps<{ id: string }>()
 const { t } = useI18n()
@@ -21,6 +22,7 @@ const { formatShortDate } = useLocaleDate()
 const router = useRouter()
 const auth = useAuthStore()
 const jobboard = useJobboardStore()
+const toast = useToast()
 
 const showCompleteDialog = ref(false)
 const showDeleteDialog = ref(false)
@@ -137,8 +139,20 @@ async function submitComplete() {
 }
 
 async function confirm(assignmentId: string) {
+  const assignment = jobboard.assignments.find(a => a.id === assignmentId)
   await jobboard.confirmAssignment(assignmentId)
   await jobboard.fetchAssignments(props.id)
+  if (assignment) {
+    toast.add({
+      severity: 'success',
+      summary: t('jobboard.hoursConfirmed'),
+      detail: t('jobboard.hoursConfirmedDetail', {
+        hours: assignment.actualHours ?? 0,
+        family: assignment.familyName,
+      }),
+      life: 5000,
+    })
+  }
 }
 
 function statusSeverity(status: string) {
