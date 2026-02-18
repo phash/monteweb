@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
 import { jobboardApi } from '@/api/jobboard.api'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -21,6 +22,7 @@ const { t } = useI18n()
 const { formatShortDate } = useLocaleDate()
 const router = useRouter()
 const auth = useAuthStore()
+const adminStore = useAdminStore()
 const jobboard = useJobboardStore()
 const toast = useToast()
 
@@ -87,6 +89,9 @@ async function handleDeleteJob() {
 }
 
 onMounted(async () => {
+  if (!adminStore.config) {
+    adminStore.fetchConfig()
+  }
   await Promise.all([
     jobboard.fetchJob(props.id),
     jobboard.fetchAssignments(props.id),
@@ -289,7 +294,7 @@ function formatDate(date: string | null) {
             <div class="assignment-actions">
               <span v-if="a.actualHours" class="hours">{{ a.actualHours }}h</span>
               <Button
-                v-if="a.status === 'COMPLETED' && !a.confirmed && (auth.isTeacher || auth.isAdmin || auth.isSectionAdmin)"
+                v-if="a.status === 'COMPLETED' && !a.confirmed && (auth.isTeacher || auth.isAdmin || auth.isSectionAdmin) && adminStore.config?.requireAssignmentConfirmation !== false"
                 :label="t('common.confirm')"
                 icon="pi pi-check"
                 severity="success"

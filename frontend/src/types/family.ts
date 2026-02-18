@@ -47,4 +47,5 @@ export interface TenantConfig {
   schoolVacations: { name: string; from: string; to: string }[]
   githubRepo?: string
   githubPatConfigured?: boolean
+  requireAssignmentConfirmation: boolean
 }

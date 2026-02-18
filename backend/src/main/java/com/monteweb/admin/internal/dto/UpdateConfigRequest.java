@@ -10,6 +10,7 @@ public record UpdateConfigRequest(
         BigDecimal targetHoursPerFamily,
         BigDecimal targetCleaningHours,
         String bundesland,
-        List<Map<String, String>> schoolVacations
+        List<Map<String, String>> schoolVacations,
+        Boolean requireAssignmentConfirmation
 ) {
 }

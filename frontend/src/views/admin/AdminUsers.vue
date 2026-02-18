@@ -469,12 +469,12 @@ async function approveUser(userId: string) {
 
 
 onMounted(async () => {
-  loadUsers()
-  loadPendingUsers()
   try {
     const res = await sectionsApi.getAll()
     allSections.value = res.data.data
   } catch { /* ignore */ }
+  loadUsers()
+  loadPendingUsers()
 })
 
 onUnmounted(() => {
@@ -579,12 +579,12 @@ onUnmounted(() => {
             <template v-for="sr in (data.specialRoles || [])" :key="sr">
               <Tag
                 v-if="sr.startsWith('PUTZORGA')"
-                value="Putz-Orga"
+                :value="sr.includes(':') ? 'Putz-Orga: ' + getSectionName(sr.substring('PUTZORGA:'.length)) : 'Putz-Orga'"
                 severity="warn"
               />
               <Tag
                 v-else-if="sr.startsWith('ELTERNBEIRAT')"
-                value="Elternbeirat"
+                :value="sr.includes(':') ? 'Elternbeirat: ' + getSectionName(sr.substring('ELTERNBEIRAT:'.length)) : 'Elternbeirat'"
                 severity="info"
               />
               <Tag

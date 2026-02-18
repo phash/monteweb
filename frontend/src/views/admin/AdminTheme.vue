@@ -8,6 +8,7 @@ import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import FileUpload from 'primevue/fileupload'
 import Select from 'primevue/select'
+import ToggleSwitch from 'primevue/toggleswitch'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import { useToast } from 'primevue/usetoast'
@@ -33,6 +34,7 @@ const savingHours = ref(false)
 const savingVacations = ref(false)
 const targetHoursPerFamily = ref(30)
 const targetCleaningHours = ref(3)
+const requireAssignmentConfirmation = ref(true)
 const bundesland = ref('BY')
 const schoolVacations = ref<{ name: string; from: string; to: string }[]>([])
 
@@ -74,6 +76,7 @@ onMounted(async () => {
     schoolName.value = adminStore.config.schoolName || ''
     targetHoursPerFamily.value = adminStore.config.targetHoursPerFamily ?? 30
     targetCleaningHours.value = adminStore.config.targetCleaningHours ?? 3
+    requireAssignmentConfirmation.value = adminStore.config.requireAssignmentConfirmation ?? true
     bundesland.value = adminStore.config.bundesland || 'BY'
     schoolVacations.value = (adminStore.config.schoolVacations || []).map(v => ({ ...v }))
     if (adminStore.config.theme) {
@@ -100,6 +103,7 @@ async function saveHoursConfig() {
     const res = await adminApi.updateConfig({
       targetHoursPerFamily: targetHoursPerFamily.value,
       targetCleaningHours: targetCleaningHours.value,
+      requireAssignmentConfirmation: requireAssignmentConfirmation.value,
     })
     adminStore.config = res.data.data
     toast.add({ severity: 'success', summary: t('admin.hoursConfigSaved'), life: 3000 })
@@ -181,6 +185,13 @@ async function uploadLogo(event: { files: File[] }) {
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('admin.cleaningHoursTarget') }}</label>
           <InputNumber v-model="targetCleaningHours" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
+        </div>
+      </div>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="requireAssignmentConfirmation" />
+        <div>
+          <label class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
+          <small class="text-gray-500">{{ t('admin.requireConfirmationHint') }}</small>
         </div>
       </div>
       <Button :label="t('admin.saveHoursConfig')" icon="pi pi-check" :loading="savingHours"

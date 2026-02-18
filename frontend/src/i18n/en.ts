@@ -262,6 +262,8 @@ export default {
     hoursConfig: 'Hours Configuration',
     totalHoursTarget: 'Total hours per family/year',
     cleaningHoursTarget: 'of which cleaning hours',
+    requireConfirmation: 'Require confirmation by responsible person',
+    requireConfirmationHint: 'When disabled, hours are automatically credited upon completion.',
     saveHoursConfig: 'Save hours configuration',
     hoursConfigSaved: 'Hours configuration saved',
     moduleSubtitle: 'Enable or disable modules',

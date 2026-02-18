@@ -64,6 +64,9 @@ public class TenantConfig {
     @Column(name = "github_pat", length = 500)
     private String githubPat;
 
+    @Column(name = "require_assignment_confirmation", nullable = false)
+    private boolean requireAssignmentConfirmation = true;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

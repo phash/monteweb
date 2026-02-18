@@ -21,6 +21,7 @@ public record TenantConfigInfo(
         String bundesland,
         List<Map<String, String>> schoolVacations,
         String githubRepo,
-        boolean githubPatConfigured
+        boolean githubPatConfigured,
+        boolean requireAssignmentConfirmation
 ) {
 }

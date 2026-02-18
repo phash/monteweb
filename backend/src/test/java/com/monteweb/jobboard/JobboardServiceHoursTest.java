@@ -70,7 +70,7 @@ class JobboardServiceHoursTest {
                 Map.of(), Map.of(),
                 targetHours, targetCleaningHours,
                 true, true, "BY", List.of(),
-                null, false
+                null, false, true
         );
     }
 

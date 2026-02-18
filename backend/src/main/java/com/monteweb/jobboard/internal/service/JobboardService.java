@@ -354,7 +354,31 @@ public class JobboardService implements JobboardModuleApi {
         assignment.setActualHours(actualHours);
         assignment.setNotes(notes);
         assignment.setCompletedAt(Instant.now());
+
+        // Auto-confirm if requireAssignmentConfirmation is disabled
+        if (!adminModuleApi.getTenantConfig().requireAssignmentConfirmation()) {
+            assignment.setConfirmed(true);
+            assignment.setConfirmedBy(userId);
+            assignment.setConfirmedAt(Instant.now());
+        }
+
         assignment = assignmentRepository.save(assignment);
+
+        // If auto-confirmed, publish event
+        if (assignment.isConfirmed()) {
+            String userName = userModuleApi.findById(assignment.getUserId())
+                    .map(u -> u.firstName() + " " + u.lastName())
+                    .orElse("Unknown");
+            var job = jobRepository.findById(assignment.getJobId()).orElseThrow();
+            eventPublisher.publishEvent(new JobCompletedEvent(
+                    job.getId(),
+                    job.getTitle(),
+                    assignment.getUserId(),
+                    userName,
+                    assignment.getFamilyId(),
+                    assignment.getActualHours()
+            ));
+        }
 
         // Check if all assignments for this job are completed
         checkAndCloseJob(assignment.getJobId());

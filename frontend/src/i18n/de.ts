@@ -262,6 +262,8 @@ export default {
     hoursConfig: 'Stundenregelung',
     totalHoursTarget: 'Gesamtstunden pro Familie/Jahr',
     cleaningHoursTarget: 'davon Putzstunden',
+    requireConfirmation: 'Bestätigung durch Verantwortliche erforderlich',
+    requireConfirmationHint: 'Wenn deaktiviert, werden Stunden beim Abschließen automatisch gutgeschrieben.',
     saveHoursConfig: 'Stundenregelung speichern',
     hoursConfigSaved: 'Stundenregelung gespeichert',
     moduleSubtitle: 'Module aktivieren oder deaktivieren',
