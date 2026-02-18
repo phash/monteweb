@@ -258,7 +258,16 @@ onMounted(loadSections)
 
 <template>
   <div>
-    <PageTitle :title="t('sectionAdmin.title')" />
+    <div class="section-admin-header">
+      <PageTitle :title="t('sectionAdmin.title')" />
+      <Button
+        :label="t('admin.familiesTitle')"
+        icon="pi pi-users"
+        severity="secondary"
+        size="small"
+        @click="router.push({ name: 'admin-families' })"
+      />
+    </div>
 
     <LoadingSpinner v-if="loading && sections.length === 0" />
 
@@ -500,6 +509,14 @@ onMounted(loadSections)
 </template>
 
 <style scoped>
+.section-admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
 .toolbar {
   display: flex;
   gap: 0.75rem;

@@ -182,7 +182,7 @@ const router = createRouter({
               path: 'families',
               name: 'admin-families',
               component: () => import('@/views/admin/AdminFamilies.vue'),
-              meta: { breadcrumbLabel: 'admin.families' },
+              meta: { breadcrumbLabel: 'admin.families', allowSectionAdmin: true },
             },
             {
               path: 'modules',
@@ -257,6 +257,8 @@ router.beforeEach(async (to) => {
   if (to.meta.requiresAdmin && !auth.isAdmin) {
     if (to.meta.allowPutzOrga && auth.isPutzOrga) {
       // PutzOrga users may access the cleaning admin page
+    } else if (to.meta.allowSectionAdmin && auth.isSectionAdmin) {
+      // Section admins may access specific admin pages (e.g. families)
     } else {
       return { name: 'dashboard' }
     }

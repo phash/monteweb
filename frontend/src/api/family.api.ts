@@ -60,6 +60,18 @@ export const familyApi = {
     return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}/hours-exempt`, { exempt })
   },
 
+  setActive(familyId: string, active: boolean) {
+    return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}/active`, { active })
+  },
+
+  adminAddMember(familyId: string, userId: string, role: string) {
+    return client.post<ApiResponse<FamilyInfo>>(`/families/${familyId}/members`, { userId, role })
+  },
+
+  adminRemoveMember(familyId: string, memberId: string) {
+    return client.delete<ApiResponse<void>>(`/families/${familyId}/members/${memberId}/admin`)
+  },
+
   // Invitations
   inviteMember(familyId: string, inviteeId: string, role: string) {
     return client.post<ApiResponse<FamilyInvitationInfo>>(`/families/${familyId}/invitations`, { inviteeId, role })

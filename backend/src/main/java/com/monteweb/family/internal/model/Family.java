@@ -36,6 +36,9 @@ public class Family {
     @Column(name = "is_hours_exempt", nullable = false)
     private boolean hoursExempt = false;
 
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     @OneToMany(mappedBy = "family", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FamilyMember> members = new ArrayList<>();
 

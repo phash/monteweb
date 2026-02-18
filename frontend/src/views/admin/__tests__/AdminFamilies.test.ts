@@ -9,6 +9,9 @@ const mockUpdateName = vi.fn().mockResolvedValue({ data: { data: {} } })
 const mockDeleteFamily = vi.fn().mockResolvedValue({ data: { data: null } })
 const mockSetHoursExempt = vi.fn().mockResolvedValue({ data: { data: {} } })
 const mockRemoveMember = vi.fn().mockResolvedValue({ data: { data: null } })
+const mockSetActive = vi.fn().mockResolvedValue({ data: { data: {} } })
+const mockAdminAddMember = vi.fn().mockResolvedValue({ data: { data: {} } })
+const mockAdminRemoveMember = vi.fn().mockResolvedValue({ data: { data: null } })
 
 vi.mock('@/api/family.api', () => ({
   familyApi: {
@@ -17,6 +20,9 @@ vi.mock('@/api/family.api', () => ({
     deleteFamily: (...args: unknown[]) => mockDeleteFamily(...args),
     setHoursExempt: (...args: unknown[]) => mockSetHoursExempt(...args),
     removeMember: (...args: unknown[]) => mockRemoveMember(...args),
+    setActive: (...args: unknown[]) => mockSetActive(...args),
+    adminAddMember: (...args: unknown[]) => mockAdminAddMember(...args),
+    adminRemoveMember: (...args: unknown[]) => mockAdminRemoveMember(...args),
   },
 }))
 
@@ -34,7 +40,11 @@ vi.mock('@/api/admin.api', () => ({
 }))
 
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
-vi.mock('@/api/users.api', () => ({ usersApi: {} }))
+vi.mock('@/api/users.api', () => ({
+  usersApi: {
+    search: vi.fn().mockResolvedValue({ data: { data: { content: [] } } }),
+  },
+}))
 
 const mockFamilies = [
   {
@@ -42,6 +52,7 @@ const mockFamilies = [
     name: 'Familie Müller',
     avatarUrl: null,
     hoursExempt: false,
+    active: true,
     members: [
       { userId: 'u1', displayName: 'Anna Müller', role: 'PARENT' },
       { userId: 'u2', displayName: 'Max Müller', role: 'CHILD' },
@@ -52,6 +63,7 @@ const mockFamilies = [
     name: 'Familie Schmidt',
     avatarUrl: null,
     hoursExempt: true,
+    active: true,
     members: [
       { userId: 'u3', displayName: 'Peter Schmidt', role: 'PARENT' },
       { userId: 'u4', displayName: 'Lisa Schmidt', role: 'PARENT' },
@@ -62,6 +74,7 @@ const mockFamilies = [
     name: 'Familie Weber',
     avatarUrl: null,
     hoursExempt: false,
+    active: true,
     members: [
       { userId: 'u5', displayName: 'Sabine Weber', role: 'PARENT' },
       { userId: 'u6', displayName: 'Tom Weber', role: 'CHILD' },
@@ -111,6 +124,10 @@ const i18n = createI18n({
         noFamilyMemberships: 'Keine Mitglieder',
         memberRemoved: 'Mitglied entfernt',
         exemptFamiliesHint: 'Familie befreit',
+        familyDeactivated: 'Familie deaktiviert',
+        familyActivated: 'Familie aktiviert',
+        familyActive: 'Aktiv',
+        addMember: 'Mitglied hinzufügen',
         trafficLight: { green: 'Grün', yellow: 'Gelb', red: 'Rot' },
         trafficLightCol: 'Ampel',
         jobHours: 'Elternstunden',
@@ -135,6 +152,7 @@ const stubs = {
   IconField: { template: '<div class="iconfield-stub"><slot /></div>' },
   InputIcon: { template: '<span class="inputicon-stub" />' },
   ToggleSwitch: { template: '<input type="checkbox" class="toggleswitch-stub" />', props: ['modelValue'] },
+  Select: { template: '<select class="select-stub"></select>', props: ['modelValue', 'options', 'optionLabel', 'optionValue'] },
   Tabs: { template: '<div class="tabs-stub"><slot /></div>', props: ['value'] },
   TabList: { template: '<div class="tablist-stub"><slot /></div>' },
   Tab: { template: '<div class="tab-stub"><slot /></div>', props: ['value'] },

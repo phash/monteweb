@@ -231,11 +231,7 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInfo updateFamily(UUID familyId, String name, UUID requestingUserId) {
-        var user = userModuleApi.findById(requestingUserId)
-                .orElseThrow(() -> new BusinessException("User not found"));
-        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
-            throw new BusinessException("Only SUPERADMIN can update families");
-        }
+        assertAdminOrSectionAdmin(requestingUserId);
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         family.setName(name);
@@ -245,15 +241,21 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public void deleteFamily(UUID familyId, UUID requestingUserId) {
-        var user = userModuleApi.findById(requestingUserId)
-                .orElseThrow(() -> new BusinessException("User not found"));
-        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
-            throw new BusinessException("Only SUPERADMIN can delete families");
-        }
+        assertAdminOrSectionAdmin(requestingUserId);
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         invitationRepository.deleteByFamilyId(familyId);
         familyRepository.delete(family);
+    }
+
+    @Transactional
+    public FamilyInfo setActive(UUID familyId, boolean active, UUID requestingUserId) {
+        assertAdminOrSectionAdmin(requestingUserId);
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
+        family.setActive(active);
+        family = familyRepository.save(family);
+        return toFamilyInfo(family);
     }
 
     @Transactional
@@ -384,16 +386,21 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInfo setHoursExempt(UUID familyId, boolean exempt, UUID requestingUserId) {
-        var user = userModuleApi.findById(requestingUserId)
-                .orElseThrow(() -> new BusinessException("User not found"));
-        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
-            throw new BusinessException("Only SUPERADMIN can change hours exemption");
-        }
+        assertAdminOrSectionAdmin(requestingUserId);
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         family.setHoursExempt(exempt);
         family = familyRepository.save(family);
         return toFamilyInfo(family);
+    }
+
+    private void assertAdminOrSectionAdmin(UUID userId) {
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN
+                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN) {
+            throw new BusinessException("Only SUPERADMIN or SECTION_ADMIN can manage families");
+        }
     }
 
     private FamilyInfo toFamilyInfo(Family family) {
@@ -405,6 +412,6 @@ public class FamilyService implements FamilyModuleApi {
                     return new FamilyInfo.FamilyMemberInfo(m.getUserId(), displayName, m.getRole().name());
                 })
                 .toList();
-        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), family.isHoursExempt(), members);
+        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), family.isHoursExempt(), family.isActive(), members);
     }
 }

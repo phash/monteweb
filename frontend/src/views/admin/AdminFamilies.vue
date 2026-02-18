@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import { familyApi } from '@/api/family.api'
+import { usersApi } from '@/api/users.api'
 import { billingApi } from '@/api/billing.api'
 import { useAdminStore } from '@/stores/admin'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
@@ -19,6 +20,7 @@ import InputText from 'primevue/inputtext'
 import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import ToggleSwitch from 'primevue/toggleswitch'
+import Select from 'primevue/select'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -42,6 +44,19 @@ const editTab = ref('0')
 const editLoading = ref(false)
 const editName = ref('')
 const editExempt = ref(false)
+const editActive = ref(true)
+
+// Add member dialog
+const showAddMember = ref(false)
+const memberSearchQuery = ref('')
+const memberSearchResults = ref<{ id: string; displayName: string; email: string; role: string }[]>([])
+const memberSearching = ref(false)
+const addingMember = ref(false)
+const selectedMemberRole = ref('PARENT')
+const memberRoleOptions = [
+  { label: 'Elternteil', value: 'PARENT' },
+  { label: 'Kind', value: 'CHILD' },
+]
 
 const jobboardEnabled = computed(() => adminStore.isModuleEnabled('jobboard'))
 
@@ -115,6 +130,7 @@ function openEdit(family: FamilyInfo) {
   editTab.value = '0'
   editName.value = family.name
   editExempt.value = family.hoursExempt
+  editActive.value = family.active
   showEdit.value = true
 }
 
@@ -129,6 +145,10 @@ async function saveFamily() {
     }
     if (editExempt.value !== editFamily.value.hoursExempt) {
       await familyApi.setHoursExempt(editFamily.value.id, editExempt.value)
+      updated = true
+    }
+    if (editActive.value !== editFamily.value.active) {
+      await familyApi.setActive(editFamily.value.id, editActive.value)
       updated = true
     }
     if (updated) {
@@ -151,9 +171,8 @@ async function removeMember(memberId: string, memberName: string) {
   })
   if (!ok) return
   try {
-    await familyApi.removeMember(editFamily.value.id, memberId)
+    await familyApi.adminRemoveMember(editFamily.value.id, memberId)
     toast.add({ severity: 'success', summary: t('admin.memberRemoved'), life: 3000 })
-    // Reload family data
     const res = await familyApi.getAll()
     families.value = res.data.data
     const updatedFamily = families.value.find(f => f.id === editFamily.value!.id)
@@ -162,6 +181,61 @@ async function removeMember(memberId: string, memberName: string) {
     } else {
       showEdit.value = false
     }
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
+}
+
+function openAddMember() {
+  memberSearchQuery.value = ''
+  memberSearchResults.value = []
+  selectedMemberRole.value = 'PARENT'
+  showAddMember.value = true
+}
+
+async function searchMembers() {
+  if (memberSearchQuery.value.trim().length < 2) return
+  memberSearching.value = true
+  try {
+    const res = await usersApi.search(memberSearchQuery.value.trim())
+    const currentMemberIds = new Set(editFamily.value?.members.map(m => m.userId) ?? [])
+    memberSearchResults.value = (res.data.data.content || []).filter((u: any) => !currentMemberIds.has(u.id))
+  } catch {
+    memberSearchResults.value = []
+  } finally {
+    memberSearching.value = false
+  }
+}
+
+async function addMemberToFamily(userId: string) {
+  if (!editFamily.value) return
+  addingMember.value = true
+  try {
+    await familyApi.adminAddMember(editFamily.value.id, userId, selectedMemberRole.value)
+    toast.add({ severity: 'success', summary: t('admin.memberAdded'), life: 3000 })
+    showAddMember.value = false
+    const res = await familyApi.getAll()
+    families.value = res.data.data
+    const updatedFamily = families.value.find(f => f.id === editFamily.value!.id)
+    if (updatedFamily) {
+      editFamily.value = updatedFamily
+    }
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  } finally {
+    addingMember.value = false
+  }
+}
+
+async function toggleActive(family: FamilyInfo) {
+  try {
+    await familyApi.setActive(family.id, !family.active)
+    toast.add({
+      severity: 'success',
+      summary: family.active ? t('admin.familyDeactivated') : t('admin.familyActivated'),
+      life: 3000,
+    })
+    await loadData()
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
@@ -217,7 +291,12 @@ onMounted(() => {
       <template #empty>
         <div class="empty-table">{{ searchQuery ? t('admin.noFamiliesFound') : t('admin.noFamilies') }}</div>
       </template>
-      <Column field="name" :header="t('common.name')" sortable />
+      <Column field="name" :header="t('common.name')" sortable>
+        <template #body="{ data }">
+          <span :class="{ 'text-muted': !data.active }">{{ data.name }}</span>
+          <Tag v-if="!data.active" :value="t('common.inactive')" severity="secondary" class="ml-2" />
+        </template>
+      </Column>
       <Column :header="t('admin.parents')">
         <template #body="{ data }">
           {{ parentCount(data) }}
@@ -243,9 +322,16 @@ onMounted(() => {
           <Tag v-if="data.hoursExempt" :value="t('admin.hoursExempt')" severity="secondary" />
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 120px">
+      <Column :header="t('common.actions')" style="width: 160px">
         <template #body="{ data }">
           <Button icon="pi pi-pencil" severity="secondary" text size="small" @click="openEdit(data)" :aria-label="t('common.edit')" />
+          <Button
+            :icon="data.active ? 'pi pi-eye-slash' : 'pi pi-eye'"
+            :severity="data.active ? 'warn' : 'success'"
+            text size="small"
+            @click="toggleActive(data)"
+            :aria-label="data.active ? t('admin.deactivate') : t('admin.activate')"
+          />
           <Button icon="pi pi-trash" severity="danger" text size="small" @click="deleteFamily(data)" :aria-label="t('common.delete')" />
         </template>
       </Column>
@@ -276,6 +362,10 @@ onMounted(() => {
                 <label>{{ t('admin.hoursExempt') }}</label>
                 <ToggleSwitch v-model="editExempt" />
               </div>
+              <div class="form-field toggle-field">
+                <label>{{ t('admin.familyActive') }}</label>
+                <ToggleSwitch v-model="editActive" />
+              </div>
               <div class="form-actions">
                 <Button :label="t('common.save')" type="submit" :loading="editLoading" />
               </div>
@@ -284,6 +374,9 @@ onMounted(() => {
 
           <!-- Members Tab -->
           <TabPanel value="1">
+            <div class="members-header">
+              <Button :label="t('admin.addMember')" icon="pi pi-plus" size="small" severity="secondary" @click="openAddMember" />
+            </div>
             <div v-if="!editFamily?.members.length" class="empty-tab">{{ t('admin.noFamilyMemberships') }}</div>
             <div v-else class="item-list">
               <div v-for="member in editFamily?.members" :key="member.userId" class="item-row">
@@ -337,6 +430,37 @@ onMounted(() => {
       </Tabs>
     </Dialog>
 
+    <!-- Add Member Dialog -->
+    <Dialog
+      v-model:visible="showAddMember"
+      :header="t('admin.addMember')"
+      modal
+      :style="{ width: '500px', maxWidth: '95vw' }"
+    >
+      <div class="dialog-form">
+        <div class="form-field">
+          <label>{{ t('admin.memberRole') }}</label>
+          <Select v-model="selectedMemberRole" :options="memberRoleOptions" optionLabel="label" optionValue="value" class="w-full" />
+        </div>
+        <div class="form-field">
+          <label>{{ t('admin.searchUser') }}</label>
+          <div class="search-input-row">
+            <InputText v-model="memberSearchQuery" :placeholder="t('admin.searchUserPlaceholder')" class="flex-1" @keyup.enter="searchMembers" />
+            <Button icon="pi pi-search" :loading="memberSearching" @click="searchMembers" />
+          </div>
+        </div>
+        <div v-if="memberSearchResults.length" class="item-list">
+          <div v-for="user in memberSearchResults" :key="user.id" class="item-row">
+            <div class="item-info">
+              <span class="item-name">{{ user.displayName }}</span>
+              <small class="text-muted">{{ user.email }}</small>
+            </div>
+            <Button icon="pi pi-plus" size="small" :loading="addingMember" @click="addMemberToFamily(user.id)" />
+          </div>
+        </div>
+      </div>
+    </Dialog>
+
     <!-- Confirm Dialog -->
     <Dialog v-model:visible="confirmVisible" :header="confirmHeader" modal :style="{ width: '400px' }">
       <p>{{ confirmMessage }}</p>
@@ -373,6 +497,10 @@ onMounted(() => {
   color: var(--p-text-muted-color);
 }
 
+.ml-2 {
+  margin-left: 0.5rem;
+}
+
 .dialog-form {
   display: flex;
   flex-direction: column;
@@ -403,6 +531,12 @@ onMounted(() => {
   padding-top: 0.5rem;
 }
 
+.members-header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.75rem;
+}
+
 .item-list {
   display: flex;
   flex-direction: column;
@@ -428,10 +562,30 @@ onMounted(() => {
   min-width: 0;
 }
 
+.item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.item-info small {
+  font-size: var(--mw-font-size-xs);
+}
+
 .empty-tab {
   padding: 2rem 0;
   text-align: center;
   color: var(--p-text-muted-color);
+}
+
+.search-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.flex-1 {
+  flex: 1;
 }
 
 .hours-grid {

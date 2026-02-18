@@ -23,22 +23,6 @@ vi.mock('@/api/admin.api', () => ({
             borderLight: '#E5E7EB',
           },
           modules: {},
-          targetHoursPerFamily: 30,
-          targetCleaningHours: 3,
-          bundesland: 'BY',
-          schoolVacations: [],
-        },
-      },
-    }),
-    updateConfig: vi.fn().mockResolvedValue({
-      data: {
-        data: {
-          id: 'tenant-1',
-          schoolName: 'Montessori Schule',
-          targetHoursPerFamily: 30,
-          targetCleaningHours: 3,
-          bundesland: 'BY',
-          schoolVacations: [],
         },
       },
     }),
@@ -68,11 +52,6 @@ const i18n = createI18n({
       admin: {
         themeTitle: 'Design & Einstellungen',
         logo: 'Logo',
-        hoursConfig: 'Stundenkonfiguration',
-        totalHoursTarget: 'Stundenziel gesamt',
-        cleaningHoursTarget: 'Putzstunden-Ziel',
-        saveHoursConfig: 'Stunden speichern',
-        hoursConfigSaved: 'Stundenkonfiguration gespeichert',
         colorScheme: 'Farbschema',
         preview: 'Vorschau',
         themeSaved: 'Design gespeichert',
@@ -108,34 +87,10 @@ const stubs = {
     template: '<input class="input-stub" :value="modelValue" />',
     props: ['modelValue'],
   },
-  InputNumber: {
-    template: '<input class="input-number-stub" :value="modelValue" />',
-    props: ['modelValue', 'min', 'max', 'minFractionDigits', 'maxFractionDigits'],
-  },
   FileUpload: {
     template: '<div class="fileupload-stub" />',
     props: ['mode', 'accept', 'maxFileSize', 'auto', 'chooseLabel'],
     emits: ['select'],
-  },
-  Select: {
-    template: '<select class="select-stub"><option>{{ modelValue }}</option></select>',
-    props: ['modelValue', 'options', 'optionLabel', 'optionValue'],
-  },
-  DatePicker: {
-    template: '<input class="datepicker-stub" />',
-    props: ['modelValue', 'dateFormat'],
-  },
-  ToggleSwitch: {
-    template: '<input type="checkbox" class="toggleswitch-stub" />',
-    props: ['modelValue'],
-  },
-  DataTable: {
-    template: '<table class="datatable-stub"><slot /></table>',
-    props: ['value', 'stripedRows'],
-  },
-  Column: {
-    template: '<td class="column-stub"><slot /></td>',
-    props: ['field', 'header'],
   },
 }
 
@@ -167,13 +122,6 @@ describe('AdminTheme', () => {
     expect(wrapper.text()).toContain('Logo')
   })
 
-  it('should render hours configuration section', () => {
-    const wrapper = mountComponent()
-    expect(wrapper.text()).toContain('Stundenkonfiguration')
-    expect(wrapper.text()).toContain('Stundenziel gesamt')
-    expect(wrapper.text()).toContain('Putzstunden-Ziel')
-  })
-
   it('should render color scheme section', () => {
     const wrapper = mountComponent()
     expect(wrapper.text()).toContain('Farbschema')
@@ -199,14 +147,6 @@ describe('AdminTheme', () => {
     expect(inputs.length).toBe(8)
   })
 
-  it('should render hours config input numbers', async () => {
-    const wrapper = mountComponent()
-    await flushPromises()
-    const numberInputs = wrapper.findAll('.input-number-stub')
-    // targetHoursPerFamily + targetCleaningHours
-    expect(numberInputs.length).toBe(2)
-  })
-
   it('should render FileUpload for logo', () => {
     const wrapper = mountComponent()
     expect(wrapper.find('.fileupload-stub').exists()).toBe(true)
@@ -219,14 +159,7 @@ describe('AdminTheme', () => {
     expect(saveBtn).toBeTruthy()
   })
 
-  it('should render save hours button', () => {
-    const wrapper = mountComponent()
-    const buttons = wrapper.findAll('.button-stub')
-    const hoursBtn = buttons.find(b => b.text().includes('Stunden speichern'))
-    expect(hoursBtn).toBeTruthy()
-  })
-
-  it('should call updateTheme when save theme is clicked', async () => {
+  it('should call updateTheme when save is clicked', async () => {
     const wrapper = mountComponent()
     await flushPromises()
 
@@ -236,22 +169,6 @@ describe('AdminTheme', () => {
     await flushPromises()
 
     expect(adminApi.updateTheme).toHaveBeenCalled()
-  })
-
-  it('should call updateConfig when save hours is clicked', async () => {
-    const wrapper = mountComponent()
-    await flushPromises()
-
-    const buttons = wrapper.findAll('.button-stub')
-    const hoursBtn = buttons.find(b => b.text().includes('Stunden speichern'))
-    if (hoursBtn) {
-      await hoursBtn.trigger('click')
-      await flushPromises()
-      expect(adminApi.updateConfig).toHaveBeenCalledWith({
-        targetHoursPerFamily: 30,
-        targetCleaningHours: 3,
-      })
-    }
   })
 
   it('should display logo image when config has logoUrl', async () => {

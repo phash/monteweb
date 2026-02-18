@@ -43,7 +43,7 @@ public class FamilyController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
     public ResponseEntity<ApiResponse<List<FamilyInfo>>> getAll() {
         var families = familyService.findAll();
         return ResponseEntity.ok(ApiResponse.ok(families));
@@ -57,7 +57,7 @@ public class FamilyController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
     public ResponseEntity<ApiResponse<FamilyInfo>> updateFamily(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateFamilyRequest request) {
@@ -67,15 +67,26 @@ public class FamilyController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteFamily(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         familyService.deleteFamily(id, userId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Family deleted"));
     }
 
+    @PutMapping("/{id}/active")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
+    public ResponseEntity<ApiResponse<FamilyInfo>> setActive(
+            @PathVariable UUID id,
+            @RequestBody Map<String, Boolean> body) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        boolean active = body.getOrDefault("active", true);
+        var family = familyService.setActive(id, active, userId);
+        return ResponseEntity.ok(ApiResponse.ok(family));
+    }
+
     @PutMapping("/{id}/hours-exempt")
-    @PreAuthorize("hasRole('SUPERADMIN')")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
     public ResponseEntity<ApiResponse<FamilyInfo>> setHoursExempt(
             @PathVariable UUID id,
             @RequestBody Map<String, Boolean> body) {
@@ -83,6 +94,27 @@ public class FamilyController {
         boolean exempt = body.getOrDefault("exempt", false);
         var family = familyService.setHoursExempt(id, exempt, userId);
         return ResponseEntity.ok(ApiResponse.ok(family));
+    }
+
+    @PostMapping("/{id}/members")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
+    public ResponseEntity<ApiResponse<FamilyInfo>> addMember(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body) {
+        String memberUserId = body.get("userId");
+        String role = body.getOrDefault("role", "PARENT");
+        familyService.adminAddMember(id, UUID.fromString(memberUserId), role);
+        var family = familyService.findById(id).orElseThrow();
+        return ResponseEntity.ok(ApiResponse.ok(family));
+    }
+
+    @DeleteMapping("/{id}/members/{memberId}/admin")
+    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> adminRemoveMember(
+            @PathVariable UUID id,
+            @PathVariable UUID memberId) {
+        familyService.adminRemoveMember(id, memberId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Member removed"));
     }
 
     @GetMapping("/mine")

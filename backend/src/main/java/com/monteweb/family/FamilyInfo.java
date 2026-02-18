@@ -11,6 +11,7 @@ public record FamilyInfo(
         String name,
         String avatarUrl,
         boolean hoursExempt,
+        boolean active,
         List<FamilyMemberInfo> members
 ) {
     public record FamilyMemberInfo(
