@@ -212,6 +212,8 @@ export default {
       familiesDesc: 'Familienverbunde verwalten',
       billing: 'Jahresabrechnung',
       billingDesc: 'Elternstunden-Abrechnung nach Perioden',
+      theme: 'Design & Einstellungen',
+      themeDesc: 'Farben, Logo, Stunden und Ferien konfigurieren',
     },
     users: 'Benutzer',
     rooms: 'Räume',

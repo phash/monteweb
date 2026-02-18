@@ -12,6 +12,7 @@ const adminLinks = [
   { to: '/admin/billing', icon: 'pi pi-calculator', labelKey: 'admin.dashboard.billing', descKey: 'admin.dashboard.billingDesc' },
   { to: '/admin/modules', icon: 'pi pi-cog', labelKey: 'admin.dashboard.modules', descKey: 'admin.dashboard.modulesDesc' },
   { to: '/admin/error-reports', icon: 'pi pi-exclamation-triangle', labelKey: 'errorReports.title', descKey: 'errorReports.subtitle' },
+  { to: '/admin/theme', icon: 'pi pi-palette', labelKey: 'admin.dashboard.theme', descKey: 'admin.dashboard.themeDesc' },
 ]
 </script>
 

@@ -212,6 +212,8 @@ export default {
       familiesDesc: 'Manage family groups',
       billing: 'Annual Billing',
       billingDesc: 'Parent hours billing by period',
+      theme: 'Design & Settings',
+      themeDesc: 'Colors, logo, hours and vacation configuration',
     },
     users: 'Users',
     rooms: 'Rooms',
