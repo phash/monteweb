@@ -33,25 +33,32 @@ const RELATIVE_URL_REGEX = new RegExp(
   'gi'
 )
 
+function resolveType(pathType: string): 'event' | 'job' | 'room' {
+  if (pathType === 'calendar/events') return 'event'
+  if (pathType === 'jobs') return 'job'
+  return 'room'
+}
+
 const linkUrls = computed(() => {
   const urls: { url: string; type: 'event' | 'job' | 'room'; id: string }[] = []
   const content = props.content
 
-  // Full URLs
-  let match
+  let match: RegExpExecArray | null
   const fullRegex = new RegExp(URL_REGEX.source, 'gi')
   while ((match = fullRegex.exec(content)) !== null) {
-    const type = match[2] === 'calendar/events' ? 'event' : match[2] === 'jobs' ? 'job' : 'room'
-    urls.push({ url: match[1], type, id: match[3] })
+    const urlStr = match[1] ?? ''
+    const pathType = match[2] ?? ''
+    const id = match[3] ?? ''
+    urls.push({ url: urlStr, type: resolveType(pathType), id })
   }
 
-  // Relative URLs
   const relRegex = new RegExp(RELATIVE_URL_REGEX.source, 'gi')
   while ((match = relRegex.exec(content)) !== null) {
-    const type = match[2] === 'calendar/events' ? 'event' : match[2] === 'jobs' ? 'job' : 'room'
-    const url = match[1].trim()
-    if (!urls.some(u => u.id === match![3])) {
-      urls.push({ url, type, id: match[3] })
+    const urlStr = (match[1] ?? '').trim()
+    const pathType = match[2] ?? ''
+    const id = match[3] ?? ''
+    if (!urls.some(u => u.id === id)) {
+      urls.push({ url: urlStr, type: resolveType(pathType), id })
     }
   }
 
@@ -97,7 +104,7 @@ async function resolveLinks() {
           route: `/jobs/${link.id}`,
         })
       } else if (link.type === 'room') {
-        const res = await roomsApi.getRoom(link.id)
+        const res = await roomsApi.getById(link.id)
         const room = res.data.data
         resolvedLinks.value.set(link.url, {
           url: link.url,
@@ -131,7 +138,7 @@ const segments = computed(() => {
     if (match.index > lastIndex) {
       result.push({ type: 'text', value: content.slice(lastIndex, match.index) })
     }
-    result.push({ type: 'link', value: match[1] })
+    result.push({ type: 'link', value: match[1] ?? match[0] })
     lastIndex = match.index + match[0].length
   }
   if (lastIndex < content.length) {
