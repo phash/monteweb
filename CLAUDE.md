@@ -7,12 +7,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MonteWeb: modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Krippe bis Oberstufe).
 Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (QR-Check-in), Kalender, Formulare, Fotobox.
 
-**Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO | Docker Compose + nginx
+**Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO | Docker Compose + Caddy (SSL) + nginx
 
 ## Commands
 
 ```bash
-# Full stack (Docker) — http://localhost (port 80)
+# Full stack (Docker) — http://localhost (port 80/443)
+# Set DOMAIN in .env: localhost (no SSL) or monteweb.deineschule.de (auto SSL)
 docker compose up -d
 docker compose build && docker compose up -d          # rebuild all
 docker compose build backend && docker compose up backend -d   # backend only

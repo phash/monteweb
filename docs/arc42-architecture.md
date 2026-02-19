@@ -109,29 +109,31 @@ MonteWeb is a modular, self-hosted school intranet for Montessori school complex
 ### 3.2 Technical Context
 
 ```
-+-----------------------------------------------------------+
-|                    Docker Host                             |
-|                                                            |
-|  +----------+    +----------+    +---------+               |
-|  | nginx    |--->| Backend  |--->|Postgres |               |
-|  | :80      |    | :8080    |    | :5432   |               |
-|  +----------+    +----+-----+    +---------+               |
-|       |               |                                    |
-|       |          +----+-----+    +---------+               |
-|       |          | Redis    |    | MinIO   |               |
-|       |          | :6379    |    | :9000   |               |
-|       |          +----------+    +---------+               |
-|       |                                                    |
-|  +----+------+   +----------+    +---------+               |
-|  | Frontend  |   |Prometheus|    | Grafana | (optional)    |
-|  | (static)  |   | :9090    |    | :3000   |               |
-|  +-----------+   +----------+    +---------+               |
-+-----------------------------------------------------------+
++----------------------------------------------------------------------+
+|  Docker Host                                                          |
+|                                                                        |
+|  +----------+    +----------+    +----------+    +---------+          |
+|  | Caddy    |--->| Frontend |--->| Backend  |--->|Postgres |          |
+|  | :80/:443 |    | (nginx)  |    | (JRE 21) |    | :5432   |          |
+|  +----------+    +----------+    +----+------+    +---------+          |
+|   (SSL/TLS)                           |                                |
+|                                  +----+------+    +---------+          |
+|                                  | Redis 7   |    | MinIO   |          |
+|                                  | :6379     |    | :9000   |          |
+|                                  +-----------+    +---------+          |
+|                                                                        |
+|  [monitoring profile]                                                  |
+|  +----------+    +----------+                                          |
+|  |Prometheus|    | Grafana  |                                          |
+|  | :9090    |───>| :3000    |                                          |
+|  +----------+    +----------+                                          |
++----------------------------------------------------------------------+
 ```
 
 | Channel | Technology | Purpose |
 |---------|-----------|---------|
-| HTTP/HTTPS | nginx reverse proxy | SPA delivery, API routing |
+| HTTPS | Caddy reverse proxy | TLS termination, auto Let's Encrypt |
+| HTTP | nginx (internal) | SPA delivery, API routing to backend |
 | WebSocket | Spring WebSocket + Redis Pub/Sub | Real-time notifications, chat |
 | JDBC | PostgreSQL driver | Persistent data storage |
 | Redis Protocol | Lettuce client | Sessions, cache, pub/sub |
@@ -311,31 +313,36 @@ Admin UI        Backend (admin)       Spring Context
 ### 7.1 Production Deployment
 
 ```
-+------------------------------------------------------------------+
-|  Docker Host (single server)                                      |
-|                                                                    |
-|  docker-compose.yml                                               |
-|  ┌────────────────────────────────────────────────────────────┐   |
-|  │                                                            │   |
-|  │  ┌──────────┐    ┌──────────┐    ┌──────────┐            │   |
-|  │  │ Frontend │    │ Backend  │    │ Postgres │            │   |
-|  │  │ (nginx)  │───>│ (JRE 21) │───>│   16     │            │   |
-|  │  │ :80      │    │ :8080    │    │ :5432    │            │   |
-|  │  └──────────┘    └────┬─────┘    └──────────┘            │   |
-|  │                       │                                    │   |
-|  │                  ┌────┴─────┐    ┌──────────┐            │   |
-|  │                  │ Redis 7  │    │ MinIO    │            │   |
-|  │                  │ :6379    │    │ :9000    │            │   |
-|  │                  └──────────┘    └──────────┘            │   |
-|  │                                                            │   |
-|  │  [monitoring profile]                                      │   |
-|  │  ┌──────────┐    ┌──────────┐                             │   |
-|  │  │Prometheus│    │ Grafana  │                             │   |
-|  │  │ :9090    │───>│ :3000    │                             │   |
-|  │  └──────────┘    └──────────┘                             │   |
-|  └────────────────────────────────────────────────────────────┘   |
-+------------------------------------------------------------------+
++----------------------------------------------------------------------+
+|  Docker Host (single server)                                          |
+|                                                                        |
+|  docker-compose.yml                                                    |
+|  ┌──────────────────────────────────────────────────────────────────┐ |
+|  │                                                                  │ |
+|  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │ |
+|  │  │  Caddy   │─>│ Frontend │─>│ Backend  │─>│ Postgres │       │ |
+|  │  │ :80/:443 │  │ (nginx)  │  │ (JRE 21) │  │   16     │       │ |
+|  │  │ (SSL)    │  │ internal │  │ :8080    │  │ :5432    │       │ |
+|  │  └──────────┘  └──────────┘  └────┬─────┘  └──────────┘       │ |
+|  │                                    │                            │ |
+|  │                               ┌────┴─────┐  ┌──────────┐       │ |
+|  │                               │ Redis 7  │  │ MinIO    │       │ |
+|  │                               │ :6379    │  │ :9000    │       │ |
+|  │                               └──────────┘  └──────────┘       │ |
+|  │                                                                  │ |
+|  │  [monitoring profile]                                            │ |
+|  │  ┌──────────┐  ┌──────────┐                                     │ |
+|  │  │Prometheus│  │ Grafana  │                                     │ |
+|  │  │ :9090    │─>│ :3000    │                                     │ |
+|  │  └──────────┘  └──────────┘                                     │ |
+|  └──────────────────────────────────────────────────────────────────┘ |
++----------------------------------------------------------------------+
+
+Internet ──HTTPS──> Caddy :443 ──HTTP──> nginx :80 ──proxy──> Backend :8080
+                    (Let's Encrypt)      (SPA + API routing)
 ```
+
+**TLS/SSL:** Caddy automatically provisions and renews Let's Encrypt certificates when `DOMAIN` is set to a real hostname in `.env`. For local/LAN use, set `DOMAIN=localhost` (no SSL).
 
 ### 7.2 Infrastructure Requirements
 

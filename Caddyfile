@@ -1,0 +1,36 @@
+# MonteWeb — Caddy Reverse Proxy Configuration
+#
+# Usage:
+#   Local (self-signed HTTPS): Set DOMAIN=localhost in .env (default)
+#   LAN (plain HTTP):          Set DOMAIN=:80 in .env
+#   Production (auto SSL):     Set DOMAIN=monteweb.deineschule.de in .env
+#
+# Caddy automatically provisions Let's Encrypt certificates when
+# DOMAIN is set to a real hostname. No manual certificate management needed.
+# For localhost, Caddy generates a self-signed local CA certificate.
+
+{$DOMAIN:localhost} {
+	# Reverse proxy to the frontend nginx container
+	reverse_proxy frontend:80
+
+	# Request size limit for file uploads (Fotobox, Chat images, Fundgrube)
+	request_body {
+		max_size 50MB
+	}
+
+	# Security headers
+	header {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Remove server identification
+		-Server
+	}
+
+	# Logging
+	log {
+		output stdout
+		format console
+	}
+}

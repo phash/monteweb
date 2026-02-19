@@ -147,6 +147,7 @@ jobs:
           MINIO_ACCESS_KEY: ci-dummy
           MINIO_SECRET_KEY: ci-dummy
           JWT_SECRET: ci-dummy-jwt-secret-for-config-validation-only
+          DOMAIN: localhost
         run: docker compose config -q
 
       - name: Scan backend image
