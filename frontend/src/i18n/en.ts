@@ -771,6 +771,8 @@ export default {
     updated: 'Event updated',
     today: 'Today',
     month: 'Month',
+    threeMonth: '3 Months',
+    year: 'Year',
     agenda: 'Agenda',
   },
   forms: {
@@ -1711,5 +1713,8 @@ export default {
         },
       },
     },
+  },
+  footer: {
+    deployed: 'Deployed',
   },
 }

@@ -771,6 +771,8 @@ export default {
     updated: 'Termin aktualisiert',
     today: 'Heute',
     month: 'Monat',
+    threeMonth: '3 Monate',
+    year: 'Jahr',
     agenda: 'Agenda',
   },
   forms: {
@@ -1711,5 +1713,8 @@ export default {
         },
       },
     },
+  },
+  footer: {
+    deployed: 'Deployed',
   },
 }

@@ -9,6 +9,11 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  define: {
+    __APP_VERSION__: JSON.stringify('0.0.0-test'),
+    __BUILD_TIME__: JSON.stringify('2024-01-01T00:00:00.000Z'),
+    __GIT_BRANCH__: JSON.stringify('test'),
+  },
   test: {
     environment: 'jsdom',
     globals: true,
