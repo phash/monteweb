@@ -31,17 +31,23 @@ MINIO_SECRET_KEY=ein-sicheres-passwort
 FRONTEND_URL=https://monteweb.deineschule.de
 ```
 
-### Domain / SSL konfigurieren
+### SSL / HTTPS fuer Produktion (optional)
+
+Fuer den Betrieb im Internet wird HTTPS empfohlen. MonteWeb bringt einen Caddy-Proxy mit, der automatisch Let's Encrypt Zertifikate holt:
 
 ```env
-# Lokal / LAN (kein SSL):
-DOMAIN=localhost
-
-# Produktion mit automatischem Let's Encrypt SSL:
+# In .env:
+APP_PORT=          # leer lassen! Caddy uebernimmt Port 80/443
 DOMAIN=monteweb.deineschule.de
+FRONTEND_URL=https://monteweb.deineschule.de
 ```
 
-Caddy holt sich automatisch ein TLS-Zertifikat von Let's Encrypt, wenn `DOMAIN` auf einen echten Hostnamen gesetzt ist. Voraussetzung: Port 80 und 443 muessen vom Internet erreichbar sein.
+```bash
+# Mit SSL starten:
+docker compose --profile ssl up -d
+```
+
+Caddy holt sich automatisch ein TLS-Zertifikat von Let's Encrypt. Voraussetzung: Port 80 und 443 muessen vom Internet erreichbar sein und der DNS-Eintrag muss auf den Server zeigen.
 
 ## 3. Starten
 
@@ -78,7 +84,8 @@ Internet --HTTPS--> Caddy :443 --HTTP--> nginx :80 --proxy--> Backend :8080
                     (Let's Encrypt)      (SPA + API)          (Spring Boot)
 ```
 
-6 Container: `caddy`, `frontend` (nginx), `backend` (Java), `postgres`, `redis`, `minio`
+5 Container: `frontend` (nginx), `backend` (Java), `postgres`, `redis`, `minio`
+Mit SSL-Profil: + `caddy` (6 Container)
 
 ## Nuetzliche Befehle
 
