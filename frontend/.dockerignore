@@ -1,0 +1,38 @@
+# Dependencies (installed in build stage via npm ci)
+node_modules/
+
+# Build output (generated in build stage)
+dist/
+
+# Test & coverage
+coverage/
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+vitest.config.ts
+
+# IDE
+.vscode/
+.idea/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Vite cache
+.vite/
+
+# Docs
+*.md
+LICENSE
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Env files (not needed in build)
+.env*

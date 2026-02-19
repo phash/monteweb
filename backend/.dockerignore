@@ -1,0 +1,37 @@
+# Build output
+target/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Tests (run in CI, not needed in image)
+src/test/
+
+# Docs
+*.md
+LICENSE
+
+# Maven wrapper (not needed — build stage has Maven)
+.mvn/
+mvnw
+mvnw.cmd
+
+# Logs
+*.log
+hs_err_pid*
