@@ -139,6 +139,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Verify compose config
+        env:
+          POSTGRES_PASSWORD: ci-dummy
+          REDIS_PASSWORD: ci-dummy
+          MINIO_ACCESS_KEY: ci-dummy
+          MINIO_SECRET_KEY: ci-dummy
+          JWT_SECRET: ci-dummy-jwt-secret-for-config-validation-only
         run: docker compose config -q
 
       - name: Scan backend image
