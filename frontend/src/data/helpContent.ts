@@ -593,6 +593,22 @@ export const helpContent: Record<string, PageHelp> = {
     },
   },
 
+  'admin-settings': {
+    pageTitle: 'help.pages.adminSettings.title',
+    roles: {
+      SUPERADMIN: {
+        actions: [
+          'help.pages.adminSettings.action1',
+          'help.pages.adminSettings.action2',
+          'help.pages.adminSettings.action3',
+        ],
+        tips: [
+          'help.pages.adminSettings.tip1',
+        ],
+      },
+    },
+  },
+
   'section-admin': {
     pageTitle: 'help.pages.sectionAdmin.title',
     roles: {
@@ -625,42 +641,72 @@ export const handbookContent: Record<string, HandbookChapter[]> = {
     {
       title: 'help.handbook.parent.gettingStarted.title',
       sections: [
-        { title: 'help.handbook.parent.gettingStarted.login.title', content: ['help.handbook.parent.gettingStarted.login.content'] },
-        { title: 'help.handbook.parent.gettingStarted.dashboard.title', content: ['help.handbook.parent.gettingStarted.dashboard.content'] },
-        { title: 'help.handbook.parent.gettingStarted.profile.title', content: ['help.handbook.parent.gettingStarted.profile.content'] },
+        { title: 'help.handbook.parent.gettingStarted.login.title', content: ['help.handbook.parent.gettingStarted.login.content', 'help.handbook.parent.gettingStarted.login.content2'] },
+        { title: 'help.handbook.parent.gettingStarted.dashboard.title', content: ['help.handbook.parent.gettingStarted.dashboard.content', 'help.handbook.parent.gettingStarted.dashboard.content2'] },
+        { title: 'help.handbook.parent.gettingStarted.navigation.title', content: ['help.handbook.parent.gettingStarted.navigation.content'] },
+        { title: 'help.handbook.parent.gettingStarted.profile.title', content: ['help.handbook.parent.gettingStarted.profile.content', 'help.handbook.parent.gettingStarted.profile.content2'] },
       ],
     },
     {
       title: 'help.handbook.parent.family.title',
       sections: [
-        { title: 'help.handbook.parent.family.create.title', content: ['help.handbook.parent.family.create.content'] },
-        { title: 'help.handbook.parent.family.invite.title', content: ['help.handbook.parent.family.invite.content'] },
-        { title: 'help.handbook.parent.family.hours.title', content: ['help.handbook.parent.family.hours.content'] },
+        { title: 'help.handbook.parent.family.create.title', content: ['help.handbook.parent.family.create.content', 'help.handbook.parent.family.create.content2'] },
+        { title: 'help.handbook.parent.family.invite.title', content: ['help.handbook.parent.family.invite.content', 'help.handbook.parent.family.invite.content2'] },
+        { title: 'help.handbook.parent.family.hours.title', content: ['help.handbook.parent.family.hours.content', 'help.handbook.parent.family.hours.content2'] },
       ],
     },
     {
       title: 'help.handbook.parent.rooms.title',
       sections: [
-        { title: 'help.handbook.parent.rooms.overview.title', content: ['help.handbook.parent.rooms.overview.content'] },
-        { title: 'help.handbook.parent.rooms.feed.title', content: ['help.handbook.parent.rooms.feed.content'] },
-        { title: 'help.handbook.parent.rooms.files.title', content: ['help.handbook.parent.rooms.files.content'] },
+        { title: 'help.handbook.parent.rooms.overview.title', content: ['help.handbook.parent.rooms.overview.content', 'help.handbook.parent.rooms.overview.content2'] },
+        { title: 'help.handbook.parent.rooms.feed.title', content: ['help.handbook.parent.rooms.feed.content', 'help.handbook.parent.rooms.feed.content2'] },
+        { title: 'help.handbook.parent.rooms.files.title', content: ['help.handbook.parent.rooms.files.content', 'help.handbook.parent.rooms.files.content2'] },
+        { title: 'help.handbook.parent.rooms.fotobox.title', content: ['help.handbook.parent.rooms.fotobox.content'] },
       ],
     },
     {
       title: 'help.handbook.parent.communication.title',
       sections: [
-        { title: 'help.handbook.parent.communication.messages.title', content: ['help.handbook.parent.communication.messages.content'] },
+        { title: 'help.handbook.parent.communication.messages.title', content: ['help.handbook.parent.communication.messages.content', 'help.handbook.parent.communication.messages.content2'] },
+        { title: 'help.handbook.parent.communication.notifications.title', content: ['help.handbook.parent.communication.notifications.content'] },
         { title: 'help.handbook.parent.communication.feed.title', content: ['help.handbook.parent.communication.feed.content'] },
       ],
     },
     {
       title: 'help.handbook.parent.services.title',
       sections: [
-        { title: 'help.handbook.parent.services.jobs.title', content: ['help.handbook.parent.services.jobs.content'] },
-        { title: 'help.handbook.parent.services.cleaning.title', content: ['help.handbook.parent.services.cleaning.content'] },
-        { title: 'help.handbook.parent.services.calendar.title', content: ['help.handbook.parent.services.calendar.content'] },
-        { title: 'help.handbook.parent.services.forms.title', content: ['help.handbook.parent.services.forms.content'] },
-        { title: 'help.handbook.parent.services.fundgrube.title', content: ['help.handbook.parent.services.fundgrube.content'] },
+        { title: 'help.handbook.parent.services.jobs.title', content: ['help.handbook.parent.services.jobs.content', 'help.handbook.parent.services.jobs.content2'] },
+        { title: 'help.handbook.parent.services.cleaning.title', content: ['help.handbook.parent.services.cleaning.content', 'help.handbook.parent.services.cleaning.content2'] },
+        { title: 'help.handbook.parent.services.calendar.title', content: ['help.handbook.parent.services.calendar.content', 'help.handbook.parent.services.calendar.content2'] },
+        { title: 'help.handbook.parent.services.forms.title', content: ['help.handbook.parent.services.forms.content', 'help.handbook.parent.services.forms.content2'] },
+        { title: 'help.handbook.parent.services.fundgrube.title', content: ['help.handbook.parent.services.fundgrube.content', 'help.handbook.parent.services.fundgrube.content2'] },
+      ],
+    },
+  ],
+  student: [
+    {
+      title: 'help.handbook.student.gettingStarted.title',
+      sections: [
+        { title: 'help.handbook.student.gettingStarted.login.title', content: ['help.handbook.student.gettingStarted.login.content'] },
+        { title: 'help.handbook.student.gettingStarted.dashboard.title', content: ['help.handbook.student.gettingStarted.dashboard.content'] },
+        { title: 'help.handbook.student.gettingStarted.profile.title', content: ['help.handbook.student.gettingStarted.profile.content'] },
+      ],
+    },
+    {
+      title: 'help.handbook.student.rooms.title',
+      sections: [
+        { title: 'help.handbook.student.rooms.overview.title', content: ['help.handbook.student.rooms.overview.content'] },
+        { title: 'help.handbook.student.rooms.feed.title', content: ['help.handbook.student.rooms.feed.content'] },
+        { title: 'help.handbook.student.rooms.files.title', content: ['help.handbook.student.rooms.files.content'] },
+        { title: 'help.handbook.student.rooms.discussions.title', content: ['help.handbook.student.rooms.discussions.content'] },
+      ],
+    },
+    {
+      title: 'help.handbook.student.tools.title',
+      sections: [
+        { title: 'help.handbook.student.tools.calendar.title', content: ['help.handbook.student.tools.calendar.content'] },
+        { title: 'help.handbook.student.tools.forms.title', content: ['help.handbook.student.tools.forms.content'] },
+        { title: 'help.handbook.student.tools.messages.title', content: ['help.handbook.student.tools.messages.content'] },
       ],
     },
   ],
@@ -669,31 +715,33 @@ export const handbookContent: Record<string, HandbookChapter[]> = {
       title: 'help.handbook.teacher.gettingStarted.title',
       sections: [
         { title: 'help.handbook.teacher.gettingStarted.login.title', content: ['help.handbook.teacher.gettingStarted.login.content'] },
-        { title: 'help.handbook.teacher.gettingStarted.dashboard.title', content: ['help.handbook.teacher.gettingStarted.dashboard.content'] },
+        { title: 'help.handbook.teacher.gettingStarted.dashboard.title', content: ['help.handbook.teacher.gettingStarted.dashboard.content', 'help.handbook.teacher.gettingStarted.dashboard.content2'] },
       ],
     },
     {
       title: 'help.handbook.teacher.rooms.title',
       sections: [
-        { title: 'help.handbook.teacher.rooms.manage.title', content: ['help.handbook.teacher.rooms.manage.content'] },
-        { title: 'help.handbook.teacher.rooms.feed.title', content: ['help.handbook.teacher.rooms.feed.content'] },
-        { title: 'help.handbook.teacher.rooms.files.title', content: ['help.handbook.teacher.rooms.files.content'] },
-        { title: 'help.handbook.teacher.rooms.fotobox.title', content: ['help.handbook.teacher.rooms.fotobox.content'] },
+        { title: 'help.handbook.teacher.rooms.manage.title', content: ['help.handbook.teacher.rooms.manage.content', 'help.handbook.teacher.rooms.manage.content2'] },
+        { title: 'help.handbook.teacher.rooms.feed.title', content: ['help.handbook.teacher.rooms.feed.content', 'help.handbook.teacher.rooms.feed.content2'] },
+        { title: 'help.handbook.teacher.rooms.files.title', content: ['help.handbook.teacher.rooms.files.content', 'help.handbook.teacher.rooms.files.content2'] },
+        { title: 'help.handbook.teacher.rooms.fotobox.title', content: ['help.handbook.teacher.rooms.fotobox.content', 'help.handbook.teacher.rooms.fotobox.content2'] },
+        { title: 'help.handbook.teacher.rooms.discussions.title', content: ['help.handbook.teacher.rooms.discussions.content'] },
+        { title: 'help.handbook.teacher.rooms.members.title', content: ['help.handbook.teacher.rooms.members.content'] },
       ],
     },
     {
       title: 'help.handbook.teacher.communication.title',
       sections: [
-        { title: 'help.handbook.teacher.communication.messages.title', content: ['help.handbook.teacher.communication.messages.content'] },
+        { title: 'help.handbook.teacher.communication.messages.title', content: ['help.handbook.teacher.communication.messages.content', 'help.handbook.teacher.communication.messages.content2'] },
         { title: 'help.handbook.teacher.communication.feed.title', content: ['help.handbook.teacher.communication.feed.content'] },
       ],
     },
     {
       title: 'help.handbook.teacher.tools.title',
       sections: [
-        { title: 'help.handbook.teacher.tools.calendar.title', content: ['help.handbook.teacher.tools.calendar.content'] },
-        { title: 'help.handbook.teacher.tools.forms.title', content: ['help.handbook.teacher.tools.forms.content'] },
-        { title: 'help.handbook.teacher.tools.jobs.title', content: ['help.handbook.teacher.tools.jobs.content'] },
+        { title: 'help.handbook.teacher.tools.calendar.title', content: ['help.handbook.teacher.tools.calendar.content', 'help.handbook.teacher.tools.calendar.content2'] },
+        { title: 'help.handbook.teacher.tools.forms.title', content: ['help.handbook.teacher.tools.forms.content', 'help.handbook.teacher.tools.forms.content2'] },
+        { title: 'help.handbook.teacher.tools.jobs.title', content: ['help.handbook.teacher.tools.jobs.content', 'help.handbook.teacher.tools.jobs.content2'] },
       ],
     },
   ],
@@ -701,33 +749,35 @@ export const handbookContent: Record<string, HandbookChapter[]> = {
     {
       title: 'help.handbook.admin.overview.title',
       sections: [
-        { title: 'help.handbook.admin.overview.dashboard.title', content: ['help.handbook.admin.overview.dashboard.content'] },
+        { title: 'help.handbook.admin.overview.dashboard.title', content: ['help.handbook.admin.overview.dashboard.content', 'help.handbook.admin.overview.dashboard.content2'] },
         { title: 'help.handbook.admin.overview.navigation.title', content: ['help.handbook.admin.overview.navigation.content'] },
       ],
     },
     {
       title: 'help.handbook.admin.users.title',
       sections: [
-        { title: 'help.handbook.admin.users.manage.title', content: ['help.handbook.admin.users.manage.content'] },
-        { title: 'help.handbook.admin.users.roles.title', content: ['help.handbook.admin.users.roles.content'] },
+        { title: 'help.handbook.admin.users.manage.title', content: ['help.handbook.admin.users.manage.content', 'help.handbook.admin.users.manage.content2'] },
+        { title: 'help.handbook.admin.users.roles.title', content: ['help.handbook.admin.users.roles.content', 'help.handbook.admin.users.roles.content2'] },
         { title: 'help.handbook.admin.users.approval.title', content: ['help.handbook.admin.users.approval.content'] },
       ],
     },
     {
       title: 'help.handbook.admin.structure.title',
       sections: [
-        { title: 'help.handbook.admin.structure.sections.title', content: ['help.handbook.admin.structure.sections.content'] },
-        { title: 'help.handbook.admin.structure.rooms.title', content: ['help.handbook.admin.structure.rooms.content'] },
-        { title: 'help.handbook.admin.structure.families.title', content: ['help.handbook.admin.structure.families.content'] },
+        { title: 'help.handbook.admin.structure.sections.title', content: ['help.handbook.admin.structure.sections.content', 'help.handbook.admin.structure.sections.content2'] },
+        { title: 'help.handbook.admin.structure.rooms.title', content: ['help.handbook.admin.structure.rooms.content', 'help.handbook.admin.structure.rooms.content2'] },
+        { title: 'help.handbook.admin.structure.families.title', content: ['help.handbook.admin.structure.families.content', 'help.handbook.admin.structure.families.content2'] },
       ],
     },
     {
       title: 'help.handbook.admin.system.title',
       sections: [
-        { title: 'help.handbook.admin.system.modules.title', content: ['help.handbook.admin.system.modules.content'] },
+        { title: 'help.handbook.admin.system.modules.title', content: ['help.handbook.admin.system.modules.content', 'help.handbook.admin.system.modules.content2'] },
+        { title: 'help.handbook.admin.system.settings.title', content: ['help.handbook.admin.system.settings.content'] },
         { title: 'help.handbook.admin.system.theme.title', content: ['help.handbook.admin.system.theme.content'] },
-        { title: 'help.handbook.admin.system.cleaning.title', content: ['help.handbook.admin.system.cleaning.content'] },
+        { title: 'help.handbook.admin.system.cleaning.title', content: ['help.handbook.admin.system.cleaning.content', 'help.handbook.admin.system.cleaning.content2'] },
         { title: 'help.handbook.admin.system.billing.title', content: ['help.handbook.admin.system.billing.content'] },
+        { title: 'help.handbook.admin.system.errorReports.title', content: ['help.handbook.admin.system.errorReports.content'] },
       ],
     },
   ],

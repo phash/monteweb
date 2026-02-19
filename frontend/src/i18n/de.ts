@@ -1360,6 +1360,13 @@ export default {
         action3: 'Berichte als PDF exportieren',
         tip1: 'Geschlossene Perioden können nicht mehr verändert werden.',
       },
+      adminSettings: {
+        title: 'Einstellungen',
+        action1: 'Sprache, Registrierung und Stundenkonfiguration verwalten',
+        action2: 'Bundesland und Schulferien einstellen',
+        action3: 'Bestätigungspflicht für Elternstunden konfigurieren',
+        tip1: 'Änderungen an Sprache und Registrierung gelten sofort für alle Nutzer.',
+      },
       sectionAdmin: {
         title: 'Bereichsverwaltung',
         action1: 'Räume des eigenen Bereichs verwalten',
@@ -1384,80 +1391,158 @@ export default {
         gettingStarted: {
           title: 'Erste Schritte',
           login: {
-            title: 'Anmeldung',
-            content: 'Melde dich mit deiner E-Mail-Adresse und deinem Passwort an. Falls du noch kein Konto hast, registriere dich über die Anmeldeseite. Nach der Registrierung muss ein Administrator deinen Zugang freigeben.',
+            title: 'Anmeldung & Registrierung',
+            content: 'Öffne MonteWeb im Browser und melde dich mit deiner E-Mail-Adresse und deinem Passwort an. Falls deine Schule Single Sign-On (SSO) nutzt, kannst du alternativ den Button „Mit SSO anmelden" verwenden.',
+            content2: 'Falls du noch kein Konto hast: Klicke auf „Registrieren", fülle die Pflichtfelder aus (E-Mail, Vorname, Nachname, Passwort) und achte auf die Passwort-Stärkeanzeige. Je nach Schuleinstellung muss ein Administrator deinen Zugang nach der Registrierung freigeben. Über „Passwort vergessen?" auf der Login-Seite kannst du ein neues Passwort anfordern.',
           },
           dashboard: {
             title: 'Das Dashboard',
-            content: 'Nach der Anmeldung siehst du das Dashboard mit dem Feed deiner Räume, anstehenden Terminen, offenen Formularen und wichtigen Bannern. Das Dashboard zeigt nur Inhalte aus Räumen, in denen du oder deine Kinder Mitglied sind.',
+            content: 'Nach der Anmeldung siehst du das Dashboard — deine persönliche Startseite. Oben erscheinen kontextabhängige Systembanner, z.B. Erinnerungen an anstehende Putztermine oder Hinweise auf abgesagte Veranstaltungen. Darunter findest du das Elternstunden-Widget mit dem aktuellen Stand deiner regulären Stunden und Putzstunden.',
+            content2: 'Außerdem werden offene Formulare (Umfragen, Einverständniserklärungen) als Widget angezeigt — bis zu 5 unbearbeitete Formulare mit Direktlink. Unter den Widgets erscheint der Haupt-Feed mit Beiträgen aus allen Räumen, in denen du oder deine Kinder Mitglied sind.',
+          },
+          navigation: {
+            title: 'Navigation',
+            content: 'Am Desktop findest du links eine Seitenleiste (Sidebar) mit allen Menüpunkten: Dashboard, Räume, Familie, Nachrichten, Jobs, Putzplan, Kalender, Formulare und Fundgrube. Auf dem Smartphone erscheint stattdessen eine untere Navigationsleiste mit den wichtigsten Punkten und einem „Mehr"-Button für weitere Optionen. In der Kopfzeile siehst du das Schullogo, dein Rollen-Badge (farbcodiert), den Sprachumschalter (DE/EN), die Benachrichtigungsglocke und dein Profilmenü.',
           },
           profile: {
             title: 'Profil bearbeiten',
-            content: 'Unter "Profil" kannst du dein Profilbild ändern, deine persönlichen Daten aktualisieren und dein Passwort ändern. Hier findest du auch die Möglichkeit, einen Datenexport nach DSGVO anzufordern.',
+            content: 'Unter „Profil" (Klick auf deinen Avatar oben rechts) kannst du dein Profilbild hochladen, Vorname, Nachname und Telefonnummer bearbeiten und dein Passwort ändern. Falls du mehrere Rollen hast (z.B. Lehrkraft und Elternteil), findest du hier auch den Rollenwechsel.',
+            content2: 'Am unteren Rand der Profilseite findest du DSGVO-Funktionen: „Daten exportieren" lädt alle persönlichen Daten als JSON herunter. „Konto löschen" anonymisiert deine Daten unwiderruflich. Du kannst außerdem Push-Benachrichtigungen aktivieren, um auch unterwegs über neue Nachrichten informiert zu werden.',
           },
         },
         family: {
           title: 'Familienverbund',
           create: {
             title: 'Familie erstellen',
-            content: 'Erstelle deinen Familienverbund unter "Familie". Jedes Elternteil hat einen eigenen Familienverbund. Dein Familien-Stundenkonto (Elternstunden) ist an diesen Verbund gekoppelt.',
+            content: 'Unter „Familie" in der Navigation kannst du deinen Familienverbund erstellen. Gib einen Familiennamen ein — du wirst automatisch als Familienoberhaupt eingetragen. Der Familienverbund ist die zentrale Abrechnungseinheit für deine Elternstunden.',
+            content2: 'Wichtig: Jedes Elternteil gehört zu genau einem Familienverbund. Kinder können mehreren Familien zugeordnet sein (z.B. bei getrennten Eltern). Das Stundenkonto ist immer an den Familienverbund gekoppelt, nicht an die Einzelperson.',
           },
           invite: {
             title: 'Mitglieder einladen',
-            content: 'Lade deinen Partner oder deine Kinder über die Suchfunktion ein. Wähle die passende Rolle (Elternteil oder Kind). Die eingeladene Person erhält eine Benachrichtigung und kann die Einladung annehmen oder ablehnen. Kinder können auch mehreren Familien zugeordnet werden.',
+            content: 'Lade deinen Partner oder deine Kinder ein: Klicke auf „Mitglied einladen", suche die Person nach Name oder E-Mail und wähle die Rolle (Elternteil oder Kind). Die eingeladene Person erhält eine Benachrichtigung und kann annehmen oder ablehnen.',
+            content2: 'Beispiel: Du lädst deinen Partner als „Elternteil" ein — er kann dann ebenfalls auf das gemeinsame Stundenkonto zugreifen. Dein Kind lädst du als „Kind" ein — es wird dem Familienverbund zugeordnet, ohne eigene Stundenrechte zu haben.',
           },
           hours: {
             title: 'Stundenkonto',
-            content: 'Das Familien-Stundenkonto zeigt die geleisteten Elternstunden aus der Jobbörse und die Putzstunden. Die Putzstunden werden in einem separaten Unterkonto geführt. Am Jahresende werden die Stunden in der Jahresabrechnung zusammengefasst.',
+            content: 'Dein Familien-Stundenkonto hat zwei getrennte Bereiche: Reguläre Elternstunden (aus der Jobbörse) und Putzstunden (aus der Putz-Organisation). Beide werden auf dem Dashboard als Widget mit Fortschrittsanzeige dargestellt.',
+            content2: 'Im Detail siehst du unter Familie → Stunden eine Aufschlüsselung aller geleisteten Stunden. Am Jahresende erstellt die Schulverwaltung eine Jahresabrechnung, die alle Stunden zusammenfasst. Familien können von der Stundenpflicht befreit werden — in diesem Fall erscheint ein entsprechender Hinweis.',
           },
         },
         rooms: {
           title: 'Räume',
           overview: {
             title: 'Raumübersicht',
-            content: 'Unter "Meine Räume" siehst du alle Räume, in denen du Mitglied bist — typischerweise die Gruppen deiner Kinder. Über "Entdecken" kannst du weitere Räume finden und einen Beitritt anfragen.',
+            content: 'Unter „Meine Räume" siehst du alle Räume als Kacheln mit Raum-Avatar, Name und Typ (Klasse, Gruppe, Projekt). Typischerweise bist du in den Gruppen deiner Kinder Mitglied.',
+            content2: 'Über den Button „Räume entdecken" findest du weitere Räume. Offene Räume kannst du direkt beitreten, bei geschlossenen Räumen sendest du eine Beitrittsanfrage mit optionaler Nachricht. Die Raumleitung entscheidet dann über deinen Beitritt.',
           },
           feed: {
             title: 'Feed & Diskussionen',
-            content: 'In jedem Raum findest du einen Feed mit aktuellen Beiträgen und Ankündigungen. Du kannst Beiträge kommentieren und an Diskussionen teilnehmen. Angepinnte Beiträge stehen immer oben.',
+            content: 'In jedem Raum findest du ein Info-Board mit aktuellen Beiträgen der Lehrkräfte und Ankündigungen. Angepinnte Beiträge stehen immer oben. Du kannst jeden Beitrag kommentieren.',
+            content2: 'Im Tab „Diskussionen" findest du themenbezogene Threads. Manche Threads sind nur für Eltern sichtbar (z.B. organisatorische Absprachen), andere für alle Mitglieder. Du kannst auf alle für dich sichtbaren Threads antworten.',
           },
           files: {
-            title: 'Dateien & Fotobox',
-            content: 'Im Dateibereich findest du Dokumente und Informationen zum Raum. Manche Ordner sind nur für Eltern sichtbar. In der Fotobox kannst du Fotos von Veranstaltungen ansehen und eigene hochladen.',
+            title: 'Dateien',
+            content: 'Im Tab „Dateien" findest du Dokumente in einer Ordnerstruktur mit Breadcrumb-Navigation. Ordner haben eine Sichtbarkeitssteuerung: Manche sind nur für Eltern zugänglich (orange Tag „Nur Eltern"), andere für alle.',
+            content2: 'Du kannst selbst Dateien hochladen — Ordner, die du erstellst, werden automatisch auf „Nur Eltern" gesetzt. Zum Herunterladen klicke auf den Dateinamen. Die Lehrkraft entscheidet, welche Ordner welcher Zielgruppe zur Verfügung stehen.',
+          },
+          fotobox: {
+            title: 'Fotobox',
+            content: 'Die Fotobox enthält Foto-Galerien (Threads) zu Veranstaltungen und Projekten. Du kannst Bilder ansehen, in der Lightbox durchblättern und eigene Fotos hochladen (bis zu 20 pro Upload). Thumbnails werden automatisch generiert. Je nach Raumeinstellung darfst du Bilder in bestehende Threads hochladen oder nur ansehen.',
           },
         },
         communication: {
           title: 'Kommunikation',
           messages: {
             title: 'Direktnachrichten',
-            content: 'Unter "Nachrichten" kannst du Direktnachrichten an Lehrkräfte senden. Du kannst auch Bilder versenden und auf einzelne Nachrichten antworten (Reply). Ob du andere Eltern anschreiben kannst, legen die Kommunikationsregeln der Schule fest.',
+            content: 'Unter „Nachrichten" findest du deine Konversationen. Klicke auf „Neue Nachricht", suche den Empfänger und schreibe los. Du kannst jederzeit Nachrichten an Lehrkräfte senden.',
+            content2: 'Du kannst Bilder versenden und auf einzelne Nachrichten antworten (Reply-Funktion). Ob du andere Eltern anschreiben kannst, hängt von den Kommunikationsregeln der Schule ab — standardmäßig ist Eltern-zu-Eltern-Kommunikation gesperrt, kann aber vom Admin freigegeben werden.',
+          },
+          notifications: {
+            title: 'Benachrichtigungen',
+            content: 'Die Glocke in der Kopfzeile zeigt die Anzahl ungelesener Benachrichtigungen. Klicke darauf, um alle Benachrichtigungen zu sehen: neue Nachrichten, Feed-Beiträge, Familien-Einladungen, Job-Updates, Formular-Hinweise und Termin-Änderungen. Du kannst Push-Benachrichtigungen im Profil aktivieren, um auch bei geschlossenem Browser informiert zu werden.',
           },
           feed: {
             title: 'Feed-Benachrichtigungen',
-            content: 'Neue Feed-Beiträge und Kommentare erscheinen in deinen Benachrichtigungen. Du kannst Push-Benachrichtigungen aktivieren, um auch unterwegs informiert zu bleiben.',
+            content: 'Neue Feed-Beiträge und Kommentare auf deine Beiträge erscheinen als Benachrichtigungen. Abgesagte Termine erzeugen automatisch einen Feed-Beitrag, damit du sofort informiert bist. Systembanner auf dem Dashboard weisen dich auf besonders wichtige Dinge hin (z.B. bevorstehende Putztermine).',
           },
         },
         services: {
           title: 'Dienste & Funktionen',
           jobs: {
             title: 'Jobbörse (Elternstunden)',
-            content: 'In der Jobbörse findest du verfügbare Aufgaben, für die Elternstunden gutgeschrieben werden. Bewirb dich auf Jobs und verfolge deine geleisteten Stunden im Familien-Stundenkonto.',
+            content: 'In der Jobbörse findest du verfügbare Aufgaben. Öffne einen Job, lies die Beschreibung und klicke auf „Bewerben" (optional mit Nachricht). Der Ablauf ist: Offen → Beworben → Zugewiesen → Gestartet → Abgeschlossen → Bestätigt.',
+            content2: 'Nachdem du zugewiesen wurdest, startest du die Arbeit und meldest sie als erledigt. Die Lehrkraft bestätigt die Stunden, die dann deinem Familienkonto gutgeschrieben werden. Deine aktuellen Bewerbungen und zugewiesenen Jobs siehst du im Tab „Meine Jobs".',
           },
           cleaning: {
             title: 'Putz-Orga',
-            content: 'Trage dich für Putztermine ein und checke am Putztag ein. Putzstunden werden separat auf deinem Familienkonto erfasst. Putztermine erscheinen auch im Kalender.',
+            content: 'Im Putzplan siehst du alle verfügbaren Putztermine — wiederkehrende (z.B. jeden Mittwoch) und einmalige Putzaktionen (z.B. Großputz am 15.03.). Wähle einen freien Termin und klicke auf „Anmelden". Du kannst dich auch wieder abmelden oder einen Tausch anbieten.',
+            content2: 'Am Putztag scannst du den QR-Code am Putzort mit deinem Smartphone zum Check-in. Nach getaner Arbeit scannst du erneut zum Check-out. Die Putzstunden werden automatisch deinem Familien-Sonderkonto gutgeschrieben. Putztermine erscheinen auch im Kalender und als Banner auf dem Dashboard.',
           },
           calendar: {
             title: 'Kalender',
-            content: 'Im Kalender siehst du alle Termine deiner Räume, des Schulbereichs und der gesamten Schule. Du kannst zu Terminen zu- oder absagen. Feiertage und Schulferien werden farbig markiert.',
+            content: 'Der Kalender zeigt Termine chronologisch nach Monaten gegliedert. Du siehst Raum-Termine, Bereichs-Termine und schulweite Events. Nutze die Monatsnavigation (Zurück/Heute/Vor) zum Blättern.',
+            content2: 'Für jeden Termin kannst du per RSVP zusagen (grün), „Vielleicht" wählen (gelb) oder absagen (rot). Wird ein Termin abgesagt, erscheint ein Info-Beitrag im Feed. Feiertage werden rot markiert, Schulferien orange — so hast du immer den Überblick.',
           },
           forms: {
             title: 'Formulare',
-            content: 'Hier findest du offene Formulare wie Umfragen oder Einverständniserklärungen. Fülle sie aus und sende sie ab. Offene Formulare werden auch im Dashboard angezeigt.',
+            content: 'Offene Formulare findest du unter „Formulare" sowie als Widget auf dem Dashboard (bis zu 5 unbearbeitete). Es gibt Umfragen (blaues Tag) und Einverständniserklärungen (oranges Tag).',
+            content2: 'Öffne ein Formular, beantworte die Fragen und klicke auf „Absenden". Bei Einverständniserklärungen triffst du eine explizite Ja/Nein-Entscheidung. Bereits beantwortete Formulare sind mit einem grünen Häkchen markiert. Manche Formulare haben eine Frist — achte auf das angezeigte Datum.',
           },
           fundgrube: {
             title: 'Fundgrube',
-            content: 'In der schulweiten Fundgrube kannst du verlorene Gegenstände suchen oder gefundene Sachen melden. Wenn du etwas findest, lade ein Foto hoch. Erkennst du deinen Gegenstand, klicke auf "Das gehört mir!".',
+            content: 'Die schulweite Fundgrube hilft beim Wiederfinden verlorener Gegenstände. Du kannst nach Schulbereich filtern und gefundene Sachen durchsuchen.',
+            content2: 'So funktioniert es: Findest du etwas, klicke auf „Neuer Eintrag", beschreibe den Gegenstand und lade ein Foto hoch. Erkennst du deinen verlorenen Gegenstand, klicke auf „Das gehört mir!" — der Eintrag wird dann als beansprucht markiert und nach 24 Stunden automatisch entfernt.',
+          },
+        },
+      },
+      student: {
+        gettingStarted: {
+          title: 'Erste Schritte',
+          login: {
+            title: 'Anmeldung',
+            content: 'Öffne MonteWeb im Browser und melde dich mit deiner E-Mail und deinem Passwort an. Falls du noch kein Konto hast, registriere dich über die Anmeldeseite. Dein Zugang muss möglicherweise erst von einem Administrator freigeschaltet werden.',
+          },
+          dashboard: {
+            title: 'Das Dashboard',
+            content: 'Nach der Anmeldung siehst du das Dashboard mit dem Feed deiner Räume (z.B. Klassengruppe), anstehenden Terminen und offenen Formularen. Du siehst nur Inhalte, die für Schüler freigegeben sind — manche Bereiche sind nur für Eltern oder Lehrkräfte sichtbar.',
+          },
+          profile: {
+            title: 'Profil bearbeiten',
+            content: 'Unter „Profil" kannst du dein Profilbild ändern und deine Daten aktualisieren. Du findest dort auch die Möglichkeit, Push-Benachrichtigungen zu aktivieren und einen Datenexport (DSGVO) anzufordern.',
+          },
+        },
+        rooms: {
+          title: 'Räume',
+          overview: {
+            title: 'Meine Räume',
+            content: 'Unter „Meine Räume" siehst du alle Gruppen und Projekte, in denen du Mitglied bist. Über „Entdecken" kannst du weitere offene Räume finden und beitreten oder eine Beitrittsanfrage stellen.',
+          },
+          feed: {
+            title: 'Feed & Beiträge',
+            content: 'Im Feed deines Raums findest du Ankündigungen und Beiträge der Lehrkräfte. Du kannst alle Beiträge kommentieren. Angepinnte Beiträge stehen immer ganz oben.',
+          },
+          files: {
+            title: 'Dateien & Fotobox',
+            content: 'Im Dateien-Tab findest du Dokumente und Materialien. Manche Ordner sind nur für Eltern sichtbar — du siehst nur die für Schüler freigegebenen Inhalte. In der Fotobox kannst du Fotos von Veranstaltungen ansehen und je nach Berechtigung eigene hochladen.',
+          },
+          discussions: {
+            title: 'Diskussionen & Chat',
+            content: 'Im Tab „Diskussionen" kannst du an Threads teilnehmen, die für Schüler sichtbar sind. Falls der Chat im Raum aktiviert ist, findest du dort auch einen Echtzeit-Chat für den schnellen Austausch mit anderen Raummitgliedern.',
+          },
+        },
+        tools: {
+          title: 'Funktionen',
+          calendar: {
+            title: 'Kalender',
+            content: 'Im Kalender siehst du Termine deiner Räume und der Schule. Du kannst zu Terminen zu- oder absagen (RSVP). Feiertage werden rot markiert, Schulferien orange.',
+          },
+          forms: {
+            title: 'Formulare',
+            content: 'Falls Formulare für Schüler freigegeben sind, findest du sie unter „Formulare" und als Widget auf dem Dashboard. Öffne ein Formular, beantworte die Fragen und sende es ab.',
+          },
+          messages: {
+            title: 'Nachrichten',
+            content: 'Du kannst Nachrichten an Lehrkräfte senden. Ob du auch anderen Schülern schreiben kannst, hängt von den Kommunikationsregeln der Schule ab. Du kannst Bilder versenden und die Reply-Funktion nutzen.',
           },
         },
       },
@@ -1466,56 +1551,73 @@ export default {
           title: 'Erste Schritte',
           login: {
             title: 'Anmeldung',
-            content: 'Melde dich mit deinen Zugangsdaten an. Als Lehrkraft hast du erweiterte Rechte in deinen Räumen und kannst Inhalte erstellen und verwalten.',
+            content: 'Melde dich mit deinen Zugangsdaten an. Als Lehrkraft hast du erweiterte Rechte: Du kannst Feed-Beiträge erstellen, Räume verwalten, Termine und Formulare anlegen sowie Jobs für Elternstunden erstellen.',
           },
           dashboard: {
             title: 'Das Dashboard',
-            content: 'Das Dashboard zeigt dir eine Übersicht über die Aktivitäten in deinen Räumen, anstehende Termine, Beitrittsanfragen und offene Aufgaben.',
+            content: 'Das Dashboard zeigt dir eine Übersicht über die Aktivitäten in deinen Räumen, anstehende Termine und offene Aufgaben. Du siehst den Post-Composer, mit dem du schnell einen neuen Beitrag erstellen kannst.',
+            content2: 'Über die Benachrichtigungsglocke siehst du neue Beitrittsanfragen für deine Räume, Bewerbungen auf deine Jobs und andere Neuigkeiten. Offene Formulare werden ebenfalls als Widget angezeigt.',
           },
         },
         rooms: {
           title: 'Raumverwaltung',
           manage: {
             title: 'Räume verwalten',
-            content: 'Als Raumleitung kannst du Raumeinstellungen ändern, Mitglieder verwalten und Beitrittsanfragen genehmigen oder ablehnen. Du kannst auch das Raumbild und die Beschreibung anpassen.',
+            content: 'Als Raumleitung (LEADER) hast du volle Kontrolle über deinen Raum: Raum-Avatar hochladen, öffentliche Beschreibung bearbeiten, Beitrittspolitik festlegen (Offen/Anfrage/Nur Einladung), Diskussionsmodus wählen und Chat aktivieren/deaktivieren.',
+            content2: 'Du kannst den Raum auch archivieren (Soft-Delete, rückgängig machbar). Neue Räume erstellst du über „Räume" → „Neuer Raum" mit Name, Typ (Klasse/Gruppe/Projekt) und Schulbereich.',
           },
           feed: {
             title: 'Feed-Beiträge',
-            content: 'Erstelle Beiträge für deinen Raum, pinne wichtige Ankündigungen an und moderiere Kommentare. Du kannst Beiträge auch gezielt an einzelne Nutzer richten (Targeted Posts).',
+            content: 'Im Info-Board des Raums erstellst du Beiträge mit optionalem Titel und Inhalt. Du kannst Beiträge anpinnen, damit sie immer oben erscheinen, und Kommentare moderieren.',
+            content2: 'Gezielte Beiträge (Targeted Posts): Du kannst Beiträge erstellen, die nur für bestimmte Nutzer sichtbar sind — z.B. eine persönliche Nachricht an einzelne Eltern direkt im Feed des Raums.',
           },
           files: {
             title: 'Dateien verwalten',
-            content: 'Lade Dokumente hoch, erstelle Ordner und lege die Sichtbarkeit fest (Alle, nur Eltern, nur Schüler). Ordner können für verschiedene Zielgruppen unterschiedliche Inhalte bereitstellen.',
+            content: 'Lade Dokumente hoch und erstelle Ordner mit unterschiedlicher Sichtbarkeit: „Alle" (für alle Raummitglieder), „Nur Eltern" oder „Nur Schüler". So kannst du z.B. Elterninformationen getrennt von Unterrichtsmaterialien ablegen.',
+            content2: 'Beispiel: Erstelle einen Ordner „Elternbriefe" mit Sichtbarkeit „Nur Eltern" für organisatorische Dokumente und einen Ordner „Arbeitsblätter" mit Sichtbarkeit „Alle" für den Unterricht. Jeder sieht nur die für seine Rolle freigegebenen Inhalte.',
           },
           fotobox: {
             title: 'Fotobox',
-            content: 'Erstelle Foto-Threads für Veranstaltungen und lade Bilder hoch. Du kannst die Sichtbarkeit der Threads festlegen und Thumbnails werden automatisch erstellt.',
+            content: 'Erstelle Foto-Threads (Alben) für Veranstaltungen, Projekte oder den Schulalltag. Wähle dabei die Sichtbarkeit: „Alle", „Nur Eltern" oder „Nur Schüler". Bilder werden automatisch mit Thumbnails versehen.',
+            content2: 'Du kannst die Standard-Berechtigung für Raummitglieder festlegen: Nur Ansehen, Bilder Posten oder Threads Erstellen. Pro Upload sind maximal 20 Bilder möglich. In der Lightbox können Bilder in Vollbild durchgeblättert werden.',
+          },
+          discussions: {
+            title: 'Diskussionen',
+            content: 'Erstelle themenbezogene Diskussions-Threads mit Titel, Inhalt und Zielgruppe (Alle, nur Eltern, nur Schüler). Threads können archiviert oder gelöscht werden. Alle berechtigten Raummitglieder können antworten.',
+          },
+          members: {
+            title: 'Mitgliederverwaltung',
+            content: 'Im Tab „Mitglieder" siehst du alle Raummitglieder gruppiert nach Leitung, Familien und Einzelpersonen. Du kannst neue Mitglieder einzeln oder als Familie hinzufügen, Beitrittsanfragen genehmigen/ablehnen und Mitglieder entfernen.',
           },
         },
         communication: {
           title: 'Kommunikation',
           messages: {
             title: 'Direktnachrichten',
-            content: 'Schreibe Nachrichten an Eltern und Schüler. Du kannst Bilder versenden und die Reply-Funktion für übersichtliche Gesprächsverläufe nutzen.',
+            content: 'Als Lehrkraft kannst du immer Nachrichten an Eltern und Schüler senden. Nutze die Suchfunktion, um Empfänger zu finden, und versende Textnachrichten mit optionalen Bildern.',
+            content2: 'Die Reply-Funktion ermöglicht übersichtliche Gesprächsverläufe: Wische oder klicke auf eine Nachricht, um direkt darauf zu antworten. Im Raum-Chat (Tab „Chat") kannst du in Echtzeit mit allen Raummitgliedern kommunizieren.',
           },
           feed: {
             title: 'Feed nutzen',
-            content: 'Der Feed ist der zentrale Informationskanal. Erstelle Beiträge mit Ankündigungen, pinne wichtige Infos an und kommentiere Beiträge anderer.',
+            content: 'Der Feed ist dein zentraler Informationskanal. Erstelle Beiträge mit Ankündigungen, pinne wichtige Infos an und kommentiere. Abgesagte Termine und Systembanner erscheinen automatisch im Feed.',
           },
         },
         tools: {
           title: 'Werkzeuge',
           calendar: {
             title: 'Kalender',
-            content: 'Erstelle Termine für deinen Raum oder deinen Schulbereich. Teilnehmer können zu- und absagen. Bei Absage eines Termins wird automatisch ein Feed-Beitrag erstellt.',
+            content: 'Erstelle Termine auf Raum-Ebene (als LEADER) oder Bereichs-Ebene (als Lehrkraft). Wähle: Titel, Beschreibung, Ort, Datum/Uhrzeit, ganztägig oder nicht, und optionale Wiederholung (täglich/wöchentlich/monatlich/jährlich).',
+            content2: 'Teilnehmer können per RSVP zusagen, „Vielleicht" wählen oder absagen. Sagst du einen Termin ab, wird automatisch ein Feed-Beitrag für alle Betroffenen erstellt. Löschst du einen Termin, erhalten nur die Zusager eine Benachrichtigung. Du kannst auch Jobs direkt mit Terminen verknüpfen.',
           },
           forms: {
             title: 'Formulare',
-            content: 'Erstelle Umfragen und Einverständniserklärungen für deinen Raum oder Bereich. Du kannst Formulare auch für mehrere Bereiche gleichzeitig erstellen und die Ergebnisse als CSV oder PDF exportieren.',
+            content: 'Erstelle Umfragen (SURVEY) oder Einverständniserklärungen (CONSENT). Wähle den Geltungsbereich: Raum, Bereich (auch mehrere gleichzeitig!) oder Schule. Verfügbare Fragetypen: Freitext, Einzelauswahl, Mehrfachauswahl, Bewertungsskala und Ja/Nein.',
+            content2: 'Formulare durchlaufen den Lebenszyklus: Entwurf → Veröffentlicht → Geschlossen → Archiviert. Unter „Ergebnisse" siehst du Rücklaufquote, Einzelantworten und Zusammenfassungen. Ergebnisse lassen sich als CSV oder PDF exportieren. Anonyme Formulare zeigen keine Nutzerzuordnung.',
           },
           jobs: {
             title: 'Jobbörse',
-            content: 'Erstelle Jobs für Elternstunden, prüfe Bewerbungen und weise Aufgaben zu. Nach Erledigung bestätigst du die geleisteten Stunden.',
+            content: 'Erstelle Jobs mit Titel, Beschreibung, Stundenwert (z.B. 2,0 Stunden), maximalem Teilnehmerlimit und optionaler Verknüpfung zu einem Kalendertermin.',
+            content2: 'Der Workflow: Eltern bewerben sich → du prüfst und weist zu → der Elternteil startet und schließt ab → du bestätigst die Stunden (je nach Einstellung automatisch oder manuell). Die bestätigten Stunden werden dem Familienkonto gutgeschrieben.',
           },
         },
       },
@@ -1524,60 +1626,76 @@ export default {
           title: 'Überblick',
           dashboard: {
             title: 'Admin-Dashboard',
-            content: 'Das Admin-Dashboard zeigt Systemstatistiken, aktuelle Aktivitäten, ausstehende Registrierungen und Fehlermeldungen. Von hier aus erreichst du alle Verwaltungsbereiche.',
+            content: 'Das Admin-Dashboard zeigt auf einen Blick: Systemstatistiken, aktuelle Aktivitäten, ausstehende Registrierungen und Fehlermeldungen. Von den Kacheln aus erreichst du direkt alle Verwaltungsbereiche.',
+            content2: 'Kacheln im Dashboard: Benutzerverwaltung, Raumverwaltung, Schulbereiche, Familien, Module, Putz-Orga, Stunden-Berichte, Jahresabrechnung, Design, Einstellungen und Fehlermeldungen. Jede Kachel zeigt eine Kennzahl (z.B. Anzahl Benutzer, offene Registrierungen).',
           },
           navigation: {
             title: 'Admin-Navigation',
-            content: 'Der Admin-Bereich umfasst: Benutzerverwaltung, Raumverwaltung, Schulbereiche, Familien, Modulverwaltung, Putz-Orga, Jahresabrechnung, Design-Einstellungen und Fehlermeldungen.',
+            content: 'Der Admin-Bereich umfasst: Benutzerverwaltung (Benutzer, Rollen, Registrierungen), Schulstruktur (Bereiche, Räume, Familien), Module und Einstellungen (Sprache, Registrierung, Stunden, Feiertage), Design (Logo, Farben), Putz-Orga (Konfiguration, QR-Codes), Jahresabrechnung (Perioden, PDF-Export) und Fehlermeldungen.',
           },
         },
         users: {
           title: 'Benutzerverwaltung',
           manage: {
             title: 'Benutzer verwalten',
-            content: 'Suche, filtere und verwalte alle Benutzer. Du kannst Benutzer aktivieren, deaktivieren, löschen und deren Rollen ändern.',
+            content: 'Unter „Benutzerverwaltung" siehst du alle Nutzer mit Suchfunktion und Rollenfilter. Du kannst Benutzer aktivieren, deaktivieren oder löschen, deren Rollen ändern und Sonderrollen (Elternbeirat, PutzOrga) zuweisen.',
+            content2: 'Beispiel: Um einen neuen Bereichs-Admin einzurichten, bearbeite den Benutzer, weise die Rolle „SECTION_ADMIN" zu und wähle unter Sonderrollen die zu verwaltenden Bereiche aus (z.B. „Grundstufe" und „Mittelstufe").',
           },
           roles: {
-            title: 'Rollen',
-            content: 'Verfügbare Rollen: Superadmin (voller Zugriff), Bereichsadmin (Bereichsverwaltung), Lehrkraft (Raumverwaltung), Elternteil (Familienfunktionen) und Schüler. Benutzer können mehrere Rollen haben und zwischen ihnen wechseln.',
+            title: 'Rollen & Sonderrollen',
+            content: 'Fünf Hauptrollen: Superadmin (rot, Vollzugriff), Bereichsadmin (orange, Bereichsverwaltung), Lehrkraft (blau, Raumverwaltung), Elternteil (grün, Familienfunktionen) und Schüler (grau, eingeschränkt). Nutzer können mehrere Rollen haben und zwischen ihnen wechseln.',
+            content2: 'Zusätzliche Sonderrollen: Elternbeirat (erweiterte Rechte für Termine, Formulare und Beiträge auf Bereichsebene) und PutzOrga (Zugriff auf die Putz-Konfiguration). Sonderrollen werden vom Bereichsadmin oder Superadmin vergeben.',
           },
           approval: {
             title: 'Registrierungen',
-            content: 'Neue Registrierungen müssen von einem Administrator genehmigt werden. Im Admin-Dashboard siehst du ausstehende Genehmigungen und kannst Registrierungen annehmen oder ablehnen.',
+            content: 'Wenn „Neue Benutzer müssen freigeschaltet werden" in den Einstellungen aktiv ist, werden neue Registrierungen zunächst als inaktiv angelegt. Du siehst ausstehende Genehmigungen im Admin-Dashboard und kannst sie dort annehmen oder ablehnen. Diese Einstellung ist unter Administration → Einstellungen konfigurierbar.',
           },
         },
         structure: {
           title: 'Schulstruktur',
           sections: {
             title: 'Schulbereiche',
-            content: 'Verwalte die Schulbereiche (z.B. Krippe, Kindergarten, Grundstufe, Mittelstufe, Oberstufe). Bereiche bilden die organisatorische Grundstruktur und werden Räumen zugeordnet.',
+            content: 'Schulbereiche bilden die organisatorische Grundstruktur: z.B. Kinderhaus, Grundstufe, Mittelstufe, Oberstufe. Jeder Bereich hat einen Namen, eine Beschreibung und eine Sortierreihenfolge.',
+            content2: 'Bereiche werden Räumen zugeordnet und bestimmen die Sichtbarkeit von Formularen (Bereichs-Scope) und Kalender-Events (Bereichs-Termine). Bereichs-Admins verwalten nur die ihnen explizit zugewiesenen Bereiche.',
           },
           rooms: {
             title: 'Räume',
-            content: 'Erstelle und verwalte alle Räume der Schule. Ordne Räume Schulbereichen zu, setze Raumleitungen ein und verwalte Mitgliedschaften. KLASSE-Räume erhalten automatisch einen Standard-Ordner.',
+            content: 'Erstelle und verwalte alle Räume der Schule. Ordne jeden Raum einem Schulbereich zu und setze Raumleitungen (LEADER) ein. Raumtypen: KLASSE (Klassenraum), GRUPPE (Arbeitsgruppe), PROJEKT und CUSTOM.',
+            content2: 'KLASSE-Räume erhalten automatisch einen Standard-Ordner im Dateibereich. Du kannst Räume archivieren (Mitglieder können noch lesen, aber nicht mehr schreiben) und wiederherstellen. Die Beitrittspolitik (Offen/Anfrage/Einladung) wird pro Raum konfiguriert.',
           },
           families: {
             title: 'Familien',
-            content: 'Überblick über alle Familienverbünde, deren Stundenkontostände und Mitglieder. Du kannst Stunden korrigieren und die Stunden-Befreiung für einzelne Familien aktivieren.',
+            content: 'Überblick über alle Familienverbünde mit Namen, Mitgliedern und Stundenkontostände. Du kannst Familien bearbeiten, Mitglieder hinzufügen oder entfernen, und die Stunden-Befreiung aktivieren.',
+            content2: 'Befreite Familien erscheinen nicht in der regulären Stundenbilanz (z.B. für Sonderfälle). Du kannst Familien auch deaktivieren — deaktivierte Familien bleiben erhalten, erscheinen aber nicht mehr in aktiven Listen. Bereichsadmins haben ebenfalls Zugriff auf die Familienverwaltung.',
           },
         },
         system: {
           title: 'Systemeinstellungen',
           modules: {
             title: 'Module',
-            content: 'Aktiviere oder deaktiviere einzelne Module wie Nachrichten, Dateien, Jobbörse, Putz-Orga, Kalender, Formulare, Fotobox und Fundgrube. Deaktivierte Module werden aus der Navigation entfernt.',
+            content: 'Aktiviere oder deaktiviere einzelne Module: Nachrichten, Dateien, Jobbörse, Putz-Orga, Kalender, Formulare, Fotobox und Fundgrube. Deaktivierte Module verschwinden aus der Navigation und die zugehörigen API-Endpunkte geben 404 zurück.',
+            content2: 'Zusätzlich konfigurierst du hier die Kommunikationsregeln: Lehrer ↔ Eltern ist immer erlaubt. Eltern ↔ Eltern und Schüler ↔ Schüler Kommunikation kann einzeln freigeschaltet oder gesperrt werden.',
+          },
+          settings: {
+            title: 'Einstellungen',
+            content: 'Unter „Einstellungen" konfigurierst du: Mehrsprachigkeit (DE/EN an/aus), Standardsprache, ob neue Benutzer freigeschaltet werden müssen, ob Stundenbestätigung durch Verantwortliche erforderlich ist, Stundenziele (gesamt und Putzstunden), Bundesland für Feiertage und Schulferien-Zeiträume.',
           },
           theme: {
-            title: 'Design & Feiertage',
-            content: 'Passe die Schulfarben und das Logo an. Stelle das Bundesland für die korrekte Feiertagsberechnung ein und konfiguriere die Schulferien-Zeiträume.',
+            title: 'Design',
+            content: 'Unter „Design" passt du das Erscheinungsbild an: Schullogo hochladen (wird in Navigation und Login angezeigt) und Farbschema festlegen (Primärfarbe, Hintergrundfarben, Textfarben, Rahmenfarben). Eine Live-Vorschau zeigt die Änderungen sofort an.',
           },
           cleaning: {
             title: 'Putz-Organisation',
-            content: 'Erstelle Putzaktionen (einmalig mit bestimmtem Datum oder wiederkehrend an Wochentagen). Verwalte Putzslots, überwache Check-ins und generiere QR-Codes. Putzaktionen erzeugen automatisch Kalender-Events und Jobs.',
+            content: 'Erstelle Putzaktionen — entweder wiederkehrend (Wochentag, Uhrzeit, max. Teilnehmer, Stundenwert) oder einmalig (spezifisches Datum). Im Datumswaehler werden Feiertage rot und Schulferien orange markiert.',
+            content2: 'Putzaktionen erzeugen automatisch einen Kalender-Eintrag und einen Job in der Jobbörse. Du kannst QR-Codes für Putzorte generieren und drucken, den Check-in-Status überwachen und die Putz-Statistiken (Anwesenheit, Stunden pro Familie) einsehen.',
           },
           billing: {
             title: 'Jahresabrechnung',
-            content: 'Erstelle Abrechnungsperioden und generiere Jahresabrechnungen für alle Familien. Exportiere Berichte als PDF. Geschlossene Perioden können nicht mehr verändert werden.',
+            content: 'Erstelle Abrechnungsperioden (Jahr/Monat), generiere Berichte für alle Familien und exportiere sie als PDF. Geschlossene Perioden können nicht mehr verändert werden. Die Abrechnung zeigt pro Familie: reguläre Stunden, Putzstunden, Gesamtstunden, Soll und Saldo.',
+          },
+          errorReports: {
+            title: 'Fehlermeldungen',
+            content: 'Frontend-Fehler werden automatisch gemeldet und unter „Fehlermeldungen" mit Fingerprint-basierter Deduplizierung angezeigt. Du kannst den Status verwalten (Neu/Gemeldet/Behoben/Ignoriert) und optional GitHub-Issues aus Fehlermeldungen erstellen, wenn ein GitHub-Repository und Personal Access Token konfiguriert sind.',
           },
         },
       },

@@ -18,6 +18,7 @@ const handbookKey = computed(() => {
   const role = auth.user?.role
   if (role === 'SUPERADMIN' || role === 'SECTION_ADMIN') return 'admin'
   if (role === 'TEACHER') return 'teacher'
+  if (role === 'STUDENT') return 'student'
   return 'parent'
 })
 

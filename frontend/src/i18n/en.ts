@@ -1360,6 +1360,13 @@ export default {
         action3: 'Export reports as PDF',
         tip1: 'Closed periods cannot be modified.',
       },
+      adminSettings: {
+        title: 'Settings',
+        action1: 'Manage language, registration and hours configuration',
+        action2: 'Configure state and school breaks',
+        action3: 'Configure confirmation requirements for parent hours',
+        tip1: 'Changes to language and registration take effect immediately for all users.',
+      },
       sectionAdmin: {
         title: 'Section Management',
         action1: 'Manage rooms in your section',
@@ -1384,80 +1391,158 @@ export default {
         gettingStarted: {
           title: 'Getting Started',
           login: {
-            title: 'Login',
-            content: 'Log in with your email address and password. If you don\'t have an account yet, register via the login page. After registration, an administrator must approve your access.',
+            title: 'Login & Registration',
+            content: 'Open MonteWeb in your browser and log in with your email address and password. If your school uses Single Sign-On (SSO), you can alternatively use the "Log in with SSO" button.',
+            content2: 'If you don\'t have an account yet: Click "Register", fill in the required fields (email, first name, last name, password) and note the password strength indicator. Depending on school settings, an administrator may need to approve your access after registration. Use "Forgot password?" on the login page to request a new password.',
           },
           dashboard: {
             title: 'The Dashboard',
-            content: 'After logging in, you see the dashboard with your rooms\' feed, upcoming events, open forms and important banners. The dashboard only shows content from rooms you or your children are members of.',
+            content: 'After logging in you see the dashboard — your personal home page. Context-dependent system banners appear at the top, e.g. reminders for upcoming cleaning dates or notices about cancelled events. Below that you\'ll find the parent hours widget showing your current regular hours and cleaning hours balance.',
+            content2: 'Open forms (surveys, consent forms) are displayed as a widget — up to 5 unsubmitted forms with direct links. Below the widgets, the main feed shows posts from all rooms you or your children are members of.',
+          },
+          navigation: {
+            title: 'Navigation',
+            content: 'On desktop, you\'ll find a sidebar on the left with all menu items: Dashboard, Rooms, Family, Messages, Jobs, Cleaning, Calendar, Forms and Lost & Found. On smartphones, a bottom navigation bar appears with the most important items and a "More" button for additional options. The header shows the school logo, your role badge (color-coded), the language switcher (DE/EN), the notification bell and your profile menu.',
           },
           profile: {
             title: 'Edit Profile',
-            content: 'Under "Profile" you can change your profile picture, update personal data and change your password. Here you can also request a data export under GDPR.',
+            content: 'Under "Profile" (click your avatar in the top right) you can upload your profile picture, edit first name, last name and phone number, and change your password. If you have multiple roles (e.g. teacher and parent), you\'ll also find the role switcher here.',
+            content2: 'At the bottom of the profile page you\'ll find GDPR features: "Export Data" downloads all personal data as JSON. "Delete Account" anonymizes your data irreversibly. You can also enable push notifications to receive alerts even when the browser is closed.',
           },
         },
         family: {
           title: 'Family Group',
           create: {
             title: 'Create Family',
-            content: 'Create your family group under "Family". Each parent has their own family group. Your family hours account (parent hours) is linked to this group.',
+            content: 'Under "Family" in the navigation you can create your family group. Enter a family name — you\'ll automatically be registered as the family head. The family group is the central billing unit for your parent hours.',
+            content2: 'Important: Each parent belongs to exactly one family group. Children can be assigned to multiple families (e.g. for separated parents). The hours account is always linked to the family group, not the individual person.',
           },
           invite: {
             title: 'Invite Members',
-            content: 'Invite your partner or children via the search function. Choose the appropriate role (parent or child). The invited person receives a notification and can accept or decline. Children can also be assigned to multiple families.',
+            content: 'Invite your partner or children: Click "Invite Member", search for the person by name or email and choose the role (Parent or Child). The invited person receives a notification and can accept or decline.',
+            content2: 'Example: You invite your partner as "Parent" — they can then also access the shared hours account. Your child is invited as "Child" — they are assigned to the family group without their own hours privileges.',
           },
           hours: {
             title: 'Hours Account',
-            content: 'The family hours account shows completed parent hours from the job board and cleaning hours. Cleaning hours are tracked in a separate sub-account. At the end of the year, hours are summarized in the annual billing.',
+            content: 'Your family hours account has two separate areas: Regular parent hours (from the job board) and cleaning hours (from the cleaning organization). Both are displayed on the dashboard as a widget with progress indicator.',
+            content2: 'In detail, under Family → Hours you\'ll see a breakdown of all completed hours. At year-end, the school administration creates an annual billing that summarizes all hours. Families can be exempt from the hours requirement — in this case a corresponding notice is displayed.',
           },
         },
         rooms: {
           title: 'Rooms',
           overview: {
             title: 'Room Overview',
-            content: 'Under "My Rooms" you see all rooms you are a member of — typically your children\'s groups. Via "Discover" you can find more rooms and request to join.',
+            content: 'Under "My Rooms" you see all rooms as tiles with room avatar, name and type (Class, Group, Project). Typically you\'re a member of your children\'s groups.',
+            content2: 'Via the "Discover Rooms" button you can find more rooms. Open rooms can be joined directly, for closed rooms you send a join request with an optional message. The room leader then decides on your membership.',
           },
           feed: {
             title: 'Feed & Discussions',
-            content: 'Each room has a feed with current posts and announcements. You can comment on posts and participate in discussions. Pinned posts always appear at the top.',
+            content: 'Each room has an info board with current posts from teachers and announcements. Pinned posts always appear at the top. You can comment on every post.',
+            content2: 'In the "Discussions" tab you\'ll find topic-based threads. Some threads are only visible to parents (e.g. organizational discussions), others for all members. You can reply to all threads visible to you.',
           },
           files: {
-            title: 'Files & Photo Box',
-            content: 'The file section contains documents and information for the room. Some folders are only visible to parents. In the photo box you can view event photos and upload your own.',
+            title: 'Files',
+            content: 'In the "Files" tab you\'ll find documents in a folder structure with breadcrumb navigation. Folders have visibility controls: Some are only accessible to parents (orange "Parents Only" tag), others for everyone.',
+            content2: 'You can upload files yourself — folders you create are automatically set to "Parents Only". Click the filename to download. The teacher decides which folders are available to which audience.',
+          },
+          fotobox: {
+            title: 'Photo Box',
+            content: 'The photo box contains photo galleries (threads) for events and projects. You can view images, browse in lightbox mode and upload your own photos (up to 20 per upload). Thumbnails are generated automatically. Depending on room settings, you may upload photos to existing threads or only view them.',
           },
         },
         communication: {
           title: 'Communication',
           messages: {
             title: 'Direct Messages',
-            content: 'Under "Messages" you can send direct messages to teachers. You can also send images and reply to individual messages. Whether you can message other parents is determined by the school\'s communication rules.',
+            content: 'Under "Messages" you\'ll find your conversations. Click "New Message", search for the recipient and start typing. You can always send messages to teachers.',
+            content2: 'You can send images and reply to individual messages (reply function). Whether you can message other parents depends on the school\'s communication rules — by default, parent-to-parent communication is blocked but can be enabled by the admin.',
+          },
+          notifications: {
+            title: 'Notifications',
+            content: 'The bell in the header shows the number of unread notifications. Click it to see all notifications: new messages, feed posts, family invitations, job updates, form reminders and event changes. You can enable push notifications in your profile to be notified even when the browser is closed.',
           },
           feed: {
             title: 'Feed Notifications',
-            content: 'New feed posts and comments appear in your notifications. You can enable push notifications to stay informed on the go.',
+            content: 'New feed posts and comments on your posts appear as notifications. Cancelled events automatically generate a feed post so you\'re immediately informed. System banners on the dashboard highlight particularly important items (e.g. upcoming cleaning dates).',
           },
         },
         services: {
           title: 'Services & Features',
           jobs: {
             title: 'Job Board (Parent Hours)',
-            content: 'The job board lists available tasks that earn parent hours. Apply for jobs and track your completed hours in the family hours account.',
+            content: 'The job board lists available tasks. Open a job, read the description and click "Apply" (optionally with a message). The workflow is: Open → Applied → Assigned → Started → Completed → Confirmed.',
+            content2: 'After being assigned, you start the work and report it as done. The teacher confirms the hours, which are then credited to your family account. View your current applications and assigned jobs in the "My Jobs" tab.',
           },
           cleaning: {
             title: 'Cleaning Organization',
-            content: 'Sign up for cleaning dates and check in on cleaning day. Cleaning hours are tracked separately in your family account. Cleaning dates also appear in the calendar.',
+            content: 'The cleaning schedule shows all available dates — recurring (e.g. every Wednesday) and one-time cleaning events (e.g. spring cleaning on March 15). Select an available slot and click "Sign Up". You can also unregister or offer a swap.',
+            content2: 'On cleaning day, scan the QR code at the cleaning location with your smartphone to check in. After finishing, scan again to check out. Cleaning hours are automatically credited to your family special account. Cleaning dates also appear in the calendar and as banners on the dashboard.',
           },
           calendar: {
             title: 'Calendar',
-            content: 'The calendar shows all events from your rooms, school section and the entire school. You can RSVP to events. Holidays and school breaks are color-coded.',
+            content: 'The calendar shows events chronologically organized by month. You\'ll see room events, section events and school-wide events. Use the month navigation (Back/Today/Forward) to browse.',
+            content2: 'For each event you can RSVP: accept (green), "Maybe" (yellow) or decline (red). When an event is cancelled, an info post appears in the feed. Holidays are marked red, school breaks orange — so you always have an overview.',
           },
           forms: {
             title: 'Forms',
-            content: 'Here you find open forms such as surveys or consent forms. Fill them out and submit. Open forms are also displayed on the dashboard.',
+            content: 'Open forms can be found under "Forms" and as a widget on the dashboard (up to 5 unsubmitted). There are surveys (blue tag) and consent forms (orange tag).',
+            content2: 'Open a form, answer the questions and click "Submit". For consent forms, you make an explicit Yes/No decision. Already answered forms are marked with a green checkmark. Some forms have a deadline — watch for the displayed date.',
           },
           fundgrube: {
             title: 'Lost & Found',
-            content: 'In the school-wide Lost & Found you can search for lost items or report found items. When you find something, upload a photo. If you recognize your item, click "This is mine!".',
+            content: 'The school-wide Lost & Found helps find lost items. You can filter by school section and browse found items.',
+            content2: 'How it works: If you find something, click "New Entry", describe the item and upload a photo. If you recognize your lost item, click "This is mine!" — the entry is then marked as claimed and automatically removed after 24 hours.',
+          },
+        },
+      },
+      student: {
+        gettingStarted: {
+          title: 'Getting Started',
+          login: {
+            title: 'Login',
+            content: 'Open MonteWeb in your browser and log in with your email and password. If you don\'t have an account yet, register via the login page. Your access may need to be approved by an administrator first.',
+          },
+          dashboard: {
+            title: 'The Dashboard',
+            content: 'After logging in you see the dashboard with the feed from your rooms (e.g. class group), upcoming events and open forms. You only see content that is released for students — some areas are only visible to parents or teachers.',
+          },
+          profile: {
+            title: 'Edit Profile',
+            content: 'Under "Profile" you can change your profile picture and update your data. You\'ll also find the option to enable push notifications and request a data export (GDPR).',
+          },
+        },
+        rooms: {
+          title: 'Rooms',
+          overview: {
+            title: 'My Rooms',
+            content: 'Under "My Rooms" you see all groups and projects you\'re a member of. Via "Discover" you can find more open rooms and join them or submit a join request.',
+          },
+          feed: {
+            title: 'Feed & Posts',
+            content: 'In your room\'s feed you\'ll find announcements and posts from teachers. You can comment on all posts. Pinned posts always appear at the very top.',
+          },
+          files: {
+            title: 'Files & Photo Box',
+            content: 'In the Files tab you\'ll find documents and materials. Some folders are only visible to parents — you only see content released for students. In the photo box you can view event photos and, depending on permissions, upload your own.',
+          },
+          discussions: {
+            title: 'Discussions & Chat',
+            content: 'In the "Discussions" tab you can participate in threads visible to students. If chat is enabled in the room, you\'ll also find a real-time chat for quick exchange with other room members.',
+          },
+        },
+        tools: {
+          title: 'Features',
+          calendar: {
+            title: 'Calendar',
+            content: 'The calendar shows events from your rooms and the school. You can RSVP to events (accept or decline). Holidays are marked red, school breaks orange.',
+          },
+          forms: {
+            title: 'Forms',
+            content: 'If forms are released for students, you\'ll find them under "Forms" and as a widget on the dashboard. Open a form, answer the questions and submit.',
+          },
+          messages: {
+            title: 'Messages',
+            content: 'You can send messages to teachers. Whether you can also write to other students depends on the school\'s communication rules. You can send images and use the reply function.',
           },
         },
       },
@@ -1466,56 +1551,73 @@ export default {
           title: 'Getting Started',
           login: {
             title: 'Login',
-            content: 'Log in with your credentials. As a teacher you have extended permissions in your rooms and can create and manage content.',
+            content: 'Log in with your credentials. As a teacher you have extended permissions: You can create feed posts, manage rooms, create events and forms, and create jobs for parent hours.',
           },
           dashboard: {
             title: 'The Dashboard',
-            content: 'The dashboard gives you an overview of activities in your rooms, upcoming events, join requests and open tasks.',
+            content: 'The dashboard gives you an overview of activities in your rooms, upcoming events and open tasks. You\'ll see the post composer to quickly create a new post.',
+            content2: 'Via the notification bell you can see new join requests for your rooms, applications for your jobs and other news. Open forms are also displayed as a widget.',
           },
         },
         rooms: {
           title: 'Room Management',
           manage: {
             title: 'Managing Rooms',
-            content: 'As room leader you can change room settings, manage members and approve or reject join requests. You can also customize the room image and description.',
+            content: 'As room leader (LEADER) you have full control over your room: Upload room avatar, edit public description, set join policy (Open/Request/Invite Only), choose discussion mode and enable/disable chat.',
+            content2: 'You can also archive the room (soft delete, reversible). Create new rooms via "Rooms" → "New Room" with name, type (Class/Group/Project) and school section.',
           },
           feed: {
             title: 'Feed Posts',
-            content: 'Create posts for your room, pin important announcements and moderate comments. You can also target individual users with posts (targeted posts).',
+            content: 'In the room\'s info board, create posts with an optional title and content. You can pin posts so they always appear at the top, and moderate comments.',
+            content2: 'Targeted posts: You can create posts visible only to specific users — e.g. a personal message to individual parents directly in the room feed.',
           },
           files: {
             title: 'Managing Files',
-            content: 'Upload documents, create folders and set visibility (all, parents only, students only). Folders can provide different content for different audiences.',
+            content: 'Upload documents and create folders with different visibility: "All" (all room members), "Parents Only" or "Students Only". This way you can e.g. keep parent information separate from teaching materials.',
+            content2: 'Example: Create a "Parent Letters" folder with "Parents Only" visibility for organizational documents and a "Worksheets" folder with "All" visibility for teaching. Everyone only sees content released for their role.',
           },
           fotobox: {
             title: 'Photo Box',
-            content: 'Create photo threads for events and upload images. You can set thread visibility and thumbnails are generated automatically.',
+            content: 'Create photo threads (albums) for events, projects or everyday school life. Choose the visibility: "All", "Parents Only" or "Students Only". Images are automatically provided with thumbnails.',
+            content2: 'You can set the default permission for room members: View Only, Post Images or Create Threads. Up to 20 images per upload. In lightbox mode, images can be browsed in fullscreen.',
+          },
+          discussions: {
+            title: 'Discussions',
+            content: 'Create topic-based discussion threads with title, content and audience (All, Parents Only, Students Only). Threads can be archived or deleted. All authorized room members can reply.',
+          },
+          members: {
+            title: 'Member Management',
+            content: 'In the "Members" tab you see all room members grouped by leadership, families and individuals. You can add new members individually or as a family, approve/reject join requests and remove members.',
           },
         },
         communication: {
           title: 'Communication',
           messages: {
             title: 'Direct Messages',
-            content: 'Send messages to parents and students. You can share images and use the reply function for organized conversations.',
+            content: 'As a teacher you can always send messages to parents and students. Use the search function to find recipients and send text messages with optional images.',
+            content2: 'The reply function enables organized conversation threads: Swipe or click on a message to reply directly. In the room chat (Chat tab) you can communicate in real-time with all room members.',
           },
           feed: {
             title: 'Using the Feed',
-            content: 'The feed is the central information channel. Create posts with announcements, pin important info and comment on others\' posts.',
+            content: 'The feed is your central information channel. Create posts with announcements, pin important info and comment. Cancelled events and system banners appear automatically in the feed.',
           },
         },
         tools: {
           title: 'Tools',
           calendar: {
             title: 'Calendar',
-            content: 'Create events for your room or school section. Participants can RSVP. When an event is cancelled, a feed post is automatically created.',
+            content: 'Create events at room level (as LEADER) or section level (as teacher). Choose: Title, description, location, date/time, all-day or not, and optional recurrence (daily/weekly/monthly/yearly).',
+            content2: 'Participants can RSVP: accept, "Maybe" or decline. When you cancel an event, a feed post is automatically created for all affected users. Deleting an event only notifies those who accepted. You can also link jobs directly to events.',
           },
           forms: {
             title: 'Forms',
-            content: 'Create surveys and consent forms for your room or section. You can also create forms for multiple sections at once and export results as CSV or PDF.',
+            content: 'Create surveys (SURVEY) or consent forms (CONSENT). Choose the scope: Room, Section (even multiple at once!) or School. Available question types: Free text, Single Choice, Multiple Choice, Rating Scale and Yes/No.',
+            content2: 'Forms go through the lifecycle: Draft → Published → Closed → Archived. Under "Results" you see response rate, individual answers and summaries. Results can be exported as CSV or PDF. Anonymous forms don\'t show user attribution.',
           },
           jobs: {
             title: 'Job Board',
-            content: 'Create jobs for parent hours, review applications and assign tasks. After completion, confirm the completed hours.',
+            content: 'Create jobs with title, description, hour value (e.g. 2.0 hours), maximum participant limit and optional link to a calendar event.',
+            content2: 'The workflow: Parents apply → you review and assign → the parent starts and completes → you confirm the hours (automatically or manually depending on settings). Confirmed hours are credited to the family account.',
           },
         },
       },
@@ -1524,60 +1626,76 @@ export default {
           title: 'Overview',
           dashboard: {
             title: 'Admin Dashboard',
-            content: 'The admin dashboard shows system statistics, current activities, pending registrations and error reports. From here you can reach all management areas.',
+            content: 'The admin dashboard shows at a glance: System statistics, current activities, pending registrations and error reports. From the tiles you can directly reach all management areas.',
+            content2: 'Dashboard tiles: User Management, Room Management, School Sections, Families, Modules, Cleaning, Hours Reports, Annual Billing, Design, Settings and Error Reports. Each tile shows a key metric (e.g. number of users, pending registrations).',
           },
           navigation: {
             title: 'Admin Navigation',
-            content: 'The admin area includes: User management, Room management, School sections, Families, Module management, Cleaning organization, Annual billing, Design settings and Error reports.',
+            content: 'The admin area includes: User Management (users, roles, registrations), School Structure (sections, rooms, families), Modules and Settings (language, registration, hours, holidays), Design (logo, colors), Cleaning (configuration, QR codes), Annual Billing (periods, PDF export) and Error Reports.',
           },
         },
         users: {
           title: 'User Management',
           manage: {
             title: 'Managing Users',
-            content: 'Search, filter and manage all users. You can activate, deactivate, delete users and change their roles.',
+            content: 'Under "User Management" you see all users with search function and role filter. You can activate, deactivate or delete users, change their roles and assign special roles (Parent Council, Cleaning Organizer).',
+            content2: 'Example: To set up a new section admin, edit the user, assign the "SECTION_ADMIN" role and under special roles select the sections to manage (e.g. "Primary" and "Middle School").',
           },
           roles: {
-            title: 'Roles',
-            content: 'Available roles: Superadmin (full access), Section Admin (section management), Teacher (room management), Parent (family features) and Student. Users can have multiple roles and switch between them.',
+            title: 'Roles & Special Roles',
+            content: 'Five main roles: Superadmin (red, full access), Section Admin (orange, section management), Teacher (blue, room management), Parent (green, family features) and Student (gray, limited). Users can have multiple roles and switch between them.',
+            content2: 'Additional special roles: Parent Council (extended permissions for events, forms and posts at section level) and Cleaning Organizer (access to cleaning configuration). Special roles are assigned by the section admin or superadmin.',
           },
           approval: {
             title: 'Registrations',
-            content: 'New registrations must be approved by an administrator. On the admin dashboard you can see pending approvals and accept or reject registrations.',
+            content: 'When "New users must be approved" is active in settings, new registrations are initially created as inactive. You can see pending approvals in the admin dashboard and accept or reject them there. This setting is configurable under Administration → Settings.',
           },
         },
         structure: {
           title: 'School Structure',
           sections: {
             title: 'School Sections',
-            content: 'Manage school sections (e.g. nursery, kindergarten, primary, middle, upper school). Sections form the organizational foundation and are assigned to rooms.',
+            content: 'School sections form the organizational foundation: e.g. Nursery, Primary, Middle School, Upper School. Each section has a name, description and sort order.',
+            content2: 'Sections are assigned to rooms and determine the visibility of forms (section scope) and calendar events (section events). Section admins only manage the sections explicitly assigned to them.',
           },
           rooms: {
             title: 'Rooms',
-            content: 'Create and manage all school rooms. Assign rooms to sections, appoint room leaders and manage memberships. KLASSE rooms automatically get a default folder.',
+            content: 'Create and manage all school rooms. Assign each room to a school section and appoint room leaders (LEADER). Room types: KLASSE (classroom), GRUPPE (working group), PROJEKT and CUSTOM.',
+            content2: 'KLASSE rooms automatically get a default folder in the file section. You can archive rooms (members can still read but not write) and restore them. The join policy (Open/Request/Invite Only) is configured per room.',
           },
           families: {
             title: 'Families',
-            content: 'Overview of all family groups, their hours account balances and members. You can correct hours and enable hours exemption for individual families.',
+            content: 'Overview of all family groups with names, members and hours account balances. You can edit families, add or remove members, and enable hours exemption.',
+            content2: 'Exempt families don\'t appear in the regular hours balance (e.g. for special cases). You can also deactivate families — deactivated families are preserved but no longer appear in active lists. Section admins also have access to family management.',
           },
         },
         system: {
           title: 'System Settings',
           modules: {
             title: 'Modules',
-            content: 'Enable or disable individual modules like Messages, Files, Job Board, Cleaning, Calendar, Forms, Photo Box and Lost & Found. Disabled modules are removed from the navigation.',
+            content: 'Enable or disable individual modules: Messages, Files, Job Board, Cleaning, Calendar, Forms, Photo Box and Lost & Found. Disabled modules disappear from the navigation and their API endpoints return 404.',
+            content2: 'You can also configure communication rules here: Teacher ↔ Parent is always allowed. Parent ↔ Parent and Student ↔ Student communication can be individually enabled or blocked.',
+          },
+          settings: {
+            title: 'Settings',
+            content: 'Under "Settings" you configure: Multilingual support (DE/EN on/off), default language, whether new users need approval, whether hour confirmation by responsible persons is required, hour targets (total and cleaning hours), state for holidays and school break periods.',
           },
           theme: {
-            title: 'Design & Holidays',
-            content: 'Customize school colors and logo. Set the state for correct holiday calculation and configure school break periods.',
+            title: 'Design',
+            content: 'Under "Design" you customize the appearance: Upload school logo (displayed in navigation and login) and set color scheme (primary color, background colors, text colors, border colors). A live preview shows changes immediately.',
           },
           cleaning: {
             title: 'Cleaning Organization',
-            content: 'Create cleaning activities (one-time with specific date or recurring on weekdays). Manage cleaning slots, monitor check-ins and generate QR codes. Cleaning activities automatically create calendar events and jobs.',
+            content: 'Create cleaning activities — either recurring (weekday, time, max participants, hour value) or one-time (specific date). In the date picker, holidays are marked red and school breaks orange.',
+            content2: 'Cleaning activities automatically create a calendar entry and a job in the job board. You can generate and print QR codes for cleaning locations, monitor check-in status and view cleaning statistics (attendance, hours per family).',
           },
           billing: {
             title: 'Annual Billing',
-            content: 'Create billing periods and generate annual billing for all families. Export reports as PDF. Closed periods cannot be modified.',
+            content: 'Create billing periods (year/month), generate reports for all families and export them as PDF. Closed periods cannot be modified. The billing shows per family: regular hours, cleaning hours, total hours, target and balance.',
+          },
+          errorReports: {
+            title: 'Error Reports',
+            content: 'Frontend errors are automatically reported and displayed under "Error Reports" with fingerprint-based deduplication. You can manage the status (New/Reported/Resolved/Ignored) and optionally create GitHub Issues from error reports when a GitHub repository and Personal Access Token are configured.',
           },
         },
       },
