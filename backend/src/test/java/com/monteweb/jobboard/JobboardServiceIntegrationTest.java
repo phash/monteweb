@@ -22,6 +22,17 @@ class JobboardServiceIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    private String loginAs(String email) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "password": "test1234"}
+                                """.formatted(email)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+    }
+
     // ── Job Listing ──────────────────────────────────────────────────
 
     @Test
@@ -138,9 +149,8 @@ class JobboardServiceIntegrationTest {
         JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
         String jobId = json.path("data").path("id").asText();
 
-        // User B applies for the job (different user than creator)
-        String tokenB = TestHelper.registerAndGetToken(mockMvc,
-                "job-applier@example.com", "Job", "Applier");
+        // Use seed user eltern@monteweb.local who has a family (required by applyForJob)
+        String tokenB = loginAs("eltern@monteweb.local");
 
         mockMvc.perform(post("/api/v1/jobs/" + jobId + "/apply")
                         .header("Authorization", "Bearer " + tokenB))

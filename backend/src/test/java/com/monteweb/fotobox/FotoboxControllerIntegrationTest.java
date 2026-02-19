@@ -173,7 +173,7 @@ class FotoboxControllerIntegrationTest {
                                 {"maxImagesPerThread": 0}
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.maxImagesPerThread").isEmpty());
+                .andExpect(jsonPath("$.data.maxImagesPerThread").doesNotExist());
     }
 
     // ==================== Thread Tests ====================
@@ -236,7 +236,7 @@ class FotoboxControllerIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("Only Title"))
-                .andExpect(jsonPath("$.data.description").isEmpty());
+                .andExpect(jsonPath("$.data.description").doesNotExist());
     }
 
     @Test
@@ -648,7 +648,7 @@ class FotoboxControllerIntegrationTest {
         var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
                 "fotobox-viewonly@example.com", "Foto", "ViewOnly");
         String memberToken = memberResponse.path("data").path("accessToken").asText();
-        String memberId = memberResponse.path("data").path("user").path("id").asText();
+        String memberId = memberResponse.path("data").path("userId").asText();
         addMemberToRoom(leaderToken, roomId, memberId);
 
         // Member with VIEW_ONLY should not be able to create threads
@@ -674,7 +674,7 @@ class FotoboxControllerIntegrationTest {
         var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
                 "fotobox-viewonly-upl@example.com", "Foto", "ViewOnlyUpl");
         String memberToken = memberResponse.path("data").path("accessToken").asText();
-        String memberId = memberResponse.path("data").path("user").path("id").asText();
+        String memberId = memberResponse.path("data").path("userId").asText();
         addMemberToRoom(leaderToken, roomId, memberId);
 
         MockMultipartFile file = new MockMultipartFile(
@@ -701,7 +701,7 @@ class FotoboxControllerIntegrationTest {
         var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
                 "fotobox-poster@example.com", "Foto", "Poster");
         String memberToken = memberResponse.path("data").path("accessToken").asText();
-        String memberId = memberResponse.path("data").path("user").path("id").asText();
+        String memberId = memberResponse.path("data").path("userId").asText();
         addMemberToRoom(leaderToken, roomId, memberId);
 
         MockMultipartFile file = new MockMultipartFile(
@@ -727,7 +727,7 @@ class FotoboxControllerIntegrationTest {
         var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
                 "fotobox-viewer@example.com", "Foto", "Viewer");
         String memberToken = memberResponse.path("data").path("accessToken").asText();
-        String memberId = memberResponse.path("data").path("user").path("id").asText();
+        String memberId = memberResponse.path("data").path("userId").asText();
         addMemberToRoom(leaderToken, roomId, memberId);
 
         // VIEW_ONLY member should see threads
@@ -761,7 +761,7 @@ class FotoboxControllerIntegrationTest {
         var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
                 "fotobox-nonleader@example.com", "Foto", "NonLeader");
         String memberToken = memberResponse.path("data").path("accessToken").asText();
-        String memberId = memberResponse.path("data").path("user").path("id").asText();
+        String memberId = memberResponse.path("data").path("userId").asText();
         addMemberToRoom(leaderToken, roomId, memberId);
 
         mockMvc.perform(put("/api/v1/rooms/" + roomId + "/fotobox/settings")

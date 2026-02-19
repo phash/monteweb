@@ -136,10 +136,10 @@ class RoomServiceIntegrationTest {
         JsonNode roomJson = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
         String roomId = roomJson.path("data").path("id").asText();
 
-        mockMvc.perform(get("/api/v1/rooms/" + roomId + "/members")
+        mockMvc.perform(get("/api/v1/rooms/" + roomId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.members").isArray());
     }
 
     // ── Browse Rooms ─────────────────────────────────────────────────
