@@ -24,13 +24,13 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (897 tests, 108 files)
+npm test               # vitest run (~1060 tests, ~120 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
 # Backend tests (requires Docker for Testcontainers)
 cd backend
-./mvnw test                                            # all tests
+./mvnw test                                            # all tests (38 test classes)
 ./mvnw test -Dtest=AuthControllerIntegrationTest       # single test class
 ./mvnw test -Dtest="AuthControllerIntegrationTest#register_*"  # single method
 
@@ -72,7 +72,7 @@ com.monteweb.<module>/
 frontend/src/
 ├── api/           # Axios modules (authApi, feedApi, roomsApi...) — base /api/v1, auto JWT refresh
 ├── components/    # By domain: common/, layout/, feed/, rooms/, family/, messaging/
-├── composables/   # useLocaleDate, useWebSocket, useTheme, usePushNotifications, useHolidays, useConfirmDialog, useErrorReporting
+├── composables/   # useLocaleDate, useWebSocket, useTheme, usePushNotifications, useHolidays, useConfirmDialog, useErrorReporting, useContextHelp, usePwaInstall
 ├── i18n/          # de.ts + en.ts — ALL user-facing text via t(), German default
 ├── router/        # Lazy-loaded routes, auth/admin guards, 404 catch-all
 ├── stores/        # Pinia composition stores (one per domain)
@@ -86,9 +86,11 @@ frontend/src/
 
 **Theming:** CSS custom properties `--mw-*`, theme loaded from backend tenant config.
 
+**PWA:** Installable via `vite-plugin-pwa` + Workbox. Service worker with runtime caching (NetworkFirst for API calls). Icons in `public/icons/`. `usePwaInstall` composable handles install prompt with 7-day dismiss delay.
+
 ### Database
 
-- **Flyway** V001–V050. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V061. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
@@ -103,6 +105,25 @@ frontend/src/
 - `forms.section_ids`: `UUID[]` with GIN index — multi-section targeting for SECTION-scoped forms
 - `billing_periods`: family billing with year/month/status (OPEN/CLOSED) — Jahresabrechnung
 - `error_reports`: fingerprint-based dedup, status (NEW/REPORTED/RESOLVED/IGNORED), `github_issue_url`, occurrence tracking
+- `fundgrube_items`: lost & found items with section filter, claim workflow (expires +24h)
+- `fundgrube_images`: MinIO image storage with thumbnails for lost & found
+- `messages.reply_to_id`: UUID FK for reply threading (ON DELETE SET NULL)
+- `messages.content`: nullable (image-only messages)
+- `message_images`: chat images with MinIO storage, thumbnails, 90-day auto-cleanup
+- `cleaning_configs.calendar_event_id` + `cleaning_configs.job_id`: links Putzaktion to calendar event and job
+- `families.is_hours_exempt`: BOOLEAN default false, exempts family from Elternstunden
+- `families.is_active`: BOOLEAN default true, family deactivation support
+- `tenant_config.require_assignment_confirmation`: BOOLEAN default true, auto-confirms job hours when false
+- `tenant_config.available_languages`: TEXT[] default `'{de,en}'`, stores selectable languages
+
+### Infrastructure (Docker / CI/CD)
+
+- **Docker:** Multi-stage builds, `.dockerignore` for minimal build context, non-root containers (nginx user, monteweb user), OCI labels
+- **nginx:** Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), `server_tokens off`, `client_max_body_size 50m`, actuator blocking (only `/health` public)
+- **Docker Compose:** Two isolated networks (`monteweb-frontend`, `monteweb-backend`), memory limits on all services, MinIO version pinned
+- **CI/CD:** GitHub Actions with SHA-pinned actions, concurrency groups, job timeouts, Docker Buildx with GHA cache, Trivy image scanning
+- **Dependabot:** Weekly updates for GitHub Actions, npm, Maven, Docker base images
+- **See also:** `INFRA-CHANGELOG.md` (all optimizations), `LOCAL-DEV-GUIDE.md` (comprehensive dev guide)
 
 ### Testing
 
@@ -122,13 +143,14 @@ frontend/src/
 | feed | Unified Feed, Posts, Kommentare, Banner, Targeted Posts | - |
 | notification | In-App + Push (VAPID) | Push: `monteweb.push.enabled` |
 | admin | System-Config, Audit-Log, Module, Error Reporting | - |
-| messaging | DM & Chat, Kommunikationsregeln | `monteweb.modules.messaging.enabled` |
+| messaging | DM & Chat, Kommunikationsregeln, Chat-Bilder, Antworten | `monteweb.modules.messaging.enabled` |
 | files | Dateiablage via MinIO, Folder-Audience | `monteweb.modules.files.enabled` |
 | jobboard | Jobboerse, Elternstunden, Jahresabrechnung, PDF-Export | `monteweb.modules.jobboard.enabled` |
 | cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen | `monteweb.modules.cleaning.enabled` |
 | calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed | `monteweb.modules.calendar.enabled` |
 | forms | Survey/Consent, Multi-Section Scopes, Dashboard Widget, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
 | fotobox | Foto-Threads, Thumbnails, Lightbox, Thread-Audience | `monteweb.modules.fotobox.enabled` |
+| fundgrube | Schulweite Fundgrube, Fotos, Bereichsfilter, Claim-Workflow | `monteweb.modules.fundgrube.enabled` |
 
 Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.enabled`), Push (`monteweb.push.enabled`)
 
@@ -149,6 +171,11 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 13. **Multi-Section Forms:** SECTION-scoped Formulare koennen mehrere Schulbereiche via `section_ids UUID[]` targeten. Dashboard-Widget zeigt offene Formulare
 14. **Auto-Folder Creation:** When a KLASSE room is created (`RoomCreatedEvent`), the files module automatically creates a default folder for the room
 15. **Error Reporting:** Frontend errors are reported via `/api/v1/error-reports` with fingerprint-based deduplication. Admin can view, manage status (NEW/REPORTED/RESOLVED/IGNORED), and optionally create GitHub Issues via configured `github_repo` + `github_pat`
+16. **Fundgrube (Lost & Found):** Schulweite Fundgrube mit Fotos, optionalem Bereichsfilter. Claim-Workflow (expires +24h via `@Scheduled` cleanup). MinIO image storage mit Thumbnails
+17. **Chat-Bilder & Antworten:** Nachrichten koennen Bilder enthalten (multipart upload, MinIO, Thumbnails). Reply-Threading via `reply_to_id`. 90-Tage Auto-Cleanup fuer Bilder
+18. **PWA:** Installierbar als Progressive Web App. Workbox Service Worker mit NetworkFirst-Caching fuer API-Calls. Install-Banner mit 7-Tage-Dismiss
+19. **Mehrsprachigkeit:** `available_languages TEXT[]` bestimmt waehlbare Sprachen. LanguageSwitcher in Profil + Login (nicht Header). Nur sichtbar wenn >1 Sprache aktiviert
+20. **Familien-Deaktivierung:** Familien koennen deaktiviert werden (`is_active`). Stundenkonto-Befreiung via `is_hours_exempt`
 
 ## Conventions
 
@@ -166,7 +193,7 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 - **Rooms** `/api/v1/rooms`: /mine, /browse, /discover, CRUD, settings, avatar, archive, members, mute, join-requests
 - **Feed** `/api/v1/feed`: feed, banners, posts CRUD, pin, comments
 - **Calendar** `/api/v1/calendar`: events CRUD, cancel, rsvp, room events
-- **Messaging** `/api/v1/messages`: conversations, messages, WS `/ws/messages`
+- **Messaging** `/api/v1/messages`: conversations, messages (multipart with images), reply threading, image download/thumbnail, WS `/ws/messages`
 - **Files** `/api/v1/rooms/{id}/files`: upload/download/delete, folders
 - **Billing** `/api/v1/billing`: periods, report (Jahresabrechnung)
 - **Jobboard** `/api/v1/jobs`: CRUD, apply, assignments, family hours, report/export/pdf
@@ -175,4 +202,5 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 - **Fotobox** `/api/v1/rooms/{id}/fotobox` + `/api/v1/fotobox`: threads, images, thumbnails (`?token=` JWT)
 - **Error Reports** `/api/v1/error-reports`: submit (public) | `/api/v1/admin/error-reports`: list, update status
 - **Section Admin** `/api/v1/section-admin`: rooms, members, overview for SECTION_ADMIN role
+- **Fundgrube** `/api/v1/fundgrube`: items CRUD, claim, images upload/download/thumbnail (`?token=` JWT)
 - **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, delete, push subscribe/unsubscribe
