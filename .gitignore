@@ -45,7 +45,8 @@ desktop.ini
 data/
 !frontend/src/data/
 
-# Plan files
+# Planning & internal docs
+planung/
 docs/plankonzept.md
 
 # Serena / Claude
