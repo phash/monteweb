@@ -282,6 +282,8 @@ export default {
       multilanguageEnabled: 'Enable multilanguage',
       multilanguageHint: 'When disabled, only the default language is used and the language switcher is hidden.',
       defaultLanguage: 'Default language',
+      availableLanguages: 'Available Languages',
+      availableLanguagesHint: 'Choose which languages users can select in the language switcher. The default language is always available.',
       registration: 'Registration',
       requireUserApproval: 'New users must be approved',
       requireUserApprovalHint: 'When disabled, new users are immediately active after registration.',
@@ -932,6 +934,7 @@ export default {
     title: 'My Profile',
     editProfile: 'Edit profile',
     saved: 'Profile saved',
+    language: 'Language',
     roles: 'My Roles',
     roleLabels: {
       SUPERADMIN: 'Superadmin',

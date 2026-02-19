@@ -9,7 +9,6 @@ import Menu from 'primevue/menu'
 import Tag from 'primevue/tag'
 import Popover from 'primevue/popover'
 import NotificationBell from '@/components/common/NotificationBell.vue'
-import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import { ref, computed } from 'vue'
 import type { UserRole } from '@/types/user'
 
@@ -111,7 +110,6 @@ async function onSwitchRole(role: string) {
           </div>
         </div>
       </Popover>
-      <LanguageSwitcher />
       <NotificationBell />
       <Button
         :label="auth.user?.displayName ?? ''"

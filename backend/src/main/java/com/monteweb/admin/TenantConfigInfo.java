@@ -25,6 +25,7 @@ public record TenantConfigInfo(
         boolean requireAssignmentConfirmation,
         boolean multilanguageEnabled,
         String defaultLanguage,
+        List<String> availableLanguages,
         boolean requireUserApproval
 ) {
 }

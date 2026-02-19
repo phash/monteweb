@@ -282,6 +282,8 @@ export default {
       multilanguageEnabled: 'Mehrsprachigkeit aktivieren',
       multilanguageHint: 'Wenn deaktiviert, wird nur die Standardsprache verwendet und der Sprachwechsler ausgeblendet.',
       defaultLanguage: 'Standardsprache',
+      availableLanguages: 'Verfügbare Sprachen',
+      availableLanguagesHint: 'Wähle die Sprachen, die Benutzer im Sprachwechsler auswählen können. Die Standardsprache ist immer verfügbar.',
       registration: 'Registrierung',
       requireUserApproval: 'Neue Benutzer müssen freigeschaltet werden',
       requireUserApprovalHint: 'Wenn deaktiviert, sind neue Benutzer nach der Registrierung sofort aktiv.',
@@ -932,6 +934,7 @@ export default {
     title: 'Mein Profil',
     editProfile: 'Profil bearbeiten',
     saved: 'Profil gespeichert',
+    language: 'Sprache',
     roles: 'Meine Rollen',
     roleLabels: {
       SUPERADMIN: 'Superadmin',

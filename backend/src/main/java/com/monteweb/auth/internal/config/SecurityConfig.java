@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/error-reports").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/config").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated()
                 )

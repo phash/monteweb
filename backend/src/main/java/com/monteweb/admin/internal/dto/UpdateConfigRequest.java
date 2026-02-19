@@ -14,6 +14,7 @@ public record UpdateConfigRequest(
         Boolean requireAssignmentConfirmation,
         Boolean multilanguageEnabled,
         String defaultLanguage,
+        List<String> availableLanguages,
         Boolean requireUserApproval
 ) {
 }

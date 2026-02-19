@@ -51,5 +51,6 @@ export interface TenantConfig {
   requireAssignmentConfirmation: boolean
   multilanguageEnabled: boolean
   defaultLanguage: string
+  availableLanguages: string[]
   requireUserApproval: boolean
 }

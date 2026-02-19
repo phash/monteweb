@@ -73,6 +73,10 @@ public class TenantConfig {
     @Column(name = "default_language", nullable = false, length = 5)
     private String defaultLanguage = "de";
 
+    @Column(name = "available_languages", columnDefinition = "TEXT[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private List<String> availableLanguages = List.of("de", "en");
+
     @Column(name = "require_user_approval", nullable = false)
     private boolean requireUserApproval = true;
 

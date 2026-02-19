@@ -13,6 +13,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import type { UserRole } from '@/types/user'
 
 const { t } = useI18n()
@@ -182,6 +183,12 @@ async function togglePush() {
       </div>
     </div>
 
+    <!-- Language -->
+    <div class="card profile-card language-card">
+      <h3>{{ t('profile.language') }}</h3>
+      <LanguageSwitcher />
+    </div>
+
     <!-- Push Notifications -->
     <div v-if="pushSupported" class="card profile-card push-card">
       <h3>{{ t('profile.pushNotifications') }}</h3>
@@ -277,6 +284,15 @@ async function togglePush() {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.language-card {
+  margin-top: 1rem;
+}
+
+.language-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
 }
 
 .push-card {

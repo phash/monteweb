@@ -104,9 +104,9 @@ describe('AppHeader', () => {
     expect(wrapper.find('.notification-bell').exists()).toBe(true)
   })
 
-  it('should render LanguageSwitcher component', () => {
+  it('should not render LanguageSwitcher component (moved to profile)', () => {
     const wrapper = createWrapper()
-    expect(wrapper.find('.language-switcher').exists()).toBe(true)
+    expect(wrapper.find('.language-switcher').exists()).toBe(false)
   })
 
   it('should have a logo link', () => {

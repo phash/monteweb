@@ -7,32 +7,38 @@ import Select from 'primevue/select'
 const { locale } = useI18n()
 const adminStore = useAdminStore()
 
-const multilanguageEnabled = computed(() => adminStore.config?.multilanguageEnabled ?? true)
-
-const languages = [
+const allLanguages = [
   { label: 'Deutsch', value: 'de' },
   { label: 'English', value: 'en' },
 ]
+
+const availableLanguages = computed(() => {
+  const available = adminStore.config?.availableLanguages ?? ['de', 'en']
+  return allLanguages.filter(l => available.includes(l.value))
+})
+
+const showSwitcher = computed(() => availableLanguages.value.length > 1)
 
 function changeLocale(event: { value: string }) {
   locale.value = event.value
   localStorage.setItem('monteweb-locale', event.value)
 }
 
-// When multilanguage is disabled, force locale to default language from config
-watch(multilanguageEnabled, (enabled) => {
-  if (!enabled && adminStore.config?.defaultLanguage) {
-    locale.value = adminStore.config.defaultLanguage
-    localStorage.setItem('monteweb-locale', adminStore.config.defaultLanguage)
+// When available languages change and current locale is not available, reset to default
+watch(availableLanguages, (langs) => {
+  if (langs.length > 0 && !langs.some(l => l.value === locale.value)) {
+    const defaultLang = adminStore.config?.defaultLanguage ?? 'de'
+    locale.value = defaultLang
+    localStorage.setItem('monteweb-locale', defaultLang)
   }
 })
 </script>
 
 <template>
   <Select
-    v-if="multilanguageEnabled"
+    v-if="showSwitcher"
     :modelValue="locale"
-    :options="languages"
+    :options="availableLanguages"
     optionLabel="label"
     optionValue="value"
     class="lang-select"

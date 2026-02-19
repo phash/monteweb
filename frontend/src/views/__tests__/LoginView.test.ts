@@ -29,7 +29,9 @@ vi.mock('@/api/users.api', () => ({
 }))
 
 vi.mock('@/api/admin.api', () => ({
-  adminApi: { getPublicConfig: vi.fn() },
+  adminApi: {
+    getPublicConfig: vi.fn().mockResolvedValue({ data: { data: { modules: {}, availableLanguages: ['de', 'en'] } } }),
+  },
 }))
 
 const i18n = createI18n({
@@ -66,6 +68,7 @@ const stubs = {
   },
   Divider: { template: '<hr class="divider-stub" />', props: ['align'] },
   Message: { template: '<div class="message-stub"><slot /></div>', props: ['severity', 'closable'] },
+  LanguageSwitcher: { template: '<div class="language-switcher-stub" />' },
 }
 
 function mountLogin() {

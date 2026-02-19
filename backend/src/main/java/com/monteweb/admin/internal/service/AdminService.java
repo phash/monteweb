@@ -39,7 +39,8 @@ public class AdminService implements AdminModuleApi {
     public TenantConfigInfo updateConfig(String schoolName, String logoUrl, BigDecimal targetHours, BigDecimal targetCleaningHours,
                                           String bundesland, java.util.List<java.util.Map<String, String>> schoolVacations,
                                           Boolean requireAssignmentConfirmation, Boolean multilanguageEnabled,
-                                          String defaultLanguage, Boolean requireUserApproval) {
+                                          String defaultLanguage, java.util.List<String> availableLanguages,
+                                          Boolean requireUserApproval) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -50,6 +51,7 @@ public class AdminService implements AdminModuleApi {
         if (requireAssignmentConfirmation != null) config.setRequireAssignmentConfirmation(requireAssignmentConfirmation);
         if (multilanguageEnabled != null) config.setMultilanguageEnabled(multilanguageEnabled);
         if (defaultLanguage != null) config.setDefaultLanguage(defaultLanguage);
+        if (availableLanguages != null) config.setAvailableLanguages(availableLanguages);
         if (requireUserApproval != null) config.setRequireUserApproval(requireUserApproval);
         return toInfo(configRepository.save(config));
     }
@@ -121,6 +123,7 @@ public class AdminService implements AdminModuleApi {
                 config.isRequireAssignmentConfirmation(),
                 config.isMultilanguageEnabled(),
                 config.getDefaultLanguage(),
+                config.getAvailableLanguages(),
                 config.isRequireUserApproval()
         );
     }

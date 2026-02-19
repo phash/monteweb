@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { useI18n } from 'vue-i18n'
 import client from '@/api/client'
 import InputText from 'primevue/inputtext'
@@ -9,11 +10,13 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
+import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 
 const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const adminStore = useAdminStore()
 
 const isLogin = ref(true)
 const error = ref('')
@@ -30,6 +33,9 @@ const form = ref({
 })
 
 onMounted(async () => {
+  if (!adminStore.config) {
+    adminStore.fetchConfig()
+  }
   try {
     const res = await client.get('/auth/oidc/config')
     if (res.data?.data?.enabled) {
@@ -164,6 +170,10 @@ function loginWithSso() {
           {{ t('auth.backToLogin') }}
         </a>
       </div>
+
+      <div class="login-lang">
+        <LanguageSwitcher />
+      </div>
     </div>
   </div>
 </template>
@@ -233,5 +243,11 @@ function loginWithSso() {
 .login-toggle a {
   margin-left: 0.25rem;
   font-weight: 600;
+}
+
+.login-lang {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 </style>

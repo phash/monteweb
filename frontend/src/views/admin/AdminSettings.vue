@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Select from 'primevue/select'
+import MultiSelect from 'primevue/multiselect'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ToggleSwitch from 'primevue/toggleswitch'
@@ -20,8 +21,8 @@ const saving = ref(false)
 const savingHours = ref(false)
 const savingVacations = ref(false)
 
-const multilanguageEnabled = ref(true)
 const defaultLanguage = ref('de')
+const availableLanguages = ref<string[]>(['de', 'en'])
 const requireUserApproval = ref(true)
 const requireAssignmentConfirmation = ref(true)
 const targetHoursPerFamily = ref(30)
@@ -58,8 +59,8 @@ onMounted(async () => {
     await adminStore.fetchConfig()
   }
   if (adminStore.config) {
-    multilanguageEnabled.value = adminStore.config.multilanguageEnabled ?? true
     defaultLanguage.value = adminStore.config.defaultLanguage ?? 'de'
+    availableLanguages.value = adminStore.config.availableLanguages ?? ['de', 'en']
     requireUserApproval.value = adminStore.config.requireUserApproval ?? true
     requireAssignmentConfirmation.value = adminStore.config.requireAssignmentConfirmation ?? true
     targetHoursPerFamily.value = adminStore.config.targetHoursPerFamily ?? 30
@@ -72,9 +73,13 @@ onMounted(async () => {
 async function saveSettings() {
   saving.value = true
   try {
+    // Ensure default language is always in available languages
+    const langs = availableLanguages.value.includes(defaultLanguage.value)
+      ? availableLanguages.value
+      : [defaultLanguage.value, ...availableLanguages.value]
     await adminStore.updateConfig({
-      multilanguageEnabled: multilanguageEnabled.value,
       defaultLanguage: defaultLanguage.value,
+      availableLanguages: langs,
       requireUserApproval: requireUserApproval.value,
       requireAssignmentConfirmation: requireAssignmentConfirmation.value,
     })
@@ -141,13 +146,6 @@ async function saveVacationsConfig() {
     <!-- Language Section -->
     <div class="settings-section">
       <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.language') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="multilanguageEnabled" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.multilanguageEnabled') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.multilanguageHint') }}</small>
-        </div>
-      </div>
       <div class="mb-4">
         <label class="block text-sm font-medium mb-1">{{ t('admin.settings.defaultLanguage') }}</label>
         <Select
@@ -157,6 +155,17 @@ async function saveVacationsConfig() {
           optionValue="value"
           class="w-full md:w-1/3"
         />
+      </div>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">{{ t('admin.settings.availableLanguages') }}</label>
+        <MultiSelect
+          v-model="availableLanguages"
+          :options="languageOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full md:w-1/3"
+        />
+        <small class="text-gray-500">{{ t('admin.settings.availableLanguagesHint') }}</small>
       </div>
     </div>
 

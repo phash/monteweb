@@ -38,7 +38,7 @@ public class AdminConfigController {
     public ResponseEntity<ApiResponse<TenantConfigInfo>> updateConfig(@RequestBody UpdateConfigRequest request) {
         var config = adminService.updateConfig(request.schoolName(), request.logoUrl(), request.targetHoursPerFamily(), request.targetCleaningHours(),
                 request.bundesland(), request.schoolVacations(), request.requireAssignmentConfirmation(),
-                request.multilanguageEnabled(), request.defaultLanguage(), request.requireUserApproval());
+                request.multilanguageEnabled(), request.defaultLanguage(), request.availableLanguages(), request.requireUserApproval());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 

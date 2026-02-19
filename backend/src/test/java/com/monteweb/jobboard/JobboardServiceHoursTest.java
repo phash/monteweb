@@ -71,7 +71,7 @@ class JobboardServiceHoursTest {
                 targetHours, targetCleaningHours,
                 true, true, "BY", List.of(),
                 null, false, true,
-                true, "de", true
+                true, "de", List.of("de", "en"), true
         );
     }
 

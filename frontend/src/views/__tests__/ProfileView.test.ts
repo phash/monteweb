@@ -17,6 +17,12 @@ vi.mock('@/api/client', () => ({
   default: { get: vi.fn(), post: vi.fn() },
 }))
 
+vi.mock('@/api/admin.api', () => ({
+  adminApi: {
+    getPublicConfig: vi.fn().mockResolvedValue({ data: { data: { modules: {}, availableLanguages: ['de', 'en'] } } }),
+  },
+}))
+
 const i18n = createI18n({
   legacy: false,
   locale: 'de',
@@ -45,6 +51,7 @@ const stubs = {
     props: ['label', 'type'],
   },
   Message: { template: '<div class="message-stub"><slot /></div>', props: ['severity', 'closable'] },
+  LanguageSwitcher: { template: '<div class="language-switcher-stub" />' },
 }
 
 function mountProfile() {
