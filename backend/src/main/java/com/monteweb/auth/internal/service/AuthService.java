@@ -32,7 +32,7 @@ public class AuthService implements AuthModuleApi {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void register(RegisterRequest request) {
+    public LoginResponse register(RegisterRequest request) {
         if (userModuleApi.existsByEmail(request.email())) {
             throw new BusinessException("Email already registered");
         }
@@ -51,7 +51,10 @@ public class AuthService implements AuthModuleApi {
         boolean requireApproval = adminModuleApi.getTenantConfig().requireUserApproval();
         if (requireApproval) {
             userModuleApi.setActive(user.id(), false);
+            return null;
         }
+
+        return generateTokenResponse(user);
     }
 
     public LoginResponse login(LoginRequest request) {

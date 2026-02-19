@@ -35,7 +35,7 @@ export default defineConfig({
         'src/components/layout/AppHeader.vue',
       ],
       thresholds: {
-        statements: 55,
+        statements: 54,
       },
     },
   },

@@ -32,3 +32,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+    defer-datasource-initialization: true
+  sql:
+    init:
+      mode: always
