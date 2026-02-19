@@ -1059,6 +1059,16 @@ export default {
     noContextHelp: 'Für diese Seite ist keine Kontexthilfe verfügbar.',
     openHandbook: 'Handbuch öffnen',
     nav: 'Hilfe',
+    downloads: {
+      title: 'Dokumente zum Download',
+      handbookParent: 'Handbuch Eltern',
+      handbookTeacher: 'Handbuch Lehrkräfte',
+      handbookAdmin: 'Handbuch Administration',
+      cheatsheetParent: 'Kurzanleitung Eltern',
+      cheatsheetTeacher: 'Kurzanleitung Lehrkräfte',
+      cheatsheetSectionAdmin: 'Kurzanleitung Bereichsleitung',
+      cheatsheetSuperadmin: 'Kurzanleitung Superadmin',
+    },
     pages: {
       dashboard: {
         title: 'Dashboard',

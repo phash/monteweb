@@ -18,7 +18,11 @@ function openHelp() {
 
 function goToHandbook() {
   visible.value = false
-  router.push('/help')
+  if (router.currentRoute.value.name === 'help') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } else {
+    router.push('/help')
+  }
 }
 </script>
 
