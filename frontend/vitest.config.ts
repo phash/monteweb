@@ -12,6 +12,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // Suppress jsdom/undici unhandled rejection false positives (Node 22 compat)
+    dangerouslyIgnoreUnhandledErrors: true,
     setupFiles: ['src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     coverage: {
