@@ -258,6 +258,8 @@ export default {
     schoolVacations: 'Schulferien',
     holidaysAndVacations: 'Schulferien & Feiertage',
     addVacation: 'Ferienzeit hinzufügen',
+    loadVacations: 'Ferien für Bundesland laden',
+    loadVacationsHint: 'Lädt die offiziellen Schulferien 2025/2026 für das gewählte Bundesland',
     removeVacation: 'Entfernen',
     vacationName: 'Bezeichnung',
     vacationFrom: 'Von',

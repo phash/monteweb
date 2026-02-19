@@ -11,6 +11,7 @@ import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useToast } from 'primevue/usetoast'
+import { predefinedVacations } from '@/data/schoolVacations'
 
 const { t } = useI18n()
 const adminStore = useAdminStore()
@@ -107,6 +108,13 @@ function addVacation() {
 
 function removeVacation(index: number) {
   schoolVacations.value.splice(index, 1)
+}
+
+function loadVacationsForBundesland() {
+  const vacations = predefinedVacations[bundesland.value]
+  if (vacations) {
+    schoolVacations.value = vacations.map(v => ({ ...v }))
+  }
 }
 
 async function saveVacationsConfig() {
@@ -206,6 +214,11 @@ async function saveVacationsConfig() {
       </div>
 
       <h3 class="text-md font-medium mb-2">{{ t('admin.schoolVacations') }}</h3>
+      <div class="mb-3">
+        <Button :label="t('admin.loadVacations')" icon="pi pi-download" severity="secondary" size="small"
+                @click="loadVacationsForBundesland" />
+        <small class="text-gray-500 ml-2">{{ t('admin.loadVacationsHint') }}</small>
+      </div>
       <DataTable :value="schoolVacations" stripedRows class="mb-3">
         <template #empty>
           <span class="text-gray-400">{{ t('common.noData') }}</span>

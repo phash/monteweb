@@ -258,6 +258,8 @@ export default {
     schoolVacations: 'School vacations',
     holidaysAndVacations: 'School Vacations & Holidays',
     addVacation: 'Add vacation period',
+    loadVacations: 'Load vacations for state',
+    loadVacationsHint: 'Loads the official 2025/2026 school vacations for the selected state',
     removeVacation: 'Remove',
     vacationName: 'Name',
     vacationFrom: 'From',

@@ -1,0 +1,117 @@
+/**
+ * Predefined school vacations per Bundesland (2025/2026 school year).
+ * Source: KMK Ferienkalender / schulferien.org
+ */
+export const predefinedVacations: Record<string, { name: string; from: string; to: string }[]> = {
+  BW: [
+    { name: 'Herbstferien', from: '2025-10-26', to: '2025-10-30' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-05' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-11' },
+    { name: 'Pfingstferien', from: '2026-05-26', to: '2026-06-05' },
+    { name: 'Sommerferien', from: '2026-07-30', to: '2026-09-12' },
+  ],
+  BY: [
+    { name: 'Herbstferien', from: '2025-11-02', to: '2025-11-06' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-05' },
+    { name: 'Winterferien', from: '2026-02-16', to: '2026-02-20' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-10' },
+    { name: 'Pfingstferien', from: '2026-05-26', to: '2026-06-05' },
+    { name: 'Sommerferien', from: '2026-08-03', to: '2026-09-14' },
+  ],
+  BE: [
+    { name: 'Herbstferien', from: '2025-10-19', to: '2025-10-31' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-02' },
+    { name: 'Winterferien', from: '2026-02-02', to: '2026-02-07' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-10' },
+    { name: 'Sommerferien', from: '2026-07-09', to: '2026-08-22' },
+  ],
+  BB: [
+    { name: 'Herbstferien', from: '2025-10-19', to: '2025-10-30' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-02' },
+    { name: 'Winterferien', from: '2026-02-02', to: '2026-02-07' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-10' },
+    { name: 'Sommerferien', from: '2026-07-09', to: '2026-08-22' },
+  ],
+  HB: [
+    { name: 'Herbstferien', from: '2025-10-12', to: '2025-10-24' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-05' },
+    { name: 'Winterferien', from: '2026-02-02', to: '2026-02-03' },
+    { name: 'Osterferien', from: '2026-03-23', to: '2026-04-07' },
+    { name: 'Sommerferien', from: '2026-07-02', to: '2026-08-12' },
+  ],
+  HH: [
+    { name: 'Herbstferien', from: '2025-10-19', to: '2025-10-30' },
+    { name: 'Weihnachtsferien', from: '2025-12-17', to: '2026-01-02' },
+    { name: 'Winterferien', from: '2026-01-30', to: '2026-01-30' },
+    { name: 'Osterferien', from: '2026-03-02', to: '2026-03-13' },
+    { name: 'Sommerferien', from: '2026-07-09', to: '2026-08-19' },
+  ],
+  HE: [
+    { name: 'Herbstferien', from: '2025-10-05', to: '2025-10-17' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-10' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-10' },
+    { name: 'Sommerferien', from: '2026-06-29', to: '2026-08-07' },
+  ],
+  MV: [
+    { name: 'Herbstferien', from: '2025-10-15', to: '2025-10-24' },
+    { name: 'Weihnachtsferien', from: '2025-12-20', to: '2026-01-03' },
+    { name: 'Winterferien', from: '2026-02-09', to: '2026-02-20' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-08' },
+    { name: 'Sommerferien', from: '2026-07-13', to: '2026-08-22' },
+  ],
+  NI: [
+    { name: 'Herbstferien', from: '2025-10-12', to: '2025-10-24' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-05' },
+    { name: 'Winterferien', from: '2026-02-02', to: '2026-02-03' },
+    { name: 'Osterferien', from: '2026-03-23', to: '2026-04-07' },
+    { name: 'Sommerferien', from: '2026-07-02', to: '2026-08-12' },
+  ],
+  NW: [
+    { name: 'Herbstferien', from: '2025-10-17', to: '2025-10-31' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-06' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-11' },
+    { name: 'Sommerferien', from: '2026-07-20', to: '2026-09-01' },
+  ],
+  RP: [
+    { name: 'Herbstferien', from: '2025-10-05', to: '2025-10-16' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-07' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-10' },
+    { name: 'Sommerferien', from: '2026-06-29', to: '2026-08-07' },
+  ],
+  SL: [
+    { name: 'Herbstferien', from: '2025-10-05', to: '2025-10-16' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-02' },
+    { name: 'Winterferien', from: '2026-02-16', to: '2026-02-20' },
+    { name: 'Osterferien', from: '2026-04-07', to: '2026-04-17' },
+    { name: 'Sommerferien', from: '2026-06-29', to: '2026-08-07' },
+  ],
+  SN: [
+    { name: 'Herbstferien', from: '2025-10-12', to: '2025-10-24' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-02' },
+    { name: 'Winterferien', from: '2026-02-09', to: '2026-02-21' },
+    { name: 'Osterferien', from: '2026-04-03', to: '2026-04-10' },
+    { name: 'Sommerferien', from: '2026-07-04', to: '2026-08-14' },
+  ],
+  ST: [
+    { name: 'Herbstferien', from: '2025-10-19', to: '2025-10-30' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-05' },
+    { name: 'Winterferien', from: '2026-01-31', to: '2026-02-06' },
+    { name: 'Osterferien', from: '2026-03-30', to: '2026-04-04' },
+    { name: 'Pfingstferien', from: '2026-05-26', to: '2026-05-29' },
+    { name: 'Sommerferien', from: '2026-07-04', to: '2026-08-14' },
+  ],
+  SH: [
+    { name: 'Herbstferien', from: '2025-10-12', to: '2025-10-24' },
+    { name: 'Weihnachtsferien', from: '2025-12-19', to: '2026-01-06' },
+    { name: 'Winterferien', from: '2026-02-02', to: '2026-02-03' },
+    { name: 'Osterferien', from: '2026-03-26', to: '2026-04-10' },
+    { name: 'Sommerferien', from: '2026-07-04', to: '2026-08-15' },
+  ],
+  TH: [
+    { name: 'Herbstferien', from: '2025-10-12', to: '2025-10-24' },
+    { name: 'Weihnachtsferien', from: '2025-12-22', to: '2026-01-03' },
+    { name: 'Winterferien', from: '2026-02-16', to: '2026-02-21' },
+    { name: 'Osterferien', from: '2026-04-07', to: '2026-04-17' },
+    { name: 'Sommerferien', from: '2026-07-04', to: '2026-08-14' },
+  ],
+}
