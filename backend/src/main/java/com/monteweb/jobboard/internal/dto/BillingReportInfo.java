@@ -18,6 +18,8 @@ public record BillingReportInfo(
             BigDecimal totalHours,
             BigDecimal targetHours,
             BigDecimal balance,
+            BigDecimal targetCleaningHours,
+            BigDecimal cleaningBalance,
             String trafficLight
     ) {
     }

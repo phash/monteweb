@@ -25,6 +25,7 @@ vi.mock('@/api/jobboard.api', () => ({
         },
       },
     }),
+    getFamilyAssignments: vi.fn().mockResolvedValue({ data: { data: [] } }),
     listJobs: vi.fn().mockResolvedValue({ data: { data: { content: [], last: true } } }),
     getCategories: vi.fn().mockResolvedValue({ data: { data: [] } }),
     getMyAssignments: vi.fn().mockResolvedValue({ data: { data: [] } }),
@@ -57,6 +58,10 @@ const i18n = createI18n({
         cleaningProgress: 'Putz-Fortschritt',
         pending: 'Ausstehend',
         remaining: 'Verbleibend',
+        totalProgress: 'Gesamtfortschritt',
+        clickForJobs: 'Klicken für geleistete Jobs',
+        completedJobs: 'Geleistete Jobs',
+        noCompletedJobs: 'Keine abgeschlossenen Jobs',
       },
       admin: {
         trafficLight: {
@@ -73,6 +78,10 @@ const stubs = {
   Tag: {
     template: '<span class="tag-stub" :class="severity">{{ value }}</span>',
     props: ['value', 'severity', 'size'],
+  },
+  Dialog: {
+    template: '<div class="dialog-stub"><slot /></div>',
+    props: ['visible', 'header', 'modal', 'style'],
   },
 }
 
@@ -169,7 +178,7 @@ describe('FamilyHoursWidget', () => {
     const wrapper = mountWithJobboard()
     await flushPromises()
 
-    expect(wrapper.find('.cleaning-progress').exists()).toBe(true)
+    expect(wrapper.find('.progress-section-header').exists()).toBe(true)
     expect(wrapper.text()).toContain('Putz-Fortschritt')
   })
 
@@ -200,7 +209,7 @@ describe('FamilyHoursWidget', () => {
     })
     await flushPromises()
 
-    expect(wrapper.find('.cleaning-progress').exists()).toBe(false)
+    expect(wrapper.find('.progress-section-header').exists()).toBe(false)
   })
 
   it('should show total/target hours in progress label', async () => {

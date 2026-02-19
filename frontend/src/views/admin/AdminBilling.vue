@@ -226,6 +226,16 @@ function translateRole(role: string): string {
             </span>
           </template>
         </Column>
+        <Column field="targetCleaningHours" :header="t('billing.targetCleaningCol')" sortable>
+          <template #body="{ data }">{{ data.targetCleaningHours }}h</template>
+        </Column>
+        <Column field="cleaningBalance" :header="t('billing.cleaningBalanceCol')" sortable>
+          <template #body="{ data }">
+            <span :class="{ negative: data.cleaningBalance < 0 }">
+              {{ data.cleaningBalance >= 0 ? '+' : '' }}{{ data.cleaningBalance }}h
+            </span>
+          </template>
+        </Column>
         <Column :header="t('admin.trafficLightCol')" sortable sortField="trafficLight">
           <template #body="{ data }">
             <Tag

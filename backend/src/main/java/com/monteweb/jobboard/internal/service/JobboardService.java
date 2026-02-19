@@ -474,6 +474,15 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     @Transactional(readOnly = true)
+    public List<JobAssignmentInfo> getAssignmentsForFamily(UUID familyId) {
+        return assignmentRepository.findByFamilyId(familyId).stream()
+                .filter(a -> "COMPLETED".equals(a.getStatus()) && a.isConfirmed())
+                .sorted((a, b) -> b.getCompletedAt().compareTo(a.getCompletedAt()))
+                .map(this::toAssignmentInfo)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<JobAssignmentInfo> getMyAssignments(UUID userId) {
         return assignmentRepository.findByUserId(userId).stream()
                 .map(this::toAssignmentInfo)

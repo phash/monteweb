@@ -93,6 +93,10 @@ export const jobboardApi = {
     return client.get<ApiResponse<JobAssignmentInfo[]>>('/jobs/my-assignments')
   },
 
+  getFamilyAssignments(familyId: string) {
+    return client.get<ApiResponse<JobAssignmentInfo[]>>(`/jobs/family/${familyId}/assignments`)
+  },
+
   // Hours / Reports
   getFamilyHours(familyId: string) {
     return client.get<ApiResponse<FamilyHoursInfo>>(`/jobs/family/${familyId}/hours`)

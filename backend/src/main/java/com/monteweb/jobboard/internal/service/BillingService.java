@@ -36,6 +36,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -74,14 +75,35 @@ public class BillingService {
         if (billingPeriodRepository.findByStatus("ACTIVE").isPresent()) {
             return;
         }
-        // Auto-create school year billing period (Sep-Aug)
+        // Derive period from school vacations (Sommerferien)
+        var tenantConfig = adminModuleApi.getTenantConfig();
+        LocalDate[] summerVacation = findSummerVacation(tenantConfig.schoolVacations());
+
         LocalDate now = LocalDate.now();
-        int startYear = now.getMonthValue() >= 9 ? now.getYear() : now.getYear() - 1;
-        LocalDate start = LocalDate.of(startYear, 9, 1);
-        LocalDate end = LocalDate.of(startYear + 1, 8, 31);
+        LocalDate start;
+        LocalDate end;
+
+        if (summerVacation != null) {
+            // Period ends the day before summer vacation starts, next period starts on first day
+            // Determine if we are before or after this year's summer vacation
+            if (now.isBefore(summerVacation[0])) {
+                // We're in the current school year: find previous year's summer vacation start
+                end = summerVacation[0].minusDays(1);
+                start = end.minusYears(1).plusDays(1);
+            } else {
+                // We're in summer vacation or after: new period starts at summer vacation start
+                start = summerVacation[0];
+                end = start.plusYears(1).minusDays(1);
+            }
+        } else {
+            // Fallback: school year Sep-Aug
+            int startYear = now.getMonthValue() >= 9 ? now.getYear() : now.getYear() - 1;
+            start = LocalDate.of(startYear, 9, 1);
+            end = LocalDate.of(startYear + 1, 8, 31);
+        }
 
         var period = new BillingPeriod();
-        period.setName("Schuljahr " + startYear + "/" + (startYear + 1));
+        period.setName(generateNextPeriodName(start));
         period.setStartDate(start);
         period.setEndDate(end);
         period.setStatus("ACTIVE");
@@ -158,12 +180,27 @@ public class BillingService {
         period.setClosedBy(closedByUserId);
         period = billingPeriodRepository.save(period);
 
-        // Create next period automatically (start = end_date + 1 day, end open = +1 year)
+        // Create next period: derive dates from school vacations
+        var tenantConfig = adminModuleApi.getTenantConfig();
+        LocalDate[] summerVacation = findSummerVacation(tenantConfig.schoolVacations());
+
+        LocalDate nextStart;
+        LocalDate nextEnd;
+
+        if (summerVacation != null && summerVacation[0].isAfter(period.getEndDate())) {
+            // Next period starts at summer vacation, ends the day before next year's summer
+            nextStart = summerVacation[0];
+            nextEnd = nextStart.plusYears(1).minusDays(1);
+        } else {
+            // Fallback: start = end_date + 1 day, end = +1 year
+            nextStart = period.getEndDate().plusDays(1);
+            nextEnd = nextStart.plusYears(1).minusDays(1);
+        }
+
         var nextPeriod = new BillingPeriod();
-        LocalDate nextStart = period.getEndDate().plusDays(1);
         nextPeriod.setName(generateNextPeriodName(nextStart));
         nextPeriod.setStartDate(nextStart);
-        nextPeriod.setEndDate(nextStart.plusYears(1).minusDays(1));
+        nextPeriod.setEndDate(nextEnd);
         nextPeriod.setStatus("ACTIVE");
         billingPeriodRepository.save(nextPeriod);
 
@@ -221,11 +258,13 @@ public class BillingService {
         sb.append("<tr><th>Nr</th><th>Familie</th><th>Mitglieder</th>");
         sb.append("<th class=\"right\">Elternstd.</th><th class=\"right\">Putzstd.</th>");
         sb.append("<th class=\"right\">Gesamt</th><th class=\"right\">Soll</th>");
-        sb.append("<th class=\"right\">Saldo</th></tr>\n");
+        sb.append("<th class=\"right\">Saldo</th><th class=\"right\">Soll Putz</th>");
+        sb.append("<th class=\"right\">Saldo Putz</th></tr>\n");
 
         int nr = 1;
         for (var entry : report.families()) {
             String balanceClass = entry.balance().compareTo(BigDecimal.ZERO) < 0 ? " class=\"negative\"" : "";
+            String cleanBalanceClass = entry.cleaningBalance().compareTo(BigDecimal.ZERO) < 0 ? " class=\"negative\"" : "";
             String membersStr = entry.members().stream()
                     .map(m -> escapeXml(m.displayName()) + " (" + translateRole(m.role()) + ")")
                     .reduce((a, b) -> a + ", " + b)
@@ -242,6 +281,10 @@ public class BillingService {
             sb.append("<td class=\"right\"").append(balanceClass).append(">")
                     .append(entry.balance().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
                     .append(entry.balance()).append("h</td>");
+            sb.append("<td class=\"right\">").append(entry.targetCleaningHours()).append("h</td>");
+            sb.append("<td class=\"right\"").append(cleanBalanceClass).append(">")
+                    .append(entry.cleaningBalance().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
+                    .append(entry.cleaningBalance()).append("h</td>");
             sb.append("</tr>\n");
         }
 
@@ -256,7 +299,7 @@ public class BillingService {
         var report = getReport(periodId);
 
         var csv = new StringBuilder();
-        csv.append("Nr;Familie;Mitglieder;Elternstunden;Putzstunden;Gesamt;Soll;Saldo;Ampel\n");
+        csv.append("Nr;Familie;Mitglieder;Elternstunden;Putzstunden;Gesamt;Soll;Saldo;Soll Putz;Saldo Putz;Ampel\n");
 
         int nr = 1;
         for (var entry : report.families()) {
@@ -273,6 +316,8 @@ public class BillingService {
             csv.append(entry.totalHours()).append(";");
             csv.append(entry.targetHours()).append(";");
             csv.append(entry.balance()).append(";");
+            csv.append(entry.targetCleaningHours()).append(";");
+            csv.append(entry.cleaningBalance()).append(";");
             csv.append(translateTrafficLight(entry.trafficLight())).append("\n");
         }
 
@@ -290,6 +335,8 @@ public class BillingService {
         var tenantConfig = adminModuleApi.getTenantConfig();
         BigDecimal targetHours = tenantConfig.targetHoursPerFamily();
         if (targetHours == null) targetHours = BigDecimal.ZERO;
+        BigDecimal targetCleaningHrs = tenantConfig.targetCleaningHours();
+        if (targetCleaningHrs == null) targetCleaningHrs = BigDecimal.ZERO;
 
         Instant fromInstant = period.getStartDate().atStartOfDay(ZoneId.systemDefault()).toInstant();
         Instant toInstant = period.getEndDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
@@ -300,6 +347,8 @@ public class BillingService {
         for (FamilyInfo family : allFamilies) {
             // Skip families exempt from hours
             if (family.hoursExempt()) continue;
+            // Skip inactive families
+            if (!family.active()) continue;
             // Normal job hours (all categories except Reinigung)
             BigDecimal jobHours = assignmentRepository.sumConfirmedNormalHoursByFamilyIdAndDateRange(
                     family.id(), fromInstant, toInstant);
@@ -318,6 +367,7 @@ public class BillingService {
             BigDecimal cleaningHours = jobCleaningHours.add(qrCleaningHours);
             BigDecimal totalHours = jobHours.add(cleaningHours);
             BigDecimal balance = totalHours.subtract(targetHours);
+            BigDecimal cleaningBalance = cleaningHours.subtract(targetCleaningHrs);
             String trafficLight = calculateTrafficLight(totalHours, targetHours);
 
             List<FamilyMember> members = family.members().stream()
@@ -327,7 +377,9 @@ public class BillingService {
             entries.add(new FamilyBillingEntry(
                     family.id(), family.name(), members,
                     jobHours, cleaningHours, totalHours,
-                    targetHours, balance, trafficLight));
+                    targetHours, balance,
+                    targetCleaningHrs, cleaningBalance,
+                    trafficLight));
         }
 
         // Sort: red first, then yellow, then green
@@ -415,5 +467,26 @@ public class BillingService {
             case "CHILD" -> "Kind";
             default -> role;
         };
+    }
+
+    /**
+     * Find the "Sommerferien" entry from school vacations config.
+     * Returns [startDate, endDate] or null if not found.
+     */
+    private LocalDate[] findSummerVacation(List<Map<String, String>> schoolVacations) {
+        if (schoolVacations == null || schoolVacations.isEmpty()) return null;
+        for (Map<String, String> v : schoolVacations) {
+            String name = v.get("name");
+            if (name != null && name.toLowerCase().contains("sommer")) {
+                try {
+                    LocalDate from = LocalDate.parse(v.get("from"));
+                    LocalDate to = LocalDate.parse(v.get("to"));
+                    return new LocalDate[]{from, to};
+                } catch (Exception e) {
+                    log.warn("Failed to parse summer vacation dates: {}", v, e);
+                }
+            }
+        }
+        return null;
     }
 }

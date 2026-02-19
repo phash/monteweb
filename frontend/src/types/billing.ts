@@ -25,6 +25,8 @@ export interface FamilyBillingEntry {
   totalHours: number
   targetHours: number
   balance: number
+  targetCleaningHours: number
+  cleaningBalance: number
   trafficLight: 'GREEN' | 'YELLOW' | 'RED'
 }
 

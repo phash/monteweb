@@ -200,6 +200,11 @@ public class JobboardController {
         return ResponseEntity.ok(ApiResponse.ok(hours));
     }
 
+    @GetMapping("/family/{familyId}/assignments")
+    public ResponseEntity<ApiResponse<List<JobAssignmentInfo>>> getFamilyAssignments(@PathVariable UUID familyId) {
+        return ResponseEntity.ok(ApiResponse.ok(jobboardService.getAssignmentsForFamily(familyId)));
+    }
+
     @GetMapping("/report")
     public ResponseEntity<ApiResponse<List<FamilyHoursInfo>>> getAllFamilyHoursReport() {
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.getAllFamilyHoursReport()));
