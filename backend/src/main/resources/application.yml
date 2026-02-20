@@ -28,6 +28,10 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:changeme}
+    web:
+      pageable:
+        max-page-size: 100
+        default-page-size: 20
 
   mail:
     host: ${SMTP_HOST:localhost}
@@ -45,12 +49,6 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 50MB
-
-  data:
-    web:
-      pageable:
-        max-page-size: 100
-        default-page-size: 20
 
   jackson:
     serialization:
