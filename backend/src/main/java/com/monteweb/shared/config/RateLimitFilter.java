@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Simple in-memory rate limiting filter for auth endpoints.
  * Uses a token-bucket approach per client IP address.
+ * Includes periodic cleanup to prevent unbounded memory growth.
  * Can be disabled via monteweb.rate-limit.enabled=false (e.g. in tests).
  */
 @Component
@@ -30,8 +31,19 @@ public class RateLimitFilter implements Filter {
     private static final int PASSWORD_RESET_MAX_REQUESTS = 5;
     private static final int ERROR_REPORT_MAX_REQUESTS = 10;
     private static final long WINDOW_MS = 60_000; // 1 minute
+    private static final int MAX_BUCKETS = 10_000; // Hard cap to prevent memory exhaustion
 
     private final Map<String, RateBucket> buckets = new ConcurrentHashMap<>();
+
+    /**
+     * Periodically clean up expired rate-limit buckets to prevent unbounded memory growth.
+     * Runs every 5 minutes.
+     */
+    @org.springframework.scheduling.annotation.Scheduled(fixedRate = 300_000)
+    public void cleanupExpiredBuckets() {
+        long now = System.currentTimeMillis();
+        buckets.entrySet().removeIf(entry -> now - entry.getValue().getWindowStart() > WINDOW_MS * 2);
+    }
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -54,6 +66,12 @@ public class RateLimitFilter implements Filter {
         if (maxRequests > 0) {
             String clientIp = getClientIp(httpReq);
             String bucketKey = clientIp + ":" + path;
+
+            // Prevent memory exhaustion from IP spoofing attacks
+            if (buckets.size() >= MAX_BUCKETS) {
+                cleanupExpiredBuckets();
+            }
+
             RateBucket bucket = buckets.computeIfAbsent(bucketKey, k -> new RateBucket());
 
             if (!bucket.tryConsume(maxRequests)) {
@@ -94,6 +112,10 @@ public class RateLimitFilter implements Filter {
             }
 
             return count.incrementAndGet() <= maxRequests;
+        }
+
+        long getWindowStart() {
+            return windowStart.get();
         }
     }
 }

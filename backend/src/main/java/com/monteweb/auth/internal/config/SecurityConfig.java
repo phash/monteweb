@@ -1,5 +1,6 @@
 package com.monteweb.auth.internal.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,18 +27,21 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final OidcAuthenticationSuccessHandler oidcSuccessHandler;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-                          CorsConfigurationSource corsConfigurationSource) {
+                          CorsConfigurationSource corsConfigurationSource,
+                          @Autowired(required = false) OidcAuthenticationSuccessHandler oidcSuccessHandler) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.corsConfigurationSource = corsConfigurationSource;
+        this.oidcSuccessHandler = oidcSuccessHandler;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        var builder = http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 // CSRF protection disabled: stateless JWT auth with no cookies/sessions (lgtm [java/spring-disabled-csrf-protection])
                 .csrf(AbstractHttpConfigurer::disable)
@@ -51,13 +55,13 @@ public class SecurityConfig {
                                 .includeSubDomains(true))
                         .referrerPolicy(r -> r.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        .permissionsPolicy(p -> p.policy("camera=(), microphone=(), geolocation=()"))
+                        .permissionsPolicy(p -> p.policy("camera=(), microphone=(), geolocation()"))
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/actuator/prometheus").permitAll()
+                        .requestMatchers("/actuator/prometheus").hasRole("SUPERADMIN")
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/error-reports").permitAll()
@@ -65,8 +69,16 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // Register OIDC success handler when OIDC is enabled
+        if (oidcSuccessHandler != null) {
+            builder.oauth2Login(oauth2 -> oauth2
+                    .successHandler(oidcSuccessHandler)
+            );
+        }
+
+        return builder.build();
     }
 
     @Bean

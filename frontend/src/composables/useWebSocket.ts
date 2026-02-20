@@ -21,6 +21,17 @@ export function useWebSocket() {
       heartbeatIncoming: 10000,
       heartbeatOutgoing: 10000,
       debug: () => {},
+      connectHeaders: {
+        Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
+      },
+      beforeConnect: () => {
+        // Update token before each (re)connect attempt
+        if (stompClient) {
+          stompClient.connectHeaders = {
+            Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
+          }
+        }
+      },
     })
 
     stompClient.onConnect = () => {

@@ -46,6 +46,12 @@ spring:
       max-file-size: 10MB
       max-request-size: 50MB
 
+  data:
+    web:
+      pageable:
+        max-page-size: 100
+        default-page-size: 20
+
   jackson:
     serialization:
       write-dates-as-timestamps: false
