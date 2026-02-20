@@ -5,10 +5,8 @@ import com.monteweb.auth.internal.service.OidcAuthCodeStore;
 import com.monteweb.auth.internal.service.OidcUserService;
 import com.monteweb.auth.internal.service.RefreshTokenService;
 import com.monteweb.shared.dto.ApiResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -32,39 +30,16 @@ public class OidcAuthController {
     private final OidcUserService oidcUserService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
-    private final ClientRegistrationRepository clientRegistrationRepository;
     private final OidcAuthCodeStore oidcAuthCodeStore;
-
-    @Value("${monteweb.oidc.provider-name:oidc}")
-    private String providerName;
 
     public OidcAuthController(OidcUserService oidcUserService,
                                JwtService jwtService,
                                RefreshTokenService refreshTokenService,
-                               ClientRegistrationRepository clientRegistrationRepository,
                                OidcAuthCodeStore oidcAuthCodeStore) {
         this.oidcUserService = oidcUserService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
-        this.clientRegistrationRepository = clientRegistrationRepository;
         this.oidcAuthCodeStore = oidcAuthCodeStore;
-    }
-
-    /**
-     * Returns OIDC configuration for the frontend.
-     */
-    @GetMapping("/config")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getConfig() {
-        var registration = clientRegistrationRepository.findByRegistrationId(providerName);
-        if (registration == null) {
-            return ResponseEntity.ok(ApiResponse.ok(Map.of("enabled", false)));
-        }
-
-        return ResponseEntity.ok(ApiResponse.ok(Map.of(
-                "enabled", true,
-                "provider", providerName,
-                "authorizationUri", "/oauth2/authorization/" + providerName
-        )));
     }
 
     /**
