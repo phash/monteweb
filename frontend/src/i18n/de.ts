@@ -885,6 +885,8 @@ export default {
     title: 'Chat',
     placeholder: 'Nachricht schreiben...',
     noMessages: 'Noch keine Nachrichten in diesem Kanal.',
+    mute: 'Stummschalten',
+    unmute: 'Stummschaltung aufheben',
     channels: {
       MAIN: 'Alle',
       PARENTS: 'Eltern-Lehrer Chat',
@@ -974,6 +976,9 @@ export default {
     pushNotifications: 'Push-Benachrichtigungen',
     enablePush: 'Push-Benachrichtigungen aktivieren',
     pushDenied: 'Push-Benachrichtigungen wurden im Browser blockiert. Bitte erlauben Sie diese in den Browser-Einstellungen.',
+    mutedChats: 'Stummgeschaltete Chats',
+    noMutedChats: 'Keine stummgeschalteten Chats',
+    unmute: 'Stummschaltung aufheben',
   },
   billing: {
     title: 'Jahresabrechnung',

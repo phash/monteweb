@@ -885,6 +885,8 @@ export default {
     title: 'Chat',
     placeholder: 'Write a message...',
     noMessages: 'No messages in this channel yet.',
+    mute: 'Mute',
+    unmute: 'Unmute',
     channels: {
       MAIN: 'All',
       PARENTS: 'Parent-Teacher Chat',
@@ -974,6 +976,9 @@ export default {
     pushNotifications: 'Push Notifications',
     enablePush: 'Enable push notifications',
     pushDenied: 'Push notifications have been blocked in the browser. Please allow them in your browser settings.',
+    mutedChats: 'Muted Chats',
+    noMutedChats: 'No muted chats',
+    unmute: 'Unmute',
   },
   billing: {
     title: 'Annual Billing',

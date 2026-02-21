@@ -21,6 +21,7 @@ const authStore = useAuthStore()
 const activeChannel = ref<ChannelType>('MAIN')
 const messageText = ref('')
 const messagesContainer = ref<HTMLElement>()
+const isMuted = ref(false)
 
 const channelOptions = computed(() => {
   return roomsStore.chatChannels.map(ch => ({
@@ -42,6 +43,8 @@ onMounted(async () => {
   }
   if (currentChannel.value) {
     await messagingStore.fetchMessages(currentChannel.value.conversationId)
+    await messagingStore.fetchConversation(currentChannel.value.conversationId)
+    isMuted.value = messagingStore.currentConversation?.muted ?? false
     scrollToBottom()
   }
 })
@@ -54,6 +57,8 @@ watch(() => messagingStore.messages.length, () => {
 watch(activeChannel, async () => {
   if (currentChannel.value) {
     await messagingStore.fetchMessages(currentChannel.value.conversationId)
+    await messagingStore.fetchConversation(currentChannel.value.conversationId)
+    isMuted.value = messagingStore.currentConversation?.muted ?? false
   }
 })
 
@@ -72,6 +77,17 @@ function scrollToBottom() {
   }, 50)
 }
 
+async function toggleMute() {
+  if (!currentChannel.value) return
+  const convId = currentChannel.value.conversationId
+  if (isMuted.value) {
+    await messagingStore.unmuteConversation(convId)
+  } else {
+    await messagingStore.muteConversation(convId)
+  }
+  isMuted.value = !isMuted.value
+}
+
 function isOwnMessage(senderId: string) {
   return authStore.user?.id === senderId
 }
@@ -83,10 +99,19 @@ function formatTime(dateStr: string) {
 
 <template>
   <div class="flex flex-col h-full" style="min-height: 400px">
-    <!-- Channel Selector -->
-    <div v-if="channelOptions.length > 1" class="p-2 border-b">
-      <SelectButton v-model="activeChannel" :options="channelOptions"
+    <!-- Header -->
+    <div class="flex items-center justify-between p-2 border-b">
+      <SelectButton v-if="channelOptions.length > 1" v-model="activeChannel" :options="channelOptions"
                     optionLabel="label" optionValue="value" />
+      <div v-else />
+      <Button
+        :icon="isMuted ? 'pi pi-volume-off' : 'pi pi-volume-up'"
+        text
+        :severity="isMuted ? 'warn' : 'secondary'"
+        size="small"
+        :aria-label="isMuted ? t('chat.unmute') : t('chat.mute')"
+        @click="toggleMute"
+      />
     </div>
 
     <!-- Messages -->
