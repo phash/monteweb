@@ -42,7 +42,13 @@ onMounted(async () => {
   }
   if (currentChannel.value) {
     await messagingStore.fetchMessages(currentChannel.value.conversationId)
+    scrollToBottom()
   }
+})
+
+// Auto-scroll when new messages arrive via WebSocket
+watch(() => messagingStore.messages.length, () => {
+  scrollToBottom()
 })
 
 watch(activeChannel, async () => {

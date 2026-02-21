@@ -174,6 +174,7 @@ describe('Messaging Store', () => {
       { id: 'conv-1', unreadCount: 0, lastMessage: '', lastMessageAt: '' },
     ] as any
     store.currentConversation = { id: 'conv-1' } as any
+    store.activeConversationId = 'conv-1'
 
     store.addIncomingMessage({
       id: 'msg-1',
@@ -196,6 +197,7 @@ describe('Messaging Store', () => {
       { id: 'conv-1', unreadCount: 0, lastMessage: '', lastMessageAt: '' },
     ] as any
     store.currentConversation = { id: 'conv-1' } as any
+    store.activeConversationId = 'conv-1'
 
     store.addIncomingMessage({
       id: 'msg-2',
