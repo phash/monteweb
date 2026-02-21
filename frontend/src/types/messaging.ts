@@ -6,6 +6,7 @@ export interface ConversationInfo {
   lastMessage: string | null
   lastMessageAt: string | null
   unreadCount: number
+  muted: boolean
   createdAt: string
 }
 

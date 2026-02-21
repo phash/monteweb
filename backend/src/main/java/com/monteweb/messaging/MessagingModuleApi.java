@@ -24,4 +24,9 @@ public interface MessagingModuleApi {
      * @return The created conversation info
      */
     ConversationInfo createGroupConversation(String title, UUID creatorId, List<UUID> memberIds);
+
+    /**
+     * Checks if a conversation is muted by a specific user.
+     */
+    boolean isConversationMutedByUser(UUID conversationId, UUID userId);
 }

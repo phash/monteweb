@@ -6,6 +6,7 @@ import com.monteweb.jobboard.JobInfo;
 import com.monteweb.jobboard.JobboardModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
+import com.monteweb.shared.util.ICalService;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -13,10 +14,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -28,11 +32,14 @@ public class CalendarController {
 
     private final CalendarService calendarService;
     private final JobboardModuleApi jobboardModuleApi;
+    private final ICalService iCalService;
 
     public CalendarController(CalendarService calendarService,
-                              @Autowired(required = false) JobboardModuleApi jobboardModuleApi) {
+                              @Autowired(required = false) JobboardModuleApi jobboardModuleApi,
+                              ICalService iCalService) {
         this.calendarService = calendarService;
         this.jobboardModuleApi = jobboardModuleApi;
+        this.iCalService = iCalService;
     }
 
     @GetMapping("/events")
@@ -111,6 +118,34 @@ public class CalendarController {
             return ResponseEntity.ok(ApiResponse.ok(List.of()));
         }
         return ResponseEntity.ok(ApiResponse.ok(jobboardModuleApi.getJobsForEvent(eventId)));
+    }
+
+    @GetMapping("/events/{id}/export")
+    public ResponseEntity<byte[]> exportEvent(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var event = calendarService.getEvent(id, userId);
+        String ical = iCalService.generateIcal(List.of(event));
+        byte[] bytes = ical.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"event.ics\"")
+                .contentType(MediaType.parseMediaType("text/calendar"))
+                .contentLength(bytes.length)
+                .body(bytes);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportCalendar(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var page = calendarService.getPersonalEvents(userId, from, to, Pageable.unpaged());
+        String ical = iCalService.generateIcal(page.getContent());
+        byte[] bytes = ical.getBytes(StandardCharsets.UTF_8);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"calendar.ics\"")
+                .contentType(MediaType.parseMediaType("text/calendar"))
+                .contentLength(bytes.length)
+                .body(bytes);
     }
 
     public record RsvpRequest(@NotNull RsvpStatus status) {

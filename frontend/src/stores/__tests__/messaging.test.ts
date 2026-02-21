@@ -12,6 +12,8 @@ vi.mock('@/api/messaging.api', () => ({
     getUnreadCount: vi.fn(),
     markAsRead: vi.fn(),
     deleteConversation: vi.fn(),
+    muteConversation: vi.fn(),
+    unmuteConversation: vi.fn(),
     imageUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}`),
     thumbnailUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}/thumbnail`),
   },
@@ -221,5 +223,53 @@ describe('Messaging Store', () => {
 
     expect(store.unreadCount).toBe(2)
     expect(store.conversations[0].unreadCount).toBe(0)
+  })
+
+  it('should mute a conversation', async () => {
+    const store = useMessagingStore()
+    store.conversations = [
+      { id: 'conv-1', muted: false, unreadCount: 0 },
+    ] as any
+    store.currentConversation = { id: 'conv-1', muted: false } as any
+
+    vi.mocked(messagingApi.muteConversation).mockResolvedValue({} as any)
+
+    await store.muteConversation('conv-1')
+
+    expect(messagingApi.muteConversation).toHaveBeenCalledWith('conv-1')
+    expect(store.conversations[0].muted).toBe(true)
+    expect(store.currentConversation?.muted).toBe(true)
+  })
+
+  it('should unmute a conversation', async () => {
+    const store = useMessagingStore()
+    store.conversations = [
+      { id: 'conv-1', muted: true, unreadCount: 0 },
+    ] as any
+    store.currentConversation = { id: 'conv-1', muted: true } as any
+
+    vi.mocked(messagingApi.unmuteConversation).mockResolvedValue({} as any)
+
+    await store.unmuteConversation('conv-1')
+
+    expect(messagingApi.unmuteConversation).toHaveBeenCalledWith('conv-1')
+    expect(store.conversations[0].muted).toBe(false)
+    expect(store.currentConversation?.muted).toBe(false)
+  })
+
+  it('should not update currentConversation muted state for different conversation', async () => {
+    const store = useMessagingStore()
+    store.conversations = [
+      { id: 'conv-1', muted: false, unreadCount: 0 },
+      { id: 'conv-2', muted: false, unreadCount: 0 },
+    ] as any
+    store.currentConversation = { id: 'conv-2', muted: false } as any
+
+    vi.mocked(messagingApi.muteConversation).mockResolvedValue({} as any)
+
+    await store.muteConversation('conv-1')
+
+    expect(store.conversations[0].muted).toBe(true)
+    expect(store.currentConversation?.muted).toBe(false)
   })
 })

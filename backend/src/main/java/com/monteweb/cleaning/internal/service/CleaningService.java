@@ -97,10 +97,11 @@ public class CleaningService implements CleaningModuleApi {
                     request.startTime(),
                     request.specificDate(),
                     request.endTime(),
-                    EventScope.SECTION,
-                    request.sectionId(),
+                    EventScope.SCHOOL,
+                    null,
                     null, // recurrence
-                    null  // recurrenceEnd
+                    null, // recurrenceEnd
+                    "CLEANING"
             );
             var calendarEvent = calendarModuleApi.createEventFromSystem(calendarRequest, currentUserId);
             config.setCalendarEventId(calendarEvent.id());

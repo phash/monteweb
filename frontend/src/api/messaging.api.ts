@@ -46,6 +46,14 @@ export const messagingApi = {
     return client.get<ApiResponse<{ count: number }>>('/messages/unread-count')
   },
 
+  muteConversation(conversationId: string) {
+    return client.post<ApiResponse<void>>(`/messages/conversations/${conversationId}/mute`)
+  },
+
+  unmuteConversation(conversationId: string) {
+    return client.post<ApiResponse<void>>(`/messages/conversations/${conversationId}/unmute`)
+  },
+
   imageUrl(imageId: string) {
     return authenticatedImageUrl(`/api/v1/messages/images/${imageId}`)
   },

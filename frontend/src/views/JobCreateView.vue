@@ -5,6 +5,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useJobboardStore } from '@/stores/jobboard'
 import { useAdminStore } from '@/stores/admin'
 import { useCalendarStore } from '@/stores/calendar'
+import { useRoomsStore } from '@/stores/rooms'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -19,6 +20,7 @@ const route = useRoute()
 const jobboard = useJobboardStore()
 const admin = useAdminStore()
 const calendar = useCalendarStore()
+const rooms = useRoomsStore()
 
 const title = ref('')
 const description = ref('')
@@ -30,10 +32,14 @@ const scheduledDate = ref<Date | null>(null)
 const scheduledTime = ref('')
 const contactInfo = ref('')
 const selectedEventId = ref<string | null>(null)
+const selectedRoomId = ref<string | null>(null)
 const submitting = ref(false)
 const calendarEnabled = admin.isModuleEnabled('calendar')
 
 onMounted(async () => {
+  if (!rooms.myRooms.length) {
+    await rooms.fetchMyRooms()
+  }
   if (calendarEnabled) {
     const now = new Date()
     const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
@@ -55,6 +61,7 @@ async function submit() {
       description: description.value.trim() || undefined,
       category: category.value.trim(),
       location: location.value.trim() || undefined,
+      roomId: selectedRoomId.value || undefined,
       estimatedHours: estimatedHours.value,
       maxAssignees: maxAssignees.value,
       scheduledDate: scheduledDate.value?.toISOString().split('T')[0],
@@ -139,6 +146,19 @@ async function submit() {
       <div class="form-field">
         <label for="job-contact">{{ t('jobboard.contact') }}</label>
         <InputText id="job-contact" v-model="contactInfo" :placeholder="t('jobboard.create_form.contactPlaceholder')" class="full-width" />
+      </div>
+
+      <div v-if="rooms.myRooms.length" class="form-field">
+        <label for="job-room">{{ t('jobboard.room') }}</label>
+        <Select
+          id="job-room"
+          v-model="selectedRoomId"
+          :options="[{ label: t('jobboard.noRoom'), value: null }, ...rooms.myRooms.map(r => ({ label: r.name, value: r.id }))]"
+          optionLabel="label"
+          optionValue="value"
+          :placeholder="t('jobboard.selectRoom')"
+          class="full-width"
+        />
       </div>
 
       <div v-if="calendarEnabled && calendar.events.length" class="form-field">
