@@ -11,6 +11,7 @@ import com.monteweb.cleaning.internal.repository.CleaningSlotRepository;
 import com.monteweb.calendar.CalendarModuleApi;
 import com.monteweb.calendar.CreateEventRequest;
 import com.monteweb.calendar.EventScope;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.school.SchoolSectionInfo;
 import com.monteweb.shared.exception.BusinessException;
@@ -48,6 +49,7 @@ public class CleaningService implements CleaningModuleApi {
     private final SchoolModuleApi schoolModuleApi;
     private final ApplicationEventPublisher eventPublisher;
     private final CalendarModuleApi calendarModuleApi;
+    private final RoomModuleApi roomModuleApi;
 
     public CleaningService(CleaningConfigRepository configRepository,
                            CleaningSlotRepository slotRepository,
@@ -55,7 +57,8 @@ public class CleaningService implements CleaningModuleApi {
                            QrTokenService qrTokenService,
                            SchoolModuleApi schoolModuleApi,
                            ApplicationEventPublisher eventPublisher,
-                           @Autowired(required = false) CalendarModuleApi calendarModuleApi) {
+                           @Autowired(required = false) CalendarModuleApi calendarModuleApi,
+                           @Autowired(required = false) RoomModuleApi roomModuleApi) {
         this.configRepository = configRepository;
         this.slotRepository = slotRepository;
         this.registrationRepository = registrationRepository;
@@ -63,6 +66,7 @@ public class CleaningService implements CleaningModuleApi {
         this.schoolModuleApi = schoolModuleApi;
         this.eventPublisher = eventPublisher;
         this.calendarModuleApi = calendarModuleApi;
+        this.roomModuleApi = roomModuleApi;
     }
 
     // ── Config Management ───────────────────────────────────────────────
@@ -78,6 +82,7 @@ public class CleaningService implements CleaningModuleApi {
         config.setMinParticipants(request.minParticipants());
         config.setMaxParticipants(request.maxParticipants());
         config.setHoursCredit(request.hoursCredit());
+        config.setRoomId(request.roomId());
         if (request.specificDate() != null) {
             config.setSpecificDate(request.specificDate());
             config.setDayOfWeek(request.specificDate().getDayOfWeek().getValue());
@@ -110,6 +115,7 @@ public class CleaningService implements CleaningModuleApi {
             eventPublisher.publishEvent(new PutzaktionCreatedEvent(
                     config.getId(),
                     request.sectionId(),
+                    request.roomId(),
                     request.title(),
                     request.description(),
                     request.specificDate(),
@@ -150,6 +156,13 @@ public class CleaningService implements CleaningModuleApi {
     @Transactional(readOnly = true)
     public List<CleaningConfigInfo> getAllActiveConfigs() {
         return configRepository.findByActiveTrue().stream()
+                .map(this::toConfigInfo)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CleaningConfigInfo> getConfigsByRoom(UUID roomId) {
+        return configRepository.findByRoomId(roomId).stream()
                 .map(this::toConfigInfo)
                 .toList();
     }
@@ -577,8 +590,15 @@ public class CleaningService implements CleaningModuleApi {
 
     private CleaningConfigInfo toConfigInfo(CleaningConfig config) {
         String sectionName = getSectionName(config.getSectionId());
+        String roomName = null;
+        if (config.getRoomId() != null && roomModuleApi != null) {
+            roomName = roomModuleApi.findById(config.getRoomId())
+                    .map(r -> r.name())
+                    .orElse(null);
+        }
         return new CleaningConfigInfo(
                 config.getId(), config.getSectionId(), sectionName,
+                config.getRoomId(), roomName,
                 config.getTitle(), config.getDescription(),
                 config.getDayOfWeek(), config.getStartTime(), config.getEndTime(),
                 config.getMinParticipants(), config.getMaxParticipants(),
@@ -629,7 +649,7 @@ public class CleaningService implements CleaningModuleApi {
     // ── Request/Response Records ────────────────────────────────────────
 
     public record CreateConfigRequest(
-            UUID sectionId, String title, String description,
+            UUID sectionId, UUID roomId, String title, String description,
             int dayOfWeek, LocalTime startTime, LocalTime endTime,
             int minParticipants, int maxParticipants, BigDecimal hoursCredit,
             LocalDate specificDate) {

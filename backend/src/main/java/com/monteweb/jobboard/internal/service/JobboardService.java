@@ -109,6 +109,7 @@ public class JobboardService implements JobboardModuleApi {
         job.setDescription(event.description());
         job.setCategory("Reinigung");
         job.setSectionId(event.sectionId());
+        job.setRoomId(event.roomId());
         job.setEstimatedHours(event.hoursCredit());
         job.setMaxAssignees(event.maxParticipants());
         job.setScheduledDate(event.date());

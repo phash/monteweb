@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { useCleaningStore } from '@/stores/cleaning'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
@@ -22,10 +23,13 @@ import { usersApi } from '@/api/users.api'
 import { sectionsApi } from '@/api/sections.api'
 import { useHolidays } from '@/composables/useHolidays'
 import { useAdminStore } from '@/stores/admin'
+import { useRoomsStore } from '@/stores/rooms'
 
 const { t } = useI18n()
+const route = useRoute()
 const cleaningStore = useCleaningStore()
 const adminStore = useAdminStore()
+const roomsStore = useRoomsStore()
 const toast = useToast()
 
 const currentYear = ref(new Date().getFullYear())
@@ -45,8 +49,11 @@ const dayOptions = [
   { label: t('cleaning.days.friday'), value: 5 }
 ]
 
+const scopeType = ref<'section' | 'room'>('section')
+
 const newConfig = ref({
   sectionId: '',
+  roomId: '' as string,
   title: '',
   description: '',
   specificDate: null as Date | null,
@@ -70,6 +77,15 @@ onMounted(async () => {
   }
   cleaningStore.loadConfigs()
   await loadSections()
+  if (!roomsStore.myRooms.length) {
+    await roomsStore.fetchMyRooms()
+  }
+  // Auto-open create dialog when navigated from room with roomId query param
+  if (route.query.roomId) {
+    scopeType.value = 'room'
+    newConfig.value.roomId = route.query.roomId as string
+    showCreateDialog.value = true
+  }
 })
 
 async function createConfig() {
@@ -77,6 +93,14 @@ async function createConfig() {
     const payload: any = {
       ...newConfig.value,
       hoursCredit: newConfig.value.hoursCredit,
+    }
+    if (scopeType.value === 'room' && newConfig.value.roomId) {
+      // For room-scoped: use the room's sectionId
+      const room = roomsStore.myRooms.find(r => r.id === newConfig.value.roomId)
+      if (room?.sectionId) payload.sectionId = room.sectionId
+      payload.roomId = newConfig.value.roomId
+    } else {
+      delete payload.roomId
     }
     if (newConfig.value.specificDate) {
       payload.specificDate = newConfig.value.specificDate.toISOString().split('T')[0]
@@ -89,6 +113,7 @@ async function createConfig() {
     })
     showCreateDialog.value = false
     newConfig.value.specificDate = null
+    scopeType.value = 'section'
     toast.add({ severity: 'success', summary: t('cleaning.admin.configCreated'), life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
@@ -246,7 +271,12 @@ function assignmentStatusSeverity(status: string) {
     <!-- Configs Table (Desktop) -->
     <DataTable :value="cleaningStore.configs" :loading="cleaningStore.loading" stripedRows scrollable class="hide-mobile">
       <Column field="title" :header="t('cleaning.admin.configTitle')" />
-      <Column field="sectionName" :header="t('cleaning.admin.section')" />
+      <Column :header="t('cleaning.admin.scope')">
+        <template #body="{ data }">
+          <span v-if="data.roomName"><i class="pi pi-home mr-1" />{{ data.roomName }}</span>
+          <span v-else><i class="pi pi-sitemap mr-1" />{{ data.sectionName }}</span>
+        </template>
+      </Column>
       <Column :header="t('cleaning.admin.day')">
         <template #body="{ data }">
           <template v-if="data.specificDate">
@@ -301,7 +331,8 @@ function assignmentStatusSeverity(status: string) {
                :severity="config.active ? 'success' : 'danger'" />
         </div>
         <div class="mobile-card-details">
-          <span><i class="pi pi-sitemap" /> {{ config.sectionName }}</span>
+          <span v-if="config.roomName"><i class="pi pi-home" /> {{ config.roomName }}</span>
+          <span v-else><i class="pi pi-sitemap" /> {{ config.sectionName }}</span>
           <span><i class="pi pi-calendar" /> {{ config.specificDate ? formatSpecificDate(config.specificDate) : getDayName(config.dayOfWeek) }}</span>
           <span><i class="pi pi-clock" /> {{ config.startTime }} - {{ config.endTime }}</span>
           <span><i class="pi pi-users" /> {{ config.minParticipants }}-{{ config.maxParticipants }} | {{ config.hoursCredit }}h</span>
@@ -326,11 +357,31 @@ function assignmentStatusSeverity(status: string) {
           <InputText id="cfg-title" v-model="newConfig.title" class="w-full" />
         </div>
         <div>
+          <label class="block text-sm font-medium mb-1">{{ t('cleaning.admin.scope') }}</label>
+          <div class="flex gap-3">
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" v-model="scopeType" value="section" />
+              {{ t('cleaning.admin.section') }}
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" v-model="scopeType" value="room" />
+              {{ t('cleaning.admin.room') }}
+            </label>
+          </div>
+        </div>
+        <div v-if="scopeType === 'section'">
           <label for="cfg-section" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.section') }}</label>
           <Select v-model="newConfig.sectionId" :options="sections"
                   optionLabel="name" optionValue="id"
                   :placeholder="t('cleaning.admin.selectSection')"
                   inputId="cfg-section" class="w-full" />
+        </div>
+        <div v-else>
+          <label for="cfg-room" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.room') }}</label>
+          <Select v-model="newConfig.roomId" :options="roomsStore.myRooms"
+                  optionLabel="name" optionValue="id"
+                  :placeholder="t('cleaning.admin.selectRoom')"
+                  inputId="cfg-room" class="w-full" />
         </div>
         <!-- Specific Date (for one-time actions) -->
         <div>
@@ -378,7 +429,7 @@ function assignmentStatusSeverity(status: string) {
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" text @click="showCreateDialog = false" />
         <Button :label="t('common.create')" icon="pi pi-check" @click="createConfig"
-                :disabled="!newConfig.title || !newConfig.sectionId" />
+                :disabled="!newConfig.title || (scopeType === 'section' ? !newConfig.sectionId : !newConfig.roomId)" />
       </template>
     </Dialog>
 
