@@ -79,6 +79,24 @@ export const useMessagingStore = defineStore('messaging', () => {
     }
   }
 
+  async function muteConversation(conversationId: string) {
+    await messagingApi.muteConversation(conversationId)
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (conv) conv.muted = true
+    if (currentConversation.value?.id === conversationId) {
+      currentConversation.value = { ...currentConversation.value, muted: true }
+    }
+  }
+
+  async function unmuteConversation(conversationId: string) {
+    await messagingApi.unmuteConversation(conversationId)
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (conv) conv.muted = false
+    if (currentConversation.value?.id === conversationId) {
+      currentConversation.value = { ...currentConversation.value, muted: false }
+    }
+  }
+
   async function deleteConversation(conversationId: string) {
     await messagingApi.deleteConversation(conversationId)
     conversations.value = conversations.value.filter(c => c.id !== conversationId)
@@ -117,6 +135,8 @@ export const useMessagingStore = defineStore('messaging', () => {
     startDirectConversation,
     fetchUnreadCount,
     markAsRead,
+    muteConversation,
+    unmuteConversation,
     deleteConversation,
     addIncomingMessage,
   }

@@ -105,6 +105,21 @@ async function linkSelectedJob() {
   }
 }
 
+async function exportEvent() {
+  try {
+    const res = await calendarApi.exportEvent(props.id)
+    const blob = new Blob([res.data], { type: 'text/calendar' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'event.ics'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    // ignore
+  }
+}
+
 function rsvpSeverity(status: string | null, target: string): 'success' | 'warn' | 'danger' | 'secondary' {
   if (status !== target) return 'secondary'
   switch (target) {
@@ -251,6 +266,17 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
           </router-link>
         </div>
         <p v-else class="text-muted">{{ t('jobboard.noLinkedJobs') }}</p>
+      </div>
+
+      <!-- Export -->
+      <div class="event-actions" style="margin-bottom: 1rem">
+        <Button
+          :label="t('calendar.exportEvent')"
+          icon="pi pi-download"
+          severity="secondary"
+          outlined
+          @click="exportEvent"
+        />
       </div>
 
       <!-- Actions -->

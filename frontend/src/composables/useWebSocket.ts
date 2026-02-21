@@ -7,10 +7,14 @@ import type { MessageInfo } from '@/types/messaging'
 
 let stompClient: Client | null = null
 const connected = ref(false)
+let currentUserId: string | null = null
+let visibilityHandler: (() => void) | null = null
 
 export function useWebSocket() {
   function connect(userId: string) {
-    if (connected.value) return
+    if (connected.value && stompClient?.connected) return
+
+    currentUserId = userId
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const wsUrl = `${protocol}//${window.location.host}/ws/websocket`
@@ -50,17 +54,50 @@ export function useWebSocket() {
       })
     }
 
+    stompClient.onDisconnect = () => {
+      connected.value = false
+    }
+
+    stompClient.onWebSocketClose = () => {
+      connected.value = false
+    }
+
     stompClient.onStompError = () => {
       connected.value = false
     }
 
     stompClient.activate()
+
+    // Handle mobile visibility changes — refresh data when returning to foreground
+    if (!visibilityHandler) {
+      visibilityHandler = () => {
+        if (document.visibilityState === 'visible' && currentUserId) {
+          // Force reconnect if connection was lost
+          if (!stompClient?.connected) {
+            connected.value = false
+            stompClient?.activate()
+          }
+          // Refresh messaging data to catch any missed messages
+          const messagingStore = useMessagingStore()
+          messagingStore.fetchConversations()
+          if (messagingStore.currentConversation) {
+            messagingStore.fetchMessages(messagingStore.currentConversation.id)
+          }
+        }
+      }
+      document.addEventListener('visibilitychange', visibilityHandler)
+    }
   }
 
   function disconnect() {
-    if (stompClient && connected.value) {
+    if (stompClient) {
       stompClient.deactivate()
       connected.value = false
+    }
+    currentUserId = null
+    if (visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler)
+      visibilityHandler = null
     }
   }
 

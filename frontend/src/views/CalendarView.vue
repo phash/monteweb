@@ -5,12 +5,14 @@ import { useRouter } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import { calendarApi } from '@/api/calendar.api'
 import type { CalendarEvent } from '@/types/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import Checkbox from 'primevue/checkbox'
 import SelectButton from 'primevue/selectbutton'
 
 type ViewMode = 'agenda' | 'month' | 'quarter' | 'year'
@@ -24,6 +26,7 @@ const auth = useAuthStore()
 const viewMode = ref<ViewMode>('agenda')
 const currentMonth = ref(new Date())
 const selectedDay = ref<string | null>(null)
+const showCleaning = ref(true)
 
 const viewOptions = computed(() => [
   { label: t('calendar.agenda'), value: 'agenda' },
@@ -64,10 +67,16 @@ const dateRange = computed(() => {
   }
 })
 
+// Filtered events (hide cleaning events when toggle is off)
+const filteredEvents = computed(() => {
+  if (showCleaning.value) return calendar.events
+  return calendar.events.filter(e => e.eventType !== 'CLEANING')
+})
+
 // Map events by date (YYYY-MM-DD) for calendar grid
 const eventsByDate = computed(() => {
   const map = new Map<string, CalendarEvent[]>()
-  for (const event of calendar.events) {
+  for (const event of filteredEvents.value) {
     const startDate = event.startDate
     const endDate = event.endDate
     // Add event to each day it spans
@@ -249,6 +258,21 @@ function formatEventDateDisplay(event: { allDay: boolean; startDate: string; sta
   return `${startStr}${time}${endTime}`
 }
 
+async function exportCalendar() {
+  try {
+    const res = await calendarApi.exportCalendar(dateRange.value.from, dateRange.value.to)
+    const blob = new Blob([res.data], { type: 'text/calendar' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'calendar.ics'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch {
+    // ignore
+  }
+}
+
 function scopeSeverity(scope: string): 'info' | 'success' | 'warn' | 'secondary' {
   switch (scope) {
     case 'SCHOOL': return 'warn'
@@ -268,12 +292,21 @@ function formatSelectedDay(date: string): string {
   <div>
     <div class="calendar-header">
       <PageTitle :title="t('calendar.title')" />
-      <Button
-        v-if="auth.isTeacher || auth.isAdmin"
-        :label="t('calendar.createEvent')"
-        icon="pi pi-plus"
-        @click="router.push({ name: 'calendar-create' })"
-      />
+      <div class="calendar-header-actions">
+        <Button
+          :label="t('calendar.exportCalendar')"
+          icon="pi pi-download"
+          severity="secondary"
+          outlined
+          @click="exportCalendar"
+        />
+        <Button
+          v-if="auth.isTeacher || auth.isAdmin"
+          :label="t('calendar.createEvent')"
+          icon="pi pi-plus"
+          @click="router.push({ name: 'calendar-create' })"
+        />
+      </div>
     </div>
 
     <div class="view-toggle">
@@ -284,6 +317,11 @@ function formatSelectedDay(date: string): string {
         optionValue="value"
         :allowEmpty="false"
       />
+    </div>
+
+    <div class="filter-toggle">
+      <Checkbox v-model="showCleaning" :binary="true" inputId="showCleaning" />
+      <label for="showCleaning">{{ t('calendar.showCleaning') }}</label>
     </div>
 
     <div class="month-nav card">
@@ -298,13 +336,13 @@ function formatSelectedDay(date: string): string {
     <!-- AGENDA VIEW -->
     <template v-if="viewMode === 'agenda'">
       <EmptyState
-        v-if="!calendar.events.length && !calendar.loading"
+        v-if="!filteredEvents.length && !calendar.loading"
         icon="pi pi-calendar"
         :message="t('calendar.noEvents')"
       />
       <div v-else class="event-list">
         <router-link
-          v-for="event in calendar.events"
+          v-for="event in filteredEvents"
           :key="event.id"
           :to="{ name: 'event-detail', params: { id: event.id } }"
           class="event-item card"
@@ -317,6 +355,7 @@ function formatSelectedDay(date: string): string {
             <div class="event-title-row">
               <strong>{{ event.title }}</strong>
               <Tag v-if="event.cancelled" :value="t('calendar.cancelled')" severity="danger" size="small" />
+              <Tag v-if="event.eventType === 'CLEANING'" :value="t('calendar.cleaning')" severity="warn" size="small" icon="pi pi-sparkles" />
               <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
               <Tag v-if="event.linkedJobCount > 0" :value="t('jobboard.jobCount', { n: event.linkedJobCount })" severity="secondary" size="small" icon="pi pi-briefcase" />
             </div>
@@ -504,12 +543,26 @@ function formatSelectedDay(date: string): string {
   gap: 1rem;
 }
 
+.calendar-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .view-toggle {
   margin-bottom: 0.75rem;
 }
 
 .view-toggle :deep(.p-selectbutton) {
   flex-wrap: wrap;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: var(--mw-font-size-sm);
 }
 
 .month-nav {

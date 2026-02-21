@@ -1,1 +1,1 @@
-[{"name":"com.monteweb.auth.internal.service.PasswordResetService","methods":[{"name":"requestReset","signature":"requestReset(java.lang.String)","comment":"Request a password reset. Generates a token and logs the reset URL.\r In production, this would send an email instead."},{"name":"confirmReset","signature":"confirmReset(java.lang.String, java.lang.String)","comment":"Confirm a password reset using the token."}]}]
+[]
