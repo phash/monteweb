@@ -24,6 +24,8 @@ import { sectionsApi } from '@/api/sections.api'
 import { useHolidays } from '@/composables/useHolidays'
 import { useAdminStore } from '@/stores/admin'
 import { useRoomsStore } from '@/stores/rooms'
+import { roomsApi } from '@/api/rooms.api'
+import type { RoomInfo } from '@/types/room'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -50,6 +52,22 @@ const dayOptions = [
 ]
 
 const scopeType = ref<'section' | 'room'>('section')
+const roomSuggestions = ref<RoomInfo[]>([])
+const selectedRoom = ref<RoomInfo | null>(null)
+
+async function searchRooms(event: { query: string }) {
+  try {
+    const res = await roomsApi.browse({ q: event.query, size: 20 })
+    roomSuggestions.value = res.data.data.content
+  } catch {
+    roomSuggestions.value = []
+  }
+}
+
+function onRoomSelect(event: { value: RoomInfo }) {
+  selectedRoom.value = event.value
+  newConfig.value.roomId = event.value.id
+}
 
 const newConfig = ref({
   sectionId: '',
@@ -84,6 +102,11 @@ onMounted(async () => {
   if (route.query.roomId) {
     scopeType.value = 'room'
     newConfig.value.roomId = route.query.roomId as string
+    // Pre-select room in autocomplete
+    const roomName = route.query.roomName as string
+    if (roomName) {
+      selectedRoom.value = { id: route.query.roomId as string, name: roomName } as RoomInfo
+    }
     showCreateDialog.value = true
   }
 })
@@ -114,6 +137,7 @@ async function createConfig() {
     showCreateDialog.value = false
     newConfig.value.specificDate = null
     scopeType.value = 'section'
+    selectedRoom.value = null
     toast.add({ severity: 'success', summary: t('cleaning.admin.configCreated'), life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
@@ -378,10 +402,10 @@ function assignmentStatusSeverity(status: string) {
         </div>
         <div v-else>
           <label for="cfg-room" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.room') }}</label>
-          <Select v-model="newConfig.roomId" :options="roomsStore.myRooms"
-                  optionLabel="name" optionValue="id"
-                  :placeholder="t('cleaning.admin.selectRoom')"
-                  inputId="cfg-room" class="w-full" />
+          <AutoComplete v-model="selectedRoom" :suggestions="roomSuggestions"
+                        @complete="searchRooms" @item-select="onRoomSelect"
+                        optionLabel="name" :placeholder="t('cleaning.admin.searchRoom')"
+                        inputId="cfg-room" class="w-full" :minLength="1" forceSelection />
         </div>
         <!-- Specific Date (for one-time actions) -->
         <div>

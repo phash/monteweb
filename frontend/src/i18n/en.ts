@@ -666,6 +666,7 @@ export default {
       section: 'School section',
       room: 'Room',
       selectRoom: 'Select room',
+      searchRoom: 'Search room...',
       sectionId: 'School section',
       sectionIdPlaceholder: 'Select school section',
       day: 'Day of week',

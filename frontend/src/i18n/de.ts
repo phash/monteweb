@@ -666,6 +666,7 @@ export default {
       section: 'Schulbereich',
       room: 'Raum',
       selectRoom: 'Raum auswählen',
+      searchRoom: 'Raum suchen...',
       sectionId: 'Schulbereich',
       sectionIdPlaceholder: 'Schulbereich auswählen',
       day: 'Wochentag',
