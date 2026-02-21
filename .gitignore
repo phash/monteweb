@@ -65,5 +65,8 @@ docs/*.pdf
 docs/handbuch*.png
 planung/produkthandbuch.*
 
+# Rezepte (project-independent recipes)
+rezepte/
+
 # Misc
 nul

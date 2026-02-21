@@ -29,4 +29,14 @@ public interface MessagingModuleApi {
      * Checks if a conversation is muted by a specific user.
      */
     boolean isConversationMutedByUser(UUID conversationId, UUID userId);
+
+    /**
+     * Adds a user as participant to an existing conversation (e.g. when joining a room with chat).
+     */
+    void addParticipantToConversation(UUID conversationId, UUID userId);
+
+    /**
+     * Removes a user from a conversation (e.g. when leaving a room with chat).
+     */
+    void removeParticipantFromConversation(UUID conversationId, UUID userId);
 }

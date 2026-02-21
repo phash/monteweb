@@ -17,7 +17,7 @@ export function useWebSocket() {
     currentUserId = userId
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const wsUrl = `${protocol}//${window.location.host}/ws/websocket`
+    const wsUrl = `${protocol}//${window.location.host}/ws`
 
     stompClient = new Client({
       brokerURL: wsUrl,
@@ -41,13 +41,13 @@ export function useWebSocket() {
     stompClient.onConnect = () => {
       connected.value = true
 
-      stompClient?.subscribe(`/user/${userId}/queue/notifications`, (msg) => {
+      stompClient?.subscribe('/user/queue/notifications', (msg) => {
         const notification: NotificationInfo = JSON.parse(msg.body)
         const store = useNotificationsStore()
         store.addNotification(notification)
       })
 
-      stompClient?.subscribe(`/user/${userId}/queue/messages`, (msg) => {
+      stompClient?.subscribe('/user/queue/messages', (msg) => {
         const message: MessageInfo = JSON.parse(msg.body)
         const store = useMessagingStore()
         store.addIncomingMessage(message)

@@ -392,6 +392,20 @@ public class MessagingService implements MessagingModuleApi {
         return role == UserRole.SUPERADMIN || role == UserRole.SECTION_ADMIN || role == UserRole.TEACHER;
     }
 
+    // ---- Public API: participant management ----
+
+    @Override
+    public void addParticipantToConversation(UUID conversationId, UUID userId) {
+        if (!participantRepository.existsByConversationIdAndUserId(conversationId, userId)) {
+            addParticipant(conversationId, userId);
+        }
+    }
+
+    @Override
+    public void removeParticipantFromConversation(UUID conversationId, UUID userId) {
+        participantRepository.deleteByConversationIdAndUserId(conversationId, userId);
+    }
+
     // ---- Helpers ----
 
     private void addParticipant(UUID conversationId, UUID userId) {

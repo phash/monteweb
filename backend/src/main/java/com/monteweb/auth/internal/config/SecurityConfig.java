@@ -61,6 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/actuator/prometheus").hasRole("SUPERADMIN")
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()

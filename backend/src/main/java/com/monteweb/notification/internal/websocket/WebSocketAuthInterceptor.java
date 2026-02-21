@@ -77,25 +77,8 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
     }
 
     private Message<?> handleSubscribe(Message<?> message, StompHeaderAccessor accessor) {
-        String destination = accessor.getDestination();
-        var user = accessor.getUser();
-
-        if (destination != null && destination.startsWith("/user/") && user != null) {
-            // Validate that users can only subscribe to their own queues
-            // Pattern: /user/{userId}/queue/*
-            String[] parts = destination.split("/");
-            if (parts.length >= 3) {
-                String targetUserId = parts[2];
-                String authenticatedUserId = user.getName();
-                if (!targetUserId.equals(authenticatedUserId)) {
-                    log.warn("WebSocket SUBSCRIBE rejected: user {} attempted to subscribe to {}'s queue",
-                            authenticatedUserId, targetUserId);
-                    throw new org.springframework.security.access.AccessDeniedException(
-                            "Cannot subscribe to another user's queue");
-                }
-            }
-        }
-
+        // Spring's UserDestinationMessageHandler resolves /user/queue/* subscriptions
+        // to session-specific destinations automatically. No manual validation needed.
         return message;
     }
 }
