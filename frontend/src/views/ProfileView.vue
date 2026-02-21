@@ -101,7 +101,7 @@ function getConversationName(conv: { title: string | null; participants: { displ
   if (conv.title) return conv.title
   if (!conv.isGroup && conv.participants.length > 0) {
     const other = conv.participants.find(p => p.displayName !== `${auth.user?.firstName} ${auth.user?.lastName}`)
-    return other?.displayName ?? conv.participants[0].displayName
+    return other?.displayName ?? conv.participants[0]?.displayName ?? ''
   }
   return conv.participants.map(p => p.displayName).join(', ')
 }
