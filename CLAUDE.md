@@ -25,7 +25,7 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (~1060 tests, ~120 files)
+npm test               # vitest run (~1113 tests, ~120 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
@@ -144,7 +144,7 @@ frontend/src/
 | feed | Unified Feed, Posts, Kommentare, Banner, Targeted Posts | - |
 | notification | In-App + Push (VAPID) | Push: `monteweb.push.enabled` |
 | admin | System-Config, Audit-Log, Module, Error Reporting | - |
-| messaging | DM & Chat, Kommunikationsregeln, Chat-Bilder, Antworten | `monteweb.modules.messaging.enabled` |
+| messaging | DM & Chat, Kommunikationsregeln, Chat-Bilder, Antworten, Chat-Stummschaltung | `monteweb.modules.messaging.enabled` |
 | files | Dateiablage via MinIO, Folder-Audience | `monteweb.modules.files.enabled` |
 | jobboard | Jobboerse, Elternstunden, Jahresabrechnung, PDF-Export | `monteweb.modules.jobboard.enabled` |
 | cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen | `monteweb.modules.cleaning.enabled` |
@@ -177,6 +177,7 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 18. **PWA:** Installierbar als Progressive Web App. Workbox Service Worker mit NetworkFirst-Caching fuer API-Calls. Install-Banner mit 7-Tage-Dismiss
 19. **Mehrsprachigkeit:** `available_languages TEXT[]` bestimmt waehlbare Sprachen. LanguageSwitcher in Profil + Login (nicht Header). Nur sichtbar wenn >1 Sprache aktiviert
 20. **Familien-Deaktivierung:** Familien koennen deaktiviert werden (`is_active`). Stundenkonto-Befreiung via `is_hours_exempt`
+21. **Chat-Stummschaltung:** Conversations koennen stummgeschaltet werden (`conversation_participants.muted`). Mute-Toggle in DM-View und RoomChat-Header. Profilseite zeigt alle stummgeschalteten Chats mit Unmute-Buttons
 
 ## Conventions
 
