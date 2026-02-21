@@ -117,7 +117,7 @@ function goToHandbook() {
 
 @media (max-width: 767px) {
   .help-fab {
-    bottom: calc(var(--mw-bottom-nav-height) + 1rem);
+    display: none;
   }
 }
 
