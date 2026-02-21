@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import AppHeader from './AppHeader.vue'
 import AppSidebar from './AppSidebar.vue'
 import BottomNav from './BottomNav.vue'
@@ -8,6 +9,17 @@ import AppFooter from './AppFooter.vue'
 import HelpButton from '@/components/common/HelpButton.vue'
 import PwaInstallBanner from '@/components/common/PwaInstallBanner.vue'
 import OfflineBanner from '@/components/common/OfflineBanner.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useWebSocket } from '@/composables/useWebSocket'
+
+const auth = useAuthStore()
+const { connect } = useWebSocket()
+
+onMounted(() => {
+  if (auth.user?.id) {
+    connect(auth.user.id)
+  }
+})
 </script>
 
 <template>

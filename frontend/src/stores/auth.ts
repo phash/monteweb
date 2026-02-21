@@ -4,6 +4,7 @@ import { authApi } from '@/api/auth.api'
 import { usersApi } from '@/api/users.api'
 import { useAdminStore } from '@/stores/admin'
 import { useImageToken } from '@/composables/useImageToken'
+import { useWebSocket } from '@/composables/useWebSocket'
 import type { UserInfo, UserRole, LoginRequest, RegisterRequest } from '@/types/user'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -58,6 +59,8 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authApi.logout(refreshToken)
     } finally {
+      const { disconnect } = useWebSocket()
+      disconnect()
       clearTokens()
       user.value = null
       const { clearImageToken } = useImageToken()
