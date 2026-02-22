@@ -87,7 +87,7 @@ class FormsEnhancementIntegrationTest {
                         .content("""
                                 {"answers": [{"questionId": "%s", "rating": 5}]}
                                 """.formatted(getFirstQuestionId(token, formId))))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     @Test
@@ -123,7 +123,7 @@ class FormsEnhancementIntegrationTest {
                         .content("""
                                 {"answers": [{"questionId": "%s", "rating": 5}]}
                                 """.formatted(questionId)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     // ── GET /forms/{id}/my-response ───────────────────────────────
@@ -182,7 +182,7 @@ class FormsEnhancementIntegrationTest {
         mockMvc.perform(get("/api/v1/forms/" + formId + "/my-response")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isEmpty());
+                .andExpect(jsonPath("$.data").doesNotExist());
     }
 
     // ── POST /forms/{id}/archive ──────────────────────────────────
@@ -222,7 +222,7 @@ class FormsEnhancementIntegrationTest {
         // Archive should fail (not closed)
         mockMvc.perform(post("/api/v1/forms/" + formId + "/archive")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isConflict());
     }
 
     // ── DELETE /forms/{id} (extended) ─────────────────────────────
