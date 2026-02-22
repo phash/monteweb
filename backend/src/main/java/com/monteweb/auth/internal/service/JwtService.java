@@ -66,4 +66,35 @@ public class JwtService {
     public UUID extractUserId(String token) {
         return UUID.fromString(extractClaims(token).getSubject());
     }
+
+    /**
+     * Generates a short-lived (5 min) image token for authenticated image access.
+     * Uses a distinct "type" claim to prevent use as a regular access token.
+     */
+    public String generateImageToken(UUID userId) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claims(Map.of("type", "image"))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(Duration.ofMinutes(5))))
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * Validates a short-lived image token and returns the user ID if valid.
+     */
+    public java.util.Optional<String> validateImageToken(String token) {
+        try {
+            var claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            if (!"image".equals(claims.get("type", String.class))) {
+                return java.util.Optional.empty();
+            }
+            return java.util.Optional.of(claims.getSubject());
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Invalid image token: {}", e.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
 }

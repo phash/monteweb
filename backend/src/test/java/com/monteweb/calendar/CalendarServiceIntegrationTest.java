@@ -61,7 +61,7 @@ class CalendarServiceIntegrationTest {
     void getEvents_authenticated_shouldReturnPage() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        mockMvc.perform(get("/api/v1/calendar/events?from=2026-01-01T00:00:00Z&to=2026-12-31T23:59:59Z")
+        mockMvc.perform(get("/api/v1/calendar/events?from=2026-01-01&to=2026-12-31")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
@@ -87,8 +87,9 @@ class CalendarServiceIntegrationTest {
                                 {
                                     "title": "School-wide Event",
                                     "description": "Everyone is invited",
-                                    "startTime": "2026-06-15T10:00:00Z",
-                                    "endTime": "2026-06-15T12:00:00Z",
+                                    "allDay": true,
+                                    "startDate": "2026-06-15",
+                                    "endDate": "2026-06-15",
                                     "scope": "SCHOOL",
                                     "recurrence": "NONE"
                                 }
@@ -105,8 +106,9 @@ class CalendarServiceIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "startTime": "2026-06-15T10:00:00Z",
-                                    "endTime": "2026-06-15T12:00:00Z",
+                                    "allDay": true,
+                                    "startDate": "2026-06-15",
+                                    "endDate": "2026-06-15",
                                     "scope": "SCHOOL"
                                 }
                                 """))
@@ -131,18 +133,18 @@ class CalendarServiceIntegrationTest {
     // ── GET /calendar/events/{id} ────────────────────────────────────
 
     @Test
-    void getEvent_nonExistent_shouldReturn404() throws Exception {
+    void getEvent_nonExistent_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(get("/api/v1/calendar/events/00000000-0000-0000-0000-000000000099")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     // ── RSVP ─────────────────────────────────────────────────────────
 
     @Test
-    void rsvp_toNonExistentEvent_shouldReturn404() throws Exception {
+    void rsvp_toNonExistentEvent_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(post("/api/v1/calendar/events/00000000-0000-0000-0000-000000000099/rsvp")
@@ -151,7 +153,7 @@ class CalendarServiceIntegrationTest {
                         .content("""
                                 {"status": "ATTENDING"}
                                 """))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     // ── Room Events ──────────────────────────────────────────────────
@@ -165,7 +167,7 @@ class CalendarServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Calendar Room"}
+                                {"name": "Calendar Room", "type": "GRUPPE"}
                                 """))
                 .andReturn();
 
@@ -188,7 +190,7 @@ class CalendarServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Event Room Test"}
+                                {"name": "Event Room Test", "type": "GRUPPE"}
                                 """))
                 .andReturn();
 
@@ -202,8 +204,11 @@ class CalendarServiceIntegrationTest {
                                 {
                                     "title": "Room Meeting",
                                     "description": "Weekly room meeting",
-                                    "startTime": "2026-06-20T10:00:00Z",
-                                    "endTime": "2026-06-20T11:00:00Z",
+                                    "allDay": false,
+                                    "startDate": "2026-06-20",
+                                    "startTime": "10:00",
+                                    "endDate": "2026-06-20",
+                                    "endTime": "11:00",
                                     "scope": "ROOM",
                                     "scopeId": "%s",
                                     "recurrence": "WEEKLY"

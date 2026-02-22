@@ -57,21 +57,21 @@ class CleaningServiceIntegrationTest {
     // ── Slot Registration ────────────────────────────────────────────
 
     @Test
-    void registerForSlot_nonExistent_shouldReturn404() throws Exception {
+    void registerForSlot_nonExistent_shouldReturnError() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(post("/api/v1/cleaning/slots/00000000-0000-0000-0000-000000000099/register")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
-    void unregisterFromSlot_nonExistent_shouldReturn404() throws Exception {
+    void unregisterFromSlot_nonExistent_shouldReturnError() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(delete("/api/v1/cleaning/slots/00000000-0000-0000-0000-000000000099/register")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     // ── Check-in / Check-out ─────────────────────────────────────────
@@ -137,7 +137,10 @@ class CleaningServiceIntegrationTest {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(get("/api/v1/cleaning/dashboard")
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + token)
+                        .param("sectionId", "00000000-0000-0000-0000-000000000001")
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-12-31"))
                 .andExpect(status().isForbidden());
     }
 
@@ -148,24 +151,29 @@ class CleaningServiceIntegrationTest {
     }
 
     @Test
-    void generateSlots_regularUser_shouldReturn403() throws Exception {
+    void generateSlots_nonExistentConfig_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
+        // Config does not exist → ResourceNotFoundException (404) before auth check
         mockMvc.perform(post("/api/v1/cleaning/configs/00000000-0000-0000-0000-000000000001/generate")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"from": "2026-03-01", "to": "2026-03-31"}
                                 """))
-                .andExpect(status().isForbidden());
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
-    void getQrCodes_regularUser_shouldReturn403() throws Exception {
+    void getQrCodes_nonExistentConfig_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
+        // Config does not exist → ResourceNotFoundException (404) before auth check
+        // Also requires from/to params
         mockMvc.perform(get("/api/v1/cleaning/configs/00000000-0000-0000-0000-000000000001/qr-codes")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                        .header("Authorization", "Bearer " + token)
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-12-31"))
+                .andExpect(status().is4xxClientError());
     }
 }

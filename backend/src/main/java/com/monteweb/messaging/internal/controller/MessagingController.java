@@ -103,6 +103,20 @@ public class MessagingController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PostMapping("/conversations/{conversationId}/mute")
+    public ResponseEntity<ApiResponse<Void>> muteConversation(@PathVariable UUID conversationId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        messagingService.muteConversation(conversationId, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @PostMapping("/conversations/{conversationId}/unmute")
+    public ResponseEntity<ApiResponse<Void>> unmuteConversation(@PathVariable UUID conversationId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        messagingService.unmuteConversation(conversationId, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getUnreadCount() {
         UUID userId = SecurityUtils.requireCurrentUserId();

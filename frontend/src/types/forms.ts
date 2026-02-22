@@ -120,3 +120,15 @@ export interface IndividualResponse {
   submittedAt: string
   answers: IndividualAnswer[]
 }
+
+export interface MyAnswerInfo {
+  questionId: string
+  text: string | null
+  selectedOptions: string[] | null
+  rating: number | null
+}
+
+export interface MyResponseInfo {
+  responseId: string
+  answers: MyAnswerInfo[]
+}

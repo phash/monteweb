@@ -244,6 +244,9 @@ public class CalendarService implements CalendarModuleApi {
         event.setScopeId(request.scopeId());
         event.setRecurrence(request.recurrence() != null ? request.recurrence() : EventRecurrence.NONE);
         event.setRecurrenceEnd(request.recurrenceEnd());
+        if (request.eventType() != null) {
+            event.setEventType(request.eventType());
+        }
         event.setCreatedBy(createdBy);
 
         event = eventRepository.save(event);
@@ -348,6 +351,7 @@ public class CalendarService implements CalendarModuleApi {
                 event.getRecurrence(),
                 event.getRecurrenceEnd(),
                 event.isCancelled(),
+                event.getEventType(),
                 event.getCreatedBy(),
                 creatorName,
                 attendingCount,

@@ -46,7 +46,7 @@ public class PdfService {
                         body { font-family: sans-serif; font-size: 12px; margin: 2cm; }
                         h1 { font-size: 18px; margin-bottom: 0.5cm; }
                         h2 { font-size: 14px; color: #555; margin-bottom: 1cm; }
-                        table { width: 100%%; border-collapse: collapse; }
+                        table { width: 100%; border-collapse: collapse; }
                         th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
                         th { background-color: #f5f5f5; font-weight: bold; }
                         .right { text-align: right; }
