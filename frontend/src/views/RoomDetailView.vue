@@ -491,6 +491,16 @@ async function toggleMute() {
         />
       </div>
 
+      <!-- Create Putzaktion for this room (leader/admin/putzorga) -->
+      <div v-if="canEditRoom" class="card" style="display: flex; align-items: center; gap: 0.75rem;">
+        <Button
+          :label="t('cleaning.createForRoom')"
+          icon="pi pi-sparkles"
+          severity="secondary"
+          @click="router.push({ name: 'admin-cleaning', query: { roomId: id, roomName: rooms.currentRoom?.name } })"
+        />
+      </div>
+
       <!-- Public description (editable by leader) -->
       <div v-if="canEditRoom" class="card public-desc-card">
         <div class="public-desc-header">

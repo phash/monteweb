@@ -1,6 +1,7 @@
 package com.monteweb.notification.internal.service;
 
 import com.monteweb.messaging.MessageSentEvent;
+import com.monteweb.messaging.MessagingModuleApi;
 import com.monteweb.notification.NotificationType;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
@@ -9,9 +10,12 @@ import org.springframework.stereotype.Component;
 public class MessageNotificationListener {
 
     private final NotificationService notificationService;
+    private final MessagingModuleApi messagingModuleApi;
 
-    public MessageNotificationListener(NotificationService notificationService) {
+    public MessageNotificationListener(NotificationService notificationService,
+                                       MessagingModuleApi messagingModuleApi) {
         this.notificationService = notificationService;
+        this.messagingModuleApi = messagingModuleApi;
     }
 
     @ApplicationModuleListener
@@ -20,6 +24,11 @@ public class MessageNotificationListener {
         String link = "/messages/" + event.conversationId();
 
         for (var recipientId : event.recipientIds()) {
+            // Skip notification if the recipient has muted this conversation
+            if (messagingModuleApi.isConversationMutedByUser(event.conversationId(), recipientId)) {
+                continue;
+            }
+
             notificationService.sendNotification(
                     recipientId,
                     NotificationType.MESSAGE,

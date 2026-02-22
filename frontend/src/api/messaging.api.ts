@@ -1,11 +1,7 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
 import type { ConversationInfo, MessageInfo, StartConversationRequest } from '@/types/messaging'
-
-function authenticatedUrl(path: string): string {
-  const token = localStorage.getItem('accessToken')
-  return token ? `${path}?token=${encodeURIComponent(token)}` : path
-}
+import { authenticatedImageUrl } from '@/composables/useImageToken'
 
 export const messagingApi = {
   getConversations() {
@@ -50,11 +46,19 @@ export const messagingApi = {
     return client.get<ApiResponse<{ count: number }>>('/messages/unread-count')
   },
 
+  muteConversation(conversationId: string) {
+    return client.post<ApiResponse<void>>(`/messages/conversations/${conversationId}/mute`)
+  },
+
+  unmuteConversation(conversationId: string) {
+    return client.post<ApiResponse<void>>(`/messages/conversations/${conversationId}/unmute`)
+  },
+
   imageUrl(imageId: string) {
-    return authenticatedUrl(`/api/v1/messages/images/${imageId}`)
+    return authenticatedImageUrl(`/api/v1/messages/images/${imageId}`)
   },
 
   thumbnailUrl(imageId: string) {
-    return authenticatedUrl(`/api/v1/messages/images/${imageId}/thumbnail`)
+    return authenticatedImageUrl(`/api/v1/messages/images/${imageId}/thumbnail`)
   },
 }

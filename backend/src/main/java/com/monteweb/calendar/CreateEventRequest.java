@@ -23,6 +23,7 @@ public record CreateEventRequest(
         @NotNull EventScope scope,
         UUID scopeId,
         EventRecurrence recurrence,
-        LocalDate recurrenceEnd
+        LocalDate recurrenceEnd,
+        String eventType
 ) {
 }

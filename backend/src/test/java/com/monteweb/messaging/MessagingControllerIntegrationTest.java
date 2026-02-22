@@ -41,7 +41,6 @@ class MessagingControllerIntegrationTest {
 
     @Test
     void startConversation_shouldSucceed() throws Exception {
-        // Register two users
         var responseA = TestHelper.registerAndGetResponse(mockMvc,
                 "msg-senderA@example.com", "Sender", "A");
         String tokenA = responseA.path("data").path("accessToken").asText();
@@ -50,14 +49,14 @@ class MessagingControllerIntegrationTest {
                 "msg-receiverB@example.com", "Receiver", "B");
         String userIdB = responseB.path("data").path("userId").asText();
 
-        // Start conversation
+        // Start conversation using correct request format (participantIds list)
         mockMvc.perform(post("/api/v1/messages/conversations")
                         .header("Authorization", "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "recipientId": "%s",
-                                    "content": "Hello there!"
+                                    "participantIds": ["%s"],
+                                    "isGroup": false
                                 }
                                 """.formatted(userIdB)))
                 .andExpect(status().isOk())
@@ -100,7 +99,7 @@ class MessagingControllerIntegrationTest {
                         .header("Authorization", "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"recipientId": "%s", "content": "First message"}
+                                {"participantIds": ["%s"], "isGroup": false}
                                 """.formatted(userIdB)))
                 .andReturn();
 
@@ -134,7 +133,7 @@ class MessagingControllerIntegrationTest {
                         .header("Authorization", "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"recipientId": "%s", "content": "Mark me as read"}
+                                {"participantIds": ["%s"], "isGroup": false}
                                 """.formatted(userIdB)))
                 .andReturn();
         String convId = TestHelper.parseResponse(convResult.getResponse().getContentAsString())

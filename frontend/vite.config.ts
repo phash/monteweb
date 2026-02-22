@@ -2,6 +2,15 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
+import { execSync } from 'node:child_process'
+
+function getGitBranch(): string {
+  try {
+    return execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8' }).trim()
+  } catch {
+    return 'unknown'
+  }
+}
 
 export default defineConfig({
   plugins: [
@@ -13,6 +22,7 @@ export default defineConfig({
         name: 'MonteWeb - Schul-Intranet',
         short_name: 'MonteWeb',
         description: 'Modulares Intranet fuer Montessori-Schulkomplexe',
+        lang: 'de',
         theme_color: '#3B82F6',
         background_color: '#F9FAFB',
         display: 'standalone',
@@ -39,54 +49,15 @@ export default defineConfig({
             src: '/icons/apple-touch-icon.png',
             sizes: '180x180',
             type: 'image/png',
-            purpose: 'apple touch icon',
+            purpose: 'any',
           },
         ],
       },
-      workbox: {
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        navigateFallback: 'index.html',
-        runtimeCaching: [
-          {
-            // User's own data (families, profile, notifications) — cache for offline
-            urlPattern: /\/api\/v1\/(families\/mine|users\/me|notifications)/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'user-data-cache',
-              expiration: {
-                maxEntries: 20,
-                maxAgeSeconds: 86400, // 24 hours
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Calendar events and jobs — cache for offline viewing
-            urlPattern: /\/api\/v1\/(calendar|jobs|cleaning\/my-slots|cleaning\/dashboard)/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'content-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 3600, // 1 hour
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-          {
-            // Feed and other API calls — shorter cache
-            urlPattern: /\/api\/v1\//,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 300, // 5 minutes
-              },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
       },
     }),
   ],
@@ -94,6 +65,11 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0-beta'),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+    __GIT_BRANCH__: JSON.stringify(getGitBranch()),
   },
   build: {
     rollupOptions: {

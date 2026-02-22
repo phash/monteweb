@@ -142,6 +142,38 @@ services:
         limits:
           memory: 128M
 
+  # ── Optional: Caddy Reverse Proxy (SSL termination + HTTPS) ──────
+  # Enable with: docker compose --profile ssl up -d
+  # Set DOMAIN in .env and remove APP_PORT (Caddy binds :80/:443)
+  caddy:
+    image: caddy:2-alpine
+    container_name: monteweb-caddy
+    restart: unless-stopped
+    profiles: ["ssl"]
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ports:
+      - "443:443"
+      - "443:443/udp"   # HTTP/3 (QUIC)
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data        # TLS certificates
+      - caddy_config:/config    # Caddy runtime config
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
   # ── Optional: Monitoring Stack ────────────────────────────────────────
   prometheus:
     image: prom/prometheus:v2.51.0
@@ -188,5 +220,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  caddy_data:
+  caddy_config:
   prometheus_data:
   grafana_data:

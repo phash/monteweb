@@ -31,24 +31,53 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
 
-        if (token != null && jwtService.validateToken(token)) {
-            var claims = jwtService.extractClaims(token);
-            String userId = claims.getSubject();
-            String role = claims.get("role", String.class);
-
-            var authorities = new ArrayList<SimpleGrantedAuthority>();
-            if (role != null) {
-                authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        if (token != null) {
+            if (isImageEndpoint(request)) {
+                // Image endpoints: accept short-lived image tokens (preferred) or regular JWT
+                authenticateImageToken(request, token);
+            } else if (jwtService.validateToken(token)) {
+                authenticateWithJwt(request, token);
             }
-
-            var authentication = new UsernamePasswordAuthenticationToken(
-                    userId, null, authorities
-            );
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void authenticateImageToken(HttpServletRequest request, String token) {
+        // First try as image token, then fall back to regular JWT for backwards compatibility
+        var imageUserId = jwtService.validateImageToken(token);
+        if (imageUserId.isPresent()) {
+            var authentication = new UsernamePasswordAuthenticationToken(
+                    imageUserId.get(), null, new ArrayList<>()
+            );
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+        } else if (jwtService.validateToken(token)) {
+            // Backwards compatibility: accept regular JWT (will be removed in future)
+            authenticateWithJwt(request, token);
+        }
+    }
+
+    private void authenticateWithJwt(HttpServletRequest request, String token) {
+        var claims = jwtService.extractClaims(token);
+        String userId = claims.getSubject();
+        String role = claims.get("role", String.class);
+
+        // Reject regular JWT tokens that have "type" claim (e.g., image tokens used for API calls)
+        if (claims.get("type", String.class) != null) {
+            return;
+        }
+
+        var authorities = new ArrayList<SimpleGrantedAuthority>();
+        if (role != null) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        }
+
+        var authentication = new UsernamePasswordAuthenticationToken(
+                userId, null, authorities
+        );
+        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private String extractToken(HttpServletRequest request) {
@@ -57,13 +86,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             return header.substring(7);
         }
         // Allow token via query parameter for image endpoints (img tags can't send headers)
-        String path = request.getRequestURI();
-        if (path != null && (path.startsWith("/api/v1/fotobox/images/") || path.startsWith("/api/v1/fundgrube/images/") || path.startsWith("/api/v1/messages/images/"))) {
+        if (isImageEndpoint(request)) {
             String queryToken = request.getParameter("token");
             if (StringUtils.hasText(queryToken)) {
                 return queryToken;
             }
         }
         return null;
+    }
+
+    private boolean isImageEndpoint(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path != null && (
+                path.startsWith("/api/v1/fotobox/images/") ||
+                path.startsWith("/api/v1/fundgrube/images/") ||
+                path.startsWith("/api/v1/messages/images/")
+        );
     }
 }

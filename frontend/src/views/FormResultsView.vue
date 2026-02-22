@@ -40,6 +40,55 @@ function maxOptionCount(optionCounts: Record<string, number>): number {
 function barWidth(count: number, max: number): string {
   return `${Math.round((count / max) * 100)}%`
 }
+
+const PIE_COLORS = [
+  '#4CAF50', '#2196F3', '#FF9800', '#E91E63',
+  '#9C27B0', '#00BCD4', '#FF5722', '#607D8B'
+]
+
+function getPieSegments(data: Record<string, number>): Array<{ label: string; count: number; percentage: number; color: string; startAngle: number; endAngle: number }> {
+  const total = Object.values(data).reduce((a, b) => a + b, 0)
+  if (total === 0) return []
+
+  const entries = Object.entries(data)
+  let currentAngle = 0
+  return entries.map(([label, count], i) => {
+    const percentage = (count / total) * 100
+    const angle = (count / total) * 360
+    const segment = {
+      label,
+      count,
+      percentage,
+      color: PIE_COLORS[i % PIE_COLORS.length]!,
+      startAngle: currentAngle,
+      endAngle: currentAngle + angle,
+    }
+    currentAngle += angle
+    return segment
+  })
+}
+
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number): string {
+  const start = polarToCartesian(cx, cy, r, endAngle)
+  const end = polarToCartesian(cx, cy, r, startAngle)
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0
+  return `M ${cx} ${cy} L ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} Z`
+}
+
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const angleRad = ((angleDeg - 90) * Math.PI) / 180
+  return {
+    x: cx + r * Math.cos(angleRad),
+    y: cy + r * Math.sin(angleRad),
+  }
+}
+
+function getYesNoPieData(yesCount: number, noCount: number): Record<string, number> {
+  const data: Record<string, number> = {}
+  if (yesCount > 0) data[t('forms.yes')] = yesCount
+  if (noCount > 0) data[t('forms.no')] = noCount
+  return data
+}
 </script>
 
 <template>
@@ -96,8 +145,31 @@ function barWidth(count: number, max: number): string {
         <h2 class="result-label">{{ result.label }}</h2>
         <span class="result-total">{{ result.totalAnswers }} {{ t('forms.responsesCount') }}</span>
 
-        <!-- Choice bar chart -->
-        <div v-if="(result.type === 'SINGLE_CHOICE' || result.type === 'MULTIPLE_CHOICE') && result.optionCounts" class="bar-chart">
+        <!-- Pie chart for SINGLE_CHOICE -->
+        <div v-if="result.type === 'SINGLE_CHOICE' && result.optionCounts" class="pie-chart-section">
+          <div class="pie-chart-container">
+            <svg viewBox="0 0 200 200" class="pie-chart">
+              <template v-for="(seg, i) in getPieSegments(result.optionCounts)" :key="i">
+                <path
+                  v-if="seg.endAngle - seg.startAngle < 360"
+                  :d="describeArc(100, 100, 90, seg.startAngle, seg.endAngle)"
+                  :fill="seg.color"
+                />
+                <circle v-else cx="100" cy="100" r="90" :fill="seg.color" />
+              </template>
+            </svg>
+          </div>
+          <div class="pie-legend">
+            <div v-for="(seg, i) in getPieSegments(result.optionCounts)" :key="i" class="legend-item">
+              <span class="legend-color" :style="{ background: seg.color }" />
+              <span class="legend-label">{{ seg.label }}</span>
+              <span class="legend-count">{{ seg.count }} ({{ seg.percentage.toFixed(0) }}%)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bar chart for MULTIPLE_CHOICE -->
+        <div v-if="result.type === 'MULTIPLE_CHOICE' && result.optionCounts" class="bar-chart">
           <div v-for="(count, option) in result.optionCounts" :key="option" class="bar-row">
             <span class="bar-label">{{ option }}</span>
             <div class="bar-container">
@@ -124,15 +196,26 @@ function barWidth(count: number, max: number): string {
           </div>
         </div>
 
-        <!-- Yes/No -->
-        <div v-if="result.type === 'YES_NO'" class="yesno-result">
-          <div class="yesno-item yes">
-            <span class="yesno-label">{{ t('forms.yes') }}</span>
-            <span class="yesno-count">{{ result.yesCount }}</span>
+        <!-- Pie chart for YES_NO -->
+        <div v-if="result.type === 'YES_NO'" class="pie-chart-section">
+          <div class="pie-chart-container">
+            <svg viewBox="0 0 200 200" class="pie-chart">
+              <template v-for="(seg, i) in getPieSegments(getYesNoPieData(result.yesCount, result.noCount))" :key="i">
+                <path
+                  v-if="seg.endAngle - seg.startAngle < 360"
+                  :d="describeArc(100, 100, 90, seg.startAngle, seg.endAngle)"
+                  :fill="seg.color"
+                />
+                <circle v-else cx="100" cy="100" r="90" :fill="seg.color" />
+              </template>
+            </svg>
           </div>
-          <div class="yesno-item no">
-            <span class="yesno-label">{{ t('forms.no') }}</span>
-            <span class="yesno-count">{{ result.noCount }}</span>
+          <div class="pie-legend">
+            <div v-for="(seg, i) in getPieSegments(getYesNoPieData(result.yesCount, result.noCount))" :key="i" class="legend-item">
+              <span class="legend-color" :style="{ background: seg.color }" />
+              <span class="legend-label">{{ seg.label }}</span>
+              <span class="legend-count">{{ seg.count }} ({{ seg.percentage.toFixed(0) }}%)</span>
+            </div>
           </div>
         </div>
 
@@ -286,36 +369,50 @@ function barWidth(count: number, max: number): string {
   gap: 0.25rem;
 }
 
-.yesno-result {
+.pie-chart-section {
   display: flex;
-  gap: 1rem;
+  gap: 2rem;
+  align-items: center;
 }
 
-.yesno-item {
+.pie-chart-container {
+  width: 160px;
+  height: 160px;
+  flex-shrink: 0;
+}
+
+.pie-chart {
+  width: 100%;
+  height: 100%;
+}
+
+.pie-legend {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+}
+
+.legend-item {
+  display: flex;
   align-items: center;
-  padding: 1rem 2rem;
-  border-radius: 8px;
+  gap: 0.5rem;
+  font-size: var(--mw-font-size-sm);
 }
 
-.yesno-item.yes {
-  background: var(--p-green-50);
-  color: var(--p-green-700);
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
-.yesno-item.no {
-  background: var(--p-red-50);
-  color: var(--p-red-700);
+.legend-label {
+  flex: 1;
 }
 
-.yesno-count {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-.yesno-label {
+.legend-count {
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .text-answers {
@@ -346,6 +443,16 @@ function barWidth(count: number, max: number): string {
 
   .rating-result {
     flex-direction: column;
+  }
+
+  .pie-chart-section {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pie-chart-container {
+    width: 140px;
+    height: 140px;
   }
 }
 </style>

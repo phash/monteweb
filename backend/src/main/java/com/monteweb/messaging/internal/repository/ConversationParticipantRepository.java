@@ -28,4 +28,10 @@ public interface ConversationParticipantRepository
     void deleteByConversationIdAndUserId(UUID conversationId, UUID userId);
 
     long countByConversationId(UUID conversationId);
+
+    @Query("""
+            SELECT cp.conversationId FROM ConversationParticipant cp
+            WHERE cp.userId = :userId AND cp.muted = true
+            """)
+    List<UUID> findMutedConversationIdsByUserId(UUID userId);
 }
