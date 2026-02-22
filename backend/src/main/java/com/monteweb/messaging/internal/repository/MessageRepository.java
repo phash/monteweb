@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,4 +24,6 @@ public interface MessageRepository extends JpaRepository<Message, UUID> {
             AND m.senderId <> :userId
             """)
     long countUnreadMessages(UUID conversationId, UUID userId, Instant since);
+
+    List<Message> findBySenderId(UUID senderId);
 }

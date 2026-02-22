@@ -1,6 +1,7 @@
 package com.monteweb.messaging;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,4 +40,9 @@ public interface MessagingModuleApi {
      * Removes a user from a conversation (e.g. when leaving a room with chat).
      */
     void removeParticipantFromConversation(UUID conversationId, UUID userId);
+
+    /**
+     * DSGVO: Export all messaging-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

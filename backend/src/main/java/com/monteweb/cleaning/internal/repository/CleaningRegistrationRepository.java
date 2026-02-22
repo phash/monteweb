@@ -60,4 +60,6 @@ public interface CleaningRegistrationRepository extends JpaRepository<CleaningRe
             "WHERE r.checkedOut = true AND r.confirmed = false AND r.noShow = false " +
             "ORDER BY r.checkOutAt ASC")
     List<CleaningRegistration> findPendingConfirmation();
+
+    void deleteByUserId(UUID userId);
 }

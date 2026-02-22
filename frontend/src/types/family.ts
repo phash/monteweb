@@ -53,4 +53,10 @@ export interface TenantConfig {
   defaultLanguage: string
   availableLanguages: string[]
   requireUserApproval: boolean
+  privacyPolicyText?: string | null
+  privacyPolicyVersion?: string | null
+  termsText?: string | null
+  termsVersion?: string | null
+  dataRetentionDaysNotifications?: number | null
+  dataRetentionDaysAudit?: number | null
 }

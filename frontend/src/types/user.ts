@@ -34,3 +34,27 @@ export interface LoginResponse {
   email: string
   role: string
 }
+
+export interface DeletionStatus {
+  deletionRequested: boolean
+  deletionRequestedAt: string | null
+  scheduledDeletionAt: string | null
+}
+
+export interface ConsentRecord {
+  id: string
+  consentType: string
+  granted: boolean
+  grantedAt: string
+  notes: string | null
+}
+
+export interface TermsStatus {
+  currentVersion: string | null
+  accepted: boolean
+}
+
+export interface PrivacyPolicy {
+  text: string | null
+  version: string | null
+}

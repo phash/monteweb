@@ -1,6 +1,7 @@
 package com.monteweb.family;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,4 +35,9 @@ public interface FamilyModuleApi {
      * Admin: Remove a user from a family without auth checks.
      */
     void adminRemoveMember(UUID familyId, UUID userId);
+
+    /**
+     * DSGVO: Export all family-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

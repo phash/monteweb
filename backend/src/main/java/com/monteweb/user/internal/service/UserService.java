@@ -1,9 +1,24 @@
 package com.monteweb.user.internal.service;
 
+import com.monteweb.calendar.CalendarModuleApi;
+import com.monteweb.cleaning.CleaningModuleApi;
+import com.monteweb.family.FamilyModuleApi;
+import com.monteweb.feed.FeedModuleApi;
+import com.monteweb.files.FilesModuleApi;
+import com.monteweb.forms.FormsModuleApi;
+import com.monteweb.fotobox.FotoboxModuleApi;
+import com.monteweb.fundgrube.FundgrubeModuleApi;
+import com.monteweb.jobboard.JobboardModuleApi;
+import com.monteweb.messaging.MessagingModuleApi;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.*;
+import com.monteweb.user.internal.model.DataAccessLog;
 import com.monteweb.user.internal.model.User;
+import com.monteweb.user.internal.repository.DataAccessLogRepository;
 import com.monteweb.user.internal.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -11,7 +26,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.*;;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 @Service
 @Transactional(readOnly = true)
@@ -19,10 +35,51 @@ public class UserService implements UserModuleApi {
 
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final DataAccessLogRepository dataAccessLogRepository;
 
-    public UserService(UserRepository userRepository, ApplicationEventPublisher eventPublisher) {
+    // Always-present module APIs
+    private final FeedModuleApi feedModuleApi;
+    private final RoomModuleApi roomModuleApi;
+    private final FamilyModuleApi familyModuleApi;
+
+    // Optional module APIs (conditional)
+    private final MessagingModuleApi messagingModuleApi;
+    private final CalendarModuleApi calendarModuleApi;
+    private final JobboardModuleApi jobboardModuleApi;
+    private final CleaningModuleApi cleaningModuleApi;
+    private final FormsModuleApi formsModuleApi;
+    private final FotoboxModuleApi fotoboxModuleApi;
+    private final FundgrubeModuleApi fundgrubeModuleApi;
+    private final FilesModuleApi filesModuleApi;
+
+    public UserService(UserRepository userRepository,
+                       ApplicationEventPublisher eventPublisher,
+                       DataAccessLogRepository dataAccessLogRepository,
+                       @Lazy FeedModuleApi feedModuleApi,
+                       @Lazy RoomModuleApi roomModuleApi,
+                       @Lazy FamilyModuleApi familyModuleApi,
+                       @Lazy @Autowired(required = false) MessagingModuleApi messagingModuleApi,
+                       @Lazy @Autowired(required = false) CalendarModuleApi calendarModuleApi,
+                       @Lazy @Autowired(required = false) JobboardModuleApi jobboardModuleApi,
+                       @Lazy @Autowired(required = false) CleaningModuleApi cleaningModuleApi,
+                       @Lazy @Autowired(required = false) FormsModuleApi formsModuleApi,
+                       @Lazy @Autowired(required = false) FotoboxModuleApi fotoboxModuleApi,
+                       @Lazy @Autowired(required = false) FundgrubeModuleApi fundgrubeModuleApi,
+                       @Lazy @Autowired(required = false) FilesModuleApi filesModuleApi) {
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
+        this.dataAccessLogRepository = dataAccessLogRepository;
+        this.feedModuleApi = feedModuleApi;
+        this.roomModuleApi = roomModuleApi;
+        this.familyModuleApi = familyModuleApi;
+        this.messagingModuleApi = messagingModuleApi;
+        this.calendarModuleApi = calendarModuleApi;
+        this.jobboardModuleApi = jobboardModuleApi;
+        this.cleaningModuleApi = cleaningModuleApi;
+        this.formsModuleApi = formsModuleApi;
+        this.fotoboxModuleApi = fotoboxModuleApi;
+        this.fundgrubeModuleApi = fundgrubeModuleApi;
+        this.filesModuleApi = filesModuleApi;
     }
 
     @Override
@@ -225,29 +282,114 @@ public class UserService implements UserModuleApi {
     }
 
     /**
-     * DSGVO: Export all personal data for a user.
+     * DSGVO: Export all personal data for a user, aggregated from all modules.
      */
     public Map<String, Object> exportUserData(UUID userId) {
         var user = findEntityById(userId);
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("id", user.getId());
-        data.put("email", user.getEmail());
-        data.put("firstName", user.getFirstName());
-        data.put("lastName", user.getLastName());
-        data.put("displayName", user.getDisplayName());
-        data.put("phone", user.getPhone());
-        data.put("role", user.getRole());
-        data.put("createdAt", user.getCreatedAt());
-        data.put("lastLoginAt", user.getLastLoginAt());
+
+        // User profile data
+        Map<String, Object> profile = new LinkedHashMap<>();
+        profile.put("id", user.getId());
+        profile.put("email", user.getEmail());
+        profile.put("firstName", user.getFirstName());
+        profile.put("lastName", user.getLastName());
+        profile.put("displayName", user.getDisplayName());
+        profile.put("phone", user.getPhone());
+        profile.put("role", user.getRole());
+        profile.put("createdAt", user.getCreatedAt());
+        profile.put("lastLoginAt", user.getLastLoginAt());
+        data.put("profile", profile);
+
+        // Always-present modules
+        data.put("feed", feedModuleApi.exportUserData(userId));
+        data.put("rooms", roomModuleApi.exportUserData(userId));
+        data.put("families", familyModuleApi.exportUserData(userId));
+
+        // Optional modules
+        if (messagingModuleApi != null) {
+            data.put("messaging", messagingModuleApi.exportUserData(userId));
+        }
+        if (calendarModuleApi != null) {
+            data.put("calendar", calendarModuleApi.exportUserData(userId));
+        }
+        if (jobboardModuleApi != null) {
+            data.put("jobboard", jobboardModuleApi.exportUserData(userId));
+        }
+        if (cleaningModuleApi != null) {
+            data.put("cleaning", cleaningModuleApi.exportUserData(userId));
+        }
+        if (formsModuleApi != null) {
+            data.put("forms", formsModuleApi.exportUserData(userId));
+        }
+        if (fotoboxModuleApi != null) {
+            data.put("fotobox", fotoboxModuleApi.exportUserData(userId));
+        }
+        if (fundgrubeModuleApi != null) {
+            data.put("fundgrube", fundgrubeModuleApi.exportUserData(userId));
+        }
+        if (filesModuleApi != null) {
+            data.put("files", filesModuleApi.exportUserData(userId));
+        }
+
+        data.put("exportedAt", Instant.now());
+
+        // Log data access for DSGVO audit
+        logDataAccess(userId, userId, "DATA_EXPORT", "User exported their personal data");
+
         return data;
     }
 
     /**
-     * DSGVO: Anonymize a user account. Replaces personal data but keeps the record
-     * for audit trail integrity.
+     * DSGVO: Log data access for audit trail (Art. 15 DSGVO).
      */
     @Transactional
-    public void anonymizeUser(UUID userId, String reason) {
+    public void logDataAccess(UUID accessedBy, UUID targetUserId, String action, String details) {
+        var log = new DataAccessLog();
+        log.setAccessedBy(accessedBy);
+        log.setTargetUserId(targetUserId);
+        log.setAction(action);
+        log.setDetails(details);
+        dataAccessLogRepository.save(log);
+    }
+
+    /**
+     * DSGVO: Request account deletion with 14-day grace period.
+     */
+    @Transactional
+    public void requestDeletion(UUID userId) {
+        var user = findEntityById(userId);
+        if (user.getDeletionRequestedAt() != null) {
+            throw new com.monteweb.shared.exception.BusinessException("Deletion already requested");
+        }
+        var now = Instant.now();
+        var scheduledAt = now.plus(14, ChronoUnit.DAYS);
+        user.setDeletionRequestedAt(now);
+        user.setScheduledDeletionAt(scheduledAt);
+        userRepository.save(user);
+        eventPublisher.publishEvent(new UserDeletionRequestedEvent(userId, scheduledAt));
+    }
+
+    /**
+     * DSGVO: Cancel a pending account deletion.
+     */
+    @Transactional
+    public void cancelDeletion(UUID userId) {
+        var user = findEntityById(userId);
+        if (user.getDeletionRequestedAt() == null) {
+            throw new com.monteweb.shared.exception.BusinessException("No deletion pending");
+        }
+        user.setDeletionRequestedAt(null);
+        user.setScheduledDeletionAt(null);
+        userRepository.save(user);
+        eventPublisher.publishEvent(new UserDeletionCancelledEvent(userId));
+    }
+
+    /**
+     * DSGVO: Anonymize a user account and publish deletion event for cross-module cleanup.
+     */
+    @Transactional
+    public void anonymizeAndDelete(UUID userId, String reason) {
         var user = findEntityById(userId);
         user.setEmail(UUID.randomUUID() + "@deleted.local");
         user.setFirstName("Geloeschter");
@@ -259,7 +401,19 @@ public class UserService implements UserModuleApi {
         user.setActive(false);
         user.setDeletedAt(Instant.now());
         user.setDeletionReason(reason);
+        user.setDeletionRequestedAt(null);
+        user.setScheduledDeletionAt(null);
+        user.setOidcProvider(null);
+        user.setOidcSubject(null);
         userRepository.save(user);
+        eventPublisher.publishEvent(new UserDeletionExecutedEvent(userId));
+    }
+
+    /**
+     * Returns users whose scheduled deletion date has passed.
+     */
+    public List<User> findUsersScheduledForDeletion() {
+        return userRepository.findByScheduledDeletionAtBeforeAndDeletionRequestedAtIsNotNull(Instant.now());
     }
 
     @Override

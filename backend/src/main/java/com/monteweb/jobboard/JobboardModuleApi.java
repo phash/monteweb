@@ -2,6 +2,7 @@ package com.monteweb.jobboard;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -18,4 +19,9 @@ public interface JobboardModuleApi {
     List<JobInfo> getJobsForEvent(UUID eventId);
 
     int countJobsForEvent(UUID eventId);
+
+    /**
+     * DSGVO: Export all jobboard-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

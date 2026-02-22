@@ -7,6 +7,8 @@ import { useMessagingStore } from '@/stores/messaging'
 import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
 import { usePushNotifications } from '@/composables/usePushNotifications'
+import { useConfirmDialog } from '@/composables/useConfirmDialog'
+import { useLocaleDate } from '@/composables/useLocaleDate'
 import PageTitle from '@/components/common/PageTitle.vue'
 import AvatarUpload from '@/components/common/AvatarUpload.vue'
 import InputText from 'primevue/inputtext'
@@ -14,6 +16,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
+import Dialog from 'primevue/dialog'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import type { UserRole } from '@/types/user'
 
@@ -116,6 +119,72 @@ async function togglePush() {
     if (!ok) pushEnabled.value = false
   } else {
     await pushUnsubscribe()
+  }
+}
+
+// DSGVO / Privacy
+const { visible: confirmVisible, header: confirmHeader, message: confirmMessage, confirm, onConfirm, onCancel } = useConfirmDialog()
+const { formatDate } = useLocaleDate()
+
+const deletionStatus = ref<{
+  deletionRequested: boolean
+  deletionRequestedAt: string | null
+  scheduledDeletionAt: string | null
+}>({ deletionRequested: false, deletionRequestedAt: null, scheduledDeletionAt: null })
+const exportingData = ref(false)
+
+onMounted(async () => {
+  try {
+    const res = await usersApi.getDeletionStatus()
+    deletionStatus.value = res.data.data
+  } catch {
+    // Ignore — deletion status not critical
+  }
+})
+
+async function exportMyData() {
+  exportingData.value = true
+  try {
+    const res = await usersApi.exportMyData()
+    const blob = new Blob([JSON.stringify(res.data.data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `monteweb-data-export-${new Date().toISOString().slice(0, 10)}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.add({ severity: 'success', summary: t('privacy.exportSuccess'), life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('privacy.exportError'), life: 5000 })
+  } finally {
+    exportingData.value = false
+  }
+}
+
+async function requestAccountDeletion() {
+  const confirmed = await confirm({
+    header: t('privacy.deleteConfirmTitle'),
+    message: t('privacy.deleteConfirmMessage'),
+  })
+  if (!confirmed) return
+
+  try {
+    await usersApi.requestDeletion()
+    const res = await usersApi.getDeletionStatus()
+    deletionStatus.value = res.data.data
+    toast.add({ severity: 'warn', summary: t('privacy.deletionRequested'), life: 5000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('privacy.deletionError'), life: 5000 })
+  }
+}
+
+async function cancelAccountDeletion() {
+  try {
+    await usersApi.cancelDeletion()
+    deletionStatus.value = { deletionRequested: false, deletionRequestedAt: null, scheduledDeletionAt: null }
+    toast.add({ severity: 'success', summary: t('privacy.deletionCancelled'), life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('privacy.cancelError'), life: 5000 })
   }
 }
 </script>
@@ -241,6 +310,76 @@ async function togglePush() {
         {{ t('profile.pushDenied') }}
       </p>
     </div>
+
+    <!-- DSGVO / Privacy -->
+    <div class="card profile-card privacy-card">
+      <h3>{{ t('privacy.title') }}</h3>
+
+      <!-- Data Export -->
+      <div class="privacy-row">
+        <div>
+          <p class="privacy-label">{{ t('privacy.exportData') }}</p>
+          <p class="privacy-desc">{{ t('privacy.exportDataDesc') }}</p>
+        </div>
+        <Button
+          icon="pi pi-download"
+          :label="t('privacy.exportData')"
+          severity="secondary"
+          size="small"
+          :loading="exportingData"
+          @click="exportMyData"
+        />
+      </div>
+
+      <!-- Deletion Status -->
+      <div v-if="deletionStatus.deletionRequested" class="privacy-row deletion-pending">
+        <div>
+          <p class="privacy-label deletion-warning">
+            <i class="pi pi-exclamation-triangle" />
+            {{ t('privacy.deletionScheduled', { date: deletionStatus.scheduledDeletionAt ? formatDate(deletionStatus.scheduledDeletionAt) : '—' }) }}
+          </p>
+        </div>
+        <Button
+          icon="pi pi-times"
+          :label="t('privacy.cancelDeletion')"
+          severity="warn"
+          size="small"
+          @click="cancelAccountDeletion"
+        />
+      </div>
+
+      <!-- Delete Account -->
+      <div v-else class="privacy-row">
+        <div>
+          <p class="privacy-label">{{ t('privacy.deleteAccount') }}</p>
+          <p class="privacy-desc">{{ t('privacy.deleteAccountDesc') }}</p>
+        </div>
+        <Button
+          icon="pi pi-trash"
+          :label="t('privacy.deleteAccount')"
+          severity="danger"
+          size="small"
+          @click="requestAccountDeletion"
+        />
+      </div>
+
+      <!-- Privacy Policy Link -->
+      <div class="privacy-row privacy-link-row">
+        <router-link to="/privacy" class="privacy-link">
+          <i class="pi pi-shield" />
+          {{ t('privacy.viewPrivacyPolicy') }}
+        </router-link>
+      </div>
+    </div>
+
+    <!-- Confirm Dialog -->
+    <Dialog v-model:visible="confirmVisible" :header="confirmHeader" modal :style="{ width: '400px' }">
+      <p>{{ confirmMessage }}</p>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" @click="onCancel" />
+        <Button :label="t('common.confirm')" severity="danger" @click="onConfirm" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -393,9 +532,79 @@ async function togglePush() {
   margin-top: 0.5rem;
 }
 
+.privacy-card {
+  margin-top: 1rem;
+}
+
+.privacy-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.privacy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.privacy-row:last-child {
+  border-bottom: none;
+}
+
+.privacy-label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
+  margin: 0;
+}
+
+.privacy-desc {
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  color: var(--mw-text-muted);
+  margin: 0.125rem 0 0;
+}
+
+.deletion-pending {
+  background: color-mix(in srgb, var(--p-orange-500) 8%, transparent);
+  padding: 0.75rem;
+  border-radius: var(--p-border-radius);
+  border-bottom: none;
+}
+
+.deletion-warning {
+  color: var(--p-orange-600);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.privacy-link-row {
+  justify-content: flex-start;
+}
+
+.privacy-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--mw-primary);
+  font-size: var(--mw-font-size-sm);
+  text-decoration: none;
+}
+
+.privacy-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 767px) {
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .privacy-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

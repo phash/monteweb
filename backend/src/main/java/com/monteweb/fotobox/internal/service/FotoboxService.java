@@ -25,6 +25,7 @@ import com.monteweb.user.UserRole;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -408,5 +409,41 @@ public class FotoboxService implements FotoboxModuleApi {
                 image.getSortOrder(),
                 image.getCreatedAt()
         );
+    }
+
+    /**
+     * DSGVO: Clean up all fotobox data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        // Delete images from MinIO and DB
+        var images = imageRepo.findByUploadedBy(userId);
+        for (var img : images) {
+            storageService.delete(img.getStoragePath());
+            storageService.delete(img.getThumbnailPath());
+        }
+        imageRepo.deleteAll(images);
+        // Anonymize threads
+        var threads = threadRepo.findByCreatedBy(userId);
+        for (var thread : threads) {
+            thread.setCreatedBy(null);
+        }
+        threadRepo.saveAll(threads);
+    }
+
+    /**
+     * DSGVO: Export all fotobox data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var images = imageRepo.findByUploadedBy(userId);
+        data.put("imagesUploaded", images.stream().map(i -> Map.of(
+                "id", i.getId(),
+                "threadId", i.getThreadId(),
+                "originalFilename", i.getOriginalFilename(),
+                "createdAt", i.getCreatedAt()
+        )).toList());
+        return data;
     }
 }

@@ -11,4 +11,6 @@ public interface FormResponseTrackingRepository extends JpaRepository<FormRespon
     boolean existsByFormIdAndUserId(UUID formId, UUID userId);
 
     void deleteByFormId(UUID formId);
+
+    void deleteByUserId(UUID userId);
 }

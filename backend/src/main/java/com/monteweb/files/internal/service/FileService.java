@@ -21,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -344,5 +345,32 @@ public class FileService implements FilesModuleApi {
     private String sanitizeFileName(String fileName) {
         if (fileName == null) return "unnamed";
         return fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    /**
+     * DSGVO: Clean up all files for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        var files = fileRepository.findByUploadedBy(userId);
+        for (var file : files) {
+            storageService.delete(file.getStoragePath());
+        }
+        fileRepository.deleteAll(files);
+    }
+
+    /**
+     * DSGVO: Export all files data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var files = fileRepository.findByUploadedBy(userId);
+        data.put("files", files.stream().map(f -> Map.of(
+                "id", f.getId(),
+                "originalFilename", f.getOriginalName(),
+                "createdAt", f.getCreatedAt()
+        )).toList());
+        return data;
     }
 }

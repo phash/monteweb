@@ -34,6 +34,9 @@ const i18n = createI18n({
       errorReports: {
         title: 'Fehlermeldungen', subtitle: 'Automatisch erfasste Fehler verwalten',
       },
+      privacy: {
+        adminPrivacy: 'Datenschutz', adminPrivacyDesc: 'Datenschutz-Verwaltung',
+      },
     },
   },
 })
@@ -51,7 +54,7 @@ describe('AdminDashboard', () => {
 
   it('should render admin tiles', () => {
     const wrapper = mount(AdminDashboard, { global: { plugins: [i18n], stubs } })
-    expect(wrapper.findAll('.router-link-stub')).toHaveLength(9)
+    expect(wrapper.findAll('.router-link-stub')).toHaveLength(10)
   })
 
   it('should render tile labels', () => {

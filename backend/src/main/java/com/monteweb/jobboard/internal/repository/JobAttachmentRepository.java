@@ -15,4 +15,6 @@ public interface JobAttachmentRepository extends JpaRepository<JobAttachment, UU
     int countByJobId(UUID jobId);
 
     void deleteByJobId(UUID jobId);
+
+    List<JobAttachment> findByUploadedBy(UUID uploadedBy);
 }

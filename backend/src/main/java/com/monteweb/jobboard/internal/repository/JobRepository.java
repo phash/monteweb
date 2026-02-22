@@ -52,4 +52,6 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     List<String> findAllCategories();
 
     long countByStatus(JobStatus status);
+
+    List<Job> findByCreatedBy(UUID createdBy);
 }

@@ -140,4 +140,6 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             ORDER BY a.completedAt ASC
             """)
     List<JobAssignment> findPendingConfirmation();
+
+    void deleteByUserId(UUID userId);
 }

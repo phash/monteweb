@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -371,5 +372,40 @@ public class CalendarService implements CalendarModuleApi {
             case SECTION -> schoolModule.findById(scopeId).map(s -> s.name()).orElse(null);
             case SCHOOL -> null;
         };
+    }
+
+    /**
+     * DSGVO: Clean up all calendar data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        // Anonymize events created by user
+        var events = eventRepository.findByCreatedBy(userId);
+        for (var event : events) {
+            event.setCreatedBy(null);
+        }
+        eventRepository.saveAll(events);
+        // Delete RSVPs
+        rsvpRepository.deleteByUserId(userId);
+    }
+
+    /**
+     * DSGVO: Export all calendar data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var events = eventRepository.findByCreatedBy(userId);
+        data.put("eventsCreated", events.stream().map(e -> Map.of(
+                "id", e.getId(),
+                "title", e.getTitle(),
+                "createdAt", e.getCreatedAt()
+        )).toList());
+        var rsvps = rsvpRepository.findByUserId(userId);
+        data.put("rsvps", rsvps.stream().map(r -> Map.of(
+                "eventId", r.getEventId(),
+                "status", r.getStatus().name()
+        )).toList());
+        return data;
     }
 }

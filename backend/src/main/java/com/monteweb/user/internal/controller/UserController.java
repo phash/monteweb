@@ -97,13 +97,36 @@ public class UserController {
     }
 
     /**
-     * DSGVO: Delete / anonymize the current user's account.
+     * DSGVO: Request account deletion with 14-day grace period.
      */
     @DeleteMapping("/me")
-    public ResponseEntity<ApiResponse<Void>> deleteAccount(@RequestBody(required = false) Map<String, String> body) {
+    public ResponseEntity<ApiResponse<Void>> deleteAccount() {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        String reason = body != null ? body.get("reason") : null;
-        userService.anonymizeUser(userId, reason);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Account has been deleted"));
+        userService.requestDeletion(userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Deletion requested. Your account will be deleted in 14 days."));
+    }
+
+    /**
+     * DSGVO: Cancel a pending account deletion.
+     */
+    @PostMapping("/me/cancel-deletion")
+    public ResponseEntity<ApiResponse<Void>> cancelDeletion() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        userService.cancelDeletion(userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Deletion cancelled"));
+    }
+
+    /**
+     * DSGVO: Get current deletion status.
+     */
+    @GetMapping("/me/deletion-status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDeletionStatus() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userService.findEntityById(userId);
+        Map<String, Object> status = new java.util.LinkedHashMap<>();
+        status.put("deletionRequested", user.getDeletionRequestedAt() != null);
+        status.put("deletionRequestedAt", user.getDeletionRequestedAt());
+        status.put("scheduledDeletionAt", user.getScheduledDeletionAt());
+        return ResponseEntity.ok(ApiResponse.ok(status));
     }
 }

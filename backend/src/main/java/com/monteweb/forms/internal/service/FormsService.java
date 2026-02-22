@@ -911,4 +911,32 @@ public class FormsService implements FormsModuleApi {
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
     }
+
+    /**
+     * DSGVO: Clean up all forms data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        // Anonymize responses (set userId to null but keep answers for statistics)
+        var responses = responseRepository.findByUserId(userId);
+        for (var response : responses) {
+            response.setUserId(null);
+        }
+        responseRepository.saveAll(responses);
+        trackingRepository.deleteByUserId(userId);
+    }
+
+    /**
+     * DSGVO: Export all forms data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        var responses = responseRepository.findByUserId(userId);
+        data.put("responses", responses.stream().map(r -> Map.of(
+                "id", r.getId(),
+                "formId", r.getFormId()
+        )).toList());
+        return data;
+    }
 }

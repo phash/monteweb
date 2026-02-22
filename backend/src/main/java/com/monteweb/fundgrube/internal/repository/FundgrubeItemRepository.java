@@ -24,4 +24,6 @@ public interface FundgrubeItemRepository extends JpaRepository<FundgrubeItem, UU
     @Modifying
     @Query("DELETE FROM FundgrubeItem i WHERE i.expiresAt IS NOT NULL AND i.expiresAt < :now")
     int deleteExpired(@Param("now") Instant now);
+
+    List<FundgrubeItem> findByCreatedBy(UUID createdBy);
 }

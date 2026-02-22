@@ -1,6 +1,7 @@
 package com.monteweb.room;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -38,4 +39,9 @@ public interface RoomModuleApi {
      * Used by section admin to create rooms within their sections.
      */
     RoomInfo createRoom(String name, String description, String type, UUID sectionId, UUID createdBy);
+
+    /**
+     * DSGVO: Export all room-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

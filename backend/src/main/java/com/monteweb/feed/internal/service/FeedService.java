@@ -261,4 +261,35 @@ public class FeedService implements FeedModuleApi {
             case SECTION, SCHOOL, BOARD, SYSTEM -> null;
         };
     }
+
+    /**
+     * DSGVO: Clean up all feed data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        commentRepository.deleteAll(commentRepository.findByAuthorId(userId));
+        postRepository.deleteAll(postRepository.findByAuthorId(userId));
+    }
+
+    /**
+     * DSGVO: Export all feed data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var posts = postRepository.findByAuthorId(userId);
+        data.put("posts", posts.stream().map(p -> Map.of(
+                "id", p.getId(),
+                "title", p.getTitle() != null ? p.getTitle() : "",
+                "content", p.getContent() != null ? p.getContent() : "",
+                "createdAt", p.getCreatedAt()
+        )).toList());
+        var comments = commentRepository.findByAuthorId(userId);
+        data.put("comments", comments.stream().map(c -> Map.of(
+                "id", c.getId(),
+                "content", c.getContent(),
+                "createdAt", c.getCreatedAt()
+        )).toList());
+        return data;
+    }
 }

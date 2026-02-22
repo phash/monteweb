@@ -84,6 +84,12 @@ public class User {
     @Column(name = "deletion_reason")
     private String deletionReason;
 
+    @Column(name = "deletion_requested_at")
+    private Instant deletionRequestedAt;
+
+    @Column(name = "scheduled_deletion_at")
+    private Instant scheduledDeletionAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();

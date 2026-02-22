@@ -48,6 +48,7 @@ public class JobboardService implements JobboardModuleApi {
     private final CleaningModuleApi cleaningModuleApi;
     private final CalendarModuleApi calendarModuleApi;
     private final RoomModuleApi roomModuleApi;
+    private final JobStorageService storageService;
 
     public JobboardService(JobRepository jobRepository,
                            JobAssignmentRepository assignmentRepository,
@@ -58,7 +59,8 @@ public class JobboardService implements JobboardModuleApi {
                            ApplicationEventPublisher eventPublisher,
                            @Autowired(required = false) CleaningModuleApi cleaningModuleApi,
                            @Autowired(required = false) CalendarModuleApi calendarModuleApi,
-                           @Autowired(required = false) RoomModuleApi roomModuleApi) {
+                           @Autowired(required = false) RoomModuleApi roomModuleApi,
+                           JobStorageService storageService) {
         this.jobRepository = jobRepository;
         this.assignmentRepository = assignmentRepository;
         this.attachmentRepository = attachmentRepository;
@@ -69,6 +71,7 @@ public class JobboardService implements JobboardModuleApi {
         this.cleaningModuleApi = cleaningModuleApi;
         this.calendarModuleApi = calendarModuleApi;
         this.roomModuleApi = roomModuleApi;
+        this.storageService = storageService;
     }
 
     // ---- Public API (JobboardModuleApi) ----
@@ -725,6 +728,48 @@ public class JobboardService implements JobboardModuleApi {
                 a.getAssignedAt(),
                 a.getCompletedAt()
         );
+    }
+
+    /**
+     * DSGVO: Clean up all jobboard data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        // Delete job attachments from MinIO
+        var attachments = attachmentRepository.findByUploadedBy(userId);
+        for (var att : attachments) {
+            storageService.delete(att.getStoragePath());
+        }
+        attachmentRepository.deleteAll(attachments);
+        // Anonymize jobs created by user
+        var jobs = jobRepository.findByCreatedBy(userId);
+        for (var job : jobs) {
+            job.setCreatedBy(null);
+        }
+        jobRepository.saveAll(jobs);
+        // Delete assignments
+        assignmentRepository.deleteByUserId(userId);
+    }
+
+    /**
+     * DSGVO: Export all jobboard data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var jobs = jobRepository.findByCreatedBy(userId);
+        data.put("jobsCreated", jobs.stream().map(j -> Map.of(
+                "id", j.getId(),
+                "title", j.getTitle(),
+                "createdAt", j.getCreatedAt()
+        )).toList());
+        var assignments = assignmentRepository.findByUserId(userId);
+        data.put("assignments", assignments.stream().map(a -> Map.of(
+                "id", a.getId(),
+                "jobId", a.getJobId(),
+                "status", a.getStatus().name()
+        )).toList());
+        return data;
     }
 
     // ---- Request DTOs ----

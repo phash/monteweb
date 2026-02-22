@@ -225,4 +225,37 @@ public class FundgrubeService implements FundgrubeModuleApi {
                 image.getFileSize(), image.getContentType()
         );
     }
+
+    /**
+     * DSGVO: Clean up all fundgrube data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        var items = itemRepo.findByCreatedBy(userId);
+        var itemIds = items.stream().map(FundgrubeItem::getId).toList();
+        if (!itemIds.isEmpty()) {
+            var images = imageRepo.findByItemIdIn(itemIds);
+            for (var img : images) {
+                storageService.delete(img.getStoragePath());
+                storageService.delete(img.getThumbnailPath());
+            }
+            imageRepo.deleteAll(images);
+        }
+        itemRepo.deleteAll(items);
+    }
+
+    /**
+     * DSGVO: Export all fundgrube data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var items = itemRepo.findByCreatedBy(userId);
+        data.put("items", items.stream().map(i -> Map.of(
+                "id", i.getId(),
+                "title", i.getTitle(),
+                "createdAt", i.getCreatedAt()
+        )).toList());
+        return data;
+    }
 }

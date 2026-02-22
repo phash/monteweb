@@ -1,6 +1,7 @@
 package com.monteweb.files;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -14,4 +15,9 @@ public interface FilesModuleApi {
     List<FolderInfo> findFoldersByRoom(UUID roomId);
 
     long getStorageUsedByRoom(UUID roomId);
+
+    /**
+     * DSGVO: Export all files-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }
