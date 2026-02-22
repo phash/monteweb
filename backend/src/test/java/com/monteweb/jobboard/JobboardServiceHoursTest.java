@@ -8,8 +8,11 @@ import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.internal.model.Job;
 import com.monteweb.jobboard.internal.model.JobAssignment;
 import com.monteweb.jobboard.internal.repository.JobAssignmentRepository;
+import com.monteweb.jobboard.internal.repository.JobAttachmentRepository;
 import com.monteweb.jobboard.internal.repository.JobRepository;
 import com.monteweb.jobboard.internal.service.JobboardService;
+import com.monteweb.calendar.CalendarModuleApi;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.user.UserModuleApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -38,11 +41,14 @@ class JobboardServiceHoursTest {
 
     @Mock private JobRepository jobRepository;
     @Mock private JobAssignmentRepository assignmentRepository;
+    @Mock private JobAttachmentRepository attachmentRepository;
     @Mock private UserModuleApi userModuleApi;
     @Mock private FamilyModuleApi familyModuleApi;
     @Mock private AdminModuleApi adminModuleApi;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private CleaningModuleApi cleaningModuleApi;
+    @Mock private CalendarModuleApi calendarModuleApi;
+    @Mock private RoomModuleApi roomModuleApi;
 
     private JobboardService service;
 
@@ -52,9 +58,10 @@ class JobboardServiceHoursTest {
     @BeforeEach
     void setUp() {
         service = new JobboardService(
-                jobRepository, assignmentRepository, userModuleApi,
-                familyModuleApi, adminModuleApi, eventPublisher,
-                cleaningModuleApi, null /* calendarModuleApi */
+                jobRepository, assignmentRepository, attachmentRepository,
+                userModuleApi, familyModuleApi, adminModuleApi,
+                eventPublisher, cleaningModuleApi, calendarModuleApi,
+                roomModuleApi
         );
     }
 
@@ -409,9 +416,10 @@ class JobboardServiceHoursTest {
         void withoutCleaningModule_onlyJobHours() {
             // Service ohne CleaningModuleApi
             var serviceNoClean = new JobboardService(
-                    jobRepository, assignmentRepository, userModuleApi,
-                    familyModuleApi, adminModuleApi, eventPublisher,
-                    null, null
+                    jobRepository, assignmentRepository, attachmentRepository,
+                    userModuleApi, familyModuleApi, adminModuleApi,
+                    eventPublisher, null, calendarModuleApi,
+                    roomModuleApi
             );
 
             when(familyModuleApi.findById(FAMILY_ID)).thenReturn(Optional.of(makeFamily(false)));

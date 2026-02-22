@@ -36,10 +36,11 @@ class RoomServiceIntegrationTest {
                         .content("""
                                 {
                                     "name": "Elefanten-Klasse",
-                                    "description": "Grundschul-Klasse 3a"
+                                    "description": "Grundschul-Klasse 3a",
+                                    "type": "KLASSE"
                                 }
                                 """))
-                .andExpect(status().isOk())
+                .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.name").value("Elefanten-Klasse"));
     }
@@ -99,7 +100,7 @@ class RoomServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Update Test Room"}
+                                {"name": "Update Test Room", "type": "GRUPPE"}
                                 """))
                 .andReturn();
 
@@ -128,17 +129,17 @@ class RoomServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Members Test Room"}
+                                {"name": "Members Test Room", "type": "GRUPPE"}
                                 """))
                 .andReturn();
 
         JsonNode roomJson = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
         String roomId = roomJson.path("data").path("id").asText();
 
-        mockMvc.perform(get("/api/v1/rooms/" + roomId + "/members")
+        mockMvc.perform(get("/api/v1/rooms/" + roomId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.members").isArray());
     }
 
     // ── Browse Rooms ─────────────────────────────────────────────────
@@ -198,7 +199,7 @@ class RoomServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Thread Test Room"}
+                                {"name": "Thread Test Room", "type": "GRUPPE"}
                                 """))
                 .andReturn();
 
@@ -220,7 +221,7 @@ class RoomServiceIntegrationTest {
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name": "Create Thread Room"}
+                                {"name": "Create Thread Room", "type": "GRUPPE"}
                                 """))
                 .andReturn();
 

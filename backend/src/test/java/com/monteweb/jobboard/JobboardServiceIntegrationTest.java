@@ -22,6 +22,17 @@ class JobboardServiceIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    private String loginAs(String email) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "password": "test1234"}
+                                """.formatted(email)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+    }
+
     // ── Job Listing ──────────────────────────────────────────────────
 
     @Test
@@ -88,7 +99,6 @@ class JobboardServiceIntegrationTest {
     void getJob_existing_shouldReturnDetails() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
-        // Create job with correct field names
         var createResult = mockMvc.perform(post("/api/v1/jobs")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -117,11 +127,12 @@ class JobboardServiceIntegrationTest {
 
     @Test
     void applyForJob_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        // User A creates the job
+        String tokenA = TestHelper.registerAndGetToken(mockMvc,
+                "job-creator-apply@example.com", "Job", "Creator");
 
-        // Create job
         var createResult = mockMvc.perform(post("/api/v1/jobs")
-                        .header("Authorization", "Bearer " + token)
+                        .header("Authorization", "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -138,8 +149,11 @@ class JobboardServiceIntegrationTest {
         JsonNode json = TestHelper.parseResponse(createResult.getResponse().getContentAsString());
         String jobId = json.path("data").path("id").asText();
 
+        // Use seed user eltern@monteweb.local who has a family (required by applyForJob)
+        String tokenB = loginAs("eltern@monteweb.local");
+
         mockMvc.perform(post("/api/v1/jobs/" + jobId + "/apply")
-                        .header("Authorization", "Bearer " + token))
+                        .header("Authorization", "Bearer " + tokenB))
                 .andExpect(status().isOk());
     }
 
@@ -184,23 +198,23 @@ class JobboardServiceIntegrationTest {
                 .andExpect(jsonPath("$.data").isArray());
     }
 
-    // ── Report (Admin) ───────────────────────────────────────────────
+    // ── Report ───────────────────────────────────────────────────────
 
     @Test
-    void getReport_regularUser_shouldReturn403() throws Exception {
+    void getReport_authenticatedUser_shouldSucceed() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(get("/api/v1/jobs/report")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 
     @Test
-    void getReportPdf_regularUser_shouldReturn403() throws Exception {
+    void getReportPdf_authenticatedUser_shouldSucceed() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(get("/api/v1/jobs/report/pdf")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isOk());
     }
 }

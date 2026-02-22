@@ -37,6 +37,9 @@ public class Job {
     @Column(name = "section_id")
     private UUID sectionId;
 
+    @Column(name = "room_id")
+    private UUID roomId;
+
     @Column(name = "estimated_hours", nullable = false, precision = 5, scale = 2)
     private BigDecimal estimatedHours;
 

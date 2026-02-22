@@ -8,6 +8,7 @@ import type { FeedPost } from '@/types/feed'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
+import RichContent from '@/components/common/RichContent.vue'
 
 const props = defineProps<{ post: FeedPost }>()
 const { t } = useI18n()
@@ -62,7 +63,7 @@ function handleDelete() {
     </div>
 
     <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
-    <p class="post-content">{{ post.content }}</p>
+    <p class="post-content"><RichContent :content="post.content" /></p>
 
     <div class="post-footer">
       <Button

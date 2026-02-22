@@ -9,6 +9,8 @@ public record CleaningConfigInfo(
         UUID id,
         UUID sectionId,
         String sectionName,
+        UUID roomId,
+        String roomName,
         String title,
         String description,
         int dayOfWeek,

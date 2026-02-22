@@ -7,11 +7,7 @@ import type {
   UpdateFundgrubeItemRequest,
   ClaimItemRequest,
 } from '@/types/fundgrube'
-
-function authenticatedUrl(path: string): string {
-  const token = localStorage.getItem('accessToken')
-  return token ? `${path}?token=${encodeURIComponent(token)}` : path
-}
+import { authenticatedImageUrl } from '@/composables/useImageToken'
 
 export const fundgrubeApi = {
   // Items
@@ -49,11 +45,11 @@ export const fundgrubeApi = {
     return client.delete<ApiResponse<void>>(`/fundgrube/images/${imageId}`)
   },
 
-  // Image URL helpers — JWT via ?token= for <img> tags
+  // Image URL helpers — uses short-lived image token for <img> tags
   imageUrl(imageId: string) {
-    return authenticatedUrl(`/api/v1/fundgrube/images/${imageId}`)
+    return authenticatedImageUrl(`/api/v1/fundgrube/images/${imageId}`)
   },
   thumbnailUrl(imageId: string) {
-    return authenticatedUrl(`/api/v1/fundgrube/images/${imageId}/thumbnail`)
+    return authenticatedImageUrl(`/api/v1/fundgrube/images/${imageId}/thumbnail`)
   },
 }

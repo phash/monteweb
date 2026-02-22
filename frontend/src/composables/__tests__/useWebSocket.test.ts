@@ -10,7 +10,10 @@ vi.mock('@stomp/stompjs', () => {
     Client: function (this: any, config: any) {
       this.brokerURL = config.brokerURL
       this.reconnectDelay = config.reconnectDelay
+      this.connected = false
       this.onConnect = null
+      this.onDisconnect = null
+      this.onWebSocketClose = null
       this.onStompError = null
       this.activate = mockActivate
       this.deactivate = mockDeactivate

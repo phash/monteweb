@@ -3,10 +3,12 @@ package com.monteweb.room.internal.service;
 import com.monteweb.room.*;
 import com.monteweb.room.internal.dto.JoinRequestInfo;
 import com.monteweb.room.internal.model.*;
+import com.monteweb.room.internal.repository.RoomChatChannelRepository;
 import com.monteweb.room.internal.repository.RoomJoinRequestRepository;
 import com.monteweb.room.internal.repository.RoomMemberRepository;
 import com.monteweb.room.internal.repository.RoomRepository;
 import com.monteweb.room.internal.repository.RoomSubscriptionRepository;
+import com.monteweb.messaging.MessagingModuleApi;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.family.FamilyInfo;
@@ -14,6 +16,7 @@ import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,12 +41,16 @@ public class RoomService implements RoomModuleApi {
     private final UserModuleApi userModuleApi;
     private final FamilyModuleApi familyModuleApi;
     private final ApplicationEventPublisher eventPublisher;
+    private final RoomChatChannelRepository chatChannelRepository;
+    private final MessagingModuleApi messagingModuleApi;
 
     public RoomService(RoomRepository roomRepository, RoomMemberRepository memberRepository,
                        RoomJoinRequestRepository joinRequestRepository,
                        RoomSubscriptionRepository subscriptionRepository,
                        UserModuleApi userModuleApi,
-                       FamilyModuleApi familyModuleApi, ApplicationEventPublisher eventPublisher) {
+                       FamilyModuleApi familyModuleApi, ApplicationEventPublisher eventPublisher,
+                       @Autowired(required = false) RoomChatChannelRepository chatChannelRepository,
+                       @Autowired(required = false) MessagingModuleApi messagingModuleApi) {
         this.roomRepository = roomRepository;
         this.memberRepository = memberRepository;
         this.joinRequestRepository = joinRequestRepository;
@@ -51,6 +58,8 @@ public class RoomService implements RoomModuleApi {
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
         this.eventPublisher = eventPublisher;
+        this.chatChannelRepository = chatChannelRepository;
+        this.messagingModuleApi = messagingModuleApi;
     }
 
     // --- Public API (RoomModuleApi) ---
@@ -236,6 +245,7 @@ public class RoomService implements RoomModuleApi {
         var member = new RoomMember(room, userId, effectiveRole);
         room.getMembers().add(member);
         roomRepository.save(room);
+        syncChatParticipantAdd(roomId, userId);
     }
 
     @Transactional
@@ -243,6 +253,7 @@ public class RoomService implements RoomModuleApi {
         var room = findEntityById(roomId);
         room.getMembers().removeIf(m -> m.getUserId().equals(userId));
         roomRepository.save(room);
+        syncChatParticipantRemove(roomId, userId);
     }
 
     @Transactional
@@ -270,6 +281,10 @@ public class RoomService implements RoomModuleApi {
         }
         if (added > 0) {
             roomRepository.save(room);
+            // Sync all newly added members to chat conversations
+            for (var member : family.members()) {
+                syncChatParticipantAdd(roomId, member.userId());
+            }
         }
         return added;
     }
@@ -293,6 +308,7 @@ public class RoomService implements RoomModuleApi {
         var member = new RoomMember(room, userId, effectiveRole);
         room.getMembers().add(member);
         roomRepository.save(room);
+        syncChatParticipantAdd(roomId, userId);
     }
 
     /**
@@ -314,6 +330,7 @@ public class RoomService implements RoomModuleApi {
         var room = findEntityById(roomId);
         room.getMembers().removeIf(m -> m.getUserId().equals(userId));
         roomRepository.save(room);
+        syncChatParticipantRemove(roomId, userId);
     }
 
     public RoomSettings getSettings(UUID roomId) {
@@ -505,5 +522,23 @@ public class RoomService implements RoomModuleApi {
                 room.getExpiresAt(),
                 room.getTags() != null ? Arrays.asList(room.getTags()) : List.of()
         );
+    }
+
+    // ---- Chat participant sync ----
+
+    private void syncChatParticipantAdd(UUID roomId, UUID userId) {
+        if (chatChannelRepository == null || messagingModuleApi == null) return;
+        var channels = chatChannelRepository.findByRoomId(roomId);
+        for (var channel : channels) {
+            messagingModuleApi.addParticipantToConversation(channel.getConversationId(), userId);
+        }
+    }
+
+    private void syncChatParticipantRemove(UUID roomId, UUID userId) {
+        if (chatChannelRepository == null || messagingModuleApi == null) return;
+        var channels = chatChannelRepository.findByRoomId(roomId);
+        for (var channel : channels) {
+            messagingModuleApi.removeParticipantFromConversation(channel.getConversationId(), userId);
+        }
     }
 }

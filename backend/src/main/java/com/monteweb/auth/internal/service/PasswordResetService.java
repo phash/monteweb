@@ -26,15 +26,18 @@ public class PasswordResetService {
     private final UserModuleApi userModule;
     private final PasswordEncoder passwordEncoder;
     private final Optional<EmailService> emailService;
+    private final RefreshTokenService refreshTokenService;
 
     public PasswordResetService(PasswordResetTokenRepository tokenRepository,
                                 UserModuleApi userModule,
                                 PasswordEncoder passwordEncoder,
-                                Optional<EmailService> emailService) {
+                                Optional<EmailService> emailService,
+                                RefreshTokenService refreshTokenService) {
         this.tokenRepository = tokenRepository;
         this.userModule = userModule;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     /**
@@ -61,7 +64,7 @@ public class PasswordResetService {
         if (emailService.isPresent()) {
             emailService.get().sendPasswordResetEmail(email, resetToken.getToken());
         } else {
-            log.info("Password reset token generated for user {}: {}", email, resetToken.getToken());
+            log.info("Password reset token generated for user {} (email not configured, token not logged for security)", email);
         }
     }
 
@@ -80,6 +83,9 @@ public class PasswordResetService {
         // Hash the new password and update the user
         String passwordHash = passwordEncoder.encode(newPassword);
         userModule.updatePasswordHash(resetToken.getUserId(), passwordHash);
+
+        // Revoke all existing refresh tokens (invalidate all sessions)
+        refreshTokenService.revokeAllForUser(resetToken.getUserId());
 
         resetToken.setUsed(true);
         tokenRepository.save(resetToken);
