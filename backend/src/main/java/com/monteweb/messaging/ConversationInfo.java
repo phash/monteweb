@@ -15,6 +15,7 @@ public record ConversationInfo(
         String lastMessage,
         Instant lastMessageAt,
         long unreadCount,
+        boolean muted,
         Instant createdAt
 ) {
     public record ParticipantInfo(

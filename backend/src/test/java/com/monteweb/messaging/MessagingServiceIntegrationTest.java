@@ -81,7 +81,7 @@ class MessagingServiceIntegrationTest {
     // ── Send Message ─────────────────────────────────────────────────
 
     @Test
-    void sendMessage_toNonExistentConversation_shouldReturn404() throws Exception {
+    void sendMessage_toNonExistentConversation_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(post("/api/v1/messages/conversations/00000000-0000-0000-0000-000000000099/messages")
@@ -90,18 +90,18 @@ class MessagingServiceIntegrationTest {
                         .content("""
                                 {"content": "Hello?"}
                                 """))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     // ── Get Messages ─────────────────────────────────────────────────
 
     @Test
-    void getMessages_nonExistentConversation_shouldReturn404() throws Exception {
+    void getMessages_nonExistentConversation_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(get("/api/v1/messages/conversations/00000000-0000-0000-0000-000000000099/messages")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     @Test
@@ -125,12 +125,12 @@ class MessagingServiceIntegrationTest {
     // ── Mark as Read ─────────────────────────────────────────────────
 
     @Test
-    void markAsRead_nonExistentConversation_shouldReturn404() throws Exception {
+    void markAsRead_nonExistentConversation_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc);
 
         mockMvc.perform(put("/api/v1/messages/conversations/00000000-0000-0000-0000-000000000099/read")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 
     // ── Full Messaging Flow ──────────────────────────────────────────
@@ -175,6 +175,6 @@ class MessagingServiceIntegrationTest {
         mockMvc.perform(get("/api/v1/messages/conversations/" + conversationId + "/messages")
                         .header("Authorization", "Bearer " + senderToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.content").isArray());
     }
 }

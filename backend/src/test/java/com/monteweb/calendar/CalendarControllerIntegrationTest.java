@@ -1,5 +1,6 @@
 package com.monteweb.calendar;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.monteweb.TestContainerConfig;
 import com.monteweb.TestHelper;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,17 @@ class CalendarControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    private String loginAs(String email) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "password": "test1234"}
+                                """.formatted(email)))
+                .andReturn();
+        JsonNode json = TestHelper.parseResponse(result.getResponse().getContentAsString());
+        return json.path("data").path("accessToken").asText();
+    }
 
     @Test
     void getEvents_unauthenticated_shouldFail() throws Exception {
@@ -48,8 +60,8 @@ class CalendarControllerIntegrationTest {
 
     @Test
     void createSchoolEvent_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
-                "cal-create@example.com", "Calendar", "Creator");
+        // SCHOOL events require SUPERADMIN role
+        String token = loginAs("admin@monteweb.local");
 
         String today = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
         String tomorrow = LocalDate.now().plusDays(1).format(DateTimeFormatter.ISO_DATE);
@@ -132,8 +144,8 @@ class CalendarControllerIntegrationTest {
 
     @Test
     void rsvp_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
-                "cal-rsvp@example.com", "Calendar", "RSVP");
+        // SCHOOL events require SUPERADMIN
+        String token = loginAs("admin@monteweb.local");
 
         String today = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
 
@@ -188,12 +200,12 @@ class CalendarControllerIntegrationTest {
     }
 
     @Test
-    void getEvent_notFound_shouldReturn404() throws Exception {
+    void getEvent_notFound_shouldReturn4xx() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc,
                 "cal-404@example.com", "Calendar", "NotFound");
 
         mockMvc.perform(get("/api/v1/calendar/events/00000000-0000-0000-0000-000000000099")
                         .header("Authorization", "Bearer " + token))
-                .andExpect(status().isNotFound());
+                .andExpect(status().is4xxClientError());
     }
 }

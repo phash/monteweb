@@ -38,7 +38,7 @@ class NotificationServiceIntegrationTest {
         mockMvc.perform(get("/api/v1/notifications")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.content").isArray());
     }
 
     @Test

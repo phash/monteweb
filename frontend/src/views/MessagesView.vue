@@ -132,6 +132,15 @@ function getMessagePreview(msg: MessageInfo) {
   return ''
 }
 
+async function toggleMute() {
+  if (!selectedConversationId.value || !selectedConversation.value) return
+  if (selectedConversation.value.muted) {
+    await messaging.unmuteConversation(selectedConversationId.value)
+  } else {
+    await messaging.muteConversation(selectedConversationId.value)
+  }
+}
+
 async function handleDeleteConversation() {
   if (!selectedConversationId.value) return
   await messaging.deleteConversation(selectedConversationId.value)
@@ -187,7 +196,10 @@ function formatTime(date: string | null) {
             </div>
             <div class="conv-meta">
               <span class="conv-time">{{ formatTime(conv.lastMessageAt) }}</span>
-              <span v-if="conv.unreadCount > 0" class="unread-badge">{{ conv.unreadCount }}</span>
+              <div class="conv-badges">
+                <i v-if="conv.muted" class="pi pi-volume-off muted-icon" :title="t('messages.muted')" />
+                <span v-if="conv.unreadCount > 0" class="unread-badge">{{ conv.unreadCount }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -207,6 +219,14 @@ function formatTime(date: string | null) {
               @click="goBackToList"
             />
             <strong class="header-title">{{ selectedConversation ? getConversationName(selectedConversation) : '' }}</strong>
+            <Button
+              :icon="selectedConversation?.muted ? 'pi pi-volume-off' : 'pi pi-volume-up'"
+              text
+              :severity="selectedConversation?.muted ? 'warn' : 'secondary'"
+              size="small"
+              :aria-label="selectedConversation?.muted ? t('messages.unmute') : t('messages.mute')"
+              @click="toggleMute"
+            />
             <Button
               icon="pi pi-trash"
               text
@@ -465,6 +485,17 @@ function formatTime(date: string | null) {
 
 .conv-time {
   font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+}
+
+.conv-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.muted-icon {
+  font-size: 0.75rem;
   color: var(--mw-text-muted);
 }
 
