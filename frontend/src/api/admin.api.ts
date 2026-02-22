@@ -7,7 +7,7 @@ export const adminApi = {
     return client.get<ApiResponse<TenantConfig>>('/admin/config')
   },
 
-  updateConfig(data: { schoolName?: string; logoUrl?: string; targetHoursPerFamily?: number; targetCleaningHours?: number; bundesland?: string; schoolVacations?: { name: string; from: string; to: string }[]; requireAssignmentConfirmation?: boolean; multilanguageEnabled?: boolean; defaultLanguage?: string; availableLanguages?: string[]; requireUserApproval?: boolean; privacyPolicyText?: string; privacyPolicyVersion?: string; termsText?: string; termsVersion?: string; dataRetentionDaysNotifications?: number; dataRetentionDaysAudit?: number }) {
+  updateConfig(data: { schoolName?: string; logoUrl?: string; targetHoursPerFamily?: number; targetCleaningHours?: number; bundesland?: string; schoolVacations?: { name: string; from: string; to: string }[]; requireAssignmentConfirmation?: boolean; multilanguageEnabled?: boolean; defaultLanguage?: string; availableLanguages?: string[]; requireUserApproval?: boolean; privacyPolicyText?: string; privacyPolicyVersion?: string; termsText?: string; termsVersion?: string; dataRetentionDaysNotifications?: number; dataRetentionDaysAudit?: number; schoolFullName?: string; schoolAddress?: string; schoolPrincipal?: string; techContactName?: string; techContactEmail?: string }) {
     return client.put<ApiResponse<TenantConfig>>('/admin/config', data)
   },
 

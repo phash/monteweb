@@ -1,6 +1,7 @@
 package com.monteweb.user.internal.controller;
 
 import com.monteweb.admin.AdminModuleApi;
+import com.monteweb.admin.TenantConfigInfo;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.internal.model.ConsentRecord;
@@ -30,25 +31,27 @@ public class PrivacyController {
     }
 
     /**
-     * Public: Get privacy policy text and version.
+     * Public: Get privacy policy text and version (with placeholder replacement).
      */
     @GetMapping("/policy")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPrivacyPolicy() {
         var config = adminModuleApi.getTenantConfig();
+        String text = replacePlaceholders(config.privacyPolicyText(), config);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("text", config.privacyPolicyText());
+        result.put("text", text);
         result.put("version", config.privacyPolicyVersion());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**
-     * Public: Get terms of service text and version.
+     * Public: Get terms of service text and version (with placeholder replacement).
      */
     @GetMapping("/terms")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTerms() {
         var config = adminModuleApi.getTenantConfig();
+        String text = replacePlaceholders(config.termsText(), config);
         Map<String, Object> result = new LinkedHashMap<>();
-        result.put("text", config.termsText());
+        result.put("text", text);
         result.put("version", config.termsVersion());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
@@ -146,5 +149,20 @@ public class PrivacyController {
         consentRepository.save(record);
 
         return ResponseEntity.ok(ApiResponse.ok(null, "Consent updated"));
+    }
+
+    private String replacePlaceholders(String text, TenantConfigInfo config) {
+        if (text == null) return null;
+        String schoolName = config.schoolFullName() != null ? config.schoolFullName() : config.schoolName();
+        String address = config.schoolAddress() != null ? config.schoolAddress() : "";
+        String principal = config.schoolPrincipal() != null ? config.schoolPrincipal() : "";
+        String techName = config.techContactName() != null ? config.techContactName() : "";
+        String techEmail = config.techContactEmail() != null ? config.techContactEmail() : "";
+        return text
+                .replace("{{SCHOOL_NAME}}", schoolName)
+                .replace("{{SCHOOL_ADDRESS}}", address)
+                .replace("{{SCHOOL_PRINCIPAL}}", principal)
+                .replace("{{TECH_CONTACT_NAME}}", techName)
+                .replace("{{TECH_CONTACT_EMAIL}}", techEmail);
     }
 }

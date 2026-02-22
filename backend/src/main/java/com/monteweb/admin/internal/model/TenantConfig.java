@@ -98,6 +98,22 @@ public class TenantConfig {
     @Column(name = "data_retention_days_audit")
     private Integer dataRetentionDaysAudit = 1095;
 
+
+    @Column(name = "school_full_name", length = 300)
+    private String schoolFullName;
+
+    @Column(name = "school_address", columnDefinition = "TEXT")
+    private String schoolAddress;
+
+    @Column(name = "school_principal", length = 200)
+    private String schoolPrincipal;
+
+    @Column(name = "tech_contact_name", length = 200)
+    private String techContactName;
+
+    @Column(name = "tech_contact_email", length = 200)
+    private String techContactEmail;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

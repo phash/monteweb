@@ -21,6 +21,11 @@ public record UpdateConfigRequest(
         String termsText,
         String termsVersion,
         Integer dataRetentionDaysNotifications,
-        Integer dataRetentionDaysAudit
+        Integer dataRetentionDaysAudit,
+        String schoolFullName,
+        String schoolAddress,
+        String schoolPrincipal,
+        String techContactName,
+        String techContactEmail
 ) {
 }

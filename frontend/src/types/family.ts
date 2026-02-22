@@ -59,4 +59,9 @@ export interface TenantConfig {
   termsVersion?: string | null
   dataRetentionDaysNotifications?: number | null
   dataRetentionDaysAudit?: number | null
+  schoolFullName?: string | null
+  schoolAddress?: string | null
+  schoolPrincipal?: string | null
+  techContactName?: string | null
+  techContactEmail?: string | null
 }

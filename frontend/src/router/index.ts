@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { privacyApi } from '@/api/privacy.api'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -283,6 +284,33 @@ router.beforeEach(async (to) => {
   if (to.meta.requiresSectionAdmin && !auth.isSectionAdmin && !auth.isAdmin) {
     return { name: 'dashboard' }
   }
+
+  // Terms acceptance guard: redirect to /terms if user hasn't accepted current terms
+  if (auth.isAuthenticated && to.meta.requiresAuth && to.name !== 'terms' && to.name !== 'privacy-policy') {
+    if (!termsChecked) {
+      try {
+        const res = await privacyApi.getTermsStatus()
+        const { accepted, currentVersion } = res.data.data
+        termsAcceptedCache = accepted || !currentVersion
+        termsChecked = true
+      } catch {
+        termsChecked = true
+        termsAcceptedCache = true
+      }
+    }
+    if (!termsAcceptedCache) {
+      return { name: 'terms' }
+    }
+  }
 })
+
+// Cache for terms acceptance status (reset on page reload)
+let termsChecked = false
+let termsAcceptedCache = true
+
+export function resetTermsCache() {
+  termsChecked = false
+  termsAcceptedCache = true
+}
 
 export default router

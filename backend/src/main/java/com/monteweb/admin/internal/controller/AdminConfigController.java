@@ -41,7 +41,9 @@ public class AdminConfigController {
                 request.multilanguageEnabled(), request.defaultLanguage(), request.availableLanguages(), request.requireUserApproval(),
                 request.privacyPolicyText(), request.privacyPolicyVersion(),
                 request.termsText(), request.termsVersion(),
-                request.dataRetentionDaysNotifications(), request.dataRetentionDaysAudit());
+                request.dataRetentionDaysNotifications(), request.dataRetentionDaysAudit(),
+                request.schoolFullName(), request.schoolAddress(), request.schoolPrincipal(),
+                request.techContactName(), request.techContactEmail());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 

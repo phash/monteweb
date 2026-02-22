@@ -43,7 +43,9 @@ public class AdminService implements AdminModuleApi {
                                           Boolean requireUserApproval,
                                           String privacyPolicyText, String privacyPolicyVersion,
                                           String termsText, String termsVersion,
-                                          Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit) {
+                                          Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit,
+                                          String schoolFullName, String schoolAddress, String schoolPrincipal,
+                                          String techContactName, String techContactEmail) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -62,6 +64,11 @@ public class AdminService implements AdminModuleApi {
         if (termsVersion != null) config.setTermsVersion(termsVersion);
         if (dataRetentionDaysNotifications != null) config.setDataRetentionDaysNotifications(dataRetentionDaysNotifications);
         if (dataRetentionDaysAudit != null) config.setDataRetentionDaysAudit(dataRetentionDaysAudit);
+        if (schoolFullName != null) config.setSchoolFullName(schoolFullName);
+        if (schoolAddress != null) config.setSchoolAddress(schoolAddress);
+        if (schoolPrincipal != null) config.setSchoolPrincipal(schoolPrincipal);
+        if (techContactName != null) config.setTechContactName(techContactName);
+        if (techContactEmail != null) config.setTechContactEmail(techContactEmail);
         return toInfo(configRepository.save(config));
     }
 
@@ -139,7 +146,12 @@ public class AdminService implements AdminModuleApi {
                 config.getTermsText(),
                 config.getTermsVersion(),
                 config.getDataRetentionDaysNotifications(),
-                config.getDataRetentionDaysAudit()
+                config.getDataRetentionDaysAudit(),
+                config.getSchoolFullName(),
+                config.getSchoolAddress(),
+                config.getSchoolPrincipal(),
+                config.getTechContactName(),
+                config.getTechContactEmail()
         );
     }
 }
