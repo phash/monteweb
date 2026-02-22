@@ -16,4 +16,10 @@ public interface FamilyInvitationRepository extends JpaRepository<FamilyInvitati
     boolean existsByFamilyIdAndInviteeIdAndStatus(UUID familyId, UUID inviteeId, FamilyInvitationStatus status);
 
     void deleteByFamilyId(UUID familyId);
+
+    void deleteByInviteeId(UUID inviteeId);
+
+    void deleteByInviterId(UUID inviterId);
+
+    List<FamilyInvitation> findByInviteeId(UUID inviteeId);
 }

@@ -11,6 +11,16 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      path: '/privacy',
+      name: 'privacy-policy',
+      component: () => import('@/views/PrivacyPolicyView.vue'),
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: () => import('@/views/TermsView.vue'),
+    },
+    {
       path: '/',
       component: () => import('@/components/layout/AppLayout.vue'),
       meta: { requiresAuth: true },
@@ -225,6 +235,12 @@ const router = createRouter({
               name: 'admin-settings',
               component: () => import('@/views/admin/AdminSettings.vue'),
               meta: { breadcrumbLabel: 'admin.settings.title' },
+            },
+            {
+              path: 'privacy',
+              name: 'admin-privacy',
+              component: () => import('@/views/admin/AdminPrivacyView.vue'),
+              meta: { breadcrumbLabel: 'privacy.adminPrivacy' },
             },
           ],
         },

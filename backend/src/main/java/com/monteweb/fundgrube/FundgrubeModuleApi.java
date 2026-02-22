@@ -1,8 +1,15 @@
 package com.monteweb.fundgrube;
 
+import java.util.Map;
+import java.util.UUID;
+
 /**
  * Public API: Facade interface for the fundgrube module.
- * Currently no cross-module consumption required; interface reserved for future use.
  */
 public interface FundgrubeModuleApi {
+
+    /**
+     * DSGVO: Export all fundgrube-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

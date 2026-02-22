@@ -2,6 +2,7 @@ package com.monteweb.calendar;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,4 +31,9 @@ public interface CalendarModuleApi {
      * Bypasses normal permission checks since it's system-initiated.
      */
     EventInfo createEventFromSystem(CreateEventRequest request, UUID createdBy);
+
+    /**
+     * DSGVO: Export all calendar-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

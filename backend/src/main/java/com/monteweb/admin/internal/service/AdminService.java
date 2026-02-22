@@ -40,7 +40,10 @@ public class AdminService implements AdminModuleApi {
                                           String bundesland, java.util.List<java.util.Map<String, String>> schoolVacations,
                                           Boolean requireAssignmentConfirmation, Boolean multilanguageEnabled,
                                           String defaultLanguage, java.util.List<String> availableLanguages,
-                                          Boolean requireUserApproval) {
+                                          Boolean requireUserApproval,
+                                          String privacyPolicyText, String privacyPolicyVersion,
+                                          String termsText, String termsVersion,
+                                          Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -53,6 +56,12 @@ public class AdminService implements AdminModuleApi {
         if (defaultLanguage != null) config.setDefaultLanguage(defaultLanguage);
         if (availableLanguages != null) config.setAvailableLanguages(availableLanguages);
         if (requireUserApproval != null) config.setRequireUserApproval(requireUserApproval);
+        if (privacyPolicyText != null) config.setPrivacyPolicyText(privacyPolicyText);
+        if (privacyPolicyVersion != null) config.setPrivacyPolicyVersion(privacyPolicyVersion);
+        if (termsText != null) config.setTermsText(termsText);
+        if (termsVersion != null) config.setTermsVersion(termsVersion);
+        if (dataRetentionDaysNotifications != null) config.setDataRetentionDaysNotifications(dataRetentionDaysNotifications);
+        if (dataRetentionDaysAudit != null) config.setDataRetentionDaysAudit(dataRetentionDaysAudit);
         return toInfo(configRepository.save(config));
     }
 
@@ -124,7 +133,13 @@ public class AdminService implements AdminModuleApi {
                 config.isMultilanguageEnabled(),
                 config.getDefaultLanguage(),
                 config.getAvailableLanguages(),
-                config.isRequireUserApproval()
+                config.isRequireUserApproval(),
+                config.getPrivacyPolicyText(),
+                config.getPrivacyPolicyVersion(),
+                config.getTermsText(),
+                config.getTermsVersion(),
+                config.getDataRetentionDaysNotifications(),
+                config.getDataRetentionDaysAudit()
         );
     }
 }

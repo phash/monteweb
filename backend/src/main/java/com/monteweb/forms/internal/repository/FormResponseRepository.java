@@ -18,4 +18,6 @@ public interface FormResponseRepository extends JpaRepository<FormResponse, UUID
     List<FormResponse> findByFormIdOrderBySubmittedAtDesc(UUID formId);
 
     void deleteByFormId(UUID formId);
+
+    List<FormResponse> findByUserId(UUID userId);
 }

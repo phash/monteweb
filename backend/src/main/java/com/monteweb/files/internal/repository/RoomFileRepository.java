@@ -19,4 +19,6 @@ public interface RoomFileRepository extends JpaRepository<RoomFile, UUID> {
     long sumFileSizeByRoomId(UUID roomId);
 
     void deleteAllByRoomId(UUID roomId);
+
+    List<RoomFile> findByUploadedBy(UUID uploadedBy);
 }

@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,4 +30,9 @@ public interface FeedModuleApi {
      * Returns the personalized feed for a user, respecting room memberships and roles.
      */
     Page<FeedPostInfo> getPersonalFeed(UUID userId, Pageable pageable);
+
+    /**
+     * DSGVO: Export all feed-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }

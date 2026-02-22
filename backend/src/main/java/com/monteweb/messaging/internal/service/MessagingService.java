@@ -506,4 +506,46 @@ public class MessagingService implements MessagingModuleApi {
                 replyInfo
         );
     }
+
+    /**
+     * DSGVO: Clean up all messaging data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        // Anonymize messages sent by user (keep structure, nullify content)
+        var messages = messageRepository.findBySenderId(userId);
+        for (var msg : messages) {
+            // Delete associated images from MinIO
+            var images = messageImageRepository.findByMessageId(msg.getId());
+            for (var img : images) {
+                storageService.delete(img.getStoragePath());
+                storageService.delete(img.getThumbnailPath());
+            }
+            messageImageRepository.deleteAll(images);
+            msg.setSenderId(null);
+            msg.setContent(null);
+            msg.setReplyToId(null);
+        }
+        messageRepository.saveAll(messages);
+        // Remove from conversations
+        participantRepository.deleteByUserId(userId);
+    }
+
+    /**
+     * DSGVO: Export all messaging data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var conversations = findConversationsByUser(userId);
+        data.put("conversations", conversations);
+        var messages = messageRepository.findBySenderId(userId);
+        data.put("messagesSent", messages.stream().map(m -> Map.of(
+                "id", m.getId(),
+                "conversationId", m.getConversationId(),
+                "content", m.getContent() != null ? m.getContent() : "",
+                "createdAt", m.getCreatedAt()
+        )).toList());
+        return data;
+    }
 }

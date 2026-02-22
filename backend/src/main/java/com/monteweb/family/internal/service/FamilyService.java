@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -413,5 +414,35 @@ public class FamilyService implements FamilyModuleApi {
                 })
                 .toList();
         return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), family.isHoursExempt(), family.isActive(), members);
+    }
+
+    /**
+     * DSGVO: Clean up all family data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        // Delete invitations involving the user
+        invitationRepository.deleteByInviteeId(userId);
+        invitationRepository.deleteByInviterId(userId);
+        // Remove user from all families they belong to
+        var families = familyRepository.findByMemberUserId(userId);
+        for (var family : families) {
+            family.getMembers().removeIf(m -> userId.equals(m.getUserId()));
+            familyRepository.save(family);
+        }
+    }
+
+    /**
+     * DSGVO: Export all family data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var families = familyRepository.findByMemberUserId(userId);
+        data.put("families", families.stream().map(f -> Map.of(
+                "id", f.getId(),
+                "name", f.getName()
+        )).toList());
+        return data;
     }
 }

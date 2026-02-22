@@ -56,7 +56,7 @@ public class Job {
     @Column(name = "scheduled_time", length = 50)
     private String scheduledTime;
 
-    @Column(name = "created_by", nullable = false)
+    @Column(name = "created_by")
     private UUID createdBy;
 
     @Column(name = "contact_info", length = 300)

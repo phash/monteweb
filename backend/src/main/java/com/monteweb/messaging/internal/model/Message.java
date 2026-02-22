@@ -22,7 +22,7 @@ public class Message {
     @Column(name = "conversation_id", nullable = false)
     private UUID conversationId;
 
-    @Column(name = "sender_id", nullable = false)
+    @Column(name = "sender_id")
     private UUID senderId;
 
     @Column(columnDefinition = "TEXT")

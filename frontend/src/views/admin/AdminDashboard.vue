@@ -14,6 +14,7 @@ const adminLinks = [
   { to: '/admin/error-reports', icon: 'pi pi-exclamation-triangle', labelKey: 'errorReports.title', descKey: 'errorReports.subtitle' },
   { to: '/admin/theme', icon: 'pi pi-palette', labelKey: 'admin.dashboard.theme', descKey: 'admin.dashboard.themeDesc' },
   { to: '/admin/settings', icon: 'pi pi-sliders-h', labelKey: 'admin.dashboard.settings', descKey: 'admin.dashboard.settingsDesc' },
+  { to: '/admin/privacy', icon: 'pi pi-shield', labelKey: 'privacy.adminPrivacy', descKey: 'privacy.adminPrivacyDesc' },
 ]
 </script>
 

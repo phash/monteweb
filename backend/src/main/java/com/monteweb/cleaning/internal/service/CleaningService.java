@@ -646,6 +646,30 @@ public class CleaningService implements CleaningModuleApi {
                 .orElse("");
     }
 
+    /**
+     * DSGVO: Clean up all cleaning data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        registrationRepository.deleteByUserId(userId);
+    }
+
+    /**
+     * DSGVO: Export all cleaning data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var registrations = registrationRepository.findByUserId(userId);
+        data.put("registrations", registrations.stream().map(r -> Map.of(
+                "id", r.getId(),
+                "slotId", r.getSlotId(),
+                "checkedIn", r.isCheckedIn(),
+                "checkedOut", r.isCheckedOut()
+        )).toList());
+        return data;
+    }
+
     // ── Request/Response Records ────────────────────────────────────────
 
     public record CreateConfigRequest(

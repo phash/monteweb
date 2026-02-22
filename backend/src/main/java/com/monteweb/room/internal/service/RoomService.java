@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -540,5 +541,30 @@ public class RoomService implements RoomModuleApi {
         for (var channel : channels) {
             messagingModuleApi.removeParticipantFromConversation(channel.getConversationId(), userId);
         }
+    }
+
+    /**
+     * DSGVO: Clean up all room data for a deleted user.
+     */
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        joinRequestRepository.deleteByUserId(userId);
+        subscriptionRepository.deleteByUserId(userId);
+        memberRepository.deleteByIdUserId(userId);
+    }
+
+    /**
+     * DSGVO: Export all room data for a user.
+     */
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new java.util.LinkedHashMap<>();
+        var memberships = memberRepository.findByIdUserId(userId);
+        data.put("memberships", memberships.stream().map(m -> Map.of(
+                "roomId", m.getId().getRoomId(),
+                "role", m.getRole().name(),
+                "joinedAt", m.getJoinedAt()
+        )).toList());
+        return data;
     }
 }

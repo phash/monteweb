@@ -11,4 +11,6 @@ public interface FundgrubeImageRepository extends JpaRepository<FundgrubeImage, 
     List<FundgrubeImage> findByItemIdOrderByCreatedAt(UUID itemId);
 
     void deleteByItemId(UUID itemId);
+
+    List<FundgrubeImage> findByItemIdIn(List<UUID> itemIds);
 }

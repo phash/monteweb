@@ -67,6 +67,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/error-reports").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/config").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/privacy/policy").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/privacy/terms").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated()
                 )

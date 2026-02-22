@@ -26,6 +26,12 @@ public record TenantConfigInfo(
         boolean multilanguageEnabled,
         String defaultLanguage,
         List<String> availableLanguages,
-        boolean requireUserApproval
+        boolean requireUserApproval,
+        String privacyPolicyText,
+        String privacyPolicyVersion,
+        String termsText,
+        String termsVersion,
+        Integer dataRetentionDaysNotifications,
+        Integer dataRetentionDaysAudit
 ) {
 }

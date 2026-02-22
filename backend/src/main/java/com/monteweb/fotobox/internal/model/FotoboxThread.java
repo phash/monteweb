@@ -34,7 +34,7 @@ public class FotoboxThread {
     @Column(nullable = false, length = 20)
     private String audience = "ALL";
 
-    @Column(name = "created_by", nullable = false)
+    @Column(name = "created_by")
     private UUID createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)

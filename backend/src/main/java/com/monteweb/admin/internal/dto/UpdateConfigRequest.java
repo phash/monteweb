@@ -15,6 +15,12 @@ public record UpdateConfigRequest(
         Boolean multilanguageEnabled,
         String defaultLanguage,
         List<String> availableLanguages,
-        Boolean requireUserApproval
+        Boolean requireUserApproval,
+        String privacyPolicyText,
+        String privacyPolicyVersion,
+        String termsText,
+        String termsVersion,
+        Integer dataRetentionDaysNotifications,
+        Integer dataRetentionDaysAudit
 ) {
 }

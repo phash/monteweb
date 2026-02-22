@@ -10,4 +10,6 @@ public interface FotoboxImageRepository extends JpaRepository<FotoboxImage, UUID
     List<FotoboxImage> findByThreadIdOrderBySortOrderAscCreatedAtAsc(UUID threadId);
     int countByThreadId(UUID threadId);
     void deleteAllByThreadId(UUID threadId);
+
+    List<FotoboxImage> findByUploadedBy(UUID uploadedBy);
 }

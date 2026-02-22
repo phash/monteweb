@@ -69,4 +69,6 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
         ORDER BY p.publishedAt DESC
     """)
     List<FeedPost> findActiveSystemBanners();
+
+    List<FeedPost> findByAuthorId(UUID authorId);
 }

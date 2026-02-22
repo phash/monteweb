@@ -14,4 +14,6 @@ public interface RoomJoinRequestRepository extends JpaRepository<RoomJoinRequest
     List<RoomJoinRequest> findByUserIdOrderByCreatedAtDesc(UUID userId);
 
     boolean existsByRoomIdAndUserIdAndStatus(UUID roomId, UUID userId, RoomJoinRequestStatus status);
+
+    void deleteByUserId(UUID userId);
 }

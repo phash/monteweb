@@ -89,4 +89,21 @@ export const usersApi = {
   updateAssignedRoles(userId: string, roles: string[]) {
     return client.put<ApiResponse<UserInfo>>(`/admin/users/${userId}/assigned-roles`, { roles })
   },
+
+  // DSGVO / GDPR
+  requestDeletion() {
+    return client.delete('/users/me')
+  },
+
+  cancelDeletion() {
+    return client.post('/users/me/cancel-deletion')
+  },
+
+  getDeletionStatus() {
+    return client.get('/users/me/deletion-status')
+  },
+
+  exportMyData() {
+    return client.get('/users/me/data-export')
+  },
 }

@@ -16,4 +16,6 @@ public interface RoomSubscriptionRepository extends JpaRepository<RoomSubscripti
     List<UUID> findMutedRoomIdsByUserId(UUID userId);
 
     boolean existsByUserIdAndRoomIdAndFeedMuted(UUID userId, UUID roomId, boolean feedMuted);
+
+    void deleteByUserId(UUID userId);
 }

@@ -34,4 +34,6 @@ public interface ConversationParticipantRepository
             WHERE cp.userId = :userId AND cp.muted = true
             """)
     List<UUID> findMutedConversationIdsByUserId(UUID userId);
+
+    void deleteByUserId(UUID userId);
 }

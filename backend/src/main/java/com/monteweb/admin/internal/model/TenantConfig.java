@@ -80,6 +80,24 @@ public class TenantConfig {
     @Column(name = "require_user_approval", nullable = false)
     private boolean requireUserApproval = true;
 
+    @Column(name = "privacy_policy_text", columnDefinition = "TEXT")
+    private String privacyPolicyText;
+
+    @Column(name = "privacy_policy_version", length = 20)
+    private String privacyPolicyVersion = "1.0";
+
+    @Column(name = "terms_text", columnDefinition = "TEXT")
+    private String termsText;
+
+    @Column(name = "terms_version", length = 20)
+    private String termsVersion = "1.0";
+
+    @Column(name = "data_retention_days_notifications")
+    private Integer dataRetentionDaysNotifications = 90;
+
+    @Column(name = "data_retention_days_audit")
+    private Integer dataRetentionDaysAudit = 1095;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

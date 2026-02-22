@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface FotoboxThreadRepository extends JpaRepository<FotoboxThread, UUID> {
     List<FotoboxThread> findByRoomIdOrderByCreatedAtDesc(UUID roomId);
+
+    List<FotoboxThread> findByCreatedBy(UUID createdBy);
 }

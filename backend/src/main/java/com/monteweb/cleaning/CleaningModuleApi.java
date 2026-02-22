@@ -3,6 +3,7 @@ package com.monteweb.cleaning;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -29,4 +30,9 @@ public interface CleaningModuleApi {
      * Links a job ID back to a cleaning config (called by jobboard after creating the job).
      */
     void linkJobToConfig(UUID configId, UUID jobId);
+
+    /**
+     * DSGVO: Export all cleaning-related data for a user.
+     */
+    Map<String, Object> exportUserData(UUID userId);
 }
