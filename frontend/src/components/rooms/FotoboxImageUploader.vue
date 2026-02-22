@@ -139,6 +139,7 @@ async function upload() {
           rounded
           size="small"
           class="remove-btn"
+          :aria-label="t('common.delete')"
           @click.stop="removeFile(index)"
         />
       </div>

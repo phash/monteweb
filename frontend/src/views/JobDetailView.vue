@@ -294,7 +294,7 @@ function formatDate(date: string | null) {
               <span class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
             </div>
             <div class="attachment-actions">
-              <Button icon="pi pi-download" text size="small" @click="downloadAttachment(att.id)" />
+              <Button icon="pi pi-download" text size="small" :aria-label="t('common.download', 'Download')" @click="downloadAttachment(att.id)" />
               <Button
                 v-if="att.uploadedBy === auth.user?.id || auth.isAdmin || auth.isTeacher || auth.isSectionAdmin"
                 icon="pi pi-trash"

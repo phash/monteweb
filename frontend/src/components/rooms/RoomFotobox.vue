@@ -219,6 +219,7 @@ function audienceLabel(audience: string): string {
               rounded
               size="small"
               class="thread-delete-btn"
+              :aria-label="t('common.delete')"
               @click.stop="deleteThread(thread.id)"
             />
           </div>

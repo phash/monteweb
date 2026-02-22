@@ -141,6 +141,7 @@ function formatDate(date: string) {
             rounded
             size="small"
             class="image-delete-btn"
+            :aria-label="t('common.delete')"
             @click.stop="deleteImage(image.id)"
           />
         </div>

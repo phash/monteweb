@@ -90,7 +90,7 @@ export const usersApi = {
     return client.put<ApiResponse<UserInfo>>(`/admin/users/${userId}/assigned-roles`, { roles })
   },
 
-  // DSGVO / GDPR
+  // DSGVO / GDPR (self-service)
   requestDeletion() {
     return client.delete('/users/me')
   },
@@ -105,5 +105,22 @@ export const usersApi = {
 
   exportMyData() {
     return client.get('/users/me/data-export')
+  },
+
+  // DSGVO / GDPR (admin)
+  adminExportUserData(userId: string) {
+    return client.get(`/admin/users/${userId}/data-export`)
+  },
+
+  adminRequestDeletion(userId: string) {
+    return client.delete(`/admin/users/${userId}`)
+  },
+
+  adminCancelDeletion(userId: string) {
+    return client.post(`/admin/users/${userId}/cancel-deletion`)
+  },
+
+  adminGetDeletionStatus(userId: string) {
+    return client.get(`/admin/users/${userId}/deletion-status`)
   },
 }

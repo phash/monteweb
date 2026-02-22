@@ -91,6 +91,16 @@ const allFamilies = ref<FamilyInfo[]>([])
 const familiesLoading = ref(false)
 const addFamilyId = ref('')
 
+// DSGVO tab
+const dsgvoLoading = ref(false)
+const deletionStatus = ref<{ deletionRequested: boolean; deletionRequestedAt: string | null; scheduledDeletionAt: string | null }>({
+  deletionRequested: false,
+  deletionRequestedAt: null,
+  scheduledDeletionAt: null,
+})
+const exportingData = ref(false)
+const showDeleteConfirm = ref(false)
+
 const roleOptions = computed<{ label: string; value: UserRole }[]>(() => [
   { label: t('profile.roleLabels.SUPERADMIN'), value: 'SUPERADMIN' },
   { label: t('profile.roleLabels.SECTION_ADMIN'), value: 'SECTION_ADMIN' },
@@ -414,12 +424,68 @@ async function toggleHoursExempt(family: FamilyInfo) {
   }
 }
 
+async function loadDeletionStatus() {
+  if (!editUser.value) return
+  dsgvoLoading.value = true
+  try {
+    const res = await usersApi.adminGetDeletionStatus(editUser.value.id)
+    deletionStatus.value = res.data.data
+  } finally {
+    dsgvoLoading.value = false
+  }
+}
+
+async function exportUserData() {
+  if (!editUser.value) return
+  exportingData.value = true
+  try {
+    const res = await usersApi.adminExportUserData(editUser.value.id)
+    const blob = new Blob([JSON.stringify(res.data.data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `user-data-${editUser.value.email}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    toast.add({ severity: 'success', summary: t('admin.dsgvoExportSuccess'), life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  } finally {
+    exportingData.value = false
+  }
+}
+
+async function requestUserDeletion() {
+  if (!editUser.value) return
+  try {
+    await usersApi.adminRequestDeletion(editUser.value.id)
+    toast.add({ severity: 'success', summary: t('admin.dsgvoDeletionRequested'), life: 3000 })
+    showDeleteConfirm.value = false
+    await loadDeletionStatus()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
+}
+
+async function cancelUserDeletion() {
+  if (!editUser.value) return
+  try {
+    await usersApi.adminCancelDeletion(editUser.value.id)
+    toast.add({ severity: 'success', summary: t('admin.dsgvoDeletionCancelled'), life: 3000 })
+    await loadDeletionStatus()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
+}
+
 function onTabChange(val: string | number) {
   const tab = String(val)
   if (tab === '1' && userRooms.value.length === 0) {
     loadUserRooms()
   } else if (tab === '2' && userFamilies.value.length === 0) {
     loadUserFamilies()
+  } else if (tab === '3') {
+    loadDeletionStatus()
   }
 }
 
@@ -620,6 +686,7 @@ onUnmounted(() => {
           <Tab value="0">{{ t('admin.tabProfile') }}</Tab>
           <Tab value="1">{{ t('admin.tabRooms') }}</Tab>
           <Tab value="2">{{ t('admin.tabFamily') }}</Tab>
+          <Tab value="3">{{ t('admin.tabDsgvo') }}</Tab>
         </TabList>
         <TabPanels>
           <!-- Profile Tab -->
@@ -777,6 +844,70 @@ onUnmounted(() => {
                   <Button icon="pi pi-trash" severity="danger" text size="small" @click="removeFromFamily(fam.id)" :aria-label="t('common.delete')" />
                 </div>
               </div>
+            </template>
+          </TabPanel>
+
+          <!-- DSGVO Tab -->
+          <TabPanel value="3">
+            <div v-if="dsgvoLoading" class="tab-loading">
+              <i class="pi pi-spin pi-spinner" />
+            </div>
+            <template v-else>
+              <div class="dsgvo-section">
+                <h4><i class="pi pi-download" /> {{ t('admin.dsgvoExportData') }}</h4>
+                <p class="dsgvo-desc">{{ t('admin.dsgvoExportDesc') }}</p>
+                <Button
+                  :label="t('admin.dsgvoExportData')"
+                  icon="pi pi-download"
+                  severity="secondary"
+                  :loading="exportingData"
+                  @click="exportUserData"
+                />
+              </div>
+
+              <div class="dsgvo-section dsgvo-deletion">
+                <h4><i class="pi pi-trash" /> {{ t('admin.dsgvoRequestDeletion') }}</h4>
+                <p class="dsgvo-desc">{{ t('admin.dsgvoRequestDeletionDesc') }}</p>
+
+                <div v-if="deletionStatus.deletionRequested" class="deletion-status">
+                  <Tag severity="warn" :value="t('admin.dsgvoDeletionRequested')" />
+                  <p v-if="deletionStatus.scheduledDeletionAt" class="deletion-date">
+                    {{ t('admin.dsgvoDeletionScheduled', { date: new Date(deletionStatus.scheduledDeletionAt).toLocaleDateString() }) }}
+                  </p>
+                  <Button
+                    :label="t('admin.dsgvoCancelDeletion')"
+                    icon="pi pi-undo"
+                    severity="secondary"
+                    size="small"
+                    @click="cancelUserDeletion"
+                  />
+                </div>
+
+                <div v-else class="deletion-status">
+                  <p class="no-deletion">{{ t('admin.dsgvoNoDeletion') }}</p>
+                  <Button
+                    :label="t('admin.dsgvoRequestDeletion')"
+                    icon="pi pi-trash"
+                    severity="danger"
+                    size="small"
+                    @click="showDeleteConfirm = true"
+                  />
+                </div>
+              </div>
+
+              <!-- Delete confirmation dialog -->
+              <Dialog
+                v-model:visible="showDeleteConfirm"
+                :header="t('admin.dsgvoConfirmTitle')"
+                modal
+                :style="{ width: '400px' }"
+              >
+                <p>{{ t('admin.dsgvoConfirmMessage', { name: editUser?.displayName }) }}</p>
+                <template #footer>
+                  <Button :label="t('common.cancel')" severity="secondary" @click="showDeleteConfirm = false" />
+                  <Button :label="t('admin.dsgvoRequestDeletion')" severity="danger" icon="pi pi-trash" @click="requestUserDeletion" />
+                </template>
+              </Dialog>
             </template>
           </TabPanel>
         </TabPanels>
@@ -1009,6 +1140,48 @@ onUnmounted(() => {
   font-size: var(--mw-font-size-xs);
   color: var(--mw-text-muted);
   margin-top: 0.125rem;
+}
+
+.dsgvo-section {
+  padding: 0.75rem 0;
+}
+
+.dsgvo-section + .dsgvo-section {
+  border-top: 1px solid var(--mw-border-light);
+  margin-top: 0.75rem;
+}
+
+.dsgvo-section h4 {
+  font-size: var(--mw-font-size-md);
+  font-weight: 600;
+  margin-bottom: 0.375rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dsgvo-desc {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.deletion-status {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.deletion-date {
+  font-size: var(--mw-font-size-sm);
+  color: var(--p-orange-600);
+  font-weight: 500;
+}
+
+.no-deletion {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
 }
 
 @media (max-width: 767px) {

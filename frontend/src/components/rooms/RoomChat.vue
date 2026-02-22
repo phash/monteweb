@@ -323,6 +323,7 @@ function getMessagePreview(msg: MessageInfo) {
         text
         severity="secondary"
         size="small"
+        :aria-label="t('common.close')"
         @click="clearReply"
       />
     </div>
@@ -336,6 +337,7 @@ function getMessagePreview(msg: MessageInfo) {
         text
         severity="secondary"
         size="small"
+        :aria-label="t('common.close')"
         @click="clearImage"
       />
     </div>

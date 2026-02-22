@@ -441,9 +441,12 @@ export const helpContent: Record<string, PageHelp> = {
         'help.pages.profile.action2',
         'help.pages.profile.action3',
         'help.pages.profile.action4',
+        'help.pages.profile.action5',
+        'help.pages.profile.action6',
       ],
       tips: [
         'help.pages.profile.tip1',
+        'help.pages.profile.tip2',
       ],
     },
     roles: {},
@@ -474,9 +477,11 @@ export const helpContent: Record<string, PageHelp> = {
           'help.pages.adminUsers.action2',
           'help.pages.adminUsers.action3',
           'help.pages.adminUsers.action4',
+          'help.pages.adminUsers.action5',
         ],
         tips: [
           'help.pages.adminUsers.tip1',
+          'help.pages.adminUsers.tip2',
         ],
       },
     },
@@ -607,6 +612,50 @@ export const helpContent: Record<string, PageHelp> = {
         ],
       },
     },
+  },
+
+  'admin-privacy': {
+    pageTitle: 'help.pages.adminPrivacy.title',
+    roles: {
+      SUPERADMIN: {
+        actions: [
+          'help.pages.adminPrivacy.action1',
+          'help.pages.adminPrivacy.action2',
+          'help.pages.adminPrivacy.action3',
+        ],
+        tips: [
+          'help.pages.adminPrivacy.tip1',
+        ],
+      },
+    },
+  },
+
+  'privacy-policy': {
+    pageTitle: 'help.pages.privacyPolicy.title',
+    general: {
+      actions: [
+        'help.pages.privacyPolicy.action1',
+        'help.pages.privacyPolicy.action2',
+      ],
+      tips: [
+        'help.pages.privacyPolicy.tip1',
+      ],
+    },
+    roles: {},
+  },
+
+  terms: {
+    pageTitle: 'help.pages.terms.title',
+    general: {
+      actions: [
+        'help.pages.terms.action1',
+        'help.pages.terms.action2',
+      ],
+      tips: [
+        'help.pages.terms.tip1',
+      ],
+    },
+    roles: {},
   },
 
   'section-admin': {
@@ -778,6 +827,7 @@ export const handbookContent: Record<string, HandbookChapter[]> = {
         { title: 'help.handbook.admin.system.cleaning.title', content: ['help.handbook.admin.system.cleaning.content', 'help.handbook.admin.system.cleaning.content2'] },
         { title: 'help.handbook.admin.system.billing.title', content: ['help.handbook.admin.system.billing.content'] },
         { title: 'help.handbook.admin.system.errorReports.title', content: ['help.handbook.admin.system.errorReports.content'] },
+        { title: 'help.handbook.admin.system.privacy.title', content: ['help.handbook.admin.system.privacy.content', 'help.handbook.admin.system.privacy.content2'] },
       ],
     },
   ],

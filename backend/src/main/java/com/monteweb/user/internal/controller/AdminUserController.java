@@ -11,6 +11,7 @@ import com.monteweb.user.UserRole;
 import com.monteweb.user.internal.dto.AdminUpdateProfileRequest;
 import com.monteweb.user.internal.dto.UpdateAssignedRolesRequest;
 import com.monteweb.user.internal.dto.UpdateRoleRequest;
+import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.internal.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
@@ -134,5 +135,38 @@ public class AdminUserController {
             @PathVariable String role) {
         var user = userService.removeSpecialRole(id, role);
         return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    // --- DSGVO / GDPR Admin endpoints ---
+
+    @GetMapping("/{id}/data-export")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> exportUserData(@PathVariable UUID id) {
+        userService.logDataAccess(SecurityUtils.requireCurrentUserId(), id, "ADMIN_DATA_EXPORT", "Admin-initiated data export");
+        var data = userService.exportUserData(id);
+        return ResponseEntity.ok(ApiResponse.ok(data));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse<Void>> requestDeletion(@PathVariable UUID id) {
+        userService.logDataAccess(SecurityUtils.requireCurrentUserId(), id, "ADMIN_DELETION_REQUEST", "Admin-initiated deletion request");
+        userService.requestDeletion(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Deletion requested"));
+    }
+
+    @PostMapping("/{id}/cancel-deletion")
+    public ResponseEntity<ApiResponse<Void>> cancelDeletion(@PathVariable UUID id) {
+        userService.logDataAccess(SecurityUtils.requireCurrentUserId(), id, "ADMIN_DELETION_CANCEL", "Admin-cancelled deletion");
+        userService.cancelDeletion(id);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Deletion cancelled"));
+    }
+
+    @GetMapping("/{id}/deletion-status")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getDeletionStatus(@PathVariable UUID id) {
+        var user = userService.findEntityById(id);
+        Map<String, Object> status = new java.util.LinkedHashMap<>();
+        status.put("deletionRequested", user.getDeletionRequestedAt() != null);
+        status.put("deletionRequestedAt", user.getDeletionRequestedAt());
+        status.put("scheduledDeletionAt", user.getScheduledDeletionAt());
+        return ResponseEntity.ok(ApiResponse.ok(status));
     }
 }

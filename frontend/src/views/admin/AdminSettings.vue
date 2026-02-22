@@ -249,7 +249,7 @@ async function saveVacationsConfig() {
         </Column>
         <Column :header="t('common.actions')" style="width: 80px">
           <template #body="{ index }">
-            <Button icon="pi pi-trash" severity="danger" text rounded size="small" @click="removeVacation(index)" />
+            <Button icon="pi pi-trash" severity="danger" text rounded size="small" :aria-label="t('common.delete')" @click="removeVacation(index)" />
           </template>
         </Column>
       </DataTable>

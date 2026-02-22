@@ -326,6 +326,7 @@ function assignmentStatusSeverity(status: string) {
         <template #body="{ data }">
           <Button v-if="data.jobId" icon="pi pi-users" text rounded size="small"
                   v-tooltip="t('cleaning.admin.showRegistrations')"
+                  :aria-label="t('cleaning.admin.showRegistrations')"
                   @click="openAssignments(data)" />
           <span v-else class="text-muted">-</span>
         </template>
@@ -335,10 +336,12 @@ function assignmentStatusSeverity(status: string) {
           <div class="flex gap-1">
             <Button icon="pi pi-calendar-plus" text rounded size="small"
                     v-tooltip="t('cleaning.admin.generate')"
+                    :aria-label="t('cleaning.admin.generate')"
                     @click="openGenerate(data)" :disabled="!data.active" />
             <Button :icon="data.active ? 'pi pi-ban' : 'pi pi-check'"
                     text rounded size="small"
                     :severity="data.active ? 'danger' : 'success'"
+                    :aria-label="data.active ? t('common.inactive') : t('common.active')"
                     @click="toggleActive(data)" />
           </div>
         </template>
