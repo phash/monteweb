@@ -51,7 +51,7 @@ spring:
       max-request-size: 50MB
 
   jackson:
-    serialization:
+    datetime:
       write-dates-as-timestamps: false
     default-property-inclusion: non_null
 
