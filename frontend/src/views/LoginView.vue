@@ -10,6 +10,7 @@ import Password from 'primevue/password'
 import Button from 'primevue/button'
 import Divider from 'primevue/divider'
 import Message from 'primevue/message'
+import Checkbox from 'primevue/checkbox'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 
 const { t } = useI18n()
@@ -23,6 +24,8 @@ const error = ref('')
 const pendingApproval = ref(false)
 const oidcEnabled = ref(false)
 const oidcAuthUri = ref('')
+
+const acceptedTerms = ref(false)
 
 const form = ref({
   email: '',
@@ -50,6 +53,10 @@ onMounted(async () => {
 async function submit() {
   error.value = ''
   pendingApproval.value = false
+  if (!isLogin.value && !acceptedTerms.value) {
+    error.value = t('auth.termsRequired')
+    return
+  }
   try {
     if (isLogin.value) {
       await auth.login({ email: form.value.email, password: form.value.password })
@@ -133,6 +140,13 @@ function loginWithSso() {
           <div class="form-field">
             <label for="phone">{{ t('auth.phone') }}</label>
             <InputText id="phone" v-model="form.phone" class="w-full" />
+          </div>
+          <div class="terms-checkbox">
+            <Checkbox v-model="acceptedTerms" :binary="true" inputId="acceptTerms" />
+            <label for="acceptTerms" class="terms-label">
+              {{ t('auth.acceptTermsLabel') }}
+              <router-link to="/terms" target="_blank" class="terms-link">{{ t('auth.termsLink') }}</router-link>
+            </label>
           </div>
         </template>
 
@@ -243,6 +257,29 @@ function loginWithSso() {
 .login-toggle a {
   margin-left: 0.25rem;
   font-weight: 600;
+}
+
+.terms-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.terms-label {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.terms-link {
+  color: var(--mw-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
 }
 
 .login-lang {

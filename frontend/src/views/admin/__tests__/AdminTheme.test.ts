@@ -87,6 +87,10 @@ const stubs = {
     template: '<input class="input-stub" :value="modelValue" />',
     props: ['modelValue'],
   },
+  Textarea: {
+    template: '<textarea class="textarea-stub" :value="modelValue" />',
+    props: ['modelValue', 'rows', 'placeholder'],
+  },
   FileUpload: {
     template: '<div class="fileupload-stub" />',
     props: ['mode', 'accept', 'maxFileSize', 'auto', 'chooseLabel'],
@@ -143,8 +147,8 @@ describe('AdminTheme', () => {
     const wrapper = mountComponent()
     await flushPromises()
     const inputs = wrapper.findAll('.input-stub')
-    // 8 color fields
-    expect(inputs.length).toBe(8)
+    // 8 color fields + 4 school info fields (fullName, principal, techContactName, techContactEmail)
+    expect(inputs.length).toBe(12)
   })
 
   it('should render FileUpload for logo', () => {

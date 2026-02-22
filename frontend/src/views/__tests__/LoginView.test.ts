@@ -68,7 +68,12 @@ const stubs = {
   },
   Divider: { template: '<hr class="divider-stub" />', props: ['align'] },
   Message: { template: '<div class="message-stub"><slot /></div>', props: ['severity', 'closable'] },
+  Checkbox: {
+    template: '<input type="checkbox" class="checkbox-stub" />',
+    props: ['modelValue', 'binary', 'inputId'],
+  },
   LanguageSwitcher: { template: '<div class="language-switcher-stub" />' },
+  RouterLink: { template: '<a class="router-link-stub"><slot /></a>', props: ['to', 'target'] },
 }
 
 function mountLogin() {

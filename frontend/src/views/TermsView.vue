@@ -4,10 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useToast } from 'primevue/usetoast'
 import Button from 'primevue/button'
 import { privacyApi } from '@/api/privacy.api'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { resetTermsCache } from '@/router'
 
 const { t } = useI18n()
 const toast = useToast()
+const router = useRouter()
 const authStore = useAuthStore()
 
 const terms = ref<{ text: string | null; version: string | null }>({ text: null, version: null })
@@ -33,7 +36,11 @@ async function handleAccept() {
   try {
     await privacyApi.acceptTerms()
     termsAccepted.value = true
+    resetTermsCache()
     toast.add({ severity: 'success', summary: t('privacy.termsAccepted'), life: 3000 })
+    if (authStore.isAuthenticated) {
+      setTimeout(() => router.push('/'), 1000)
+    }
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 3000 })
   }

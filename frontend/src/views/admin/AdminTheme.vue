@@ -5,6 +5,7 @@ import { adminApi } from '@/api/admin.api'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import FileUpload from 'primevue/fileupload'
 import { useToast } from 'primevue/usetoast'
 
@@ -24,7 +25,13 @@ const theme = ref<Record<string, string>>({
 })
 
 const schoolName = ref('')
+const schoolFullName = ref('')
+const schoolAddress = ref('')
+const schoolPrincipal = ref('')
+const techContactName = ref('')
+const techContactEmail = ref('')
 const saving = ref(false)
+const savingSchoolInfo = ref(false)
 
 const themeFields = [
   { key: 'primaryColor', labelKey: 'admin.theme.primaryColor' },
@@ -43,6 +50,11 @@ onMounted(async () => {
   }
   if (adminStore.config) {
     schoolName.value = adminStore.config.schoolName || ''
+    schoolFullName.value = adminStore.config.schoolFullName || ''
+    schoolAddress.value = adminStore.config.schoolAddress || ''
+    schoolPrincipal.value = adminStore.config.schoolPrincipal || ''
+    techContactName.value = adminStore.config.techContactName || ''
+    techContactEmail.value = adminStore.config.techContactEmail || ''
     if (adminStore.config.theme) {
       theme.value = { ...theme.value, ...(adminStore.config.theme as Record<string, string>) }
     }
@@ -58,6 +70,25 @@ async function saveTheme() {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   } finally {
     saving.value = false
+  }
+}
+
+async function saveSchoolInfo() {
+  savingSchoolInfo.value = true
+  try {
+    const res = await adminApi.updateConfig({
+      schoolFullName: schoolFullName.value,
+      schoolAddress: schoolAddress.value,
+      schoolPrincipal: schoolPrincipal.value,
+      techContactName: techContactName.value,
+      techContactEmail: techContactEmail.value,
+    })
+    adminStore.config = res.data.data
+    toast.add({ severity: 'success', summary: t('admin.schoolInfoSaved'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    savingSchoolInfo.value = false
   }
 }
 
@@ -79,6 +110,35 @@ async function uploadLogo(event: { files: File[] }) {
 <template>
   <div class="p-4">
     <h1 class="text-2xl font-bold mb-6">{{ t('admin.themeTitle') }}</h1>
+
+    <!-- School Info -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.schoolInfo') }}</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.schoolFullName') }}</label>
+          <InputText v-model="schoolFullName" class="w-full" :placeholder="t('admin.schoolFullNamePlaceholder')" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.schoolPrincipal') }}</label>
+          <InputText v-model="schoolPrincipal" class="w-full" :placeholder="t('admin.schoolPrincipalPlaceholder')" />
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium mb-1">{{ t('admin.schoolAddress') }}</label>
+          <Textarea v-model="schoolAddress" class="w-full" rows="2" :placeholder="t('admin.schoolAddressPlaceholder')" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.techContactName') }}</label>
+          <InputText v-model="techContactName" class="w-full" :placeholder="t('admin.techContactNamePlaceholder')" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.techContactEmail') }}</label>
+          <InputText v-model="techContactEmail" class="w-full" type="email" :placeholder="t('admin.techContactEmailPlaceholder')" />
+        </div>
+      </div>
+      <small class="text-gray-500 mb-3 block">{{ t('admin.schoolInfoHint') }}</small>
+      <Button :label="t('common.save')" icon="pi pi-check" :loading="savingSchoolInfo" @click="saveSchoolInfo" />
+    </div>
 
     <!-- Logo Upload -->
     <div class="mb-6">
@@ -143,6 +203,12 @@ async function uploadLogo(event: { files: File[] }) {
 </template>
 
 <style scoped>
+.settings-section {
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--mw-border-light);
+}
+
 small {
   display: block;
   margin-top: 0.25rem;
