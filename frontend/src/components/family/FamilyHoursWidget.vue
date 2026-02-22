@@ -68,7 +68,7 @@ function formatDate(dateStr: string | null) {
 </script>
 
 <template>
-  <div v-if="jobboardEnabled && jobboard.familyHours" class="hours-widget card" @click="openJobsList">
+  <div v-if="jobboardEnabled && jobboard.familyHours" class="hours-widget card" tabindex="0" role="link" @click="openJobsList" @keydown.enter="openJobsList">
     <div class="hours-header">
       <h3>{{ t('family.hours') }}</h3>
       <Tag
@@ -174,6 +174,11 @@ function formatDate(dateStr: string | null) {
 
 .hours-widget:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.hours-widget:focus-visible {
+  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline-offset: 2px;
 }
 
 .hours-header {

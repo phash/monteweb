@@ -176,7 +176,7 @@ function audienceLabel(audience: string): string {
 
     <!-- Folders -->
     <div v-if="folders.length" class="file-list">
-      <div v-for="folder in folders" :key="folder.id" class="file-item folder" @click="openFolder(folder)">
+      <div v-for="folder in folders" :key="folder.id" class="file-item folder" tabindex="0" @click="openFolder(folder)" @keydown.enter="openFolder(folder)">
         <i class="pi pi-folder" />
         <span class="file-name">{{ folder.name }}</span>
         <Tag
@@ -192,7 +192,7 @@ function audienceLabel(audience: string): string {
 
     <!-- Files -->
     <div v-if="files.length" class="file-list">
-      <div v-for="file in files" :key="file.id" class="file-item" @click="downloadFile(file)">
+      <div v-for="file in files" :key="file.id" class="file-item" tabindex="0" @click="downloadFile(file)" @keydown.enter="downloadFile(file)">
         <i class="pi pi-file" />
         <span class="file-name">{{ file.originalName }}</span>
         <Tag
@@ -281,6 +281,12 @@ function audienceLabel(audience: string): string {
 }
 
 .file-item:hover {
+  background: var(--mw-bg-hover);
+}
+
+.file-item:focus-visible {
+  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline-offset: -2px;
   background: var(--mw-bg-hover);
 }
 

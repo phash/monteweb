@@ -45,7 +45,7 @@ function onFileSelected(e: Event) {
 
 <template>
   <div class="avatar-upload" :class="[`avatar-${size}`, { editable }]">
-    <div class="avatar-circle" :style="{ width: sizeMap[size], height: sizeMap[size] }" @click="openFilePicker">
+    <div class="avatar-circle" :style="{ width: sizeMap[size], height: sizeMap[size] }" tabindex="0" role="button" :aria-label="t('common.changeAvatar')" @click="openFilePicker" @keydown.enter="openFilePicker" @keydown.space.prevent="openFilePicker">
       <img v-if="imageUrl" :src="imageUrl" alt="Avatar" class="avatar-img" />
       <i v-else :class="`pi ${icon}`" :style="{ fontSize: iconSizeMap[size] }" />
       <div v-if="editable" class="avatar-overlay">
@@ -116,6 +116,15 @@ function onFileSelected(e: Event) {
 }
 
 .editable .avatar-circle:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.editable .avatar-circle:focus-visible {
+  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline-offset: 2px;
+}
+
+.editable .avatar-circle:focus-visible .avatar-overlay {
   opacity: 1;
 }
 

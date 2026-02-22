@@ -274,7 +274,7 @@ function formatTime(date: string | null) {
                   <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
                   <button
                     class="reply-button"
-                    :title="t('messages.replyTo')"
+                    :aria-label="t('messages.replyTo')"
                     @click.stop="setReplyTo(msg)"
                   >
                     <i class="pi pi-reply" />
@@ -338,6 +338,7 @@ function formatTime(date: string | null) {
             <Button
               icon="pi pi-send"
               :disabled="!canSend"
+              :aria-label="t('messages.send')"
               @click="sendMessage"
             />
           </div>

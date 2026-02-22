@@ -1,4 +1,5 @@
 import { vi } from 'vitest'
+import 'vitest-axe/extend-expect'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}

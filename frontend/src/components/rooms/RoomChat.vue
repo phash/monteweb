@@ -301,7 +301,7 @@ function getMessagePreview(msg: MessageInfo) {
               <span class="rc-time">{{ formatTime(item.msg.createdAt) }}</span>
               <button
                 class="rc-reply-btn"
-                :title="t('chat.replyTo')"
+                :aria-label="t('chat.replyTo')"
                 @click.stop="setReplyTo(item.msg)"
               >
                 <i class="pi pi-reply" />
@@ -370,6 +370,7 @@ function getMessagePreview(msg: MessageInfo) {
       <Button
         icon="pi pi-send"
         :disabled="!canSend"
+        :aria-label="t('chat.send')"
         size="small"
         class="rc-send-btn"
         @click="sendMessage"

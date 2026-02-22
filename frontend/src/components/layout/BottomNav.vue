@@ -85,7 +85,7 @@ watch(() => route.path, () => {
   <div>
     <!-- More menu overlay -->
     <Transition name="fade">
-      <div v-if="showMore" class="more-overlay" @click="showMore = false" />
+      <div v-if="showMore" class="more-overlay" @click="showMore = false" @keydown.escape="showMore = false" />
     </Transition>
 
     <!-- More menu panel -->

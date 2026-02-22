@@ -119,7 +119,7 @@ async function createInterestRoom() {
     <div class="flex gap-2 mb-4">
       <InputText v-model="searchQuery" :placeholder="t('discover.searchPlaceholder')"
                  class="flex-1" @keyup.enter="search" />
-      <Button icon="pi pi-search" @click="search" />
+      <Button icon="pi pi-search" :aria-label="t('common.search')" @click="search" />
     </div>
 
     <!-- Discoverable Rooms (open join) -->
@@ -140,11 +140,13 @@ async function createInterestRoom() {
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <div class="discover-avatar">
-                  <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="discover-avatar-img" />
+                  <img v-if="room.avatarUrl" :src="room.avatarUrl" :alt="room.name" class="discover-avatar-img" />
                   <i v-else class="pi pi-home" />
                 </div>
                 <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
-                    @click="router.push({ name: 'room-detail', params: { id: room.id } })">
+                    tabindex="0" role="link"
+                    @click="router.push({ name: 'room-detail', params: { id: room.id } })"
+                    @keydown.enter="router.push({ name: 'room-detail', params: { id: room.id } })">
                   {{ room.name }}
                 </h3>
               </div>
@@ -187,11 +189,13 @@ async function createInterestRoom() {
             <div class="flex justify-between items-start mb-2">
               <div class="flex items-center gap-2">
                 <div class="discover-avatar">
-                  <img v-if="room.avatarUrl" :src="room.avatarUrl" alt="" class="discover-avatar-img" />
+                  <img v-if="room.avatarUrl" :src="room.avatarUrl" :alt="room.name" class="discover-avatar-img" />
                   <i v-else class="pi pi-home" />
                 </div>
                 <h3 class="font-semibold text-lg cursor-pointer hover:text-blue-600"
-                    @click="router.push({ name: 'room-detail', params: { id: room.id } })">
+                    tabindex="0" role="link"
+                    @click="router.push({ name: 'room-detail', params: { id: room.id } })"
+                    @keydown.enter="router.push({ name: 'room-detail', params: { id: room.id } })">
                   {{ room.name }}
                 </h3>
               </div>

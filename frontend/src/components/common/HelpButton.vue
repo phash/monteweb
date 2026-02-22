@@ -111,6 +111,11 @@ function goToHandbook() {
   transform: scale(0.95);
 }
 
+.help-fab:focus-visible {
+  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline-offset: 2px;
+}
+
 .help-fab .pi {
   font-size: 1.5rem;
 }

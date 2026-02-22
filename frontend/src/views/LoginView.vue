@@ -126,7 +126,7 @@ function loginWithSso() {
         <div class="form-field">
           <label for="password" class="required">{{ t('auth.password') }}</label>
           <Password
-            id="password"
+            inputId="password"
             v-model="form.password"
             :feedback="!isLogin"
             toggleMask

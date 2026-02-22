@@ -188,7 +188,7 @@ function audienceLabel(audience: string): string {
               <img
                 v-if="thread.coverImageId"
                 :src="fotoboxApi.thumbnailUrl(thread.coverImageId)"
-                alt=""
+                :alt="thread.title"
                 class="cover-img"
               />
               <i v-else class="pi pi-images cover-placeholder" />
