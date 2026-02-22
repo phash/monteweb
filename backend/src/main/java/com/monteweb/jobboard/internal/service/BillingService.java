@@ -1,7 +1,7 @@
 package com.monteweb.jobboard.internal.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.cleaning.CleaningModuleApi;
 import com.monteweb.family.FamilyInfo;
@@ -151,7 +151,7 @@ public class BillingService {
         if ("CLOSED".equals(period.getStatus()) && period.getReportData() != null) {
             try {
                 return objectMapper.readValue(period.getReportData(), BillingReportInfo.class);
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 throw new RuntimeException("Failed to read frozen report data", e);
             }
         }
@@ -171,7 +171,7 @@ public class BillingService {
         var report = generateReport(period);
         try {
             period.setReportData(objectMapper.writeValueAsString(report));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new RuntimeException("Failed to serialize report data", e);
         }
 
