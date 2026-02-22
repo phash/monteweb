@@ -18,7 +18,11 @@ function openHelp() {
 
 function goToHandbook() {
   visible.value = false
-  router.push('/help')
+  if (router.currentRoute.value.name === 'help') {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  } else {
+    router.push('/help')
+  }
 }
 </script>
 
@@ -113,7 +117,7 @@ function goToHandbook() {
 
 @media (max-width: 767px) {
   .help-fab {
-    bottom: calc(var(--mw-bottom-nav-height) + 1rem);
+    display: none;
   }
 }
 

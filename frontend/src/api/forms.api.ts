@@ -8,6 +8,7 @@ import type {
   SubmitResponseRequest,
   FormResultsSummary,
   IndividualResponse,
+  MyResponseInfo,
 } from '@/types/forms'
 
 export const formsApi = {
@@ -49,6 +50,18 @@ export const formsApi = {
 
   submitResponse(id: string, data: SubmitResponseRequest) {
     return client.post<ApiResponse<void>>(`/forms/${id}/respond`, data)
+  },
+
+  getMyResponse(id: string) {
+    return client.get<ApiResponse<MyResponseInfo | null>>(`/forms/${id}/my-response`)
+  },
+
+  updateResponse(id: string, data: SubmitResponseRequest) {
+    return client.put<ApiResponse<void>>(`/forms/${id}/respond`, data)
+  },
+
+  archiveForm(id: string) {
+    return client.post<ApiResponse<FormInfo>>(`/forms/${id}/archive`)
   },
 
   getResults(id: string) {

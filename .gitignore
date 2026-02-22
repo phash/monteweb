@@ -38,6 +38,7 @@ desktop.ini
 
 # Environment
 .env
+.env.prod
 .env.local
 .env.*.local
 
@@ -63,6 +64,9 @@ docs/*.pdf
 !docs/pdf/
 docs/handbuch*.png
 planung/produkthandbuch.*
+
+# Rezepte (project-independent recipes)
+rezepte/
 
 # Misc
 nul

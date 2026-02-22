@@ -43,4 +43,12 @@ export const calendarApi = {
   getEventJobs(eventId: string) {
     return client.get<ApiResponse<JobInfo[]>>(`/calendar/events/${eventId}/jobs`)
   },
+
+  exportEvent(id: string) {
+    return client.get(`/calendar/events/${id}/export`, { responseType: 'blob' })
+  },
+
+  exportCalendar(from: string, to: string) {
+    return client.get('/calendar/export', { params: { from, to }, responseType: 'blob' })
+  },
 }

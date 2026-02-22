@@ -31,6 +31,9 @@ public class ConversationParticipant {
     @Column(name = "joined_at", nullable = false, updatable = false)
     private Instant joinedAt;
 
+    @Column(name = "muted", nullable = false)
+    private boolean muted = false;
+
     @PrePersist
     protected void onCreate() {
         joinedAt = Instant.now();

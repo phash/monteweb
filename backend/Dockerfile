@@ -15,6 +15,9 @@ LABEL org.opencontainers.image.title="MonteWeb Backend" \
 
 WORKDIR /app
 
+# Install fonts required by OpenHTMLToPdf for PDF generation
+RUN apk add --no-cache fontconfig ttf-dejavu
+
 RUN addgroup -S monteweb && adduser -S monteweb -G monteweb
 USER monteweb
 

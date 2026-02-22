@@ -9,6 +9,12 @@ vi.mock('../client', () => ({
   },
 }))
 
+let mockImageToken: string | null = null
+vi.mock('@/composables/useImageToken', () => ({
+  authenticatedImageUrl: (path: string) =>
+    mockImageToken ? `${path}?token=${encodeURIComponent(mockImageToken)}` : path,
+}))
+
 import client from '../client'
 import { fundgrubeApi } from '../fundgrube.api'
 
@@ -103,13 +109,13 @@ describe('fundgrubeApi', () => {
 
   describe('imageUrl', () => {
     it('should return URL with token', () => {
-      localStorage.setItem('accessToken', 'abc123')
+      mockImageToken = 'abc123'
       const url = fundgrubeApi.imageUrl('img-1')
       expect(url).toBe('/api/v1/fundgrube/images/img-1?token=abc123')
     })
 
     it('should return URL without token when not logged in', () => {
-      localStorage.removeItem('accessToken')
+      mockImageToken = null
       const url = fundgrubeApi.imageUrl('img-1')
       expect(url).toBe('/api/v1/fundgrube/images/img-1')
     })
@@ -117,13 +123,13 @@ describe('fundgrubeApi', () => {
 
   describe('thumbnailUrl', () => {
     it('should return thumbnail URL with token', () => {
-      localStorage.setItem('accessToken', 'abc123')
+      mockImageToken = 'abc123'
       const url = fundgrubeApi.thumbnailUrl('img-1')
       expect(url).toBe('/api/v1/fundgrube/images/img-1/thumbnail?token=abc123')
     })
 
     it('should return thumbnail URL without token when not logged in', () => {
-      localStorage.removeItem('accessToken')
+      mockImageToken = null
       const url = fundgrubeApi.thumbnailUrl('img-1')
       expect(url).toBe('/api/v1/fundgrube/images/img-1/thumbnail')
     })

@@ -65,10 +65,11 @@ export function rejectRegistration(registrationId: string) {
 
 // ── Admin: Configs ────────────────────────────────────────────────────
 
-export function getConfigs(sectionId?: string) {
-  return client.get<ApiResponse<CleaningConfigInfo[]>>('/cleaning/configs', {
-    params: sectionId ? { sectionId } : {}
-  })
+export function getConfigs(sectionId?: string, roomId?: string) {
+  const params: Record<string, string> = {}
+  if (sectionId) params.sectionId = sectionId
+  if (roomId) params.roomId = roomId
+  return client.get<ApiResponse<CleaningConfigInfo[]>>('/cleaning/configs', { params })
 }
 
 export function createConfig(request: CreateConfigRequest) {
