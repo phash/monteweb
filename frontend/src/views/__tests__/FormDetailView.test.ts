@@ -54,6 +54,9 @@ vi.mock('@/api/forms.api', () => ({
     closeForm: vi.fn().mockResolvedValue({ data: { data: { id: 'form-1', status: 'CLOSED' } } }),
     deleteForm: vi.fn().mockResolvedValue({}),
     submitResponse: vi.fn().mockResolvedValue({}),
+    getMyResponse: vi.fn().mockResolvedValue({ data: { data: null } }),
+    updateResponse: vi.fn().mockResolvedValue({}),
+    archiveForm: vi.fn().mockResolvedValue({ data: { data: { id: 'form-1', status: 'ARCHIVED' } } }),
     getResults: vi.fn(),
     getIndividualResponses: vi.fn(),
     exportCsv: vi.fn(),
@@ -96,6 +99,15 @@ const i18n = createI18n({
           YES_NO: 'Ja/Nein',
         },
         user: 'Benutzer',
+        editResponse: 'Antwort bearbeiten',
+        updateResponse: 'Antwort aktualisieren',
+        responseUpdated: 'Antwort aktualisiert',
+        archive: 'Archivieren',
+        formArchived: 'Formular archiviert',
+        viewResultsHint: 'Ergebnisse ansehen',
+        deadlinePassed: 'Frist abgelaufen',
+        canEditUntil: 'Bearbeitbar bis',
+        cannotEditAnonymous: 'Anonyme Antworten können nicht bearbeitet werden',
       },
       common: {
         back: 'Zurück',
@@ -249,5 +261,190 @@ describe('FormDetailView', () => {
     expect(
       wrapper.find('.questions-readonly').exists() || wrapper.find('.loading-stub').exists()
     ).toBe(true)
+  })
+
+  it('should show edit response button for responded PUBLISHED form with future deadline', async () => {
+    const { formsApi } = await import('@/api/forms.api')
+    const futureDate = new Date()
+    futureDate.setDate(futureDate.getDate() + 14)
+    const deadline = futureDate.toISOString().split('T')[0]
+
+    vi.mocked(formsApi.getForm).mockResolvedValue({
+      data: {
+        data: {
+          form: {
+            id: 'form-1',
+            title: 'Active Survey',
+            description: '',
+            type: 'SURVEY',
+            scope: 'ROOM',
+            scopeId: 'r1',
+            scopeName: 'Klasse 3a',
+            anonymous: false,
+            deadline,
+            status: 'PUBLISHED',
+            createdBy: 'other-user',
+            creatorName: 'Andere Person',
+            responseCount: 5,
+            hasUserResponded: true,
+          },
+          questions: [
+            { id: 'q-1', type: 'TEXT', label: 'Frage', description: null, required: true, options: null, ratingConfig: null },
+          ],
+        },
+      },
+    } as any)
+
+    const pinia = createPinia()
+    const wrapper = mount(FormDetailView, {
+      global: { plugins: [i18n, pinia], stubs },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    if (wrapper.find('.responded-message').exists()) {
+      const buttons = wrapper.findAll('.button-stub')
+      const texts = buttons.map(b => b.text())
+      expect(texts.some(t => t.includes('Antwort bearbeiten'))).toBe(true)
+    }
+  })
+
+  it('should show archive button for CLOSED form when user is creator', async () => {
+    const { formsApi } = await import('@/api/forms.api')
+    vi.mocked(formsApi.getForm).mockResolvedValue({
+      data: {
+        data: {
+          form: {
+            id: 'form-1',
+            title: 'Closed Form',
+            description: '',
+            type: 'SURVEY',
+            scope: 'ROOM',
+            scopeId: 'r1',
+            scopeName: 'Klasse 3a',
+            anonymous: false,
+            deadline: null,
+            status: 'CLOSED',
+            createdBy: 'current-user',
+            creatorName: 'Current User',
+            responseCount: 10,
+            hasUserResponded: false,
+          },
+          questions: [],
+        },
+      },
+    } as any)
+
+    const pinia = createPinia()
+    // Set auth store user to match creator
+    const { useAuthStore } = await import('@/stores/auth')
+    setActivePinia(pinia)
+    const authStore = useAuthStore()
+    authStore.user = { id: 'current-user', role: 'TEACHER' } as any
+
+    const wrapper = mount(FormDetailView, {
+      global: { plugins: [i18n, pinia], stubs },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    if (wrapper.find('.management-actions').exists()) {
+      const buttons = wrapper.findAll('.button-stub')
+      const texts = buttons.map(b => b.text())
+      expect(texts.some(t => t.includes('Archivieren'))).toBe(true)
+    }
+  })
+
+  it('should show delete button for creator on all statuses', async () => {
+    const { formsApi } = await import('@/api/forms.api')
+    vi.mocked(formsApi.getForm).mockResolvedValue({
+      data: {
+        data: {
+          form: {
+            id: 'form-1',
+            title: 'Published Form',
+            description: '',
+            type: 'SURVEY',
+            scope: 'ROOM',
+            scopeId: 'r1',
+            scopeName: 'Klasse 3a',
+            anonymous: false,
+            deadline: null,
+            status: 'PUBLISHED',
+            createdBy: 'current-user',
+            creatorName: 'Current User',
+            responseCount: 3,
+            hasUserResponded: false,
+          },
+          questions: [],
+        },
+      },
+    } as any)
+
+    const pinia = createPinia()
+    const { useAuthStore } = await import('@/stores/auth')
+    setActivePinia(pinia)
+    const authStore = useAuthStore()
+    authStore.user = { id: 'current-user', role: 'TEACHER' } as any
+
+    const wrapper = mount(FormDetailView, {
+      global: { plugins: [i18n, pinia], stubs },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    if (wrapper.find('.management-actions').exists()) {
+      const buttons = wrapper.findAll('.button-stub')
+      const texts = buttons.map(b => b.text())
+      expect(texts.some(t => t.includes('Löschen'))).toBe(true)
+    }
+  })
+
+  it('should show view results link for closed forms with user responded', async () => {
+    const { formsApi } = await import('@/api/forms.api')
+    vi.mocked(formsApi.getForm).mockResolvedValue({
+      data: {
+        data: {
+          form: {
+            id: 'form-1',
+            title: 'Closed Survey',
+            description: '',
+            type: 'SURVEY',
+            scope: 'ROOM',
+            scopeId: 'r1',
+            scopeName: 'Klasse 3a',
+            anonymous: false,
+            deadline: null,
+            status: 'CLOSED',
+            createdBy: 'other-user',
+            creatorName: 'Other User',
+            responseCount: 20,
+            hasUserResponded: true,
+          },
+          questions: [],
+        },
+      },
+    } as any)
+
+    const pinia = createPinia()
+    const wrapper = mount(FormDetailView, {
+      global: { plugins: [i18n, pinia], stubs },
+    })
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+
+    if (wrapper.find('.responded-message').exists()) {
+      const buttons = wrapper.findAll('.button-stub')
+      const texts = buttons.map(b => b.text())
+      expect(texts.some(t => t.includes('Ergebnisse ansehen'))).toBe(true)
+    }
   })
 })

@@ -9,6 +9,7 @@ import type {
   SubmitResponseRequest,
   FormResultsSummary,
   IndividualResponse,
+  MyResponseInfo,
 } from '@/types/forms'
 
 export const useFormsStore = defineStore('forms', () => {
@@ -17,6 +18,7 @@ export const useFormsStore = defineStore('forms', () => {
   const currentForm = ref<FormDetailInfo | null>(null)
   const currentResults = ref<FormResultsSummary | null>(null)
   const individualResponses = ref<IndividualResponse[]>([])
+  const myResponse = ref<MyResponseInfo | null>(null)
   const loading = ref(false)
   const totalAvailable = ref(0)
   const totalMine = ref(0)
@@ -125,6 +127,36 @@ export const useFormsStore = defineStore('forms', () => {
     }
   }
 
+  async function fetchMyResponse(id: string) {
+    const res = await formsApi.getMyResponse(id)
+    myResponse.value = res.data.data
+  }
+
+  async function updateResponse(id: string, data: SubmitResponseRequest) {
+    await formsApi.updateResponse(id, data)
+    if (currentForm.value?.form.id === id) {
+      currentForm.value = {
+        ...currentForm.value,
+        form: {
+          ...currentForm.value.form,
+          hasUserResponded: true,
+        },
+      }
+    }
+    myResponse.value = null
+  }
+
+  async function archiveForm(id: string) {
+    const res = await formsApi.archiveForm(id)
+    const updated = res.data.data
+    const idx = myForms.value.findIndex(f => f.id === id)
+    if (idx !== -1) myForms.value[idx] = updated
+    if (currentForm.value?.form.id === id) {
+      currentForm.value = { ...currentForm.value, form: updated }
+    }
+    return updated
+  }
+
   async function fetchResults(id: string) {
     const res = await formsApi.getResults(id)
     currentResults.value = res.data.data
@@ -161,6 +193,7 @@ export const useFormsStore = defineStore('forms', () => {
     currentForm,
     currentResults,
     individualResponses,
+    myResponse,
     loading,
     totalAvailable,
     totalMine,
@@ -174,6 +207,9 @@ export const useFormsStore = defineStore('forms', () => {
     publishForm,
     closeForm,
     submitResponse,
+    fetchMyResponse,
+    updateResponse,
+    archiveForm,
     fetchResults,
     fetchIndividualResponses,
     downloadCsv,

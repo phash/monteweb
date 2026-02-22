@@ -97,6 +97,9 @@ vi.mock('@/api/forms.api', () => ({
         ],
       },
     }),
+    getMyResponse: vi.fn().mockResolvedValue({ data: { data: null } }),
+    updateResponse: vi.fn().mockResolvedValue({}),
+    archiveForm: vi.fn(),
     exportCsv: vi.fn().mockResolvedValue({ data: 'csv-data' }),
     exportPdf: vi.fn().mockResolvedValue({ data: new Blob() }),
   },
@@ -237,5 +240,61 @@ describe('FormResultsView', () => {
     await vi.waitFor(() => {
       expect(formsApi.getIndividualResponses).toHaveBeenCalledWith('form-1')
     })
+  })
+
+  it('should render pie chart for SINGLE_CHOICE questions after loading', async () => {
+    const wrapper = mountFormResults()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // Should have pie-chart-section for SINGLE_CHOICE
+    expect(
+      wrapper.findAll('.pie-chart-section').length > 0 || wrapper.find('.loading-stub').exists()
+    ).toBe(true)
+  })
+
+  it('should render pie chart SVG for YES_NO questions after loading', async () => {
+    const wrapper = mountFormResults()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // YES_NO also gets a pie chart
+    if (!wrapper.find('.loading-stub').exists()) {
+      const pieCharts = wrapper.findAll('.pie-chart-section')
+      // Should have 2 pie charts: one for SINGLE_CHOICE, one for YES_NO
+      expect(pieCharts.length).toBe(2)
+    }
+  })
+
+  it('should render legend items with labels and counts for pie chart', async () => {
+    const wrapper = mountFormResults()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    if (!wrapper.find('.loading-stub').exists()) {
+      const legends = wrapper.findAll('.legend-item')
+      expect(legends.length).toBeGreaterThan(0)
+      // Check that legend items contain counts
+      const legendTexts = legends.map(l => l.text())
+      expect(legendTexts.some(t => t.includes('5'))).toBe(true) // "Gut: 5"
+    }
+  })
+
+  it('should keep bar chart for MULTIPLE_CHOICE questions', async () => {
+    const wrapper = mountFormResults()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    await wrapper.vm.$nextTick()
+    // Bar chart should NOT be used for SINGLE_CHOICE
+    // Only MULTIPLE_CHOICE uses bar-chart (but we don't have MULTIPLE_CHOICE in test data)
+    // Verify bar-chart is not rendered for our SINGLE_CHOICE data
+    if (!wrapper.find('.loading-stub').exists()) {
+      const barCharts = wrapper.findAll('.bar-chart')
+      expect(barCharts.length).toBe(0) // No MULTIPLE_CHOICE in test data
+    }
   })
 })

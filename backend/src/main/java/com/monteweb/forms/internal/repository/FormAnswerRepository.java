@@ -17,4 +17,6 @@ public interface FormAnswerRepository extends JpaRepository<FormAnswer, UUID> {
     @Modifying
     @Query("DELETE FROM FormAnswer a WHERE a.responseId IN (SELECT r.id FROM FormResponse r WHERE r.formId = :formId)")
     void deleteByResponseFormId(UUID formId);
+
+    void deleteByResponseId(UUID responseId);
 }
