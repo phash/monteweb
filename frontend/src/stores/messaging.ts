@@ -6,6 +6,7 @@ import type { ConversationInfo, MessageInfo } from '@/types/messaging'
 export const useMessagingStore = defineStore('messaging', () => {
   const conversations = ref<ConversationInfo[]>([])
   const currentConversation = ref<ConversationInfo | null>(null)
+  const activeConversationId = ref<string | null>(null)
   const messages = ref<MessageInfo[]>([])
   const unreadCount = ref(0)
   const loading = ref(false)
@@ -29,6 +30,7 @@ export const useMessagingStore = defineStore('messaging', () => {
   }
 
   async function fetchMessages(conversationId: string) {
+    activeConversationId.value = conversationId
     loading.value = true
     try {
       const res = await messagingApi.getMessages(conversationId)
@@ -79,18 +81,40 @@ export const useMessagingStore = defineStore('messaging', () => {
     }
   }
 
+  async function muteConversation(conversationId: string) {
+    await messagingApi.muteConversation(conversationId)
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (conv) conv.muted = true
+    if (currentConversation.value?.id === conversationId) {
+      currentConversation.value = { ...currentConversation.value, muted: true }
+    }
+  }
+
+  async function unmuteConversation(conversationId: string) {
+    await messagingApi.unmuteConversation(conversationId)
+    const conv = conversations.value.find(c => c.id === conversationId)
+    if (conv) conv.muted = false
+    if (currentConversation.value?.id === conversationId) {
+      currentConversation.value = { ...currentConversation.value, muted: false }
+    }
+  }
+
   async function deleteConversation(conversationId: string) {
     await messagingApi.deleteConversation(conversationId)
     conversations.value = conversations.value.filter(c => c.id !== conversationId)
     if (currentConversation.value?.id === conversationId) {
       currentConversation.value = null
+      activeConversationId.value = null
       messages.value = []
     }
   }
 
   function addIncomingMessage(message: MessageInfo) {
-    if (currentConversation.value?.id === message.conversationId) {
-      messages.value.push(message)
+    if (activeConversationId.value === message.conversationId) {
+      // Avoid duplicates (own messages already added via sendMessage)
+      if (!messages.value.some(m => m.id === message.id)) {
+        messages.value.push(message)
+      }
     }
     // Update conversation list
     const conv = conversations.value.find(c => c.id === message.conversationId)
@@ -105,6 +129,7 @@ export const useMessagingStore = defineStore('messaging', () => {
   return {
     conversations,
     currentConversation,
+    activeConversationId,
     messages,
     unreadCount,
     loading,
@@ -117,6 +142,8 @@ export const useMessagingStore = defineStore('messaging', () => {
     startDirectConversation,
     fetchUnreadCount,
     markAsRead,
+    muteConversation,
+    unmuteConversation,
     deleteConversation,
     addIncomingMessage,
   }

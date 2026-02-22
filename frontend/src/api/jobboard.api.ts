@@ -2,6 +2,7 @@ import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
 import type {
   JobInfo,
+  JobAttachmentInfo,
   JobAssignmentInfo,
   FamilyHoursInfo,
   ReportSummary,
@@ -11,9 +12,9 @@ import type {
 
 export const jobboardApi = {
   listJobs(page = 0, size = 20, category?: string, status?: JobStatus[], eventId?: string,
-           fromDate?: string, toDate?: string) {
+           fromDate?: string, toDate?: string, roomId?: string) {
     return client.get<ApiResponse<PageResponse<JobInfo>>>('/jobs', {
-      params: { page, size, category, status: status?.join(','), eventId, fromDate, toDate },
+      params: { page, size, category, status: status?.join(','), eventId, roomId, fromDate, toDate },
     })
   },
 
@@ -116,5 +117,22 @@ export const jobboardApi = {
 
   exportPdf() {
     return client.get('/jobs/report/pdf', { responseType: 'blob' })
+  },
+
+  // Attachments
+  uploadAttachment(jobId: string, file: File) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return client.post<ApiResponse<JobAttachmentInfo>>(`/jobs/${jobId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  downloadAttachmentUrl(jobId: string, attachmentId: string) {
+    return `/api/v1/jobs/${jobId}/attachments/${attachmentId}/download`
+  },
+
+  deleteAttachment(jobId: string, attachmentId: string) {
+    return client.delete<ApiResponse<void>>(`/jobs/${jobId}/attachments/${attachmentId}`)
   },
 }

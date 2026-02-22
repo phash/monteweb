@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useMessagingStore } from '@/stores/messaging'
 import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
 import { usePushNotifications } from '@/composables/usePushNotifications'
@@ -18,6 +19,7 @@ import type { UserRole } from '@/types/user'
 
 const { t } = useI18n()
 const auth = useAuthStore()
+const messagingStore = useMessagingStore()
 const router = useRouter()
 const toast = useToast()
 const { isSupported: pushSupported, isSubscribed: pushSubscribed, permission: pushPermission,
@@ -41,6 +43,7 @@ onMounted(async () => {
   }
   await checkSubscription()
   pushEnabled.value = pushSubscribed.value
+  await messagingStore.fetchConversations()
 })
 
 async function save() {
@@ -88,6 +91,23 @@ async function onSwitchRole(role: string) {
   } finally {
     switching.value = false
   }
+}
+
+const mutedConversations = computed(() =>
+  messagingStore.conversations.filter(c => c.muted)
+)
+
+function getConversationName(conv: { title: string | null; participants: { displayName: string }[]; isGroup: boolean }) {
+  if (conv.title) return conv.title
+  if (!conv.isGroup && conv.participants.length > 0) {
+    const other = conv.participants.find(p => p.displayName !== `${auth.user?.firstName} ${auth.user?.lastName}`)
+    return other?.displayName ?? conv.participants[0]?.displayName ?? ''
+  }
+  return conv.participants.map(p => p.displayName).join(', ')
+}
+
+async function unmuteChatFromProfile(conversationId: string) {
+  await messagingStore.unmuteConversation(conversationId)
 }
 
 async function togglePush() {
@@ -187,6 +207,27 @@ async function togglePush() {
     <div class="card profile-card language-card">
       <h3>{{ t('profile.language') }}</h3>
       <LanguageSwitcher />
+    </div>
+
+    <!-- Muted Chats -->
+    <div class="card profile-card muted-chats-card">
+      <h3>{{ t('profile.mutedChats') }}</h3>
+      <div v-if="mutedConversations.length === 0" class="empty-muted">
+        {{ t('profile.noMutedChats') }}
+      </div>
+      <div v-else class="muted-list">
+        <div v-for="conv in mutedConversations" :key="conv.id" class="muted-item">
+          <span class="muted-name">{{ getConversationName(conv) }}</span>
+          <Button
+            icon="pi pi-volume-up"
+            :label="t('profile.unmute')"
+            text
+            size="small"
+            severity="secondary"
+            @click="unmuteChatFromProfile(conv.id)"
+          />
+        </div>
+      </div>
     </div>
 
     <!-- Push Notifications -->
@@ -293,6 +334,42 @@ async function togglePush() {
 .language-card h3 {
   margin: 0 0 0.75rem 0;
   font-size: var(--mw-font-size-md);
+}
+
+.muted-chats-card {
+  margin-top: 1rem;
+}
+
+.muted-chats-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.empty-muted {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+}
+
+.muted-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.muted-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--p-surface-200);
+}
+
+.muted-item:last-child {
+  border-bottom: none;
+}
+
+.muted-name {
+  font-size: var(--mw-font-size-sm);
 }
 
 .push-card {

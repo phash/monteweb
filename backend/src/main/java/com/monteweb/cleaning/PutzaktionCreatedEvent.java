@@ -12,6 +12,7 @@ import java.util.UUID;
 public record PutzaktionCreatedEvent(
         UUID configId,
         UUID sectionId,
+        UUID roomId,
         String title,
         String description,
         LocalDate date,

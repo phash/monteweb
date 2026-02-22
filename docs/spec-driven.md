@@ -568,7 +568,8 @@ GET /api/v1/section-admin/overview           -> ApiResponse<SectionOverview>
 | Testing (FE) | Vitest + @vue/test-utils | 4.0 |
 | Testing (BE) | JUnit 5 + Testcontainers | 1.20.4 |
 | Containerization | Docker + Docker Compose | v2 |
-| Reverse Proxy | nginx | Alpine |
+| Reverse Proxy / SSL | Caddy | 2-alpine |
+| Internal Proxy | nginx | Alpine |
 | CI/CD | GitHub Actions | - |
 | Monitoring | Prometheus + Grafana | 2.51 / 10.4 |
 
@@ -699,6 +700,7 @@ monteweb:
 
 ```yaml
 services:
+  caddy:       # Reverse proxy + auto SSL (ports: 80, 443)
   postgres:    # Data persistence (volumes: postgres_data)
   redis:       # Sessions, cache, pub/sub (volumes: redis_data)
   minio:       # File storage (volumes: minio_data)
@@ -711,7 +713,7 @@ services:
 ### 4.2 Network Topology
 
 ```
-Internet -> [TLS Termination*] -> nginx:80
+Internet -> Caddy :80/:443 -> frontend (nginx) :80
   nginx:80 -> /api/*          -> backend:8080
   nginx:80 -> /ws/*           -> backend:8080  (WebSocket upgrade)
   nginx:80 -> /actuator/*     -> backend:8080
@@ -725,7 +727,7 @@ prometheus:9090 -> backend:8080/actuator/prometheus  (scrape)
 grafana:3000    -> prometheus:9090                    (query)
 ```
 
-*TLS termination expected to be handled by external load balancer or nginx config extension.
+**SSL/TLS:** Caddy handles TLS termination automatically. Set `DOMAIN=monteweb.deineschule.de` in `.env` for auto Let's Encrypt certificates. Set `DOMAIN=localhost` for local/LAN use without SSL.
 
 ### 4.3 Health Checks
 
@@ -748,7 +750,8 @@ grafana:3000    -> prometheus:9090                    (query)
 
 **Optional (with defaults):**
 - `POSTGRES_DB` (monteweb), `POSTGRES_USER` (monteweb)
-- `APP_PORT` (80), `FRONTEND_URL` (http://localhost)
+- `DOMAIN` (localhost) -- set to hostname for auto SSL (e.g. `monteweb.deineschule.de`)
+- `FRONTEND_URL` (http://localhost) -- public URL for emails/links
 - `EMAIL_ENABLED` (false), `SMTP_*` settings
 - `OIDC_ENABLED` (false), `OIDC_*` settings
 - `PUSH_ENABLED` (false), `VAPID_*` settings
@@ -849,11 +852,12 @@ grafana:3000    -> prometheus:9090                    (query)
 ### 6.1 Deployment
 
 ```bash
-# Production (5 core services)
+# Production (6 core services: caddy, frontend, backend, postgres, redis, minio)
 cp .env.example .env       # Configure required variables
+# Set DOMAIN=monteweb.deineschule.de for auto HTTPS
 docker compose up -d
 
-# With monitoring (7 services)
+# With monitoring (8 services)
 docker compose --profile monitoring up -d
 ```
 

@@ -9,6 +9,12 @@ vi.mock('../client', () => ({
   },
 }))
 
+let mockImageToken: string | null = null
+vi.mock('@/composables/useImageToken', () => ({
+  authenticatedImageUrl: (path: string) =>
+    mockImageToken ? `${path}?token=${encodeURIComponent(mockImageToken)}` : path,
+}))
+
 import client from '../client'
 import { fotoboxApi } from '../fotobox.api'
 
@@ -133,27 +139,27 @@ describe('fotoboxApi', () => {
 
   // URL helpers
   describe('imageUrl', () => {
-    it('should return URL with token when accessToken exists', () => {
-      localStorage.setItem('accessToken', 'test-jwt-token')
-      expect(fotoboxApi.imageUrl('img-1')).toBe('/api/v1/fotobox/images/img-1?token=test-jwt-token')
+    it('should return URL with token when image token exists', () => {
+      mockImageToken = 'test-image-token'
+      expect(fotoboxApi.imageUrl('img-1')).toBe('/api/v1/fotobox/images/img-1?token=test-image-token')
     })
 
-    it('should return URL without token when no accessToken', () => {
-      localStorage.removeItem('accessToken')
+    it('should return URL without token when no image token', () => {
+      mockImageToken = null
       expect(fotoboxApi.imageUrl('img-1')).toBe('/api/v1/fotobox/images/img-1')
     })
   })
 
   describe('thumbnailUrl', () => {
-    it('should return URL with token when accessToken exists', () => {
-      localStorage.setItem('accessToken', 'test-jwt-token')
+    it('should return URL with token when image token exists', () => {
+      mockImageToken = 'test-image-token'
       expect(fotoboxApi.thumbnailUrl('img-1')).toBe(
-        '/api/v1/fotobox/images/img-1/thumbnail?token=test-jwt-token',
+        '/api/v1/fotobox/images/img-1/thumbnail?token=test-image-token',
       )
     })
 
-    it('should return URL without token when no accessToken', () => {
-      localStorage.removeItem('accessToken')
+    it('should return URL without token when no image token', () => {
+      mockImageToken = null
       expect(fotoboxApi.thumbnailUrl('img-1')).toBe('/api/v1/fotobox/images/img-1/thumbnail')
     })
   })

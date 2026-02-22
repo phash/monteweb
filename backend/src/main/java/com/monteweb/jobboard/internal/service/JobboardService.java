@@ -16,7 +16,10 @@ import com.monteweb.jobboard.internal.repository.JobRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.jobboard.internal.model.JobAttachment;
+import com.monteweb.jobboard.internal.repository.JobAttachmentRepository;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,29 +40,35 @@ public class JobboardService implements JobboardModuleApi {
 
     private final JobRepository jobRepository;
     private final JobAssignmentRepository assignmentRepository;
+    private final JobAttachmentRepository attachmentRepository;
     private final UserModuleApi userModuleApi;
     private final FamilyModuleApi familyModuleApi;
     private final AdminModuleApi adminModuleApi;
     private final ApplicationEventPublisher eventPublisher;
     private final CleaningModuleApi cleaningModuleApi;
     private final CalendarModuleApi calendarModuleApi;
+    private final RoomModuleApi roomModuleApi;
 
     public JobboardService(JobRepository jobRepository,
                            JobAssignmentRepository assignmentRepository,
+                           JobAttachmentRepository attachmentRepository,
                            UserModuleApi userModuleApi,
                            FamilyModuleApi familyModuleApi,
                            AdminModuleApi adminModuleApi,
                            ApplicationEventPublisher eventPublisher,
                            @Autowired(required = false) CleaningModuleApi cleaningModuleApi,
-                           @Autowired(required = false) CalendarModuleApi calendarModuleApi) {
+                           @Autowired(required = false) CalendarModuleApi calendarModuleApi,
+                           @Autowired(required = false) RoomModuleApi roomModuleApi) {
         this.jobRepository = jobRepository;
         this.assignmentRepository = assignmentRepository;
+        this.attachmentRepository = attachmentRepository;
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.eventPublisher = eventPublisher;
         this.cleaningModuleApi = cleaningModuleApi;
         this.calendarModuleApi = calendarModuleApi;
+        this.roomModuleApi = roomModuleApi;
     }
 
     // ---- Public API (JobboardModuleApi) ----
@@ -100,6 +109,7 @@ public class JobboardService implements JobboardModuleApi {
         job.setDescription(event.description());
         job.setCategory("Reinigung");
         job.setSectionId(event.sectionId());
+        job.setRoomId(event.roomId());
         job.setEstimatedHours(event.hoursCredit());
         job.setMaxAssignees(event.maxParticipants());
         job.setScheduledDate(event.date());
@@ -124,6 +134,7 @@ public class JobboardService implements JobboardModuleApi {
         job.setCategory(request.category());
         job.setLocation(request.location());
         job.setSectionId(request.sectionId());
+        job.setRoomId(request.roomId());
         job.setEstimatedHours(request.estimatedHours());
         job.setMaxAssignees(request.maxAssignees());
         job.setScheduledDate(request.scheduledDate());
@@ -202,13 +213,13 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     @Transactional(readOnly = true)
-    public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, UUID eventId,
+    public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, UUID eventId, UUID roomId,
                                   LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         if (statuses == null || statuses.isEmpty()) {
             statuses = List.of(JobStatus.OPEN, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS);
         }
         String cat = (category != null && !category.isBlank()) ? category : null;
-        return jobRepository.findWithFilters(statuses, cat, eventId, fromDate, toDate, pageable)
+        return jobRepository.findWithFilters(statuses, cat, eventId, roomId, fromDate, toDate, pageable)
                 .map(this::toJobInfo);
     }
 
@@ -645,6 +656,20 @@ public class JobboardService implements JobboardModuleApi {
                     .orElse(null);
         }
 
+        String roomName = null;
+        if (job.getRoomId() != null && roomModuleApi != null) {
+            roomName = roomModuleApi.findById(job.getRoomId())
+                    .map(r -> r.name())
+                    .orElse(null);
+        }
+
+        List<JobAttachmentInfo> attachments = attachmentRepository.findByJobIdOrderByCreatedAtAsc(job.getId())
+                .stream()
+                .map(a -> new JobAttachmentInfo(
+                        a.getId(), a.getJobId(), a.getOriginalFilename(),
+                        a.getFileSize(), a.getContentType(), a.getUploadedBy(), a.getCreatedAt()))
+                .toList();
+
         return new JobInfo(
                 job.getId(),
                 job.getTitle(),
@@ -652,6 +677,8 @@ public class JobboardService implements JobboardModuleApi {
                 job.getCategory(),
                 job.getLocation(),
                 job.getSectionId(),
+                job.getRoomId(),
+                roomName,
                 job.getEstimatedHours(),
                 job.getMaxAssignees(),
                 (int) currentAssignees,
@@ -663,6 +690,7 @@ public class JobboardService implements JobboardModuleApi {
                 job.getContactInfo(),
                 job.getEventId(),
                 eventTitle,
+                attachments,
                 job.getCreatedAt()
         );
     }
@@ -707,6 +735,7 @@ public class JobboardService implements JobboardModuleApi {
             String category,
             String location,
             UUID sectionId,
+            UUID roomId,
             BigDecimal estimatedHours,
             int maxAssignees,
             java.time.LocalDate scheduledDate,

@@ -1,6 +1,6 @@
 package com.monteweb.admin.internal.controller;
 
-import com.monteweb.admin.TenantConfigInfo;
+import com.monteweb.admin.PublicTenantConfigInfo;
 import com.monteweb.admin.internal.service.AdminService;
 import com.monteweb.shared.dto.ApiResponse;
 import org.springframework.http.ResponseEntity;
@@ -19,7 +19,8 @@ public class PublicConfigController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<TenantConfigInfo>> getPublicConfig() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getTenantConfig()));
+    public ResponseEntity<ApiResponse<PublicTenantConfigInfo>> getPublicConfig() {
+        var publicConfig = PublicTenantConfigInfo.from(adminService.getTenantConfig());
+        return ResponseEntity.ok(ApiResponse.ok(publicConfig));
     }
 }

@@ -9,6 +9,12 @@ vi.mock('../client', () => ({
   },
 }))
 
+let mockImageToken: string | null = null
+vi.mock('@/composables/useImageToken', () => ({
+  authenticatedImageUrl: (path: string) =>
+    mockImageToken ? `${path}?token=${encodeURIComponent(mockImageToken)}` : path,
+}))
+
 import client from '../client'
 import { messagingApi } from '../messaging.api'
 
@@ -110,26 +116,28 @@ describe('messagingApi', () => {
   })
 
   describe('imageUrl', () => {
-    it('should return URL with token when logged in', () => {
-      localStorage.setItem('accessToken', 'abc123')
+    it('should return URL with token when image token exists', () => {
+      mockImageToken = 'abc123'
       const url = messagingApi.imageUrl('img-1')
       expect(url).toBe('/api/v1/messages/images/img-1?token=abc123')
     })
 
-    it('should return URL without token when not logged in', () => {
+    it('should return URL without token when no image token', () => {
+      mockImageToken = null
       const url = messagingApi.imageUrl('img-1')
       expect(url).toBe('/api/v1/messages/images/img-1')
     })
   })
 
   describe('thumbnailUrl', () => {
-    it('should return thumbnail URL with token when logged in', () => {
-      localStorage.setItem('accessToken', 'abc123')
+    it('should return thumbnail URL with token when image token exists', () => {
+      mockImageToken = 'abc123'
       const url = messagingApi.thumbnailUrl('img-1')
       expect(url).toBe('/api/v1/messages/images/img-1/thumbnail?token=abc123')
     })
 
-    it('should return thumbnail URL without token when not logged in', () => {
+    it('should return thumbnail URL without token when no image token', () => {
+      mockImageToken = null
       const url = messagingApi.thumbnailUrl('img-1')
       expect(url).toBe('/api/v1/messages/images/img-1/thumbnail')
     })

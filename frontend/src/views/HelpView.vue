@@ -9,6 +9,12 @@ import AccordionContent from 'primevue/accordioncontent'
 import InputText from 'primevue/inputtext'
 import { handbookContent } from '@/data/helpContent'
 
+interface PdfDownload {
+  label: string
+  file: string
+  icon: string
+}
+
 const { t } = useI18n()
 const auth = useAuthStore()
 
@@ -20,6 +26,43 @@ const handbookKey = computed(() => {
   if (role === 'TEACHER') return 'teacher'
   if (role === 'STUDENT') return 'student'
   return 'parent'
+})
+
+const downloads = computed<PdfDownload[]>(() => {
+  const role = auth.user?.role
+  const items: PdfDownload[] = []
+
+  if (role === 'SUPERADMIN') {
+    items.push(
+      { label: t('help.downloads.handbookAdmin'), file: 'MonteWeb_Handbuch_Administration.pdf', icon: 'pi pi-book' },
+      { label: t('help.downloads.cheatsheetSuperadmin'), file: 'MonteWeb_CheatSheet_Superadmin.pdf', icon: 'pi pi-list-check' },
+    )
+  }
+  if (role === 'SECTION_ADMIN') {
+    items.push(
+      { label: t('help.downloads.handbookAdmin'), file: 'MonteWeb_Handbuch_Administration.pdf', icon: 'pi pi-book' },
+      { label: t('help.downloads.cheatsheetSectionAdmin'), file: 'MonteWeb_CheatSheet_Bereichsleitung.pdf', icon: 'pi pi-list-check' },
+    )
+  }
+  if (role === 'TEACHER') {
+    items.push(
+      { label: t('help.downloads.handbookTeacher'), file: 'MonteWeb_Handbuch_Lehrkraefte.pdf', icon: 'pi pi-book' },
+      { label: t('help.downloads.cheatsheetTeacher'), file: 'MonteWeb_CheatSheet_Lehrkraefte.pdf', icon: 'pi pi-list-check' },
+    )
+  }
+  if (role === 'PARENT') {
+    items.push(
+      { label: t('help.downloads.handbookParent'), file: 'MonteWeb_Handbuch_Eltern.pdf', icon: 'pi pi-book' },
+      { label: t('help.downloads.cheatsheetParent'), file: 'MonteWeb_CheatSheet_Eltern.pdf', icon: 'pi pi-list-check' },
+    )
+  }
+  if (role === 'STUDENT') {
+    items.push(
+      { label: t('help.downloads.cheatsheetParent'), file: 'MonteWeb_CheatSheet_Eltern.pdf', icon: 'pi pi-list-check' },
+    )
+  }
+
+  return items
 })
 
 const chapters = computed(() => {
@@ -76,6 +119,26 @@ const roleLabel = computed(() => {
           class="w-full"
         />
       </span>
+    </div>
+
+    <div v-if="downloads.length" class="help-downloads">
+      <h2 class="downloads-title">
+        <i class="pi pi-download" />
+        {{ t('help.downloads.title') }}
+      </h2>
+      <div class="downloads-grid">
+        <a
+          v-for="dl in downloads"
+          :key="dl.file"
+          :href="`/docs/${dl.file}`"
+          target="_blank"
+          class="download-card"
+        >
+          <i :class="dl.icon" />
+          <span class="download-label">{{ dl.label }}</span>
+          <span class="download-badge">PDF</span>
+        </a>
+      </div>
     </div>
 
     <div v-if="filteredChapters.length === 0" class="help-no-results">
@@ -181,6 +244,73 @@ const roleLabel = computed(() => {
 
 .section-content:last-child {
   margin-bottom: 0;
+}
+
+.help-downloads {
+  margin-bottom: 2rem;
+}
+
+.downloads-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--mw-font-size-lg);
+  font-weight: 600;
+  color: var(--mw-text);
+  margin: 0 0 1rem;
+}
+
+.downloads-title .pi {
+  color: var(--mw-primary);
+}
+
+.downloads-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.download-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--mw-bg-card);
+  border: 1px solid var(--mw-border-light);
+  border-radius: var(--mw-border-radius);
+  text-decoration: none;
+  color: var(--mw-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.download-card:hover {
+  border-color: var(--mw-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  text-decoration: none;
+}
+
+.download-card .pi {
+  font-size: 1.25rem;
+  color: var(--mw-primary);
+  flex-shrink: 0;
+}
+
+.download-label {
+  flex: 1;
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
+}
+
+.download-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--mw-primary) 12%, transparent);
+  color: var(--mw-primary);
+  flex-shrink: 0;
 }
 
 .help-no-results {
