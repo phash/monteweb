@@ -249,6 +249,7 @@ function formatDate(date: string | null) {
                 <span v-if="job.location"><i class="pi pi-map-marker" /> {{ job.location }}</span>
                 <span><i class="pi pi-clock" /> {{ job.estimatedHours }}h</span>
                 <span v-if="job.scheduledDate"><i class="pi pi-calendar" /> {{ formatDate(job.scheduledDate) }}</span>
+                <span v-if="job.roomName"><i class="pi pi-home" /> {{ job.roomName }}</span>
                 <span v-if="job.eventTitle"><i class="pi pi-calendar-plus" /> {{ job.eventTitle }}</span>
               </div>
               <div class="job-card-footer">

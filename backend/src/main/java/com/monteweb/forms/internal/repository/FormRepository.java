@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,7 +17,7 @@ public interface FormRepository extends JpaRepository<Form, UUID> {
 
     @Query(value = """
             SELECT * FROM forms f
-            WHERE f.status = 'PUBLISHED'
+            WHERE f.status IN ('PUBLISHED', 'CLOSED')
               AND (
                 (f.scope = 'SCHOOL')
                 OR (f.scope = 'SECTION' AND EXISTS (
@@ -28,7 +29,7 @@ public interface FormRepository extends JpaRepository<Form, UUID> {
             """,
             countQuery = """
             SELECT count(*) FROM forms f
-            WHERE f.status = 'PUBLISHED'
+            WHERE f.status IN ('PUBLISHED', 'CLOSED')
               AND (
                 (f.scope = 'SCHOOL')
                 OR (f.scope = 'SECTION' AND EXISTS (
@@ -55,4 +56,6 @@ public interface FormRepository extends JpaRepository<Form, UUID> {
     List<Form> findPublishedForSection(@Param("sectionId") UUID sectionId);
 
     List<Form> findByScopeAndStatus(FormScope scope, FormStatus status);
+
+    List<Form> findByStatusAndDeadlineBefore(FormStatus status, LocalDate deadline);
 }

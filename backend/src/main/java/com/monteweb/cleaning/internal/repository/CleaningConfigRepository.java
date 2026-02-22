@@ -15,4 +15,6 @@ public interface CleaningConfigRepository extends JpaRepository<CleaningConfig, 
     List<CleaningConfig> findByActiveTrue();
 
     List<CleaningConfig> findBySectionId(UUID sectionId);
+
+    List<CleaningConfig> findByRoomId(UUID roomId);
 }

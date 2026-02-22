@@ -1,6 +1,16 @@
 export type JobStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type AssignmentStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
+export interface JobAttachmentInfo {
+  id: string
+  jobId: string
+  originalFilename: string
+  fileSize: number
+  contentType: string
+  uploadedBy: string
+  createdAt: string
+}
+
 export interface JobInfo {
   id: string
   title: string
@@ -8,6 +18,8 @@ export interface JobInfo {
   category: string
   location: string | null
   sectionId: string | null
+  roomId: string | null
+  roomName: string | null
   estimatedHours: number
   maxAssignees: number
   currentAssignees: number
@@ -19,6 +31,7 @@ export interface JobInfo {
   contactInfo: string | null
   eventId: string | null
   eventTitle: string | null
+  attachments: JobAttachmentInfo[]
   createdAt: string
 }
 
@@ -71,6 +84,7 @@ export interface CreateJobRequest {
   category: string
   location?: string
   sectionId?: string
+  roomId?: string
   estimatedHours: number
   maxAssignees: number
   scheduledDate?: string

@@ -32,7 +32,7 @@ class RateLimitFilterTest {
                         .content("""
                                 {"email": "rate-test@example.com", "password": "SomePass123!"}
                                 """))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnprocessableEntity()); // BusinessException → 422
     }
 
     @Test

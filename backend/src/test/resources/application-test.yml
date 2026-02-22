@@ -29,6 +29,8 @@ monteweb:
       enabled: true
 
 spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/testmigration
   jpa:
     hibernate:
       ddl-auto: validate

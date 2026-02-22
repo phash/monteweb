@@ -7,10 +7,12 @@ import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.PdfService;
 import com.monteweb.shared.util.SecurityUtils;
+import com.monteweb.room.RoomModuleApi;
+import com.monteweb.room.RoomRole;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,18 +28,33 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/cleaning")
 @ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
-@RequiredArgsConstructor
 public class CleaningAdminController {
 
     private final CleaningService cleaningService;
     private final PdfService pdfService;
     private final UserModuleApi userModuleApi;
+    private final RoomModuleApi roomModuleApi;
+
+    public CleaningAdminController(CleaningService cleaningService,
+                                   PdfService pdfService,
+                                   UserModuleApi userModuleApi,
+                                   @Autowired(required = false) RoomModuleApi roomModuleApi) {
+        this.cleaningService = cleaningService;
+        this.pdfService = pdfService;
+        this.userModuleApi = userModuleApi;
+        this.roomModuleApi = roomModuleApi;
+    }
 
     // ── Config endpoints ────────────────────────────────────────────────
 
     @GetMapping("/configs")
     public ResponseEntity<ApiResponse<List<CleaningConfigInfo>>> getConfigs(
-            @RequestParam(required = false) UUID sectionId) {
+            @RequestParam(required = false) UUID sectionId,
+            @RequestParam(required = false) UUID roomId) {
+        if (roomId != null) {
+            requireRoomLeaderOrCleaningAdmin(roomId);
+            return ResponseEntity.ok(ApiResponse.ok(cleaningService.getConfigsByRoom(roomId)));
+        }
         requireCleaningAdmin(sectionId);
         List<CleaningConfigInfo> configs;
         if (sectionId != null) {
@@ -62,7 +79,11 @@ public class CleaningAdminController {
     @PostMapping("/configs")
     public ResponseEntity<ApiResponse<CleaningConfigInfo>> createConfig(
             @RequestBody CleaningService.CreateConfigRequest request) {
-        requireCleaningAdmin(request.sectionId());
+        if (request.roomId() != null) {
+            requireRoomLeaderOrCleaningAdmin(request.roomId());
+        } else {
+            requireCleaningAdmin(request.sectionId());
+        }
         return ResponseEntity.ok(ApiResponse.ok(cleaningService.createConfig(request)));
     }
 
@@ -205,6 +226,28 @@ public class CleaningAdminController {
 
     private boolean hasScopedSpecialRole(com.monteweb.user.UserInfo user, String roleName, UUID scopeId) {
         return user.specialRoles() != null && user.specialRoles().contains(roleName + ":" + scopeId);
+    }
+
+    private void requireRoomLeaderOrCleaningAdmin(UUID roomId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() == UserRole.SUPERADMIN) {
+            return;
+        }
+        // Room LEADER can create cleaning configs for their room
+        if (roomModuleApi != null) {
+            var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId);
+            if (roomRole.isPresent() && roomRole.get() == RoomRole.LEADER) {
+                return;
+            }
+        }
+        // Fall back to section-based cleaning admin check
+        try {
+            requireCleaningAdmin(null);
+        } catch (ForbiddenException e) {
+            throw new ForbiddenException("Not authorized for room cleaning administration");
+        }
     }
 
     private void requireCleaningAdminFromSlot(UUID slotId) {

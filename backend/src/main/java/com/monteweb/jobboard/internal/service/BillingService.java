@@ -227,7 +227,7 @@ public class BillingService {
                         .green { color: #16a34a; }
                         .yellow { color: #ca8a04; }
                         .red { color: #dc2626; }
-                        table { width: 100%%; border-collapse: collapse; font-size: 10px; }
+                        table { width: 100%; border-collapse: collapse; font-size: 10px; }
                         th, td { border: 1px solid #ddd; padding: 4px 6px; text-align: left; }
                         th { background-color: #f5f5f5; font-weight: bold; }
                         .right { text-align: right; }
@@ -263,8 +263,10 @@ public class BillingService {
 
         int nr = 1;
         for (var entry : report.families()) {
-            String balanceClass = entry.balance().compareTo(BigDecimal.ZERO) < 0 ? " class=\"negative\"" : "";
-            String cleanBalanceClass = entry.cleaningBalance().compareTo(BigDecimal.ZERO) < 0 ? " class=\"negative\"" : "";
+            BigDecimal balance = entry.balance() != null ? entry.balance() : BigDecimal.ZERO;
+            BigDecimal cleaningBalance = entry.cleaningBalance() != null ? entry.cleaningBalance() : BigDecimal.ZERO;
+            String balanceClass = balance.compareTo(BigDecimal.ZERO) < 0 ? "right negative" : "right";
+            String cleanBalanceClass = cleaningBalance.compareTo(BigDecimal.ZERO) < 0 ? "right negative" : "right";
             String membersStr = entry.members().stream()
                     .map(m -> escapeXml(m.displayName()) + " (" + translateRole(m.role()) + ")")
                     .reduce((a, b) -> a + ", " + b)
@@ -274,17 +276,17 @@ public class BillingService {
             sb.append("<td>").append(nr++).append("</td>");
             sb.append("<td>").append(escapeXml(entry.familyName())).append("</td>");
             sb.append("<td class=\"members\">").append(membersStr).append("</td>");
-            sb.append("<td class=\"right\">").append(entry.jobHours()).append("h</td>");
-            sb.append("<td class=\"right\">").append(entry.cleaningHours()).append("h</td>");
-            sb.append("<td class=\"right\">").append(entry.totalHours()).append("h</td>");
-            sb.append("<td class=\"right\">").append(entry.targetHours()).append("h</td>");
-            sb.append("<td class=\"right\"").append(balanceClass).append(">")
-                    .append(entry.balance().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
-                    .append(entry.balance()).append("h</td>");
-            sb.append("<td class=\"right\">").append(entry.targetCleaningHours()).append("h</td>");
-            sb.append("<td class=\"right\"").append(cleanBalanceClass).append(">")
-                    .append(entry.cleaningBalance().compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
-                    .append(entry.cleaningBalance()).append("h</td>");
+            sb.append("<td class=\"right\">").append(entry.jobHours() != null ? entry.jobHours() : BigDecimal.ZERO).append("h</td>");
+            sb.append("<td class=\"right\">").append(entry.cleaningHours() != null ? entry.cleaningHours() : BigDecimal.ZERO).append("h</td>");
+            sb.append("<td class=\"right\">").append(entry.totalHours() != null ? entry.totalHours() : BigDecimal.ZERO).append("h</td>");
+            sb.append("<td class=\"right\">").append(entry.targetHours() != null ? entry.targetHours() : BigDecimal.ZERO).append("h</td>");
+            sb.append("<td class=\"").append(balanceClass).append("\">")
+                    .append(balance.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
+                    .append(balance).append("h</td>");
+            sb.append("<td class=\"right\">").append(entry.targetCleaningHours() != null ? entry.targetCleaningHours() : BigDecimal.ZERO).append("h</td>");
+            sb.append("<td class=\"").append(cleanBalanceClass).append("\">")
+                    .append(cleaningBalance.compareTo(BigDecimal.ZERO) >= 0 ? "+" : "")
+                    .append(cleaningBalance).append("h</td>");
             sb.append("</tr>\n");
         }
 
