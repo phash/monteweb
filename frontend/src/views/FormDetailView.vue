@@ -26,6 +26,7 @@ const toast = useToast()
 
 const formId = computed(() => route.params.id as string)
 const submitting = ref(false)
+const isEditing = ref(false)
 const answers = ref<Record<string, AnswerRequest>>({})
 
 function getAnswer(questionId: string): AnswerRequest {
@@ -43,10 +44,24 @@ const isAdmin = computed(() => auth.isAdmin)
 
 const canManage = computed(() => isCreator.value || isAdmin.value)
 
+const deadlineNotPassed = computed(() => {
+  if (!forms.currentForm) return false
+  const f = forms.currentForm.form
+  if (!f.deadline) return true
+  const dl: string = f.deadline
+  return new Date(dl) >= new Date(new Date().toISOString().split('T')[0]!)
+})
+
+const canEditResponse = computed(() => {
+  if (!forms.currentForm) return false
+  const f = forms.currentForm.form
+  return f.status === 'PUBLISHED' && f.hasUserResponded && !f.anonymous && deadlineNotPassed.value
+})
+
 const canRespond = computed(() => {
   if (!forms.currentForm) return false
   const f = forms.currentForm.form
-  return f.status === 'PUBLISHED' && !f.hasUserResponded
+  return (f.status === 'PUBLISHED' && !f.hasUserResponded) || isEditing.value
 })
 
 onMounted(async () => {
@@ -90,6 +105,31 @@ async function handleDelete() {
   }
 }
 
+async function handleEditResponse() {
+  await forms.fetchMyResponse(formId.value)
+  if (forms.myResponse) {
+    // Pre-fill answers from existing response
+    for (const a of forms.myResponse.answers) {
+      answers.value[a.questionId] = {
+        questionId: a.questionId,
+        text: a.text ?? undefined,
+        selectedOptions: a.selectedOptions ?? [],
+        rating: a.rating ?? undefined,
+      }
+    }
+  }
+  isEditing.value = true
+}
+
+async function handleArchive() {
+  try {
+    await forms.archiveForm(formId.value)
+    toast.add({ severity: 'success', summary: t('forms.formArchived'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || t('common.error'), life: 5000 })
+  }
+}
+
 async function handleSubmitResponse() {
   submitting.value = true
   try {
@@ -97,8 +137,14 @@ async function handleSubmitResponse() {
       return a.text || (a.selectedOptions && a.selectedOptions.length > 0) || a.rating != null
     })
 
-    await forms.submitResponse(formId.value, { answers: answerList })
-    toast.add({ severity: 'success', summary: t('forms.thankYou'), life: 3000 })
+    if (isEditing.value) {
+      await forms.updateResponse(formId.value, { answers: answerList })
+      toast.add({ severity: 'success', summary: t('forms.responseUpdated'), life: 3000 })
+      isEditing.value = false
+    } else {
+      await forms.submitResponse(formId.value, { answers: answerList })
+      toast.add({ severity: 'success', summary: t('forms.thankYou'), life: 3000 })
+    }
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || t('common.error'), life: 5000 })
   } finally {
@@ -202,6 +248,14 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           @click="handleClose"
         />
         <Button
+          v-if="forms.currentForm.form.status === 'CLOSED'"
+          :label="t('forms.archive')"
+          icon="pi pi-box"
+          severity="secondary"
+          size="small"
+          @click="handleArchive"
+        />
+        <Button
           v-if="forms.currentForm.form.status !== 'DRAFT'"
           :label="t('forms.viewResults')"
           icon="pi pi-chart-bar"
@@ -210,7 +264,6 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
           @click="router.push({ name: 'form-results', params: { id: formId } })"
         />
         <Button
-          v-if="forms.currentForm.form.status === 'DRAFT'"
           :label="t('forms.deleteForm')"
           icon="pi pi-trash"
           severity="danger"
@@ -220,14 +273,37 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
         />
       </div>
 
+      <div v-if="canEditResponse && forms.currentForm.form.deadline" class="edit-hint">
+        <i class="pi pi-info-circle" />
+        {{ t('forms.canEditUntil') }}: {{ formatShortDate(forms.currentForm.form.deadline) }}
+      </div>
+
       <!-- Already responded message -->
-      <div v-if="forms.currentForm.form.hasUserResponded" class="responded-message card">
+      <div v-if="forms.currentForm.form.hasUserResponded && !isEditing" class="responded-message card">
         <i class="pi pi-check-circle" />
         <span>{{ t('forms.alreadyResponded') }}</span>
+        <div class="responded-actions">
+          <Button
+            v-if="canEditResponse"
+            :label="t('forms.editResponse')"
+            icon="pi pi-pencil"
+            severity="secondary"
+            size="small"
+            @click="handleEditResponse"
+          />
+          <Button
+            v-if="(forms.currentForm.form.status === 'CLOSED' || forms.currentForm.form.status === 'ARCHIVED')"
+            :label="t('forms.viewResultsHint')"
+            icon="pi pi-chart-bar"
+            severity="info"
+            size="small"
+            @click="router.push({ name: 'form-results', params: { id: formId } })"
+          />
+        </div>
       </div>
 
       <!-- Response form -->
-      <div v-else-if="canRespond" class="response-form">
+      <div v-if="canRespond" class="response-form">
         <div
           v-for="q in forms.currentForm.questions"
           :key="q.id"
@@ -303,7 +379,7 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
 
         <div class="submit-actions">
           <Button
-            :label="t('forms.submitResponse')"
+            :label="isEditing ? t('forms.updateResponse') : t('forms.submitResponse')"
             icon="pi pi-send"
             :loading="submitting"
             :disabled="submitting"
@@ -448,5 +524,20 @@ function onCheckboxToggle(questionId: string, option: string, checked: boolean) 
   padding: 0.25rem 0.75rem;
   border-radius: 1rem;
   font-size: var(--mw-font-size-sm);
+}
+
+.responded-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.edit-hint {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>
