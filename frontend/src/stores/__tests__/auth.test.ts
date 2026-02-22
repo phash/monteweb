@@ -23,6 +23,14 @@ vi.mock('@/api/admin.api', () => ({
   },
 }))
 
+vi.mock('@/composables/useImageToken', () => ({
+  useImageToken: () => ({
+    fetchImageToken: vi.fn().mockResolvedValue('mock-image-token'),
+    clearImageToken: vi.fn(),
+  }),
+  authenticatedImageUrl: (path: string) => path,
+}))
+
 import { authApi } from '@/api/auth.api'
 import { usersApi } from '@/api/users.api'
 

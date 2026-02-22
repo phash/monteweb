@@ -15,16 +15,20 @@ import java.util.UUID;
 /**
  * Generates and validates HMAC-signed QR tokens for cleaning slot check-ins.
  * Token format: {slotId}:{timestamp}:{signature}
- * Tokens are valid for the duration of the cleaning slot.
+ * Tokens expire after a configurable duration (default: 24 hours).
  */
 @Service
 @ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 public class QrTokenService {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final long DEFAULT_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000L; // 24 hours
 
     @Value("${monteweb.cleaning.qr-secret:monteweb-cleaning-qr-default-secret}")
     private String secret;
+
+    @Value("${monteweb.cleaning.qr-token-expiry-hours:24}")
+    private int tokenExpiryHours;
 
     /**
      * Generates a QR token for a cleaning slot.
@@ -37,7 +41,7 @@ public class QrTokenService {
 
     /**
      * Validates a QR token and extracts the slot ID.
-     * Returns the slot ID if valid, null otherwise.
+     * Returns the slot ID if valid and not expired, null otherwise.
      */
     public UUID validateToken(String token) {
         if (token == null || token.isBlank()) {
@@ -51,10 +55,8 @@ public class QrTokenService {
             return null;
         }
 
-        // Reconstruct: everything before the last two colon-separated parts is not the format we use
-        // Actually our format is: {uuid}:{timestamp}:{base64signature}
-        // UUID contains dashes, not colons, so split by ":" gives us:
-        // [uuid, timestamp, signature]
+        // Reconstruct: everything before the last two colon-separated parts
+        // Format is: {uuid}:{timestamp}:{base64signature}
         int lastColon = token.lastIndexOf(':');
         int secondLastColon = token.lastIndexOf(':', lastColon - 1);
 
@@ -67,6 +69,18 @@ public class QrTokenService {
 
         String expectedSignature = sign(payload);
         if (!expectedSignature.equals(providedSignature)) {
+            return null;
+        }
+
+        // Extract and validate timestamp (expiry check)
+        String timestampStr = token.substring(secondLastColon + 1, lastColon);
+        try {
+            long tokenTimestamp = Long.parseLong(timestampStr);
+            long expiryMs = tokenExpiryHours * 60L * 60L * 1000L;
+            if (System.currentTimeMillis() - tokenTimestamp > expiryMs) {
+                return null; // Token expired
+            }
+        } catch (NumberFormatException e) {
             return null;
         }
 

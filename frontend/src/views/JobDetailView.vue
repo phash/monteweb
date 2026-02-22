@@ -41,6 +41,7 @@ const editLocation = ref('')
 const editEstimatedHours = ref<number>(2)
 const editContactInfo = ref('')
 const editSubmitting = ref(false)
+const uploading = ref(false)
 
 const canManageJob = computed(() => {
   if (!jobboard.currentJob) return false
@@ -160,6 +161,42 @@ async function confirm(assignmentId: string) {
   }
 }
 
+async function uploadAttachment(event: { files: File[] }) {
+  const file = event.files[0]
+  if (!file) return
+  if (file.size > 10 * 1024 * 1024) {
+    toast.add({ severity: 'error', summary: t('jobboard.fileTooLarge'), life: 3000 })
+    return
+  }
+  uploading.value = true
+  try {
+    await jobboardApi.uploadAttachment(props.id, file)
+    await jobboard.fetchJob(props.id)
+    toast.add({ severity: 'success', summary: t('jobboard.attachmentUploaded'), life: 3000 })
+  } finally {
+    uploading.value = false
+  }
+}
+
+async function deleteAttachment(attachmentId: string) {
+  try {
+    await jobboardApi.deleteAttachment(props.id, attachmentId)
+    await jobboard.fetchJob(props.id)
+  } catch {
+    // error handled by interceptor
+  }
+}
+
+function downloadAttachment(attachmentId: string) {
+  window.open(jobboardApi.downloadAttachmentUrl(props.id, attachmentId), '_blank')
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
 function statusSeverity(status: string) {
   switch (status) {
     case 'OPEN': return 'success'
@@ -229,6 +266,10 @@ function formatDate(date: string | null) {
             <label>{{ t('common.slots') }}</label>
             <span>{{ jobboard.currentJob.currentAssignees }}/{{ jobboard.currentJob.maxAssignees }}</span>
           </div>
+          <div v-if="jobboard.currentJob.roomName" class="detail-item">
+            <label>{{ t('jobboard.room') }}</label>
+            <span>{{ jobboard.currentJob.roomName }}</span>
+          </div>
           <div v-if="jobboard.currentJob.eventTitle" class="detail-item">
             <label>{{ t('jobboard.linkedEvent') }}</label>
             <a class="event-link" @click.stop="router.push({ name: 'event-detail', params: { id: jobboard.currentJob.eventId! } })">
@@ -240,6 +281,50 @@ function formatDate(date: string | null) {
         <p v-if="jobboard.currentJob.description" class="job-description">
           {{ jobboard.currentJob.description }}
         </p>
+      </div>
+
+      <!-- Attachments -->
+      <div class="attachments-section card">
+        <h2>{{ t('jobboard.attachments') }}</h2>
+        <div v-if="jobboard.currentJob.attachments?.length" class="attachments-list">
+          <div v-for="att in jobboard.currentJob.attachments" :key="att.id" class="attachment-item">
+            <div class="attachment-info">
+              <i class="pi pi-file" />
+              <span class="attachment-name">{{ att.originalFilename }}</span>
+              <span class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
+            </div>
+            <div class="attachment-actions">
+              <Button icon="pi pi-download" text size="small" @click="downloadAttachment(att.id)" />
+              <Button
+                v-if="att.uploadedBy === auth.user?.id || auth.isAdmin || auth.isTeacher || auth.isSectionAdmin"
+                icon="pi pi-trash"
+                text
+                size="small"
+                severity="danger"
+                @click="deleteAttachment(att.id)"
+              />
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-muted">{{ t('jobboard.noAttachments') }}</p>
+        <div v-if="canManageJob && (jobboard.currentJob.attachments?.length ?? 0) < 5" class="attachment-upload">
+          <Button
+            :label="t('jobboard.uploadAttachment')"
+            icon="pi pi-upload"
+            severity="secondary"
+            outlined
+            size="small"
+            :loading="uploading"
+            @click="($refs.fileInput as HTMLInputElement)?.click()"
+          />
+          <input
+            ref="fileInput"
+            type="file"
+            style="display: none"
+            @change="(e: Event) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) uploadAttachment({ files: [f] }); (e.target as HTMLInputElement).value = '' }"
+          />
+          <span class="upload-hint">{{ t('jobboard.maxAttachments') }}</span>
+        </div>
       </div>
 
       <!-- Action buttons -->
@@ -480,6 +565,68 @@ function formatDate(date: string | null) {
 }
 
 .text-muted {
+  color: var(--mw-text-muted);
+}
+
+.attachments-section {
+  margin-bottom: 1.5rem;
+}
+
+.attachments-section h2 {
+  font-size: var(--mw-font-size-lg);
+  margin-bottom: 0.75rem;
+}
+
+.attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.attachment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--mw-border-light);
+  border-radius: var(--mw-border-radius-sm);
+}
+
+.attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--mw-font-size-sm);
+  min-width: 0;
+}
+
+.attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-xs);
+  flex-shrink: 0;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.attachment-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.upload-hint {
+  font-size: var(--mw-font-size-xs);
   color: var(--mw-text-muted);
 }
 

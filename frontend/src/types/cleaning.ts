@@ -4,6 +4,8 @@ export interface CleaningConfigInfo {
   id: string
   sectionId: string
   sectionName: string
+  roomId?: string | null
+  roomName?: string | null
   title: string
   description: string | null
   dayOfWeek: number
@@ -59,6 +61,7 @@ export interface DashboardInfo {
 
 export interface CreateConfigRequest {
   sectionId: string
+  roomId?: string
   title: string
   description?: string
   dayOfWeek: number

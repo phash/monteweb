@@ -6,6 +6,7 @@ import type {
   FotoboxRoomSettings,
   CreateFotoboxThreadRequest,
 } from '@/types/fotobox'
+import { authenticatedImageUrl } from '@/composables/useImageToken'
 
 export const fotoboxApi = {
   // Settings
@@ -59,13 +60,11 @@ export const fotoboxApi = {
     return client.delete<ApiResponse<void>>(`/fotobox/images/${imageId}`)
   },
 
-  // Image URL helpers — append JWT for <img> tags which can't send Authorization headers
+  // Image URL helpers — uses short-lived image token for <img> tags
   imageUrl(imageId: string) {
-    const token = localStorage.getItem('accessToken')
-    return `/api/v1/fotobox/images/${imageId}${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    return authenticatedImageUrl(`/api/v1/fotobox/images/${imageId}`)
   },
   thumbnailUrl(imageId: string) {
-    const token = localStorage.getItem('accessToken')
-    return `/api/v1/fotobox/images/${imageId}/thumbnail${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    return authenticatedImageUrl(`/api/v1/fotobox/images/${imageId}/thumbnail`)
   },
 }

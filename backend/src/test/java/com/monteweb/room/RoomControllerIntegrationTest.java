@@ -172,9 +172,10 @@ class RoomControllerIntegrationTest {
         String roomId = TestHelper.parseResponse(createResult.getResponse().getContentAsString())
                 .path("data").path("id").asText();
 
-        mockMvc.perform(get("/api/v1/rooms/" + roomId + "/members")
+        // GET /rooms/{id} returns detail response with members array for room members
+        mockMvc.perform(get("/api/v1/rooms/" + roomId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data.members").isArray());
     }
 }

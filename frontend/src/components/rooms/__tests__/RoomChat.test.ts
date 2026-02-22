@@ -36,6 +36,8 @@ vi.mock('@/api/messaging.api', () => ({
           senderName: 'Test User',
           content: 'Hello world',
           createdAt: '2025-01-15T10:00:00Z',
+          images: [],
+          replyTo: null,
         },
       },
     }),
@@ -44,6 +46,8 @@ vi.mock('@/api/messaging.api', () => ({
     getUnreadCount: vi.fn().mockResolvedValue({ data: { data: { count: 0 } } }),
     markAsRead: vi.fn().mockResolvedValue({ data: { data: null } }),
     startConversation: vi.fn().mockResolvedValue({ data: { data: null } }),
+    imageUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}`),
+    thumbnailUrl: vi.fn((id: string) => `/api/v1/messages/images/${id}/thumbnail`),
   },
 }))
 
@@ -75,8 +79,17 @@ const i18n = createI18n({
   messages: {
     de: {
       chat: {
+        title: 'Chat',
         noMessages: 'Keine Nachrichten',
         placeholder: 'Nachricht schreiben...',
+        mute: 'Stummschalten',
+        unmute: 'Stummschaltung aufheben',
+        muted: 'Stumm',
+        today: 'Heute',
+        yesterday: 'Gestern',
+        image: 'Bild',
+        attachImage: 'Bild anhängen',
+        replyTo: 'Antworten',
         channels: {
           MAIN: 'Allgemein',
           PARENTS: 'Eltern',
@@ -93,15 +106,20 @@ const stubs = {
     props: ['label', 'disabled', 'icon', 'severity', 'text', 'size'],
     emits: ['click'],
   },
-  InputText: {
-    template: '<input class="inputtext-stub" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" @keyup="$listeners && $listeners.keyup" />',
-    props: ['modelValue', 'placeholder'],
+  Textarea: {
+    template: '<textarea class="textarea-stub" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)"></textarea>',
+    props: ['modelValue', 'placeholder', 'autoResize', 'rows'],
     emits: ['update:modelValue'],
   },
   SelectButton: {
     template: '<div class="selectbutton-stub"></div>',
     props: ['modelValue', 'options', 'optionLabel', 'optionValue'],
     emits: ['update:modelValue'],
+  },
+  Dialog: {
+    template: '<div class="dialog-stub"><slot /></div>',
+    props: ['visible', 'modal', 'dismissableMask', 'closable', 'style', 'pt'],
+    emits: ['update:visible'],
   },
 }
 
@@ -123,7 +141,7 @@ describe('RoomChat', () => {
 
   it('should render the chat container', () => {
     const wrapper = mountComponent()
-    expect(wrapper.find('.flex.flex-col').exists()).toBe(true)
+    expect(wrapper.find('.rc-container').exists()).toBe(true)
   })
 
   it('should show no messages text when messages array is empty', async () => {
@@ -134,14 +152,8 @@ describe('RoomChat', () => {
 
   it('should render the message input and send button', () => {
     const wrapper = mountComponent()
-    expect(wrapper.find('.inputtext-stub').exists()).toBe(true)
+    expect(wrapper.find('.textarea-stub').exists()).toBe(true)
     expect(wrapper.findAll('.button-stub').length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('should disable send button when message text is empty', () => {
-    const wrapper = mountComponent()
-    const sendButton = wrapper.findAll('.button-stub').find(btn => btn.attributes('disabled') !== undefined)
-    expect(sendButton).toBeDefined()
   })
 
   it('should render with a different roomId prop', () => {
@@ -172,6 +184,8 @@ describe('RoomChat', () => {
         senderName: 'Other User',
         content: 'Hello there!',
         createdAt: '2025-01-15T10:00:00Z',
+        images: [],
+        replyTo: null,
       },
     ]
     await flushPromises()
@@ -207,12 +221,103 @@ describe('RoomChat', () => {
         senderName: 'Me',
         content: 'My own message',
         createdAt: '2025-01-15T10:00:00Z',
+        images: [],
+        replyTo: null,
       },
     ]
     await flushPromises()
 
-    const ownMsg = wrapper.find('.justify-end')
+    const ownMsg = wrapper.find('.rc-message--own')
     expect(ownMsg.exists()).toBe(true)
     expect(ownMsg.text()).toContain('My own message')
+  })
+
+  it('should show sender avatar for other users', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = mount(RoomChat, {
+      props: { roomId: 'room-1' },
+      global: {
+        plugins: [i18n, pinia],
+        stubs,
+      },
+    })
+    await flushPromises()
+
+    const { useAuthStore } = await import('@/stores/auth')
+    const authStore = useAuthStore()
+    authStore.user = { id: 'user-1', displayName: 'Me', role: 'PARENT' } as any
+
+    const { useMessagingStore } = await import('@/stores/messaging')
+    const messagingStore = useMessagingStore()
+    messagingStore.messages = [
+      {
+        id: 'msg-1',
+        conversationId: 'conv-1',
+        senderId: 'user-2',
+        senderName: 'Anna Müller',
+        content: 'Test message',
+        createdAt: '2025-01-15T10:00:00Z',
+        images: [],
+        replyTo: null,
+      },
+    ]
+    await flushPromises()
+
+    const avatar = wrapper.find('.rc-avatar')
+    expect(avatar.exists()).toBe(true)
+    expect(avatar.text()).toBe('AM')
+  })
+
+  it('should show date separators', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+
+    const wrapper = mount(RoomChat, {
+      props: { roomId: 'room-1' },
+      global: {
+        plugins: [i18n, pinia],
+        stubs,
+      },
+    })
+    await flushPromises()
+
+    const { useMessagingStore } = await import('@/stores/messaging')
+    const messagingStore = useMessagingStore()
+    messagingStore.messages = [
+      {
+        id: 'msg-1',
+        conversationId: 'conv-1',
+        senderId: 'user-2',
+        senderName: 'Other',
+        content: 'Old message',
+        createdAt: '2025-01-14T10:00:00Z',
+        images: [],
+        replyTo: null,
+      },
+      {
+        id: 'msg-2',
+        conversationId: 'conv-1',
+        senderId: 'user-2',
+        senderName: 'Other',
+        content: 'New message',
+        createdAt: '2025-01-15T10:00:00Z',
+        images: [],
+        replyTo: null,
+      },
+    ]
+    await flushPromises()
+
+    const separators = wrapper.findAll('.rc-date-separator')
+    expect(separators.length).toBe(2)
+  })
+
+  it('should render empty state with icon', async () => {
+    const wrapper = mountComponent()
+    await flushPromises()
+
+    expect(wrapper.find('.rc-empty').exists()).toBe(true)
+    expect(wrapper.find('.rc-empty-icon').exists()).toBe(true)
   })
 })

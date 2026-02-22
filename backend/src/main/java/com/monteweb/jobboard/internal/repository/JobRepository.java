@@ -36,11 +36,12 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
             SELECT j FROM Job j WHERE j.status IN :statuses
             AND (:category IS NULL OR j.category = :category)
             AND (:eventId IS NULL OR j.eventId = :eventId)
+            AND (:roomId IS NULL OR j.roomId = :roomId)
             AND (CAST(:fromDate AS date) IS NULL OR j.scheduledDate >= :fromDate)
             AND (CAST(:toDate AS date) IS NULL OR j.scheduledDate <= :toDate)
             ORDER BY j.scheduledDate ASC, j.createdAt DESC
             """)
-    Page<Job> findWithFilters(List<JobStatus> statuses, String category, UUID eventId,
+    Page<Job> findWithFilters(List<JobStatus> statuses, String category, UUID eventId, UUID roomId,
                               LocalDate fromDate, LocalDate toDate, Pageable pageable);
 
     List<Job> findByEventId(UUID eventId);

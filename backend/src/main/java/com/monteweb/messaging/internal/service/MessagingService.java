@@ -323,6 +323,36 @@ public class MessagingService implements MessagingModuleApi {
         }
     }
 
+
+    @Transactional
+    public void muteConversation(UUID conversationId, UUID userId) {
+        requireParticipant(conversationId, userId);
+        var id = new ConversationParticipant.ConversationParticipantId();
+        id.setConversationId(conversationId);
+        id.setUserId(userId);
+        var participant = participantRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Not a participant"));
+        participant.setMuted(true);
+        participantRepository.save(participant);
+    }
+
+    @Transactional
+    public void unmuteConversation(UUID conversationId, UUID userId) {
+        requireParticipant(conversationId, userId);
+        var id = new ConversationParticipant.ConversationParticipantId();
+        id.setConversationId(conversationId);
+        id.setUserId(userId);
+        var participant = participantRepository.findById(id)
+                .orElseThrow(() -> new BusinessException("Not a participant"));
+        participant.setMuted(false);
+        participantRepository.save(participant);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isConversationMutedByUser(UUID conversationId, UUID userId) {
+        return participantRepository.findMutedConversationIdsByUserId(userId).contains(conversationId);
+    }
+
     // ---- Communication Rules ----
 
     private void enforceCommRules(UUID userId, UUID otherUserId) {
@@ -360,6 +390,20 @@ public class MessagingService implements MessagingModuleApi {
 
     private boolean isStaffRole(UserRole role) {
         return role == UserRole.SUPERADMIN || role == UserRole.SECTION_ADMIN || role == UserRole.TEACHER;
+    }
+
+    // ---- Public API: participant management ----
+
+    @Override
+    public void addParticipantToConversation(UUID conversationId, UUID userId) {
+        if (!participantRepository.existsByConversationIdAndUserId(conversationId, userId)) {
+            addParticipant(conversationId, userId);
+        }
+    }
+
+    @Override
+    public void removeParticipantFromConversation(UUID conversationId, UUID userId) {
+        participantRepository.deleteByConversationIdAndUserId(conversationId, userId);
     }
 
     // ---- Helpers ----
@@ -400,11 +444,13 @@ public class MessagingService implements MessagingModuleApi {
                 .filter(p -> p.getUserId().equals(currentUserId))
                 .findFirst();
         long unread = 0;
+        boolean muted = false;
         if (currentParticipant.isPresent()) {
             Instant since = currentParticipant.get().getLastReadAt() != null
                     ? currentParticipant.get().getLastReadAt()
                     : currentParticipant.get().getJoinedAt();
             unread = messageRepository.countUnreadMessages(c.getId(), currentUserId, since);
+            muted = currentParticipant.get().isMuted();
         }
 
         return new ConversationInfo(
@@ -415,6 +461,7 @@ public class MessagingService implements MessagingModuleApi {
                 lastMessage,
                 lastMessageAt,
                 unread,
+                muted,
                 c.getCreatedAt()
         );
     }

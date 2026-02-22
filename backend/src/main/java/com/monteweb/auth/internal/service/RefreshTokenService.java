@@ -12,7 +12,8 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 
-    private static final String KEY_PREFIX = "refresh_token:";
+    private static final String TOKEN_PREFIX = "refresh_token:";
+    private static final String USER_TOKENS_PREFIX = "user_refresh_tokens:";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final StringRedisTemplate redisTemplate;
@@ -29,17 +30,23 @@ public class RefreshTokenService {
         RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
 
+        // Store token → userId mapping
         redisTemplate.opsForValue().set(
-                KEY_PREFIX + token,
+                TOKEN_PREFIX + token,
                 userId.toString(),
                 refreshTokenExpiration
         );
+
+        // Track token in user's token set for revoke-all support
+        String userKey = USER_TOKENS_PREFIX + userId;
+        redisTemplate.opsForSet().add(userKey, token);
+        redisTemplate.expire(userKey, refreshTokenExpiration);
 
         return token;
     }
 
     public UUID validateAndRotate(String refreshToken) {
-        String key = KEY_PREFIX + refreshToken;
+        String key = TOKEN_PREFIX + refreshToken;
         String userId = redisTemplate.opsForValue().get(key);
 
         if (userId == null) {
@@ -48,16 +55,34 @@ public class RefreshTokenService {
 
         // Delete old token (rotation)
         redisTemplate.delete(key);
+        redisTemplate.opsForSet().remove(USER_TOKENS_PREFIX + userId, refreshToken);
 
         return UUID.fromString(userId);
     }
 
+    /**
+     * Revokes all refresh tokens for a user (e.g., on password change or security event).
+     */
     public void revokeAllForUser(UUID userId) {
-        // In a production system, we'd track all tokens per user.
-        // For now, individual revocation on logout is sufficient.
+        String userKey = USER_TOKENS_PREFIX + userId;
+        var tokens = redisTemplate.opsForSet().members(userKey);
+        if (tokens != null && !tokens.isEmpty()) {
+            var tokenKeys = tokens.stream()
+                    .map(t -> TOKEN_PREFIX + t)
+                    .toList();
+            redisTemplate.delete(tokenKeys);
+        }
+        redisTemplate.delete(userKey);
     }
 
     public void revoke(String refreshToken) {
-        redisTemplate.delete(KEY_PREFIX + refreshToken);
+        String key = TOKEN_PREFIX + refreshToken;
+        String userId = redisTemplate.opsForValue().get(key);
+        redisTemplate.delete(key);
+
+        // Also remove from user's token set
+        if (userId != null) {
+            redisTemplate.opsForSet().remove(USER_TOKENS_PREFIX + userId, refreshToken);
+        }
     }
 }

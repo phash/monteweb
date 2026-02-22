@@ -57,6 +57,9 @@ public class CleaningConfig {
     @Column(name = "job_id")
     private UUID jobId;
 
+    @Column(name = "room_id")
+    private UUID roomId;
+
     @Column(nullable = false)
     private boolean active = true;
 

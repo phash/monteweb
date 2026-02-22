@@ -148,22 +148,18 @@ class RoleConceptIntegrationTest {
                 "rc-updatejp@example.com", "Update", "JP");
         String roomId = createInterestRoomAndGetId(token, "Changeable Policy Room");
 
-        // Change from OPEN to REQUEST
-        mockMvc.perform(put("/api/v1/rooms/" + roomId + "/interest")
+        // Change from OPEN to REQUEST and verify from the PUT response
+        var putResult = mockMvc.perform(put("/api/v1/rooms/" + roomId + "/interest")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"joinPolicy": "REQUEST", "tags": ["updated"]}
                                 """))
-                .andExpect(status().isOk());
-
-        // Verify the room now has REQUEST policy
-        var getResult = mockMvc.perform(get("/api/v1/rooms/" + roomId)
-                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        JsonNode roomData = TestHelper.parseResponse(getResult.getResponse().getContentAsString())
+        // The PUT response returns RoomInfo which includes joinPolicy
+        JsonNode roomData = TestHelper.parseResponse(putResult.getResponse().getContentAsString())
                 .path("data");
         org.junit.jupiter.api.Assertions.assertEquals("REQUEST", roomData.path("joinPolicy").asText());
     }

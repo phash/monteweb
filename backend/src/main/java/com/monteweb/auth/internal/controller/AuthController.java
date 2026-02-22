@@ -22,8 +22,12 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
+    public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest request) {
+        var loginResponse = authService.register(request);
+        if (loginResponse != null) {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.ok(loginResponse));
+        }
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(null, "PENDING_APPROVAL"));
     }

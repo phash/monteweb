@@ -98,10 +98,10 @@ export const useCleaningStore = defineStore('cleaning', () => {
 
   // ── Admin ───────────────────────────────────────────────────────────
 
-  async function loadConfigs(sectionId?: string) {
+  async function loadConfigs(sectionId?: string, roomId?: string) {
     loading.value = true
     try {
-      const res = await cleaningApi.getConfigs(sectionId)
+      const res = await cleaningApi.getConfigs(sectionId, roomId)
       configs.value = res.data.data
     } finally {
       loading.value = false
