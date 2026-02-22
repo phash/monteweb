@@ -158,6 +158,16 @@ public class FormsService implements FormsModuleApi {
             return;
         }
 
+        // Creator can delete their own forms regardless of status
+        if (form.getCreatedBy().equals(userId)) {
+            answerRepository.deleteByResponseFormId(formId);
+            responseRepository.deleteByFormId(formId);
+            trackingRepository.deleteByFormId(formId);
+            questionRepository.deleteByFormId(formId);
+            formRepository.delete(form);
+            return;
+        }
+
         if (form.getStatus() != FormStatus.DRAFT) {
             throw new IllegalStateException("Only draft forms can be deleted");
         }
@@ -292,6 +302,93 @@ public class FormsService implements FormsModuleApi {
             tracking.setUserId(userId);
             trackingRepository.save(tracking);
         }
+    }
+
+    public void updateResponse(UUID formId, SubmitResponseRequest request, UUID userId) {
+        var form = formRepository.findById(formId)
+                .orElseThrow(() -> new IllegalArgumentException("Form not found"));
+
+        if (form.getStatus() != FormStatus.PUBLISHED) {
+            throw new IllegalStateException("Form is not accepting responses");
+        }
+
+        if (form.getDeadline() != null && java.time.LocalDate.now().isAfter(form.getDeadline())) {
+            throw new IllegalStateException("Form deadline has passed");
+        }
+
+        if (form.isAnonymous()) {
+            throw new IllegalStateException("Anonymous responses cannot be edited");
+        }
+
+        var existingResponse = responseRepository.findByFormIdAndUserId(formId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("No existing response found"));
+
+        var questions = questionRepository.findByFormIdOrderBySortOrder(formId);
+        var questionMap = questions.stream().collect(Collectors.toMap(FormQuestion::getId, q -> q));
+
+        // Delete old answers
+        answerRepository.deleteByResponseId(existingResponse.getId());
+
+        // Save new answers
+        for (var answerReq : request.answers()) {
+            var question = questionMap.get(answerReq.questionId());
+            if (question == null) continue;
+
+            var answer = new FormAnswer();
+            answer.setResponseId(existingResponse.getId());
+            answer.setQuestionId(answerReq.questionId());
+
+            switch (question.getType()) {
+                case TEXT -> answer.setAnswerText(answerReq.text());
+                case SINGLE_CHOICE -> answer.setAnswerOptions(
+                        answerReq.selectedOptions() != null ? answerReq.selectedOptions() : List.of());
+                case MULTIPLE_CHOICE -> answer.setAnswerOptions(
+                        answerReq.selectedOptions() != null ? answerReq.selectedOptions() : List.of());
+                case RATING -> answer.setAnswerRating(answerReq.rating());
+                case YES_NO -> answer.setAnswerText(answerReq.text());
+            }
+
+            answerRepository.save(answer);
+        }
+
+        // Update submitted timestamp
+        existingResponse.setSubmittedAt(Instant.now());
+        responseRepository.save(existingResponse);
+    }
+
+    public MyResponseInfo getMyResponse(UUID formId, UUID userId) {
+        var form = formRepository.findById(formId)
+                .orElseThrow(() -> new IllegalArgumentException("Form not found"));
+
+        if (form.isAnonymous()) {
+            return null;
+        }
+
+        var response = responseRepository.findByFormIdAndUserId(formId, userId).orElse(null);
+        if (response == null) return null;
+
+        var answers = answerRepository.findByResponseId(response.getId());
+        var answerInfos = answers.stream()
+                .map(a -> new MyAnswerInfo(a.getQuestionId(), a.getAnswerText(), a.getAnswerOptions(), a.getAnswerRating()))
+                .toList();
+
+        return new MyResponseInfo(response.getId(), answerInfos);
+    }
+
+    public FormInfo archiveForm(UUID formId, UUID userId) {
+        var form = formRepository.findById(formId)
+                .orElseThrow(() -> new IllegalArgumentException("Form not found"));
+
+        if (form.getStatus() != FormStatus.CLOSED) {
+            throw new IllegalStateException("Only closed forms can be archived");
+        }
+
+        checkManagePermission(form, userId);
+
+        form.setStatus(FormStatus.ARCHIVED);
+        form = formRepository.save(form);
+
+        return toFormInfo(form, userId);
     }
 
     public FormResultsSummary getResults(UUID formId, UUID userId) {
@@ -611,6 +708,14 @@ public class FormsService implements FormsModuleApi {
 
         if (user.role() == UserRole.SUPERADMIN) return;
         if (form.getCreatedBy().equals(userId)) return;
+
+        // Allow respondents to see results of closed/archived forms
+        if (form.getStatus() == FormStatus.CLOSED || form.getStatus() == FormStatus.ARCHIVED) {
+            boolean hasResponded = form.isAnonymous()
+                ? trackingRepository.existsByFormIdAndUserId(form.getId(), userId)
+                : responseRepository.existsByFormIdAndUserId(form.getId(), userId);
+            if (hasResponded) return;
+        }
 
         throw new IllegalArgumentException("Only the form creator or an admin can view results");
     }

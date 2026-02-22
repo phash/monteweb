@@ -96,6 +96,29 @@ public class FormsController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PutMapping("/{id}/respond")
+    public ResponseEntity<ApiResponse<Void>> updateResponse(
+            @PathVariable UUID id,
+            @Valid @RequestBody SubmitResponseRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        formsService.updateResponse(id, request, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @GetMapping("/{id}/my-response")
+    public ResponseEntity<ApiResponse<MyResponseInfo>> getMyResponse(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var response = formsService.getMyResponse(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/{id}/archive")
+    public ResponseEntity<ApiResponse<FormInfo>> archiveForm(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var form = formsService.archiveForm(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(form));
+    }
+
     @GetMapping("/{id}/results")
     public ResponseEntity<ApiResponse<FormResultsSummary>> getResults(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();

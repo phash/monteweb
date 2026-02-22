@@ -3,6 +3,7 @@ package com.monteweb.jobboard;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public record JobInfo(
@@ -12,6 +13,8 @@ public record JobInfo(
         String category,
         String location,
         UUID sectionId,
+        UUID roomId,
+        String roomName,
         BigDecimal estimatedHours,
         int maxAssignees,
         int currentAssignees,
@@ -23,6 +26,7 @@ public record JobInfo(
         String contactInfo,
         UUID eventId,
         String eventTitle,
+        List<JobAttachmentInfo> attachments,
         Instant createdAt
 ) {
 }

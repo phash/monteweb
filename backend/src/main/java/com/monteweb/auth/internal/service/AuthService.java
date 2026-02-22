@@ -2,6 +2,7 @@ package com.monteweb.auth.internal.service;
 
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.auth.AuthModuleApi;
+import com.monteweb.auth.TokenClaims;
 import com.monteweb.auth.TokenResponse;
 import com.monteweb.auth.internal.dto.*;
 import com.monteweb.shared.exception.BusinessException;
@@ -32,7 +33,7 @@ public class AuthService implements AuthModuleApi {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void register(RegisterRequest request) {
+    public LoginResponse register(RegisterRequest request) {
         if (userModuleApi.existsByEmail(request.email())) {
             throw new BusinessException("Email already registered");
         }
@@ -51,7 +52,10 @@ public class AuthService implements AuthModuleApi {
         boolean requireApproval = adminModuleApi.getTenantConfig().requireUserApproval();
         if (requireApproval) {
             userModuleApi.setActive(user.id(), false);
+            return null;
         }
+
+        return generateTokenResponse(user);
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -96,6 +100,28 @@ public class AuthService implements AuthModuleApi {
         String accessToken = jwtService.generateAccessToken(user.id(), user.email(), user.role().name());
         String refreshToken = refreshTokenService.createRefreshToken(user.id());
         return new TokenResponse(accessToken, refreshToken, user.id(), user.email(), user.role().name());
+    }
+
+    @Override
+    public java.util.Optional<TokenClaims> validateAndExtractClaims(String token) {
+        if (token == null || !jwtService.validateToken(token)) {
+            return java.util.Optional.empty();
+        }
+        var claims = jwtService.extractClaims(token);
+        return java.util.Optional.of(new TokenClaims(
+                claims.getSubject(),
+                claims.get("role", String.class)
+        ));
+    }
+
+    @Override
+    public String generateImageToken(java.util.UUID userId) {
+        return jwtService.generateImageToken(userId);
+    }
+
+    @Override
+    public java.util.Optional<String> validateImageToken(String token) {
+        return jwtService.validateImageToken(token);
     }
 
     private LoginResponse generateTokenResponse(UserInfo user) {
