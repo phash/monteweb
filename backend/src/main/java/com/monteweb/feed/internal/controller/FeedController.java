@@ -104,4 +104,16 @@ public class FeedController {
         var page = feedService.getPostsBySource(SourceType.ROOM, roomId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
+
+    @PostMapping("/rooms/{roomId}/posts")
+    public ResponseEntity<ApiResponse<FeedPostInfo>> createRoomPost(
+            @PathVariable UUID roomId,
+            @Valid @RequestBody CreateRoomPostRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var post = feedService.createPost(
+                userId, request.title(), request.content(),
+                SourceType.ROOM, roomId, false
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(post));
+    }
 }
