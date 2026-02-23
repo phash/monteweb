@@ -13,6 +13,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import NewMessageDialog from '@/components/messaging/NewMessageDialog.vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
+import ReactionBar from '@/components/common/ReactionBar.vue'
 import Textarea from 'primevue/textarea'
 
 const { t } = useI18n()
@@ -115,6 +116,13 @@ function triggerImageSelect() {
 
 function setReplyTo(msg: MessageInfo) {
   messaging.setReplyTo(msg)
+}
+
+async function handleMsgReaction(msg: MessageInfo, emoji: string) {
+  try {
+    const res = await messagingApi.toggleMessageReaction(msg.id, emoji)
+    msg.reactions = res.data.data
+  } catch { /* ignore */ }
 }
 
 function clearReply() {
@@ -269,6 +277,12 @@ function formatTime(date: string | null) {
                 </div>
 
                 <p v-if="msg.content">{{ msg.content }}</p>
+
+                <ReactionBar
+                  :reactions="msg.reactions || []"
+                  compact
+                  @react="(emoji: string) => handleMsgReaction(msg, emoji)"
+                />
 
                 <div class="message-footer">
                   <span class="message-time">{{ formatTime(msg.createdAt) }}</span>

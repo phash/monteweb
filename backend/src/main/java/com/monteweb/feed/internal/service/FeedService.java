@@ -3,8 +3,10 @@ package com.monteweb.feed.internal.service;
 import com.monteweb.feed.*;
 import com.monteweb.feed.internal.model.FeedPost;
 import com.monteweb.feed.internal.model.FeedPostComment;
+import com.monteweb.feed.internal.model.FeedReaction;
 import com.monteweb.feed.internal.repository.FeedPostCommentRepository;
 import com.monteweb.feed.internal.repository.FeedPostRepository;
+import com.monteweb.feed.internal.repository.FeedReactionRepository;
 import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.BusinessException;
@@ -26,19 +28,24 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class FeedService implements FeedModuleApi {
 
+    private static final Set<String> ALLOWED_EMOJIS = Set.of("👍", "👎", "❤️", "😂", "😢");
+
     private final FeedPostRepository postRepository;
     private final FeedPostCommentRepository commentRepository;
+    private final FeedReactionRepository reactionRepository;
     private final UserModuleApi userModuleApi;
     private final RoomModuleApi roomModuleApi;
     private final ApplicationEventPublisher eventPublisher;
 
     public FeedService(FeedPostRepository postRepository,
                        FeedPostCommentRepository commentRepository,
+                       FeedReactionRepository reactionRepository,
                        UserModuleApi userModuleApi,
                        RoomModuleApi roomModuleApi,
                        ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
+        this.reactionRepository = reactionRepository;
         this.userModuleApi = userModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.eventPublisher = eventPublisher;
@@ -213,6 +220,79 @@ public class FeedService implements FeedModuleApi {
                 .toList();
     }
 
+    // --- Reactions ---
+
+    @Transactional
+    public void togglePostReaction(UUID postId, UUID userId, String emoji) {
+        validateEmoji(emoji);
+        postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        var existing = reactionRepository.findByPostIdAndUserIdAndEmoji(postId, userId, emoji);
+        if (existing.isPresent()) {
+            reactionRepository.delete(existing.get());
+        } else {
+            var reaction = new FeedReaction();
+            reaction.setPostId(postId);
+            reaction.setUserId(userId);
+            reaction.setEmoji(emoji);
+            reactionRepository.save(reaction);
+        }
+    }
+
+    @Transactional
+    public void toggleCommentReaction(UUID commentId, UUID userId, String emoji) {
+        validateEmoji(emoji);
+        commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPostComment", commentId));
+        var existing = reactionRepository.findByCommentIdAndUserIdAndEmoji(commentId, userId, emoji);
+        if (existing.isPresent()) {
+            reactionRepository.delete(existing.get());
+        } else {
+            var reaction = new FeedReaction();
+            reaction.setCommentId(commentId);
+            reaction.setUserId(userId);
+            reaction.setEmoji(emoji);
+            reactionRepository.save(reaction);
+        }
+    }
+
+    public List<FeedPostInfo.ReactionSummary> getPostReactions(UUID postId, UUID currentUserId) {
+        return buildReactionSummaries(reactionRepository.findByPostId(postId), currentUserId);
+    }
+
+    public List<com.monteweb.feed.internal.dto.CommentResponse.ReactionSummary> getCommentReactions(UUID commentId, UUID currentUserId) {
+        var reactions = reactionRepository.findByCommentId(commentId);
+        return reactions.stream()
+                .collect(Collectors.groupingBy(FeedReaction::getEmoji))
+                .entrySet().stream()
+                .map(e -> new com.monteweb.feed.internal.dto.CommentResponse.ReactionSummary(
+                        e.getKey(),
+                        e.getValue().size(),
+                        e.getValue().stream().anyMatch(r -> r.getUserId().equals(currentUserId))
+                ))
+                .sorted(Comparator.comparingLong(com.monteweb.feed.internal.dto.CommentResponse.ReactionSummary::count).reversed())
+                .toList();
+    }
+
+    private List<FeedPostInfo.ReactionSummary> buildReactionSummaries(List<FeedReaction> reactions, UUID currentUserId) {
+        return reactions.stream()
+                .collect(Collectors.groupingBy(FeedReaction::getEmoji))
+                .entrySet().stream()
+                .map(e -> new FeedPostInfo.ReactionSummary(
+                        e.getKey(),
+                        e.getValue().size(),
+                        currentUserId != null && e.getValue().stream().anyMatch(r -> r.getUserId().equals(currentUserId))
+                ))
+                .sorted(Comparator.comparingLong(FeedPostInfo.ReactionSummary::count).reversed())
+                .toList();
+    }
+
+    private void validateEmoji(String emoji) {
+        if (!ALLOWED_EMOJIS.contains(emoji)) {
+            throw new BusinessException("Invalid emoji. Allowed: " + ALLOWED_EMOJIS);
+        }
+    }
+
     private FeedPostInfo toPostInfo(FeedPost post) {
         String authorName = userModuleApi.findById(post.getAuthorId())
                 .map(UserInfo::displayName)
@@ -240,6 +320,7 @@ public class FeedService implements FeedModuleApi {
                 post.isParentOnly(),
                 post.getComments().size(),
                 attachments,
+                List.of(),
                 post.getPublishedAt(),
                 post.getCreatedAt()
         );
@@ -250,7 +331,7 @@ public class FeedService implements FeedModuleApi {
                 .map(UserInfo::displayName)
                 .orElse("Unknown");
         return new com.monteweb.feed.internal.dto.CommentResponse(
-                c.getId(), c.getPost().getId(), c.getAuthorId(), authorName, c.getContent(), c.getCreatedAt()
+                c.getId(), c.getPost().getId(), c.getAuthorId(), authorName, c.getContent(), List.of(), c.getCreatedAt()
         );
     }
 

@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { ConversationInfo, MessageInfo, StartConversationRequest } from '@/types/messaging'
+import type { ConversationInfo, MessageInfo, MessageReactionSummary, StartConversationRequest } from '@/types/messaging'
 import { authenticatedImageUrl } from '@/composables/useImageToken'
 
 export const messagingApi = {
@@ -60,5 +60,9 @@ export const messagingApi = {
 
   thumbnailUrl(imageId: string) {
     return authenticatedImageUrl(`/api/v1/messages/images/${imageId}/thumbnail`)
+  },
+
+  toggleMessageReaction(messageId: string, emoji: string) {
+    return client.post<ApiResponse<MessageReactionSummary[]>>(`/messages/messages/${messageId}/reactions`, { emoji })
   },
 }

@@ -31,6 +31,12 @@ export interface ReplyInfo {
   hasImage: boolean
 }
 
+export interface MessageReactionSummary {
+  emoji: string
+  count: number
+  userReacted: boolean
+}
+
 export interface MessageInfo {
   id: string
   conversationId: string
@@ -40,6 +46,7 @@ export interface MessageInfo {
   createdAt: string
   images: MessageImageInfo[]
   replyTo: ReplyInfo | null
+  reactions: MessageReactionSummary[]
 }
 
 export interface StartConversationRequest {

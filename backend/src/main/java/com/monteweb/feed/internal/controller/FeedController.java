@@ -8,6 +8,7 @@ import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
@@ -32,7 +33,7 @@ public class FeedController {
             @PageableDefault(size = 20) Pageable pageable) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var page = feedService.getPersonalFeed(userId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(enrichPage(page, userId))));
     }
 
     @GetMapping("/banners")
@@ -52,9 +53,10 @@ public class FeedController {
 
     @GetMapping("/posts/{id}")
     public ResponseEntity<ApiResponse<FeedPostInfo>> getPost(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
         var post = feedService.findPostById(id)
                 .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("FeedPost", id));
-        return ResponseEntity.ok(ApiResponse.ok(post));
+        return ResponseEntity.ok(ApiResponse.ok(enrichPost(post, userId)));
     }
 
     @PutMapping("/posts/{id}")
@@ -84,8 +86,10 @@ public class FeedController {
     public ResponseEntity<ApiResponse<PageResponse<CommentResponse>>> getComments(
             @PathVariable UUID id,
             @PageableDefault(size = 20) Pageable pageable) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
         var page = feedService.getComments(id, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+        var enriched = page.map(c -> enrichComment(c, userId));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(enriched)));
     }
 
     @PostMapping("/posts/{id}/comments")
@@ -97,12 +101,37 @@ public class FeedController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(comment));
     }
 
+    // --- Reactions ---
+
+    @PostMapping("/posts/{id}/reactions")
+    public ResponseEntity<ApiResponse<List<FeedPostInfo.ReactionSummary>>> togglePostReaction(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReactionRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        feedService.togglePostReaction(id, userId, request.emoji());
+        var reactions = feedService.getPostReactions(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(reactions));
+    }
+
+    @PostMapping("/comments/{id}/reactions")
+    public ResponseEntity<ApiResponse<List<CommentResponse.ReactionSummary>>> toggleCommentReaction(
+            @PathVariable UUID id,
+            @Valid @RequestBody ReactionRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        feedService.toggleCommentReaction(id, userId, request.emoji());
+        var reactions = feedService.getCommentReactions(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(reactions));
+    }
+
+    // --- Room posts ---
+
     @GetMapping("/rooms/{roomId}/posts")
     public ResponseEntity<ApiResponse<PageResponse<FeedPostInfo>>> getRoomPosts(
             @PathVariable UUID roomId,
             @PageableDefault(size = 20) Pageable pageable) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
         var page = feedService.getPostsBySource(SourceType.ROOM, roomId, pageable);
-        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(enrichPage(page, userId))));
     }
 
     @PostMapping("/rooms/{roomId}/posts")
@@ -115,5 +144,29 @@ public class FeedController {
                 SourceType.ROOM, roomId, false
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(post));
+    }
+
+    // --- Helper: enrich posts/comments with reactions for current user ---
+
+    private Page<FeedPostInfo> enrichPage(Page<FeedPostInfo> page, UUID userId) {
+        return page.map(post -> enrichPost(post, userId));
+    }
+
+    private FeedPostInfo enrichPost(FeedPostInfo post, UUID userId) {
+        var reactions = feedService.getPostReactions(post.id(), userId);
+        return new FeedPostInfo(
+                post.id(), post.authorId(), post.authorName(), post.title(), post.content(),
+                post.sourceType(), post.sourceId(), post.sourceName(), post.pinned(),
+                post.parentOnly(), post.commentCount(), post.attachments(),
+                reactions, post.publishedAt(), post.createdAt()
+        );
+    }
+
+    private CommentResponse enrichComment(CommentResponse comment, UUID userId) {
+        var reactions = feedService.getCommentReactions(comment.id(), userId);
+        return new CommentResponse(
+                comment.id(), comment.postId(), comment.authorId(), comment.authorName(),
+                comment.content(), reactions, comment.createdAt()
+        );
     }
 }

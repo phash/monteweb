@@ -9,6 +9,8 @@ import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import RichContent from '@/components/common/RichContent.vue'
+import ReactionBar from '@/components/common/ReactionBar.vue'
+import { feedApi } from '@/api/feed.api'
 
 const props = defineProps<{ post: FeedPost }>()
 const { t } = useI18n()
@@ -46,6 +48,21 @@ function handleDelete() {
   showDeleteConfirm.value = false
   feed.deletePost(props.post.id)
 }
+
+async function handlePostReaction(emoji: string) {
+  try {
+    const res = await feedApi.togglePostReaction(props.post.id, emoji)
+    props.post.reactions = res.data.data
+  } catch { /* ignore */ }
+}
+
+async function handleCommentReaction(commentId: string, emoji: string) {
+  try {
+    const res = await feedApi.toggleCommentReaction(commentId, emoji)
+    const comment = postComments.value.find(c => c.id === commentId)
+    if (comment) comment.reactions = res.data.data
+  } catch { /* ignore */ }
+}
 </script>
 
 <template>
@@ -64,6 +81,11 @@ function handleDelete() {
 
     <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
     <p class="post-content"><RichContent :content="post.content" /></p>
+
+    <ReactionBar
+      :reactions="post.reactions || []"
+      @react="handlePostReaction"
+    />
 
     <div class="post-footer">
       <Button
@@ -100,6 +122,11 @@ function handleDelete() {
           <span class="comment-date">{{ formatDate(comment.createdAt) }}</span>
         </div>
         <p>{{ comment.content }}</p>
+        <ReactionBar
+          :reactions="comment.reactions || []"
+          compact
+          @react="(emoji: string) => handleCommentReaction(comment.id, emoji)"
+        />
       </div>
 
       <div class="comment-input">

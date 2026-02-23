@@ -1,5 +1,11 @@
 export type SourceType = 'ROOM' | 'SECTION' | 'SCHOOL' | 'BOARD' | 'SYSTEM'
 
+export interface ReactionSummary {
+  emoji: string
+  count: number
+  userReacted: boolean
+}
+
 export interface FeedPost {
   id: string
   authorId: string
@@ -11,6 +17,7 @@ export interface FeedPost {
   content: string
   pinned: boolean
   attachments: FeedAttachment[]
+  reactions: ReactionSummary[]
   commentCount: number
   createdAt: string
   updatedAt: string | null
@@ -29,6 +36,7 @@ export interface FeedComment {
   authorId: string
   authorName: string
   content: string
+  reactions: ReactionSummary[]
   createdAt: string
 }
 

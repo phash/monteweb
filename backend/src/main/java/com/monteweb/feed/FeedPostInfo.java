@@ -20,6 +20,7 @@ public record FeedPostInfo(
         boolean parentOnly,
         int commentCount,
         List<AttachmentInfo> attachments,
+        List<ReactionSummary> reactions,
         Instant publishedAt,
         Instant createdAt
 ) {
@@ -29,6 +30,13 @@ public record FeedPostInfo(
             String fileUrl,
             String fileType,
             long fileSize
+    ) {
+    }
+
+    public record ReactionSummary(
+            String emoji,
+            long count,
+            boolean userReacted
     ) {
     }
 }

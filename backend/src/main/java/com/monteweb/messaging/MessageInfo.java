@@ -12,7 +12,8 @@ public record MessageInfo(
         String content,
         Instant createdAt,
         List<MessageImageInfo> images,
-        ReplyInfo replyTo
+        ReplyInfo replyTo,
+        List<ReactionSummary> reactions
 ) {
     public record MessageImageInfo(
             UUID imageId,
@@ -28,6 +29,13 @@ public record MessageInfo(
             String senderName,
             String contentPreview,
             boolean hasImage
+    ) {
+    }
+
+    public record ReactionSummary(
+            String emoji,
+            long count,
+            boolean userReacted
     ) {
     }
 }

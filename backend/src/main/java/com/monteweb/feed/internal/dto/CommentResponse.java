@@ -9,6 +9,13 @@ public record CommentResponse(
         UUID authorId,
         String authorName,
         String content,
+        java.util.List<ReactionSummary> reactions,
         Instant createdAt
 ) {
+    public record ReactionSummary(
+            String emoji,
+            long count,
+            boolean userReacted
+    ) {
+    }
 }

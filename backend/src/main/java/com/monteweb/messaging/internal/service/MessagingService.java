@@ -9,9 +9,11 @@ import com.monteweb.messaging.internal.model.Conversation;
 import com.monteweb.messaging.internal.model.ConversationParticipant;
 import com.monteweb.messaging.internal.model.Message;
 import com.monteweb.messaging.internal.model.MessageImage;
+import com.monteweb.messaging.internal.model.MessageReaction;
 import com.monteweb.messaging.internal.repository.ConversationParticipantRepository;
 import com.monteweb.messaging.internal.repository.ConversationRepository;
 import com.monteweb.messaging.internal.repository.MessageImageRepository;
+import com.monteweb.messaging.internal.repository.MessageReactionRepository;
 import com.monteweb.messaging.internal.repository.MessageRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
@@ -28,20 +30,21 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 @ConditionalOnProperty(prefix = "monteweb.modules.messaging", name = "enabled", havingValue = "true")
 public class MessagingService implements MessagingModuleApi {
 
+    private static final Set<String> ALLOWED_EMOJIS = Set.of("👍", "👎", "❤️", "😂", "😢");
+
     private final ConversationRepository conversationRepository;
     private final ConversationParticipantRepository participantRepository;
     private final MessageRepository messageRepository;
     private final MessageImageRepository messageImageRepository;
+    private final MessageReactionRepository messageReactionRepository;
     private final UserModuleApi userModuleApi;
     private final AdminModuleApi adminModuleApi;
     private final SimpMessagingTemplate messagingTemplate;
@@ -52,11 +55,13 @@ public class MessagingService implements MessagingModuleApi {
                             ConversationParticipantRepository participantRepository,
                             MessageRepository messageRepository,
                             MessageImageRepository messageImageRepository,
+                            MessageReactionRepository messageReactionRepository,
                             UserModuleApi userModuleApi,
                             AdminModuleApi adminModuleApi,
                             SimpMessagingTemplate messagingTemplate,
                             ApplicationEventPublisher eventPublisher,
                             MessageStorageService storageService) {
+        this.messageReactionRepository = messageReactionRepository;
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
@@ -503,8 +508,43 @@ public class MessagingService implements MessagingModuleApi {
                 m.getContent(),
                 m.getCreatedAt(),
                 imageInfos,
-                replyInfo
+                replyInfo,
+                List.of()
         );
+    }
+
+    // --- Message Reactions ---
+
+    public void toggleMessageReaction(UUID messageId, UUID userId, String emoji) {
+        if (!ALLOWED_EMOJIS.contains(emoji)) {
+            throw new BusinessException("Invalid emoji. Allowed: " + ALLOWED_EMOJIS);
+        }
+        messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+        var existing = messageReactionRepository.findByMessageIdAndUserIdAndEmoji(messageId, userId, emoji);
+        if (existing.isPresent()) {
+            messageReactionRepository.delete(existing.get());
+        } else {
+            var reaction = new MessageReaction();
+            reaction.setMessageId(messageId);
+            reaction.setUserId(userId);
+            reaction.setEmoji(emoji);
+            messageReactionRepository.save(reaction);
+        }
+    }
+
+    public List<MessageInfo.ReactionSummary> getMessageReactions(UUID messageId, UUID currentUserId) {
+        var reactions = messageReactionRepository.findByMessageId(messageId);
+        return reactions.stream()
+                .collect(Collectors.groupingBy(MessageReaction::getEmoji))
+                .entrySet().stream()
+                .map(e -> new MessageInfo.ReactionSummary(
+                        e.getKey(),
+                        e.getValue().size(),
+                        e.getValue().stream().anyMatch(r -> r.getUserId().equals(currentUserId))
+                ))
+                .sorted(Comparator.comparingLong(MessageInfo.ReactionSummary::count).reversed())
+                .toList();
     }
 
     /**

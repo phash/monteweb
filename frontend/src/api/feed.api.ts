@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest, CreateCommentRequest } from '@/types/feed'
+import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest, CreateCommentRequest, ReactionSummary } from '@/types/feed'
 
 export const feedApi = {
   getFeed(page = 0, size = 20) {
@@ -45,5 +45,13 @@ export const feedApi = {
 
   createRoomPost(roomId: string, data: { title?: string; content: string }) {
     return client.post<ApiResponse<FeedPost>>(`/feed/rooms/${roomId}/posts`, data)
+  },
+
+  togglePostReaction(postId: string, emoji: string) {
+    return client.post<ApiResponse<ReactionSummary[]>>(`/feed/posts/${postId}/reactions`, { emoji })
+  },
+
+  toggleCommentReaction(commentId: string, emoji: string) {
+    return client.post<ApiResponse<ReactionSummary[]>>(`/feed/comments/${commentId}/reactions`, { emoji })
   },
 }

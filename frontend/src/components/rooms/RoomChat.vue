@@ -12,6 +12,7 @@ import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import SelectButton from 'primevue/selectbutton'
 import Dialog from 'primevue/dialog'
+import ReactionBar from '@/components/common/ReactionBar.vue'
 
 const props = defineProps<{ roomId: string }>()
 
@@ -195,6 +196,13 @@ function setReplyTo(msg: MessageInfo) {
   messagingStore.setReplyTo(msg)
 }
 
+async function handleMessageReaction(msg: MessageInfo, emoji: string) {
+  try {
+    const res = await messagingApi.toggleMessageReaction(msg.id, emoji)
+    msg.reactions = res.data.data
+  } catch { /* ignore */ }
+}
+
 function clearReply() {
   messagingStore.setReplyTo(null)
 }
@@ -296,6 +304,13 @@ function getMessagePreview(msg: MessageInfo) {
             </div>
 
             <p v-if="item.msg.content" class="rc-content">{{ item.msg.content }}</p>
+
+            <ReactionBar
+              v-if="item.msg.reactions?.length || true"
+              :reactions="item.msg.reactions || []"
+              compact
+              @react="(emoji: string) => handleMessageReaction(item.msg, emoji)"
+            />
 
             <div class="rc-meta">
               <span class="rc-time">{{ formatTime(item.msg.createdAt) }}</span>

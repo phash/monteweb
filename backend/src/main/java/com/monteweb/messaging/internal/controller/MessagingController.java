@@ -151,6 +151,17 @@ public class MessagingController {
         }
     }
 
+    @PostMapping("/messages/{messageId}/reactions")
+    public ResponseEntity<ApiResponse<java.util.List<MessageInfo.ReactionSummary>>> toggleMessageReaction(
+            @PathVariable UUID messageId,
+            @RequestBody Map<String, String> request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        String emoji = request.get("emoji");
+        messagingService.toggleMessageReaction(messageId, userId, emoji);
+        var reactions = messagingService.getMessageReactions(messageId, userId);
+        return ResponseEntity.ok(ApiResponse.ok(reactions));
+    }
+
     public record StartConversationRequest(
             String title,
             boolean isGroup,
