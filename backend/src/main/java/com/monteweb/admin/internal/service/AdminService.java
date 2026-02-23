@@ -11,6 +11,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Map;
 
@@ -45,7 +47,8 @@ public class AdminService implements AdminModuleApi {
                                           String termsText, String termsVersion,
                                           Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit,
                                           String schoolFullName, String schoolAddress, String schoolPrincipal,
-                                          String techContactName, String techContactEmail) {
+                                          String techContactName, String techContactEmail,
+                                          String twoFactorMode) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -69,6 +72,16 @@ public class AdminService implements AdminModuleApi {
         if (schoolPrincipal != null) config.setSchoolPrincipal(schoolPrincipal);
         if (techContactName != null) config.setTechContactName(techContactName);
         if (techContactEmail != null) config.setTechContactEmail(techContactEmail);
+        if (twoFactorMode != null) {
+            String oldMode = config.getTwoFactorMode();
+            config.setTwoFactorMode(twoFactorMode);
+            if ("MANDATORY".equals(twoFactorMode) && !"MANDATORY".equals(oldMode)) {
+                // Set 7-day grace period when switching to MANDATORY
+                config.setTwoFactorGraceDeadline(Instant.now().plus(7, ChronoUnit.DAYS));
+            } else if (!"MANDATORY".equals(twoFactorMode)) {
+                config.setTwoFactorGraceDeadline(null);
+            }
+        }
         return toInfo(configRepository.save(config));
     }
 
@@ -151,7 +164,9 @@ public class AdminService implements AdminModuleApi {
                 config.getSchoolAddress(),
                 config.getSchoolPrincipal(),
                 config.getTechContactName(),
-                config.getTechContactEmail()
+                config.getTechContactEmail(),
+                config.getTwoFactorMode(),
+                config.getTwoFactorGraceDeadline()
         );
     }
 }

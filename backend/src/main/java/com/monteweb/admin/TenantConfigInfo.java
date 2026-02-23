@@ -37,6 +37,8 @@ public record TenantConfigInfo(
         String schoolAddress,
         String schoolPrincipal,
         String techContactName,
-        String techContactEmail
+        String techContactEmail,
+        String twoFactorMode,
+        java.time.Instant twoFactorGraceDeadline
 ) {
 }

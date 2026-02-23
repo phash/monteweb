@@ -64,4 +64,6 @@ export interface TenantConfig {
   schoolPrincipal?: string | null
   techContactName?: string | null
   techContactEmail?: string | null
+  twoFactorMode?: string
+  twoFactorGraceDeadline?: string | null
 }

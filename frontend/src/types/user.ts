@@ -33,6 +33,9 @@ export interface LoginResponse {
   userId: string
   email: string
   role: string
+  requires2fa?: boolean
+  tempToken?: string
+  requires2faSetup?: boolean
 }
 
 export interface DeletionStatus {

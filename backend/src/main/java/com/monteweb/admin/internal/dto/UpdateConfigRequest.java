@@ -26,6 +26,7 @@ public record UpdateConfigRequest(
         String schoolAddress,
         String schoolPrincipal,
         String techContactName,
-        String techContactEmail
+        String techContactEmail,
+        String twoFactorMode
 ) {
 }

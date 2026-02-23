@@ -90,6 +90,16 @@ public class User {
     @Column(name = "scheduled_deletion_at")
     private Instant scheduledDeletionAt;
 
+    @Column(name = "totp_secret", length = 64)
+    private String totpSecret;
+
+    @Column(name = "totp_enabled", nullable = false)
+    private boolean totpEnabled = false;
+
+    @Column(name = "totp_recovery_codes", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] totpRecoveryCodes;
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();

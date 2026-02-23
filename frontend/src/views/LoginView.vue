@@ -27,6 +27,12 @@ const oidcAuthUri = ref('')
 
 const acceptedTerms = ref(false)
 
+// 2FA state
+const show2faInput = ref(false)
+const show2faSetupRequired = ref(false)
+const tempToken = ref('')
+const twoFactorCode = ref('')
+
 const form = ref({
   email: '',
   password: '',
@@ -59,7 +65,16 @@ async function submit() {
   }
   try {
     if (isLogin.value) {
-      await auth.login({ email: form.value.email, password: form.value.password })
+      const challenge = await auth.login({ email: form.value.email, password: form.value.password })
+      if (challenge) {
+        tempToken.value = challenge.tempToken
+        if (challenge.type === '2fa_verify') {
+          show2faInput.value = true
+        } else if (challenge.type === '2fa_setup_required') {
+          show2faSetupRequired.value = true
+        }
+        return
+      }
       const redirect = (route.query.redirect as string) || '/'
       router.push(redirect)
     } else {
@@ -82,6 +97,25 @@ async function submit() {
   }
 }
 
+async function submit2fa() {
+  error.value = ''
+  try {
+    await auth.verify2fa(tempToken.value, twoFactorCode.value)
+    const redirect = (route.query.redirect as string) || '/'
+    router.push(redirect)
+  } catch (e: any) {
+    error.value = e?.response?.data?.message || t('twoFactor.invalidCode')
+  }
+}
+
+function back2fa() {
+  show2faInput.value = false
+  show2faSetupRequired.value = false
+  tempToken.value = ''
+  twoFactorCode.value = ''
+  error.value = ''
+}
+
 function toggleMode() {
   isLogin.value = !isLogin.value
   error.value = ''
@@ -96,98 +130,177 @@ function loginWithSso() {
   <div class="login-page">
     <div class="login-card">
       <h1 class="login-title">MonteWeb</h1>
-      <p class="login-subtitle">{{ isLogin ? t('auth.login') : t('auth.register') }}</p>
 
-      <Message v-if="pendingApproval" severity="success" :closable="false" class="login-error">
-        {{ t('auth.pendingApprovalSuccess') }}
-      </Message>
+      <!-- 2FA Verification Step -->
+      <template v-if="show2faInput">
+        <p class="login-subtitle">{{ t('twoFactor.codeRequired') }}</p>
 
-      <Message v-if="error" severity="error" :closable="false" class="login-error">
-        {{ error }}
-      </Message>
+        <Message v-if="error" severity="error" :closable="false" class="login-error">
+          {{ error }}
+        </Message>
 
-      <form v-if="!pendingApproval" @submit.prevent="submit" class="login-form">
-        <template v-if="!isLogin">
+        <form @submit.prevent="submit2fa" class="login-form">
           <div class="form-field">
-            <label for="firstName" class="required">{{ t('auth.firstName') }}</label>
-            <InputText id="firstName" v-model="form.firstName" required class="w-full" />
+            <label for="twoFactorCode">{{ t('twoFactor.enterCode') }}</label>
+            <InputText
+              id="twoFactorCode"
+              v-model="twoFactorCode"
+              required
+              class="w-full twofa-input"
+              maxlength="8"
+              autocomplete="one-time-code"
+              placeholder="123456"
+            />
+            <small class="form-hint">{{ t('twoFactor.recoveryCodesInfo') }}</small>
           </div>
-          <div class="form-field">
-            <label for="lastName" class="required">{{ t('auth.lastName') }}</label>
-            <InputText id="lastName" v-model="form.lastName" required class="w-full" />
-          </div>
-        </template>
 
-        <div class="form-field">
-          <label for="email" class="required">{{ t('auth.email') }}</label>
-          <InputText id="email" v-model="form.email" type="email" required class="w-full" />
-        </div>
-
-        <div class="form-field">
-          <label for="password" class="required">{{ t('auth.password') }}</label>
-          <Password
-            inputId="password"
-            v-model="form.password"
-            :feedback="!isLogin"
-            toggleMask
-            required
+          <Button
+            type="submit"
+            :label="t('twoFactor.verify')"
+            :loading="auth.loading"
             class="w-full"
-            inputClass="w-full"
           />
+        </form>
+
+        <div class="login-toggle">
+          <a href="#" @click.prevent="back2fa">{{ t('common.back') }}</a>
         </div>
-
-        <template v-if="!isLogin">
-          <div class="form-field">
-            <label for="phone">{{ t('auth.phone') }}</label>
-            <InputText id="phone" v-model="form.phone" class="w-full" />
-          </div>
-          <div class="terms-checkbox">
-            <Checkbox v-model="acceptedTerms" :binary="true" inputId="acceptTerms" />
-            <label for="acceptTerms" class="terms-label">
-              {{ t('auth.acceptTermsLabel') }}
-              <router-link to="/terms" target="_blank" class="terms-link">{{ t('auth.termsLink') }}</router-link>
-            </label>
-          </div>
-        </template>
-
-        <Button
-          type="submit"
-          :label="isLogin ? t('auth.login') : t('auth.register')"
-          :loading="auth.loading"
-          class="w-full"
-        />
-      </form>
-
-      <template v-if="oidcEnabled && isLogin">
-        <Divider align="center">
-          <span class="divider-text">{{ t('auth.or') }}</span>
-        </Divider>
-        <Button
-          :label="t('auth.loginSso')"
-          icon="pi pi-shield"
-          severity="secondary"
-          outlined
-          class="w-full"
-          @click="loginWithSso"
-        />
       </template>
 
-      <div v-if="!pendingApproval" class="login-toggle">
-        <span v-if="isLogin">{{ t('auth.noAccount') }}</span>
-        <span v-else>{{ t('auth.hasAccount') }}</span>
-        <a href="#" @click.prevent="toggleMode">
-          {{ isLogin ? t('auth.register') : t('auth.login') }}
-        </a>
-      </div>
-      <div v-if="pendingApproval" class="login-toggle">
-        <a href="#" @click.prevent="pendingApproval = false; isLogin = true">
-          {{ t('auth.backToLogin') }}
-        </a>
-      </div>
+      <!-- 2FA Setup Required (MANDATORY mode) -->
+      <template v-else-if="show2faSetupRequired">
+        <p class="login-subtitle">{{ t('twoFactor.setupRequired') }}</p>
 
-      <div class="login-lang">
-        <LanguageSwitcher />
-      </div>
+        <Message severity="warn" :closable="false" class="login-error">
+          {{ t('twoFactor.setupRequiredDesc') }}
+        </Message>
+
+        <p class="setup-info">{{ t('twoFactor.setupRequiredDesc') }}</p>
+
+        <!-- For mandatory setup, we issue a temp token. The user must log in normally,
+             then set up 2FA from their profile. We let them through with the temp token
+             so they can access the profile page. -->
+        <form @submit.prevent="submit2fa" class="login-form">
+          <div class="form-field">
+            <label for="twoFactorCode">{{ t('twoFactor.enterCode') }}</label>
+            <InputText
+              id="twoFactorCode"
+              v-model="twoFactorCode"
+              class="w-full twofa-input"
+              maxlength="8"
+              autocomplete="one-time-code"
+              placeholder="123456"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            :label="t('twoFactor.verify')"
+            :loading="auth.loading"
+            class="w-full"
+          />
+        </form>
+
+        <div class="login-toggle">
+          <a href="#" @click.prevent="back2fa">{{ t('common.back') }}</a>
+        </div>
+      </template>
+
+      <!-- Normal Login / Register -->
+      <template v-else>
+        <p class="login-subtitle">{{ isLogin ? t('auth.login') : t('auth.register') }}</p>
+
+        <Message v-if="pendingApproval" severity="success" :closable="false" class="login-error">
+          {{ t('auth.pendingApprovalSuccess') }}
+        </Message>
+
+        <Message v-if="error" severity="error" :closable="false" class="login-error">
+          {{ error }}
+        </Message>
+
+        <form v-if="!pendingApproval" @submit.prevent="submit" class="login-form">
+          <template v-if="!isLogin">
+            <div class="form-field">
+              <label for="firstName" class="required">{{ t('auth.firstName') }}</label>
+              <InputText id="firstName" v-model="form.firstName" required class="w-full" />
+            </div>
+            <div class="form-field">
+              <label for="lastName" class="required">{{ t('auth.lastName') }}</label>
+              <InputText id="lastName" v-model="form.lastName" required class="w-full" />
+            </div>
+          </template>
+
+          <div class="form-field">
+            <label for="email" class="required">{{ t('auth.email') }}</label>
+            <InputText id="email" v-model="form.email" type="email" required class="w-full" />
+          </div>
+
+          <div class="form-field">
+            <label for="password" class="required">{{ t('auth.password') }}</label>
+            <Password
+              inputId="password"
+              v-model="form.password"
+              :feedback="!isLogin"
+              toggleMask
+              required
+              class="w-full"
+              inputClass="w-full"
+            />
+          </div>
+
+          <template v-if="!isLogin">
+            <div class="form-field">
+              <label for="phone">{{ t('auth.phone') }}</label>
+              <InputText id="phone" v-model="form.phone" class="w-full" />
+            </div>
+            <div class="terms-checkbox">
+              <Checkbox v-model="acceptedTerms" :binary="true" inputId="acceptTerms" />
+              <label for="acceptTerms" class="terms-label">
+                {{ t('auth.acceptTermsLabel') }}
+                <router-link to="/terms" target="_blank" class="terms-link">{{ t('auth.termsLink') }}</router-link>
+              </label>
+            </div>
+          </template>
+
+          <Button
+            type="submit"
+            :label="isLogin ? t('auth.login') : t('auth.register')"
+            :loading="auth.loading"
+            class="w-full"
+          />
+        </form>
+
+        <template v-if="oidcEnabled && isLogin">
+          <Divider align="center">
+            <span class="divider-text">{{ t('auth.or') }}</span>
+          </Divider>
+          <Button
+            :label="t('auth.loginSso')"
+            icon="pi pi-shield"
+            severity="secondary"
+            outlined
+            class="w-full"
+            @click="loginWithSso"
+          />
+        </template>
+
+        <div v-if="!pendingApproval" class="login-toggle">
+          <span v-if="isLogin">{{ t('auth.noAccount') }}</span>
+          <span v-else>{{ t('auth.hasAccount') }}</span>
+          <a href="#" @click.prevent="toggleMode">
+            {{ isLogin ? t('auth.register') : t('auth.login') }}
+          </a>
+        </div>
+        <div v-if="pendingApproval" class="login-toggle">
+          <a href="#" @click.prevent="pendingApproval = false; isLogin = true">
+            {{ t('auth.backToLogin') }}
+          </a>
+        </div>
+
+        <div class="login-lang">
+          <LanguageSwitcher />
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -247,6 +360,11 @@ function loginWithSso() {
   color: var(--mw-text-secondary);
 }
 
+.form-hint {
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  color: var(--mw-text-muted);
+}
+
 .login-toggle {
   text-align: center;
   margin-top: 1.5rem;
@@ -286,5 +404,18 @@ function loginWithSso() {
   display: flex;
   justify-content: center;
   margin-top: 1rem;
+}
+
+.twofa-input {
+  font-size: 1.5rem;
+  text-align: center;
+  letter-spacing: 0.5rem;
+}
+
+.setup-info {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
+  margin-bottom: 1rem;
+  text-align: center;
 }
 </style>

@@ -43,7 +43,8 @@ public class AdminConfigController {
                 request.termsText(), request.termsVersion(),
                 request.dataRetentionDaysNotifications(), request.dataRetentionDaysAudit(),
                 request.schoolFullName(), request.schoolAddress(), request.schoolPrincipal(),
-                request.techContactName(), request.techContactEmail());
+                request.techContactName(), request.techContactEmail(),
+                request.twoFactorMode());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 

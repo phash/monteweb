@@ -451,6 +451,64 @@ public class UserService implements UserModuleApi {
         return toUserInfo(userRepository.save(user));
     }
 
+    // --- TOTP / 2FA ---
+
+    @Override
+    public boolean isTotpEnabled(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::isTotpEnabled)
+                .orElse(false);
+    }
+
+    @Override
+    public Optional<String> getTotpSecret(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::getTotpSecret)
+                .filter(s -> s != null && !s.isBlank());
+    }
+
+    @Override
+    @Transactional
+    public void setTotpSecret(UUID userId, String secret) {
+        var user = findEntityById(userId);
+        user.setTotpSecret(secret);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void enableTotp(UUID userId, String[] recoveryCodes) {
+        var user = findEntityById(userId);
+        user.setTotpEnabled(true);
+        user.setTotpRecoveryCodes(recoveryCodes);
+        userRepository.save(user);
+    }
+
+    @Override
+    @Transactional
+    public void disableTotp(UUID userId) {
+        var user = findEntityById(userId);
+        user.setTotpEnabled(false);
+        user.setTotpSecret(null);
+        user.setTotpRecoveryCodes(null);
+        userRepository.save(user);
+    }
+
+    @Override
+    public String[] getTotpRecoveryCodes(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::getTotpRecoveryCodes)
+                .orElse(new String[0]);
+    }
+
+    @Override
+    @Transactional
+    public void setTotpRecoveryCodes(UUID userId, String[] codes) {
+        var user = findEntityById(userId);
+        user.setTotpRecoveryCodes(codes);
+        userRepository.save(user);
+    }
+
     private UserInfo toUserInfo(User user) {
         return new UserInfo(
                 user.getId(),

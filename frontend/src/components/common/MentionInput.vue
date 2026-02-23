@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usersApi } from '@/api/users.api'
 import type { UserInfo } from '@/types/user'
@@ -61,7 +61,7 @@ function checkForMention(textarea: HTMLTextAreaElement) {
   }
 
   // The @ must be at the start or preceded by a space/newline
-  if (atIndex > 0 && !/\s/.test(textBefore[atIndex - 1])) {
+  if (atIndex > 0 && !/\s/.test(textBefore.charAt(atIndex - 1))) {
     closeDropdown()
     return
   }
@@ -181,7 +181,8 @@ function onKeydown(event: KeyboardEvent) {
     if (event.key === 'Enter' || event.key === 'Tab') {
       event.preventDefault()
       event.stopPropagation()
-      selectUser(searchResults.value[selectedIndex.value])
+      const user = searchResults.value[selectedIndex.value]
+      if (user) selectUser(user)
       return
     }
     if (event.key === 'Escape') {

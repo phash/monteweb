@@ -84,4 +84,41 @@ public interface UserModuleApi {
      * Activates or deactivates a user. Used by auth module after registration.
      */
     UserInfo setActive(UUID userId, boolean active);
+
+    // --- TOTP / 2FA ---
+
+    /**
+     * Returns whether the user has TOTP enabled.
+     */
+    boolean isTotpEnabled(UUID userId);
+
+    /**
+     * Returns the stored TOTP secret for the user, or empty if not set.
+     */
+    Optional<String> getTotpSecret(UUID userId);
+
+    /**
+     * Stores the TOTP secret for a user (setup phase, before confirmation).
+     */
+    void setTotpSecret(UUID userId, String secret);
+
+    /**
+     * Enables TOTP for a user and stores recovery codes.
+     */
+    void enableTotp(UUID userId, String[] recoveryCodes);
+
+    /**
+     * Disables TOTP for a user, clearing secret and recovery codes.
+     */
+    void disableTotp(UUID userId);
+
+    /**
+     * Returns the stored recovery codes for the user.
+     */
+    String[] getTotpRecoveryCodes(UUID userId);
+
+    /**
+     * Replaces the stored recovery codes (e.g. after one is consumed).
+     */
+    void setTotpRecoveryCodes(UUID userId, String[] codes);
 }

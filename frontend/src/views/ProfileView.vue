@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
 import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
+import { authApi } from '@/api/auth.api'
 import { usePushNotifications } from '@/composables/usePushNotifications'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useLocaleDate } from '@/composables/useLocaleDate'
@@ -17,6 +18,7 @@ import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
+import Password from 'primevue/password'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import type { UserRole } from '@/types/user'
 
@@ -38,6 +40,20 @@ const form = ref({
 })
 const saved = ref(false)
 
+// 2FA state
+const twoFactorEnabled = ref(false)
+const twoFactorLoading = ref(false)
+const showSetupDialog = ref(false)
+const showDisableDialog = ref(false)
+const showRecoveryCodes = ref(false)
+const setupSecret = ref('')
+const setupQrUri = ref('')
+const setupCode = ref('')
+const setupError = ref('')
+const recoveryCodes = ref<string[]>([])
+const disablePassword = ref('')
+const disableError = ref('')
+
 onMounted(async () => {
   if (auth.user) {
     form.value.firstName = auth.user.firstName
@@ -47,6 +63,14 @@ onMounted(async () => {
   await checkSubscription()
   pushEnabled.value = pushSubscribed.value
   await messagingStore.fetchConversations()
+
+  // Check 2FA status
+  try {
+    const res = await authApi.get2faStatus()
+    twoFactorEnabled.value = res.data.data.enabled
+  } catch {
+    // Ignore — 2FA status not critical
+  }
 })
 
 async function save() {
@@ -121,6 +145,72 @@ async function togglePush() {
     await pushUnsubscribe()
   }
 }
+
+// --- 2FA Functions ---
+
+async function startSetup2fa() {
+  twoFactorLoading.value = true
+  setupError.value = ''
+  setupCode.value = ''
+  try {
+    const res = await authApi.setup2fa()
+    setupSecret.value = res.data.data.secret
+    setupQrUri.value = res.data.data.qrUri
+    showSetupDialog.value = true
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e?.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    twoFactorLoading.value = false
+  }
+}
+
+async function confirmSetup2fa() {
+  setupError.value = ''
+  twoFactorLoading.value = true
+  try {
+    const res = await authApi.confirm2fa(setupCode.value)
+    recoveryCodes.value = res.data.data.recoveryCodes
+    showSetupDialog.value = false
+    showRecoveryCodes.value = true
+    twoFactorEnabled.value = true
+    toast.add({ severity: 'success', summary: t('twoFactor.setupSuccess'), life: 3000 })
+  } catch (e: any) {
+    setupError.value = e?.response?.data?.message || t('twoFactor.invalidCode')
+  } finally {
+    twoFactorLoading.value = false
+  }
+}
+
+function closeRecoveryCodes() {
+  showRecoveryCodes.value = false
+  recoveryCodes.value = []
+}
+
+function openDisable2fa() {
+  disablePassword.value = ''
+  disableError.value = ''
+  showDisableDialog.value = true
+}
+
+async function confirmDisable2fa() {
+  disableError.value = ''
+  twoFactorLoading.value = true
+  try {
+    await authApi.disable2fa(disablePassword.value)
+    twoFactorEnabled.value = false
+    showDisableDialog.value = false
+    toast.add({ severity: 'success', summary: t('twoFactor.disableSuccess'), life: 3000 })
+  } catch (e: any) {
+    disableError.value = e?.response?.data?.message || 'Error'
+  } finally {
+    twoFactorLoading.value = false
+  }
+}
+
+const qrCodeUrl = computed(() => {
+  if (!setupQrUri.value) return ''
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupQrUri.value)}`
+})
 
 // DSGVO / Privacy
 const { visible: confirmVisible, header: confirmHeader, message: confirmMessage, confirm, onConfirm, onCancel } = useConfirmDialog()
@@ -271,6 +361,104 @@ async function cancelAccountDeletion() {
         />
       </div>
     </div>
+
+    <!-- Two-Factor Authentication -->
+    <div class="card profile-card twofa-card">
+      <h3>{{ t('twoFactor.title') }}</h3>
+      <div class="twofa-status">
+        <div>
+          <Tag
+            v-if="twoFactorEnabled"
+            :value="t('twoFactor.enabled')"
+            severity="success"
+          />
+          <span v-else class="twofa-disabled-text">{{ t('twoFactor.modes.DISABLED') }}</span>
+        </div>
+        <Button
+          v-if="!twoFactorEnabled"
+          :label="t('twoFactor.enable')"
+          icon="pi pi-shield"
+          size="small"
+          :loading="twoFactorLoading"
+          @click="startSetup2fa"
+        />
+        <Button
+          v-else
+          :label="t('twoFactor.disable')"
+          icon="pi pi-times"
+          size="small"
+          severity="danger"
+          :loading="twoFactorLoading"
+          @click="openDisable2fa"
+        />
+      </div>
+    </div>
+
+    <!-- 2FA Setup Dialog -->
+    <Dialog v-model:visible="showSetupDialog" :header="t('twoFactor.enable')" modal :style="{ width: '450px' }" :closable="true">
+      <div class="twofa-setup">
+        <p class="twofa-step">1. {{ t('twoFactor.scanQr') }}</p>
+        <div class="twofa-qr">
+          <img v-if="qrCodeUrl" :src="qrCodeUrl" alt="QR Code" width="200" height="200" />
+        </div>
+
+        <p class="twofa-step">{{ t('twoFactor.manualEntry') }}:</p>
+        <div class="twofa-secret">
+          <code>{{ setupSecret }}</code>
+        </div>
+
+        <p class="twofa-step">2. {{ t('twoFactor.enterCode') }}</p>
+        <Message v-if="setupError" severity="error" :closable="false" class="mb-2">
+          {{ setupError }}
+        </Message>
+        <InputText
+          v-model="setupCode"
+          class="w-full twofa-code-input"
+          maxlength="6"
+          placeholder="123456"
+          autocomplete="one-time-code"
+          @keyup.enter="confirmSetup2fa"
+        />
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" @click="showSetupDialog = false" />
+        <Button :label="t('twoFactor.verify')" :loading="twoFactorLoading" @click="confirmSetup2fa" :disabled="setupCode.length < 6" />
+      </template>
+    </Dialog>
+
+    <!-- Recovery Codes Dialog -->
+    <Dialog v-model:visible="showRecoveryCodes" :header="t('twoFactor.recoveryCodes')" modal :style="{ width: '450px' }" :closable="false">
+      <Message severity="warn" :closable="false" class="mb-3">
+        {{ t('twoFactor.recoveryCodesInfo') }}
+      </Message>
+      <div class="recovery-codes-grid">
+        <code v-for="code in recoveryCodes" :key="code" class="recovery-code">{{ code }}</code>
+      </div>
+      <template #footer>
+        <Button :label="t('twoFactor.recoveryCodesSaved')" @click="closeRecoveryCodes" />
+      </template>
+    </Dialog>
+
+    <!-- Disable 2FA Dialog -->
+    <Dialog v-model:visible="showDisableDialog" :header="t('twoFactor.disable')" modal :style="{ width: '400px' }">
+      <p class="mb-3">{{ t('twoFactor.disableConfirm') }}</p>
+      <Message v-if="disableError" severity="error" :closable="false" class="mb-2">
+        {{ disableError }}
+      </Message>
+      <Password
+        v-model="disablePassword"
+        :feedback="false"
+        toggleMask
+        class="w-full"
+        inputClass="w-full"
+        :placeholder="t('twoFactor.enterPassword')"
+        @keyup.enter="confirmDisable2fa"
+      />
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" @click="showDisableDialog = false" />
+        <Button :label="t('twoFactor.disable')" severity="danger" :loading="twoFactorLoading" @click="confirmDisable2fa" />
+      </template>
+    </Dialog>
 
     <!-- Language -->
     <div class="card profile-card language-card">
@@ -464,6 +652,73 @@ async function cancelAccountDeletion() {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.twofa-card {
+  margin-top: 1rem;
+}
+
+.twofa-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.twofa-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.twofa-disabled-text {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+}
+
+.twofa-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.twofa-step {
+  font-weight: 500;
+  margin: 0;
+}
+
+.twofa-qr {
+  display: flex;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.twofa-secret {
+  background: var(--p-surface-100);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--p-border-radius);
+  text-align: center;
+  word-break: break-all;
+  font-size: var(--mw-font-size-sm);
+}
+
+.twofa-code-input {
+  font-size: 1.25rem;
+  text-align: center;
+  letter-spacing: 0.3rem;
+}
+
+.recovery-codes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.recovery-code {
+  background: var(--p-surface-100);
+  padding: 0.5rem;
+  border-radius: var(--p-border-radius);
+  text-align: center;
+  font-size: 0.9rem;
+  font-family: monospace;
 }
 
 .language-card {

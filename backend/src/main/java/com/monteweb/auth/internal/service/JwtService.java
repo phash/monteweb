@@ -68,6 +68,41 @@ public class JwtService {
     }
 
     /**
+     * Generates a short-lived (5 min) temp token for 2FA verification.
+     * Contains user ID, email, and role — but type="2fa_temp" prevents use as access token.
+     */
+    public String generateTempToken(UUID userId, String email, String role) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(userId.toString())
+                .claims(Map.of(
+                        "email", email,
+                        "role", role,
+                        "type", "2fa_temp"
+                ))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(Duration.ofMinutes(5))))
+                .signWith(key)
+                .compact();
+    }
+
+    /**
+     * Validates a 2FA temp token and returns claims if valid.
+     */
+    public java.util.Optional<Claims> validateTempToken(String token) {
+        try {
+            var claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
+            if (!"2fa_temp".equals(claims.get("type", String.class))) {
+                return java.util.Optional.empty();
+            }
+            return java.util.Optional.of(claims);
+        } catch (JwtException | IllegalArgumentException e) {
+            log.debug("Invalid temp token: {}", e.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
+
+    /**
      * Generates a short-lived (5 min) image token for authenticated image access.
      * Uses a distinct "type" claim to prevent use as a regular access token.
      */

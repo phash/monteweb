@@ -20,17 +20,20 @@ public class AuthService implements AuthModuleApi {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final TotpService totpService;
 
     public AuthService(UserModuleApi userModuleApi,
                        AdminModuleApi adminModuleApi,
                        JwtService jwtService,
                        RefreshTokenService refreshTokenService,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       TotpService totpService) {
         this.userModuleApi = userModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.passwordEncoder = passwordEncoder;
+        this.totpService = totpService;
     }
 
     public LoginResponse register(RegisterRequest request) {
@@ -71,6 +74,23 @@ public class AuthService implements AuthModuleApi {
 
         if (!user.active()) {
             throw new BusinessException("PENDING_APPROVAL");
+        }
+
+        // Check if user has 2FA enabled
+        if (userModuleApi.isTotpEnabled(user.id())) {
+            String tempToken = jwtService.generateTempToken(user.id(), user.email(), user.role().name());
+            return LoginResponse.twoFactorChallenge(tempToken);
+        }
+
+        // Check if 2FA is MANDATORY and grace period passed
+        var tenantConfig = adminModuleApi.getTenantConfig();
+        if ("MANDATORY".equals(tenantConfig.twoFactorMode())) {
+            if (tenantConfig.twoFactorGraceDeadline() != null
+                    && java.time.Instant.now().isAfter(tenantConfig.twoFactorGraceDeadline())) {
+                // Grace period passed, user must set up 2FA before proceeding
+                String tempToken = jwtService.generateTempToken(user.id(), user.email(), user.role().name());
+                return LoginResponse.twoFactorSetupRequired(tempToken);
+            }
         }
 
         userModuleApi.updateLastLogin(user.id());
@@ -122,6 +142,106 @@ public class AuthService implements AuthModuleApi {
     @Override
     public java.util.Optional<String> validateImageToken(String token) {
         return jwtService.validateImageToken(token);
+    }
+
+    /**
+     * 2FA Setup: Generate a new TOTP secret and return the QR URI.
+     */
+    public TwoFactorSetupResponse setup2fa(java.util.UUID userId) {
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        String secret = totpService.generateSecret();
+        userModuleApi.setTotpSecret(userId, secret);
+
+        String qrUri = totpService.generateTotpUri(secret, user.email());
+        return new TwoFactorSetupResponse(secret, qrUri);
+    }
+
+    /**
+     * 2FA Confirm: Verify code against stored secret, enable 2FA, return recovery codes.
+     */
+    public TwoFactorConfirmResponse confirm2fa(java.util.UUID userId, String code) {
+        String secret = userModuleApi.getTotpSecret(userId)
+                .orElseThrow(() -> new BusinessException("2FA not set up. Call setup first."));
+
+        if (!totpService.verifyCode(secret, code)) {
+            throw new BusinessException("Invalid 2FA code");
+        }
+
+        var recoveryCodes = totpService.generateRecoveryCodes();
+        userModuleApi.enableTotp(userId, recoveryCodes.toArray(new String[0]));
+
+        return new TwoFactorConfirmResponse(recoveryCodes);
+    }
+
+    /**
+     * 2FA Disable: Verify password and disable 2FA for the user.
+     */
+    public void disable2fa(java.util.UUID userId, String password) {
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        String storedHash = userModuleApi.getPasswordHash(user.email())
+                .orElseThrow(() -> new BusinessException("Invalid credentials"));
+
+        if (!passwordEncoder.matches(password, storedHash)) {
+            throw new BusinessException("Invalid password");
+        }
+
+        userModuleApi.disableTotp(userId);
+    }
+
+    /**
+     * 2FA Verify: Validate temp token + TOTP code, return real tokens.
+     * Also accepts recovery codes (consumed on use).
+     */
+    public LoginResponse verify2fa(String tempToken, String code) {
+        var claimsOpt = jwtService.validateTempToken(tempToken);
+        if (claimsOpt.isEmpty()) {
+            throw new BusinessException("Invalid or expired temp token");
+        }
+
+        var claims = claimsOpt.get();
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        // Try TOTP code first
+        String secret = userModuleApi.getTotpSecret(userId).orElse(null);
+        if (secret != null && totpService.verifyCode(secret, code)) {
+            userModuleApi.updateLastLogin(userId);
+            return generateTokenResponse(user);
+        }
+
+        // Try recovery code
+        String[] recoveryCodes = userModuleApi.getTotpRecoveryCodes(userId);
+        if (recoveryCodes != null) {
+            String upperCode = code.toUpperCase();
+            for (int i = 0; i < recoveryCodes.length; i++) {
+                if (recoveryCodes[i] != null && recoveryCodes[i].equals(upperCode)) {
+                    // Consume recovery code
+                    recoveryCodes[i] = null;
+                    // Filter out nulls
+                    var remaining = java.util.Arrays.stream(recoveryCodes)
+                            .filter(c -> c != null)
+                            .toArray(String[]::new);
+                    userModuleApi.setTotpRecoveryCodes(userId, remaining);
+                    userModuleApi.updateLastLogin(userId);
+                    return generateTokenResponse(user);
+                }
+            }
+        }
+
+        throw new BusinessException("Invalid 2FA code");
+    }
+
+    /**
+     * Returns whether TOTP is enabled for the given user.
+     */
+    public boolean is2faEnabled(java.util.UUID userId) {
+        return userModuleApi.isTotpEnabled(userId);
     }
 
     private LoginResponse generateTokenResponse(UserInfo user) {

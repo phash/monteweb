@@ -4,6 +4,7 @@ import com.monteweb.auth.internal.dto.*;
 import com.monteweb.auth.internal.service.AuthService;
 import com.monteweb.auth.internal.service.PasswordResetService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -60,5 +61,41 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
         passwordResetService.confirmReset(request.token(), request.newPassword());
         return ResponseEntity.ok(ApiResponse.ok(null, "Password has been reset"));
+    }
+
+    // --- 2FA Endpoints ---
+
+    @PostMapping("/2fa/setup")
+    public ResponseEntity<ApiResponse<TwoFactorSetupResponse>> setup2fa() {
+        var userId = SecurityUtils.requireCurrentUserId();
+        var response = authService.setup2fa(userId);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/2fa/confirm")
+    public ResponseEntity<ApiResponse<TwoFactorConfirmResponse>> confirm2fa(@Valid @RequestBody TwoFactorConfirmRequest request) {
+        var userId = SecurityUtils.requireCurrentUserId();
+        var response = authService.confirm2fa(userId, request.code());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/2fa/disable")
+    public ResponseEntity<ApiResponse<Void>> disable2fa(@Valid @RequestBody TwoFactorDisableRequest request) {
+        var userId = SecurityUtils.requireCurrentUserId();
+        authService.disable2fa(userId, request.password());
+        return ResponseEntity.ok(ApiResponse.ok(null, "2FA disabled"));
+    }
+
+    @PostMapping("/2fa/verify")
+    public ResponseEntity<ApiResponse<LoginResponse>> verify2fa(@Valid @RequestBody TwoFactorVerifyRequest request) {
+        var response = authService.verify2fa(request.tempToken(), request.code());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @GetMapping("/2fa/status")
+    public ResponseEntity<ApiResponse<java.util.Map<String, Boolean>>> get2faStatus() {
+        var userId = SecurityUtils.requireCurrentUserId();
+        boolean enabled = authService.is2faEnabled(userId);
+        return ResponseEntity.ok(ApiResponse.ok(java.util.Map.of("enabled", enabled)));
     }
 }

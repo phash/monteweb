@@ -117,6 +117,12 @@ public class TenantConfig {
     @Column(name = "tech_contact_email", length = 200)
     private String techContactEmail;
 
+    @Column(name = "two_factor_mode", nullable = false, length = 20)
+    private String twoFactorMode = "DISABLED";
+
+    @Column(name = "two_factor_grace_deadline")
+    private Instant twoFactorGraceDeadline;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -11,6 +11,7 @@ import MultiSelect from 'primevue/multiselect'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import ToggleSwitch from 'primevue/toggleswitch'
+import Message from 'primevue/message'
 import { useToast } from 'primevue/usetoast'
 import { predefinedVacations } from '@/data/schoolVacations'
 
@@ -25,6 +26,14 @@ const defaultLanguage = ref('de')
 const availableLanguages = ref<string[]>(['de', 'en'])
 const requireUserApproval = ref(true)
 const requireAssignmentConfirmation = ref(true)
+const twoFactorMode = ref('DISABLED')
+const twoFactorGraceDeadline = ref<string | null>(null)
+
+const twoFactorModeOptions = [
+  { label: t('twoFactor.modes.DISABLED'), value: 'DISABLED' },
+  { label: t('twoFactor.modes.OPTIONAL'), value: 'OPTIONAL' },
+  { label: t('twoFactor.modes.MANDATORY'), value: 'MANDATORY' },
+]
 const targetHoursPerFamily = ref(30)
 const targetCleaningHours = ref(3)
 const bundesland = ref('BY')
@@ -63,6 +72,8 @@ onMounted(async () => {
     availableLanguages.value = adminStore.config.availableLanguages ?? ['de', 'en']
     requireUserApproval.value = adminStore.config.requireUserApproval ?? true
     requireAssignmentConfirmation.value = adminStore.config.requireAssignmentConfirmation ?? true
+    twoFactorMode.value = adminStore.config.twoFactorMode ?? 'DISABLED'
+    twoFactorGraceDeadline.value = adminStore.config.twoFactorGraceDeadline ?? null
     targetHoursPerFamily.value = adminStore.config.targetHoursPerFamily ?? 30
     targetCleaningHours.value = adminStore.config.targetCleaningHours ?? 3
     bundesland.value = adminStore.config.bundesland || 'BY'
@@ -82,7 +93,12 @@ async function saveSettings() {
       availableLanguages: langs,
       requireUserApproval: requireUserApproval.value,
       requireAssignmentConfirmation: requireAssignmentConfirmation.value,
+      twoFactorMode: twoFactorMode.value,
     })
+    // Update grace deadline from response
+    if (adminStore.config) {
+      twoFactorGraceDeadline.value = adminStore.config.twoFactorGraceDeadline ?? null
+    }
     toast.add({ severity: 'success', summary: t('admin.settings.saved'), life: 3000 })
   } catch (e: any) {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
@@ -190,6 +206,27 @@ async function saveVacationsConfig() {
           <label class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
           <small class="text-gray-500">{{ t('admin.requireConfirmationHint') }}</small>
         </div>
+      </div>
+    </div>
+
+    <!-- Two-Factor Authentication Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('twoFactor.title') }}</h2>
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-1">{{ t('twoFactor.adminMode') }}</label>
+        <Select
+          v-model="twoFactorMode"
+          :options="twoFactorModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full md:w-1/3"
+        />
+        <small class="text-gray-500">{{ t('twoFactor.adminModeHint') }}</small>
+      </div>
+      <div v-if="twoFactorMode === 'MANDATORY' && twoFactorGraceDeadline" class="mb-4">
+        <Message severity="info" :closable="false">
+          {{ t('twoFactor.graceDeadline', { date: new Date(twoFactorGraceDeadline).toLocaleDateString() }) }}
+        </Message>
       </div>
     </div>
 
