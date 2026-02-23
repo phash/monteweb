@@ -53,6 +53,7 @@ export default {
     discover: 'Entdecken',
     more: 'Mehr',
     mainNavigation: 'Hauptnavigation',
+    directory: 'Verzeichnis',
   },
   auth: {
     login: 'Anmelden',
@@ -1914,6 +1915,23 @@ export default {
     adminMode: '2FA-Modus',
     adminModeHint: 'Bei "Pflicht" haben Nutzer 7 Tage Zeit zur Einrichtung.',
     graceDeadline: 'Frist für Pflicht-2FA: {date}',
+  },
+  directory: {
+    title: 'Benutzerverzeichnis',
+    search: 'Name oder E-Mail suchen...',
+    filterRole: 'Alle Rollen',
+    filterSection: 'Alle Bereiche',
+    filterRoom: 'Alle Räume',
+    noResults: 'Keine Benutzer gefunden',
+    showingCount: '{count} Benutzer',
+    startChat: 'Nachricht senden',
+    roles: {
+      SUPERADMIN: 'Superadmin',
+      SECTION_ADMIN: 'Bereichsadmin',
+      TEACHER: 'Pädagoge',
+      PARENT: 'Elternteil',
+      STUDENT: 'Schüler/in',
+    },
   },
   footer: {
     deployed: 'Deployed',

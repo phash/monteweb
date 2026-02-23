@@ -55,4 +55,22 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     );
 
     List<User> findByScheduledDeletionAtBeforeAndDeletionRequestedAtIsNotNull(Instant cutoff);
+
+    @Query("""
+        SELECT u FROM User u
+        WHERE u.active = true
+        AND (:role IS NULL OR u.role = :role)
+        AND (:userIds IS NULL OR u.id IN :userIds)
+        AND (:search IS NULL OR :search = ''
+            OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))
+        ORDER BY u.lastName ASC, u.firstName ASC
+        """)
+    Page<User> findForDirectory(
+            @Param("role") UserRole role,
+            @Param("userIds") List<UUID> userIds,
+            @Param("search") String search,
+            Pageable pageable
+    );
 }

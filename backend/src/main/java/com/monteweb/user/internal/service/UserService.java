@@ -140,6 +140,30 @@ public class UserService implements UserModuleApi {
         return userRepository.searchByDisplayNameOrEmail(query.trim(), pageable).map(this::toUserInfo);
     }
 
+    public Page<UserInfo> findDirectory(UserRole role, UUID sectionId, UUID roomId, String search, Pageable pageable) {
+        List<UUID> userIds = null;
+
+        if (roomId != null) {
+            userIds = roomModuleApi.getMemberUserIds(roomId);
+            if (userIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+        } else if (sectionId != null) {
+            var rooms = roomModuleApi.findBySectionId(sectionId);
+            Set<UUID> memberIds = new LinkedHashSet<>();
+            for (var room : rooms) {
+                memberIds.addAll(roomModuleApi.getMemberUserIds(room.id()));
+            }
+            if (memberIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            userIds = new ArrayList<>(memberIds);
+        }
+
+        String searchTerm = (search == null || search.isBlank()) ? null : search.trim();
+        return userRepository.findForDirectory(role, userIds, searchTerm, pageable).map(this::toUserInfo);
+    }
+
     public Page<UserInfo> findAll(Pageable pageable) {
         return userRepository.findByActiveTrue(pageable).map(this::toUserInfo);
     }

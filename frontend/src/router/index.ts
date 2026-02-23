@@ -145,6 +145,11 @@ const router = createRouter({
           component: () => import('@/views/FundgrubeView.vue'),
         },
         {
+          path: 'directory',
+          name: 'directory',
+          component: () => import('@/views/DirectoryView.vue'),
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),

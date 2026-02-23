@@ -8,5 +8,14 @@ public enum UserRole {
     SECTION_ADMIN,
     TEACHER,
     PARENT,
-    STUDENT
+    STUDENT;
+
+    public static UserRole fromStringOrNull(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return valueOf(value.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 }

@@ -7,6 +7,7 @@ import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.AvatarUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
+import com.monteweb.user.UserRole;
 import com.monteweb.user.internal.dto.SwitchRoleRequest;
 import com.monteweb.user.internal.dto.UpdateProfileRequest;
 import com.monteweb.user.internal.service.UserService;
@@ -54,6 +55,17 @@ public class UserController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userService.updateProfile(userId, request.firstName(), request.lastName(), request.phone());
         return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    @GetMapping("/directory")
+    public ResponseEntity<ApiResponse<PageResponse<UserInfo>>> getDirectory(
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) UUID sectionId,
+            @RequestParam(required = false) UUID roomId,
+            @RequestParam(required = false, defaultValue = "") String q,
+            @PageableDefault(size = 24, sort = "lastName") Pageable pageable) {
+        var page = userService.findDirectory(UserRole.fromStringOrNull(role), sectionId, roomId, q, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
     @GetMapping("/search")

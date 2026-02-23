@@ -53,6 +53,7 @@ export default {
     discover: 'Discover',
     more: 'More',
     mainNavigation: 'Main navigation',
+    directory: 'Directory',
   },
   auth: {
     login: 'Log in',
@@ -1914,6 +1915,23 @@ export default {
     adminMode: '2FA mode',
     adminModeHint: 'When set to "Mandatory", users have 7 days to set up 2FA.',
     graceDeadline: 'Mandatory 2FA deadline: {date}',
+  },
+  directory: {
+    title: 'User Directory',
+    search: 'Search by name or email...',
+    filterRole: 'All Roles',
+    filterSection: 'All Sections',
+    filterRoom: 'All Rooms',
+    noResults: 'No users found',
+    showingCount: '{count} users',
+    startChat: 'Send message',
+    roles: {
+      SUPERADMIN: 'Superadmin',
+      SECTION_ADMIN: 'Section Admin',
+      TEACHER: 'Teacher',
+      PARENT: 'Parent',
+      STUDENT: 'Student',
+    },
   },
   footer: {
     deployed: 'Deployed',

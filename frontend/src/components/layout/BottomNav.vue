@@ -27,6 +27,8 @@ const primaryItems = computed(() => [
 const moreItems = computed(() => {
   const items: { to: string; icon: string; label: string; name: string }[] = []
 
+  items.push({ to: '/directory', icon: 'pi pi-address-book', label: t('nav.directory'), name: 'directory' })
+
   if (admin.isModuleEnabled('jobboard')) {
     items.push({ to: '/jobs', icon: 'pi pi-briefcase', label: t('nav.jobs'), name: 'jobs' })
   }

@@ -37,6 +37,11 @@ export const usersApi = {
     })
   },
 
+  // Directory (authenticated users)
+  directory(params?: { page?: number; size?: number; role?: string; sectionId?: string; roomId?: string; q?: string }) {
+    return client.get<ApiResponse<PageResponse<UserInfo>>>('/users/directory', { params })
+  },
+
   // Admin
   list(params?: { page?: number; size?: number; role?: string; active?: boolean; search?: string }) {
     return client.get<ApiResponse<PageResponse<UserInfo>>>('/admin/users', { params })
