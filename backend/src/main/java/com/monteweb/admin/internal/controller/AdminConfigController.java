@@ -44,7 +44,12 @@ public class AdminConfigController {
                 request.dataRetentionDaysNotifications(), request.dataRetentionDaysAudit(),
                 request.schoolFullName(), request.schoolAddress(), request.schoolPrincipal(),
                 request.techContactName(), request.techContactEmail(),
-                request.twoFactorMode());
+                request.twoFactorMode(),
+                request.ldapEnabled(), request.ldapUrl(), request.ldapBaseDn(),
+                request.ldapBindDn(), request.ldapBindPassword(),
+                request.ldapUserSearchFilter(), request.ldapAttrEmail(),
+                request.ldapAttrFirstName(), request.ldapAttrLastName(),
+                request.ldapDefaultRole(), request.ldapUseSsl());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 
@@ -64,6 +69,32 @@ public class AdminConfigController {
     public ResponseEntity<ApiResponse<TenantConfigInfo>> uploadLogo(@RequestParam("file") MultipartFile file) {
         var config = adminService.uploadLogo(file);
         return ResponseEntity.ok(ApiResponse.ok(config));
+    }
+
+    @PostMapping("/ldap/test")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> testLdapConnection(@RequestBody(required = false) Map<String, String> params) {
+        try {
+            var config = adminService.getTenantConfig();
+            String url = params != null && params.containsKey("ldapUrl") ? params.get("ldapUrl") : config.ldapUrl();
+            String baseDn = params != null && params.containsKey("ldapBaseDn") ? params.get("ldapBaseDn") : config.ldapBaseDn();
+            String bindDn = params != null && params.containsKey("ldapBindDn") ? params.get("ldapBindDn") : config.ldapBindDn();
+            String bindPassword = params != null && params.containsKey("ldapBindPassword") ? params.get("ldapBindPassword") : null;
+            boolean useSsl = params != null && params.containsKey("ldapUseSsl") ? Boolean.parseBoolean(params.get("ldapUseSsl")) : config.ldapUseSsl();
+
+            if (url == null || url.isBlank() || baseDn == null || baseDn.isBlank()) {
+                return ResponseEntity.ok(ApiResponse.ok(Map.of("success", false, "message", "LDAP URL and Base DN are required")));
+            }
+
+            // If no password provided in request, read from stored config
+            if (bindPassword == null || bindPassword.isBlank()) {
+                bindPassword = adminService.getLdapBindPassword();
+            }
+
+            adminService.testLdapConnection(url, baseDn, bindDn, bindPassword, useSsl);
+            return ResponseEntity.ok(ApiResponse.ok(Map.of("success", true, "message", "Connection successful")));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.ok(Map.of("success", false, "message", e.getMessage() != null ? e.getMessage() : "Connection failed")));
+        }
     }
 
     @GetMapping("/audit-log")

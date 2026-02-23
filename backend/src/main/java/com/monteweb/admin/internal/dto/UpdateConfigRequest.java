@@ -27,6 +27,18 @@ public record UpdateConfigRequest(
         String schoolPrincipal,
         String techContactName,
         String techContactEmail,
-        String twoFactorMode
+        String twoFactorMode,
+        // LDAP/AD fields
+        Boolean ldapEnabled,
+        String ldapUrl,
+        String ldapBaseDn,
+        String ldapBindDn,
+        String ldapBindPassword,
+        String ldapUserSearchFilter,
+        String ldapAttrEmail,
+        String ldapAttrFirstName,
+        String ldapAttrLastName,
+        String ldapDefaultRole,
+        Boolean ldapUseSsl
 ) {
 }

@@ -112,7 +112,14 @@ class JobboardServiceTest {
                 new BigDecimal("30"), new BigDecimal("3"),
                 true, true, "BY", List.of(),
                 null, false, requireConfirmation,
-                true, "de", List.of("de", "en"), true
+                true, "de", List.of("de", "en"), true,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null,
+                "DISABLED", null,
+                false, null, null, null,
+                null, null, null, null,
+                "PARENT", false, false
         );
     }
 

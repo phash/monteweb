@@ -9,11 +9,16 @@ import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthService implements AuthModuleApi {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final UserModuleApi userModuleApi;
     private final AdminModuleApi adminModuleApi;
@@ -21,6 +26,9 @@ public class AuthService implements AuthModuleApi {
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final TotpService totpService;
+
+    @Autowired(required = false)
+    private LdapAuthService ldapAuthService;
 
     public AuthService(UserModuleApi userModuleApi,
                        AdminModuleApi adminModuleApi,
@@ -62,13 +70,31 @@ public class AuthService implements AuthModuleApi {
     }
 
     public LoginResponse login(LoginRequest request) {
-        UserInfo user = userModuleApi.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException("Invalid credentials"));
+        // First try local DB authentication
+        UserInfo user = null;
+        boolean localAuthSuccess = false;
 
-        String storedHash = userModuleApi.getPasswordHash(request.email())
-                .orElseThrow(() -> new BusinessException("Invalid credentials"));
+        var existingUser = userModuleApi.findByEmail(request.email());
+        if (existingUser.isPresent()) {
+            user = existingUser.get();
+            var storedHash = userModuleApi.getPasswordHash(request.email());
+            if (storedHash.isPresent() && passwordEncoder.matches(request.password(), storedHash.get())) {
+                localAuthSuccess = true;
+            }
+        }
 
-        if (!passwordEncoder.matches(request.password(), storedHash)) {
+        // If local auth failed, try LDAP
+        if (!localAuthSuccess && ldapAuthService != null && ldapAuthService.isLdapEnabled()) {
+            log.debug("Local auth failed for {}, attempting LDAP authentication", request.email());
+            var ldapUser = ldapAuthService.authenticate(request.email(), request.password());
+            if (ldapUser != null) {
+                log.info("LDAP authentication successful for {}", ldapUser.email());
+                user = findOrCreateLdapUser(ldapUser);
+                localAuthSuccess = true;
+            }
+        }
+
+        if (!localAuthSuccess || user == null) {
             throw new BusinessException("Invalid credentials");
         }
 
@@ -95,6 +121,38 @@ public class AuthService implements AuthModuleApi {
 
         userModuleApi.updateLastLogin(user.id());
         return generateTokenResponse(user);
+    }
+
+    /**
+     * Finds an existing user by email or creates a new one from LDAP attributes.
+     * If the user already exists, updates their attributes from LDAP.
+     */
+    private UserInfo findOrCreateLdapUser(LdapAuthService.LdapUserInfo ldapUser) {
+        var existing = userModuleApi.findByEmail(ldapUser.email());
+        if (existing.isPresent()) {
+            // Update existing user attributes from LDAP on each login
+            var user = existing.get();
+            userModuleApi.updateProfile(user.id(), ldapUser.firstName(), ldapUser.lastName(), null);
+            // Re-fetch after update
+            return userModuleApi.findById(user.id()).orElse(user);
+        }
+
+        // Auto-create user from LDAP (no password — can't do local login)
+        UserRole role = UserRole.fromStringOrNull(ldapUser.defaultRole());
+        if (role == null) {
+            role = UserRole.PARENT;
+        }
+        UserInfo newUser = userModuleApi.createUser(
+                ldapUser.email(),
+                null, // no password hash — LDAP-only user
+                ldapUser.firstName() != null ? ldapUser.firstName() : "",
+                ldapUser.lastName() != null ? ldapUser.lastName() : "",
+                null, // no phone
+                role
+        );
+        // LDAP-created users are immediately active (skip approval)
+        userModuleApi.setActive(newUser.id(), true);
+        return userModuleApi.findById(newUser.id()).orElse(newUser);
     }
 
     public LoginResponse refresh(RefreshTokenRequest request) {

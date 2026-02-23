@@ -7,8 +7,12 @@ export const adminApi = {
     return client.get<ApiResponse<TenantConfig>>('/admin/config')
   },
 
-  updateConfig(data: { schoolName?: string; logoUrl?: string; targetHoursPerFamily?: number; targetCleaningHours?: number; bundesland?: string; schoolVacations?: { name: string; from: string; to: string }[]; requireAssignmentConfirmation?: boolean; multilanguageEnabled?: boolean; defaultLanguage?: string; availableLanguages?: string[]; requireUserApproval?: boolean; privacyPolicyText?: string; privacyPolicyVersion?: string; termsText?: string; termsVersion?: string; dataRetentionDaysNotifications?: number; dataRetentionDaysAudit?: number; schoolFullName?: string; schoolAddress?: string; schoolPrincipal?: string; techContactName?: string; techContactEmail?: string; twoFactorMode?: string }) {
+  updateConfig(data: { schoolName?: string; logoUrl?: string; targetHoursPerFamily?: number; targetCleaningHours?: number; bundesland?: string; schoolVacations?: { name: string; from: string; to: string }[]; requireAssignmentConfirmation?: boolean; multilanguageEnabled?: boolean; defaultLanguage?: string; availableLanguages?: string[]; requireUserApproval?: boolean; privacyPolicyText?: string; privacyPolicyVersion?: string; termsText?: string; termsVersion?: string; dataRetentionDaysNotifications?: number; dataRetentionDaysAudit?: number; schoolFullName?: string; schoolAddress?: string; schoolPrincipal?: string; techContactName?: string; techContactEmail?: string; twoFactorMode?: string; ldapEnabled?: boolean; ldapUrl?: string; ldapBaseDn?: string; ldapBindDn?: string; ldapBindPassword?: string; ldapUserSearchFilter?: string; ldapAttrEmail?: string; ldapAttrFirstName?: string; ldapAttrLastName?: string; ldapDefaultRole?: string; ldapUseSsl?: boolean }) {
     return client.put<ApiResponse<TenantConfig>>('/admin/config', data)
+  },
+
+  testLdapConnection(data: { ldapUrl?: string; ldapBaseDn?: string; ldapBindDn?: string; ldapBindPassword?: string; ldapUseSsl?: string }) {
+    return client.post<ApiResponse<{ success: boolean; message: string }>>('/admin/ldap/test', data)
   },
 
   updateTheme(theme: Record<string, string>) {

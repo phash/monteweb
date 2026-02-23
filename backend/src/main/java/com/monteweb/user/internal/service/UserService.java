@@ -184,6 +184,7 @@ public class UserService implements UserModuleApi {
         return toUserInfo(userRepository.save(user));
     }
 
+    @Override
     @Transactional
     public UserInfo updateProfile(UUID userId, String firstName, String lastName, String phone) {
         var user = findEntityById(userId);

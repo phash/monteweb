@@ -78,7 +78,14 @@ class JobboardServiceHoursTest {
                 targetHours, targetCleaningHours,
                 true, true, "BY", List.of(),
                 null, false, true,
-                true, "de", List.of("de", "en"), true
+                true, "de", List.of("de", "en"), true,
+                null, null, null, null,
+                null, null, null, null,
+                null, null, null,
+                "DISABLED", null,
+                false, null, null, null,
+                null, null, null, null,
+                "PARENT", false, false
         );
     }
 

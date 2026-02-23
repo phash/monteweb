@@ -66,4 +66,16 @@ export interface TenantConfig {
   techContactEmail?: string | null
   twoFactorMode?: string
   twoFactorGraceDeadline?: string | null
+  // LDAP/AD fields
+  ldapEnabled?: boolean
+  ldapUrl?: string | null
+  ldapBaseDn?: string | null
+  ldapBindDn?: string | null
+  ldapUserSearchFilter?: string | null
+  ldapAttrEmail?: string | null
+  ldapAttrFirstName?: string | null
+  ldapAttrLastName?: string | null
+  ldapDefaultRole?: string | null
+  ldapUseSsl?: boolean
+  ldapConfigured?: boolean
 }

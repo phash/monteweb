@@ -123,6 +123,41 @@ public class TenantConfig {
     @Column(name = "two_factor_grace_deadline")
     private Instant twoFactorGraceDeadline;
 
+    // --- LDAP/AD Integration ---
+
+    @Column(name = "ldap_enabled", nullable = false)
+    private boolean ldapEnabled = false;
+
+    @Column(name = "ldap_url", length = 255)
+    private String ldapUrl;
+
+    @Column(name = "ldap_base_dn", length = 255)
+    private String ldapBaseDn;
+
+    @Column(name = "ldap_bind_dn", length = 255)
+    private String ldapBindDn;
+
+    @Column(name = "ldap_bind_password", length = 512)
+    private String ldapBindPassword;
+
+    @Column(name = "ldap_user_search_filter", length = 255)
+    private String ldapUserSearchFilter = "(uid={0})";
+
+    @Column(name = "ldap_attr_email", length = 64)
+    private String ldapAttrEmail = "mail";
+
+    @Column(name = "ldap_attr_first_name", length = 64)
+    private String ldapAttrFirstName = "givenName";
+
+    @Column(name = "ldap_attr_last_name", length = 64)
+    private String ldapAttrLastName = "sn";
+
+    @Column(name = "ldap_default_role", length = 30)
+    private String ldapDefaultRole = "PARENT";
+
+    @Column(name = "ldap_use_ssl", nullable = false)
+    private boolean ldapUseSsl = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

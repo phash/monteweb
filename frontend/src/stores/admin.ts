@@ -19,6 +19,19 @@ export const useAdminStore = defineStore('admin', () => {
     }
   }
 
+  async function fetchAdminConfig() {
+    loading.value = true
+    try {
+      const res = await adminApi.getConfig()
+      config.value = res.data.data
+    } catch {
+      // Fallback to public config
+      await fetchConfig()
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function updateConfig(data: Parameters<typeof adminApi.updateConfig>[0]) {
     const res = await adminApi.updateConfig(data)
     config.value = res.data.data
@@ -42,6 +55,7 @@ export const useAdminStore = defineStore('admin', () => {
     config,
     loading,
     fetchConfig,
+    fetchAdminConfig,
     updateConfig,
     updateModules,
     updateTheme,

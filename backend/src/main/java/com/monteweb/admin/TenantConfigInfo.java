@@ -39,6 +39,18 @@ public record TenantConfigInfo(
         String techContactName,
         String techContactEmail,
         String twoFactorMode,
-        java.time.Instant twoFactorGraceDeadline
+        java.time.Instant twoFactorGraceDeadline,
+        // LDAP/AD fields (password never exposed)
+        boolean ldapEnabled,
+        String ldapUrl,
+        String ldapBaseDn,
+        String ldapBindDn,
+        String ldapUserSearchFilter,
+        String ldapAttrEmail,
+        String ldapAttrFirstName,
+        String ldapAttrLastName,
+        String ldapDefaultRole,
+        boolean ldapUseSsl,
+        boolean ldapConfigured
 ) {
 }

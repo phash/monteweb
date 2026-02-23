@@ -48,7 +48,12 @@ public class AdminService implements AdminModuleApi {
                                           Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit,
                                           String schoolFullName, String schoolAddress, String schoolPrincipal,
                                           String techContactName, String techContactEmail,
-                                          String twoFactorMode) {
+                                          String twoFactorMode,
+                                          Boolean ldapEnabled, String ldapUrl, String ldapBaseDn,
+                                          String ldapBindDn, String ldapBindPassword,
+                                          String ldapUserSearchFilter, String ldapAttrEmail,
+                                          String ldapAttrFirstName, String ldapAttrLastName,
+                                          String ldapDefaultRole, Boolean ldapUseSsl) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -82,6 +87,18 @@ public class AdminService implements AdminModuleApi {
                 config.setTwoFactorGraceDeadline(null);
             }
         }
+        // LDAP/AD fields
+        if (ldapEnabled != null) config.setLdapEnabled(ldapEnabled);
+        if (ldapUrl != null) config.setLdapUrl(ldapUrl);
+        if (ldapBaseDn != null) config.setLdapBaseDn(ldapBaseDn);
+        if (ldapBindDn != null) config.setLdapBindDn(ldapBindDn);
+        if (ldapBindPassword != null && !ldapBindPassword.isBlank()) config.setLdapBindPassword(ldapBindPassword);
+        if (ldapUserSearchFilter != null) config.setLdapUserSearchFilter(ldapUserSearchFilter);
+        if (ldapAttrEmail != null) config.setLdapAttrEmail(ldapAttrEmail);
+        if (ldapAttrFirstName != null) config.setLdapAttrFirstName(ldapAttrFirstName);
+        if (ldapAttrLastName != null) config.setLdapAttrLastName(ldapAttrLastName);
+        if (ldapDefaultRole != null) config.setLdapDefaultRole(ldapDefaultRole);
+        if (ldapUseSsl != null) config.setLdapUseSsl(ldapUseSsl);
         return toInfo(configRepository.save(config));
     }
 
@@ -129,6 +146,37 @@ public class AdminService implements AdminModuleApi {
         }
     }
 
+    @Override
+    public String getLdapBindPassword() {
+        return getConfig().getLdapBindPassword();
+    }
+
+    /**
+     * Tests an LDAP connection with the given parameters.
+     */
+    public void testLdapConnection(String url, String baseDn, String bindDn, String bindPassword, boolean useSsl) {
+        java.util.Hashtable<String, String> env = new java.util.Hashtable<>();
+        env.put(javax.naming.Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
+        env.put(javax.naming.Context.PROVIDER_URL, url);
+        if (useSsl) {
+            env.put(javax.naming.Context.SECURITY_PROTOCOL, "ssl");
+        }
+        if (bindDn != null && !bindDn.isBlank()) {
+            env.put(javax.naming.Context.SECURITY_AUTHENTICATION, "simple");
+            env.put(javax.naming.Context.SECURITY_PRINCIPAL, bindDn);
+            env.put(javax.naming.Context.SECURITY_CREDENTIALS, bindPassword != null ? bindPassword : "");
+        }
+        env.put("com.sun.jndi.ldap.connect.timeout", "5000");
+        env.put("com.sun.jndi.ldap.read.timeout", "5000");
+
+        try {
+            var ctx = new javax.naming.directory.InitialDirContext(env);
+            ctx.close();
+        } catch (javax.naming.NamingException e) {
+            throw new BusinessException("LDAP connection failed: " + e.getMessage());
+        }
+    }
+
     private TenantConfig getConfig() {
         return configRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant configuration not found"));
@@ -166,7 +214,20 @@ public class AdminService implements AdminModuleApi {
                 config.getTechContactName(),
                 config.getTechContactEmail(),
                 config.getTwoFactorMode(),
-                config.getTwoFactorGraceDeadline()
+                config.getTwoFactorGraceDeadline(),
+                // LDAP/AD fields (password never exposed)
+                config.isLdapEnabled(),
+                config.getLdapUrl(),
+                config.getLdapBaseDn(),
+                config.getLdapBindDn(),
+                config.getLdapUserSearchFilter(),
+                config.getLdapAttrEmail(),
+                config.getLdapAttrFirstName(),
+                config.getLdapAttrLastName(),
+                config.getLdapDefaultRole(),
+                config.isLdapUseSsl(),
+                config.getLdapUrl() != null && !config.getLdapUrl().isBlank()
+                        && config.getLdapBaseDn() != null && !config.getLdapBaseDn().isBlank()
         );
     }
 }

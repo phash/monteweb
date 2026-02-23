@@ -85,6 +85,11 @@ public interface UserModuleApi {
      */
     UserInfo setActive(UUID userId, boolean active);
 
+    /**
+     * Updates a user's profile information. Used by auth module for LDAP attribute sync.
+     */
+    UserInfo updateProfile(UUID userId, String firstName, String lastName, String phone);
+
     // --- TOTP / 2FA ---
 
     /**

@@ -66,4 +66,12 @@ describe('adminApi', () => {
       expect(client.get).toHaveBeenCalledWith('/config')
     })
   })
+
+  describe('testLdapConnection', () => {
+    it('should POST /admin/ldap/test with LDAP config', async () => {
+      const data = { ldapUrl: 'ldap://server:389', ldapBaseDn: 'dc=test,dc=com' }
+      await adminApi.testLdapConnection(data)
+      expect(client.post).toHaveBeenCalledWith('/admin/ldap/test', data)
+    })
+  })
 })
