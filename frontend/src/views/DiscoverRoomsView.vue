@@ -55,13 +55,6 @@ const sectionOptions = computed(() => [
   ...sections.value.map(s => ({ label: s.name, value: s.id })),
 ])
 
-// Build section map for quick lookup
-const sectionMap = computed(() => {
-  const map = new Map<string, SchoolSectionInfo>()
-  for (const s of sections.value) map.set(s.id, s)
-  return map
-})
-
 // Filter rooms
 const filteredRooms = computed(() => {
   let rooms = allRooms.value
