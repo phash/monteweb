@@ -129,3 +129,5 @@ monteweb:
       enabled: true
     tasks:
       enabled: true
+    wiki:
+      enabled: true

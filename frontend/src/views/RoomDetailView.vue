@@ -25,6 +25,7 @@ import RoomDiscussions from '@/components/rooms/RoomDiscussions.vue'
 import RoomEvents from '@/components/rooms/RoomEvents.vue'
 import RoomFotobox from '@/components/rooms/RoomFotobox.vue'
 import RoomTasks from '@/components/rooms/RoomTasks.vue'
+import RoomWiki from '@/components/rooms/RoomWiki.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
@@ -98,6 +99,7 @@ const filesEnabled = admin.config?.modules?.files ?? false
 const calendarEnabled = admin.config?.modules?.calendar ?? false
 const fotoboxEnabled = admin.config?.modules?.fotobox ?? false
 const tasksEnabled = admin.isModuleEnabled('tasks')
+const wikiEnabled = admin.isModuleEnabled('wiki')
 const messagingEnabled = admin.config?.modules?.messaging ?? false
 const chatEnabled = computed(() =>
   messagingEnabled && rooms.currentRoom?.settings?.chatEnabled !== false
@@ -543,6 +545,7 @@ async function toggleMute() {
           <Tab v-if="calendarEnabled" value="5">{{ t('calendar.title') }}</Tab>
           <Tab v-if="fotoboxEnabled" value="6">{{ t('fotobox.title') }}</Tab>
           <Tab v-if="tasksEnabled" value="7">{{ t('tasks.title') }}</Tab>
+          <Tab v-if="wikiEnabled" value="8">{{ t('wiki.title') }}</Tab>
         </TabList>
         <TabPanels>
           <!-- Info-Board Tab -->
@@ -739,6 +742,11 @@ async function toggleMute() {
           <!-- Tasks Tab -->
           <TabPanel v-if="tasksEnabled" value="7">
             <RoomTasks :room-id="id" :is-leader="isLeader" />
+          </TabPanel>
+
+          <!-- Wiki Tab -->
+          <TabPanel v-if="wikiEnabled" value="8">
+            <RoomWiki :room-id="id" :is-leader="isLeader" />
           </TabPanel>
         </TabPanels>
       </Tabs>
