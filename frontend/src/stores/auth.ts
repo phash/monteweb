@@ -5,6 +5,7 @@ import { usersApi } from '@/api/users.api'
 import { useAdminStore } from '@/stores/admin'
 import { useImageToken } from '@/composables/useImageToken'
 import { useWebSocket } from '@/composables/useWebSocket'
+import { resetTermsCache } from '@/utils/termsCache'
 import type { UserInfo, UserRole, LoginRequest, RegisterRequest } from '@/types/user'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -65,6 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = null
       const { clearImageToken } = useImageToken()
       clearImageToken()
+      resetTermsCache()
     }
   }
 

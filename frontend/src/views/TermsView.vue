@@ -6,7 +6,7 @@ import Button from 'primevue/button'
 import { privacyApi } from '@/api/privacy.api'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { resetTermsCache } from '@/router'
+import { markTermsAccepted } from '@/utils/termsCache'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -36,7 +36,7 @@ async function handleAccept() {
   try {
     await privacyApi.acceptTerms()
     termsAccepted.value = true
-    resetTermsCache()
+    markTermsAccepted()
     toast.add({ severity: 'success', summary: t('privacy.termsAccepted'), life: 3000 })
     if (authStore.isAuthenticated) {
       setTimeout(() => router.push('/'), 1000)
