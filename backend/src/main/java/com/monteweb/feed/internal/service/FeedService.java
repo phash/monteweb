@@ -116,6 +116,13 @@ public class FeedService implements FeedModuleApi {
                 .map(this::toPostInfo);
     }
 
+    @Override
+    public List<FeedPostInfo> searchPosts(String query, int limit, UUID userId) {
+        return postRepository.searchPosts(query, userId, limit).stream()
+                .map(this::toPostInfo)
+                .toList();
+    }
+
     // --- Internal service methods ---
 
     @Transactional

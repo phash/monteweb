@@ -41,6 +41,12 @@ public interface RoomModuleApi {
     RoomInfo createRoom(String name, String description, String type, UUID sectionId, UUID createdBy);
 
     /**
+     * Searches non-archived rooms by name (case-insensitive LIKE).
+     * Used by the global search module.
+     */
+    List<RoomInfo> searchRooms(String query, int limit);
+
+    /**
      * DSGVO: Export all room-related data for a user.
      */
     Map<String, Object> exportUserData(UUID userId);

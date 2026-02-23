@@ -389,6 +389,13 @@ public class CalendarService implements CalendarModuleApi {
         rsvpRepository.deleteByUserId(userId);
     }
 
+    @Override
+    public List<EventInfo> searchEvents(String query, int limit) {
+        return eventRepository.searchEvents(query, Pageable.ofSize(limit)).stream()
+                .map(e -> toEventInfo(e, null))
+                .toList();
+    }
+
     /**
      * DSGVO: Export all calendar data for a user.
      */

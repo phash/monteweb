@@ -51,4 +51,10 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
             "AND LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
             "ORDER BY r.name ASC")
     Page<Room> searchBrowsableRooms(@Param("userId") UUID userId, @Param("query") String query, Pageable pageable);
+
+    // Global search: search all non-archived rooms by name
+    @Query("SELECT r FROM Room r WHERE r.archived = false " +
+            "AND LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) " +
+            "ORDER BY r.name ASC")
+    List<Room> searchByName(@Param("query") String query, Pageable pageable);
 }

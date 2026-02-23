@@ -32,6 +32,12 @@ public interface FeedModuleApi {
     Page<FeedPostInfo> getPersonalFeed(UUID userId, Pageable pageable);
 
     /**
+     * Searches feed posts by title or content (case-insensitive LIKE).
+     * Used by the global search module.
+     */
+    List<FeedPostInfo> searchPosts(String query, int limit, UUID userId);
+
+    /**
      * DSGVO: Export all feed-related data for a user.
      */
     Map<String, Object> exportUserData(UUID userId);

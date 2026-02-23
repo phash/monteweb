@@ -33,6 +33,12 @@ public interface CalendarModuleApi {
     EventInfo createEventFromSystem(CreateEventRequest request, UUID createdBy);
 
     /**
+     * Searches calendar events by title or description (case-insensitive LIKE).
+     * Used by the global search module.
+     */
+    List<EventInfo> searchEvents(String query, int limit);
+
+    /**
      * DSGVO: Export all calendar-related data for a user.
      */
     Map<String, Object> exportUserData(UUID userId);

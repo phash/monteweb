@@ -81,4 +81,14 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, UU
             @Param("to") LocalDate to);
 
     List<CalendarEvent> findByCreatedBy(UUID createdBy);
+
+    // Global search: search events by title or description
+    @Query("""
+            SELECT e FROM CalendarEvent e
+            WHERE e.cancelled = false
+              AND (LOWER(e.title) LIKE LOWER(CONCAT('%', :query, '%'))
+                   OR LOWER(COALESCE(e.description, '')) LIKE LOWER(CONCAT('%', :query, '%')))
+            ORDER BY e.startDate DESC
+            """)
+    List<CalendarEvent> searchEvents(@Param("query") String query, Pageable pageable);
 }

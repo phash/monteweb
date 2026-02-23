@@ -101,6 +101,13 @@ public class RoomService implements RoomModuleApi {
     }
 
     @Override
+    public List<RoomInfo> searchRooms(String query, int limit) {
+        return roomRepository.searchByName(query, Pageable.ofSize(limit)).stream()
+                .map(this::toRoomInfo)
+                .toList();
+    }
+
+    @Override
     public List<RoomInfo> findBySectionId(UUID sectionId) {
         return roomRepository.findBySectionIdAndArchivedFalse(sectionId,
                 Pageable.unpaged()).stream().map(this::toRoomInfo).toList();

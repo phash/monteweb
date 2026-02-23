@@ -9,6 +9,7 @@ import Menu from 'primevue/menu'
 import Tag from 'primevue/tag'
 import Popover from 'primevue/popover'
 import NotificationBell from '@/components/common/NotificationBell.vue'
+import GlobalSearch from '@/components/common/GlobalSearch.vue'
 import { ref, computed } from 'vue'
 import type { UserRole } from '@/types/user'
 
@@ -19,6 +20,7 @@ const router = useRouter()
 const toast = useToast()
 const userMenu = ref()
 const rolePopover = ref()
+const globalSearch = ref<InstanceType<typeof GlobalSearch> | null>(null)
 const switching = ref(false)
 
 const menuItems = ref([
@@ -84,6 +86,14 @@ async function onSwitchRole(role: string) {
       </router-link>
     </div>
 
+    <div class="header-center">
+      <button class="search-trigger" @click="globalSearch?.open()" :aria-label="t('search.title')">
+        <i class="pi pi-search" />
+        <span class="search-trigger-text">{{ t('search.placeholder') }}</span>
+        <kbd class="search-trigger-shortcut"><span>Ctrl+K</span></kbd>
+      </button>
+    </div>
+
     <div class="header-right">
       <Tag
         v-if="auth.user?.role"
@@ -122,6 +132,8 @@ async function onSwitchRole(role: string) {
       />
       <Menu ref="userMenu" :model="menuItems" popup />
     </div>
+
+    <GlobalSearch ref="globalSearch" />
   </header>
 </template>
 
@@ -141,6 +153,59 @@ async function onSwitchRole(role: string) {
 
 .header-left {
   min-width: 0;
+  flex-shrink: 0;
+}
+
+.header-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  padding: 0 0.75rem;
+  min-width: 0;
+}
+
+.search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 400px;
+  width: 100%;
+  padding: 0.375rem 0.75rem;
+  background: var(--p-surface-50);
+  border: 1px solid var(--mw-border-light);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  color: var(--mw-text-secondary);
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.search-trigger:hover {
+  background: var(--p-surface-100);
+  border-color: var(--mw-primary);
+}
+
+.search-trigger i {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.search-trigger-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-trigger-shortcut {
+  background: var(--p-surface-100);
+  border: 1px solid var(--mw-border-light);
+  border-radius: 4px;
+  padding: 0.0625rem 0.375rem;
+  font-size: 0.675rem;
+  font-family: monospace;
+  flex-shrink: 0;
 }
 
 .header-logo {
@@ -204,6 +269,21 @@ async function onSwitchRole(role: string) {
 @media (max-width: 767px) {
   .user-menu-button :deep(.p-button-label) {
     display: none;
+  }
+
+  .search-trigger-text,
+  .search-trigger-shortcut {
+    display: none;
+  }
+
+  .search-trigger {
+    width: auto;
+    padding: 0.375rem;
+  }
+
+  .header-center {
+    flex: 0;
+    padding: 0;
   }
 }
 </style>

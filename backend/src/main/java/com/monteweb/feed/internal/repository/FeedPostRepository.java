@@ -71,4 +71,19 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
     List<FeedPost> findActiveSystemBanners();
 
     List<FeedPost> findByAuthorId(UUID authorId);
+
+    /**
+     * Global search: search posts by title or content that the user can see.
+     * Respects targeted posts (target_user_ids).
+     */
+    @Query(value = """
+        SELECT p.* FROM feed_posts p
+        WHERE (LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%'))
+               OR LOWER(COALESCE(p.title, '')) LIKE LOWER(CONCAT('%', :query, '%')))
+        AND (p.expires_at IS NULL OR p.expires_at > NOW())
+        AND (p.target_user_ids IS NULL OR CAST(:userId AS UUID) = ANY(p.target_user_ids))
+        ORDER BY p.published_at DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<FeedPost> searchPosts(@Param("query") String query, @Param("userId") UUID userId, @Param("limit") int limit);
 }
