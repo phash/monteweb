@@ -7,11 +7,13 @@ import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
+import { useFamilyStore } from '@/stores/family'
 import { jobboardApi } from '@/api/jobboard.api'
 import { useCalendarStore } from '@/stores/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
+import FamilyHoursWidget from '@/components/family/FamilyHoursWidget.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
@@ -28,6 +30,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const admin = useAdminStore()
 const jobboard = useJobboardStore()
+const familyStore = useFamilyStore()
 const calendar = useCalendarStore()
 const activeTab = ref('0')
 const selectedCategory = ref<string | null>(null)
@@ -35,6 +38,7 @@ const selectedEventId = ref<string | null>(null)
 const selectedFromDate = ref<Date | null>(null)
 const selectedToDate = ref<Date | null>(null)
 const calendarEnabled = admin.isModuleEnabled('calendar')
+const jobboardEnabled = admin.isModuleEnabled('jobboard')
 const completedJobs = ref<import('@/types/jobboard').JobInfo[]>([])
 const completedLoading = ref(false)
 const canSeeCompleted = computed(() => auth.isAdmin || auth.isSectionAdmin || auth.isTeacher)
@@ -272,6 +276,11 @@ function formatDate(date: string | null) {
 
         <!-- My Assignments -->
         <TabPanel value="1">
+          <FamilyHoursWidget
+            v-if="jobboardEnabled && familyStore.primaryFamily && !familyStore.primaryFamily.hoursExempt"
+            :familyId="familyStore.primaryFamily.id"
+            compact
+          />
           <EmptyState
             v-if="!jobboard.myAssignments.length"
             icon="pi pi-check-circle"

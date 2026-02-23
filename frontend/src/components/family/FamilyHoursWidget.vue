@@ -9,7 +9,7 @@ import Dialog from 'primevue/dialog'
 import type { JobAssignmentInfo } from '@/types/jobboard'
 
 const { t } = useI18n()
-const props = defineProps<{ familyId: string }>()
+const props = withDefaults(defineProps<{ familyId: string; compact?: boolean }>(), { compact: false })
 const jobboard = useJobboardStore()
 const admin = useAdminStore()
 
@@ -68,7 +68,43 @@ function formatDate(dateStr: string | null) {
 </script>
 
 <template>
-  <div v-if="jobboardEnabled && jobboard.familyHours" class="hours-widget card" tabindex="0" role="link" @click="openJobsList" @keydown.enter="openJobsList">
+  <!-- Compact variant for JobBoard -->
+  <div v-if="compact && jobboardEnabled && jobboard.familyHours" class="hours-compact" @click="openJobsList">
+    <div class="compact-row">
+      <span class="compact-title">{{ t('family.hours') }}</span>
+      <Tag
+        :value="trafficLightLabel(jobboard.familyHours.trafficLight)"
+        :severity="trafficLightSeverity(jobboard.familyHours.trafficLight)"
+        class="compact-tag"
+      />
+      <span class="compact-progress-text">
+        {{ jobboard.familyHours.totalHours }}/{{ jobboard.familyHours.targetHours }}h
+      </span>
+    </div>
+    <div class="compact-bar">
+      <div
+        class="progress-fill"
+        :class="jobboard.familyHours.trafficLight.toLowerCase()"
+        :style="{ width: progressPercent(jobboard.familyHours.totalHours, jobboard.familyHours.targetHours) + '%' }"
+      />
+    </div>
+    <div v-if="jobboard.familyHours.targetCleaningHours > 0" class="compact-row compact-sub">
+      <span class="compact-sub-label">{{ t('family.cleaningProgress') }}</span>
+      <span class="compact-progress-text">
+        {{ jobboard.familyHours.cleaningHours }}/{{ jobboard.familyHours.targetCleaningHours }}h
+      </span>
+    </div>
+    <div v-if="jobboard.familyHours.targetCleaningHours > 0" class="compact-bar compact-bar-sm">
+      <div
+        class="progress-fill"
+        :class="jobboard.familyHours.cleaningTrafficLight.toLowerCase()"
+        :style="{ width: progressPercent(jobboard.familyHours.cleaningHours, jobboard.familyHours.targetCleaningHours) + '%' }"
+      />
+    </div>
+  </div>
+
+  <!-- Full variant for FamilyView -->
+  <div v-else-if="!compact && jobboardEnabled && jobboard.familyHours" class="hours-widget card" tabindex="0" role="link" @click="openJobsList" @keydown.enter="openJobsList">
     <div class="hours-header">
       <h3>{{ t('family.hours') }}</h3>
       <Tag
@@ -165,6 +201,66 @@ function formatDate(dateStr: string | null) {
 </template>
 
 <style scoped>
+/* Compact variant */
+.hours-compact {
+  padding: 0.625rem 0.875rem;
+  background: var(--mw-bg);
+  border-radius: var(--mw-border-radius-sm);
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.hours-compact:hover {
+  background: var(--mw-border-light);
+}
+
+.compact-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.compact-title {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 600;
+}
+
+.compact-tag {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+}
+
+.compact-progress-text {
+  margin-left: auto;
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-secondary);
+  font-weight: 500;
+}
+
+.compact-bar {
+  height: 8px;
+  background: var(--mw-border-light);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.375rem;
+}
+
+.compact-bar-sm {
+  height: 6px;
+  margin-top: 0.25rem;
+}
+
+.compact-sub {
+  margin-top: 0.375rem;
+}
+
+.compact-sub-label {
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+}
+
+/* Full variant */
 .hours-widget {
   margin-bottom: 1.5rem;
   max-width: 480px;
