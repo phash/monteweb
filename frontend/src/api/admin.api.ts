@@ -1,6 +1,7 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
 import type { TenantConfig } from '@/types/family'
+import type { CsvImportResult } from '@/types/user'
 
 export const adminApi = {
   getConfig() {
@@ -33,5 +34,18 @@ export const adminApi = {
 
   getPublicConfig() {
     return client.get<ApiResponse<TenantConfig>>('/config')
+  },
+
+  // CSV Import
+  uploadCsv(file: File, dryRun = false) {
+    const form = new FormData()
+    form.append('file', file)
+    return client.post<ApiResponse<CsvImportResult>>(`/admin/csv-import?dryRun=${dryRun}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  downloadExampleCsv() {
+    return client.get('/admin/csv-import/example', { responseType: 'blob' })
   },
 }

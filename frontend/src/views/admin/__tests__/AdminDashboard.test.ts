@@ -37,6 +37,9 @@ const i18n = createI18n({
       privacy: {
         adminPrivacy: 'Datenschutz', adminPrivacyDesc: 'Datenschutz-Verwaltung',
       },
+      csvImport: {
+        title: 'CSV-Import', subtitle: 'Benutzer und Familien per CSV importieren',
+      },
     },
   },
 })
@@ -54,7 +57,7 @@ describe('AdminDashboard', () => {
 
   it('should render admin tiles', () => {
     const wrapper = mount(AdminDashboard, { global: { plugins: [i18n], stubs } })
-    expect(wrapper.findAll('.router-link-stub')).toHaveLength(10)
+    expect(wrapper.findAll('.router-link-stub')).toHaveLength(11)
   })
 
   it('should render tile labels', () => {

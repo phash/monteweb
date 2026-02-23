@@ -40,4 +40,14 @@ public interface FamilyModuleApi {
      * DSGVO: Export all family-related data for a user.
      */
     Map<String, Object> exportUserData(UUID userId);
+
+    /**
+     * Find a family by name (case-insensitive). Used by CSV import.
+     */
+    Optional<FamilyInfo> findByNameIgnoreCase(String name);
+
+    /**
+     * Admin: Create a family with a given name (no creator user added). Used by CSV import.
+     */
+    FamilyInfo adminCreateFamily(String name);
 }

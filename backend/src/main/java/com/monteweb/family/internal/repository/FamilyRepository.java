@@ -17,4 +17,6 @@ public interface FamilyRepository extends JpaRepository<Family, UUID> {
 
     @Query("SELECT COUNT(m) > 0 FROM FamilyMember m WHERE m.family.id = :familyId AND m.userId = :userId")
     boolean isMember(UUID userId, UUID familyId);
+
+    Optional<Family> findByNameIgnoreCase(String name);
 }

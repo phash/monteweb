@@ -61,3 +61,31 @@ export interface PrivacyPolicy {
   text: string | null
   version: string | null
 }
+
+// CSV Import types
+export interface CsvImportResult {
+  totalRows: number
+  usersCreated: number
+  familiesCreated: number
+  errorsCount: number
+  errors: CsvRowError[]
+  preview: CsvRowPreview[]
+}
+
+export interface CsvRowError {
+  row: number
+  field: string
+  message: string
+}
+
+export interface CsvRowPreview {
+  row: number
+  email: string
+  name: string
+  role: string
+  familyName: string
+  familyRole: string
+  sectionSlug: string
+  valid: boolean
+  error: string | null
+}

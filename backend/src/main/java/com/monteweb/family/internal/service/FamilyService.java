@@ -432,6 +432,20 @@ public class FamilyService implements FamilyModuleApi {
         }
     }
 
+    @Override
+    public Optional<FamilyInfo> findByNameIgnoreCase(String name) {
+        return familyRepository.findByNameIgnoreCase(name).map(this::toFamilyInfo);
+    }
+
+    @Override
+    @Transactional
+    public FamilyInfo adminCreateFamily(String name) {
+        var family = new Family();
+        family.setName(name);
+        family = familyRepository.save(family);
+        return toFamilyInfo(family);
+    }
+
     /**
      * DSGVO: Export all family data for a user.
      */

@@ -1,14 +1,18 @@
 package com.monteweb.admin.internal.controller;
 
 import com.monteweb.admin.TenantConfigInfo;
+import com.monteweb.admin.internal.dto.CsvImportResult;
 import com.monteweb.admin.internal.dto.UpdateConfigRequest;
 import com.monteweb.admin.internal.model.AuditLogEntry;
 import com.monteweb.admin.internal.service.AdminService;
 import com.monteweb.admin.internal.service.AuditService;
+import com.monteweb.admin.internal.service.CsvImportService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -23,10 +27,12 @@ public class AdminConfigController {
 
     private final AdminService adminService;
     private final AuditService auditService;
+    private final CsvImportService csvImportService;
 
-    public AdminConfigController(AdminService adminService, AuditService auditService) {
+    public AdminConfigController(AdminService adminService, AuditService auditService, CsvImportService csvImportService) {
         this.adminService = adminService;
         this.auditService = auditService;
+        this.csvImportService = csvImportService;
     }
 
     @GetMapping("/config")
@@ -101,5 +107,24 @@ public class AdminConfigController {
     public ResponseEntity<ApiResponse<PageResponse<AuditLogEntry>>> getAuditLog(
             @PageableDefault(size = 50) Pageable pageable) {
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(auditService.findAll(pageable))));
+    }
+
+    // --- CSV Import ---
+
+    @PostMapping("/csv-import")
+    public ResponseEntity<ApiResponse<CsvImportResult>> importCsv(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(defaultValue = "false") boolean dryRun) {
+        var result = csvImportService.processCsv(file, dryRun);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    @GetMapping("/csv-import/example")
+    public ResponseEntity<byte[]> downloadExampleCsv() {
+        byte[] csv = csvImportService.generateExampleCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=import-example.csv")
+                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .body(csv);
     }
 }

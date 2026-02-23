@@ -249,6 +249,12 @@ const router = createRouter({
               component: () => import('@/views/admin/AdminPrivacyView.vue'),
               meta: { breadcrumbLabel: 'privacy.adminPrivacy' },
             },
+            {
+              path: 'csv-import',
+              name: 'admin-csv-import',
+              component: () => import('@/views/admin/AdminCsvImport.vue'),
+              meta: { breadcrumbLabel: 'csvImport.title' },
+            },
           ],
         },
       ],
