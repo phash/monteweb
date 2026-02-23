@@ -1,9 +1,11 @@
 package com.monteweb.feed.internal.controller;
 
 import com.monteweb.feed.FeedPostInfo;
+import com.monteweb.feed.LinkPreviewInfo;
 import com.monteweb.feed.SourceType;
 import com.monteweb.feed.internal.dto.*;
 import com.monteweb.feed.internal.service.FeedService;
+import com.monteweb.feed.internal.service.LinkPreviewService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
@@ -23,9 +25,11 @@ import java.util.UUID;
 public class FeedController {
 
     private final FeedService feedService;
+    private final LinkPreviewService linkPreviewService;
 
-    public FeedController(FeedService feedService) {
+    public FeedController(FeedService feedService, LinkPreviewService linkPreviewService) {
         this.feedService = feedService;
+        this.linkPreviewService = linkPreviewService;
     }
 
     @GetMapping
@@ -121,6 +125,17 @@ public class FeedController {
         feedService.toggleCommentReaction(id, userId, request.emoji());
         var reactions = feedService.getCommentReactions(id, userId);
         return ResponseEntity.ok(ApiResponse.ok(reactions));
+    }
+
+    // --- Link preview ---
+
+    @GetMapping("/link-preview")
+    public ResponseEntity<ApiResponse<LinkPreviewInfo>> getLinkPreview(@RequestParam String url) {
+        var preview = linkPreviewService.fetchPreview(url);
+        if (preview == null) {
+            return ResponseEntity.ok(ApiResponse.ok(null));
+        }
+        return ResponseEntity.ok(ApiResponse.ok(preview));
     }
 
     // --- Room posts ---

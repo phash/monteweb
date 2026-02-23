@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest, CreateCommentRequest, ReactionSummary } from '@/types/feed'
+import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest, CreateCommentRequest, ReactionSummary, LinkPreviewInfo } from '@/types/feed'
 
 export const feedApi = {
   getFeed(page = 0, size = 20) {
@@ -53,5 +53,9 @@ export const feedApi = {
 
   toggleCommentReaction(commentId: string, emoji: string) {
     return client.post<ApiResponse<ReactionSummary[]>>(`/feed/comments/${commentId}/reactions`, { emoji })
+  },
+
+  getLinkPreview(url: string) {
+    return client.get<ApiResponse<LinkPreviewInfo>>('/feed/link-preview', { params: { url } })
   },
 }

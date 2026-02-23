@@ -99,6 +99,9 @@ public class TenantConfig {
     private Integer dataRetentionDaysAudit = 1095;
 
 
+    @Column(name = "max_upload_size_mb", nullable = false)
+    private int maxUploadSizeMb = 50;
+
     @Column(name = "school_full_name", length = 300)
     private String schoolFullName;
 

@@ -59,3 +59,11 @@ export interface CreatePostRequest {
 export interface CreateCommentRequest {
   content: string
 }
+
+export interface LinkPreviewInfo {
+  url: string
+  title: string | null
+  description: string | null
+  imageUrl: string | null
+  siteName: string | null
+}

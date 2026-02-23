@@ -581,6 +581,8 @@ export default {
     titlePlaceholder: 'Title (optional)',
     contentPlaceholder: "What's new?",
     commentPlaceholder: 'Write a comment...',
+    linkPreview: 'Link Preview',
+    videoEmbed: 'Video',
     sourceLabels: {
       ROOM: 'Room',
       SECTION: 'School section',

@@ -5,6 +5,8 @@ import { useRouter } from 'vue-router'
 import { calendarApi } from '@/api/calendar.api'
 import { jobboardApi } from '@/api/jobboard.api'
 import { roomsApi } from '@/api/rooms.api'
+import LinkPreview from '@/components/common/LinkPreview.vue'
+import VideoEmbed from '@/components/common/VideoEmbed.vue'
 
 const props = defineProps<{ content: string }>()
 const { t } = useI18n()
@@ -32,6 +34,13 @@ const RELATIVE_URL_REGEX = new RegExp(
   `(?:^|\\s)(/(calendar/events|jobs|rooms)/(${UUID_PATTERN}))`,
   'gi'
 )
+
+// Pattern to detect any external URL
+const EXTERNAL_URL_REGEX = /https?:\/\/[^\s<>"']+/gi
+
+// Video URL patterns
+const YOUTUBE_REGEX = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/
+const VIMEO_REGEX = /vimeo\.com\/(\d+)/
 
 function resolveType(pathType: string): 'event' | 'job' | 'room' {
   if (pathType === 'calendar/events') return 'event'
@@ -63,6 +72,36 @@ const linkUrls = computed(() => {
   }
 
   return urls
+})
+
+// Find the first external URL in content for embed/preview
+const firstExternalUrl = computed<string | null>(() => {
+  const content = props.content
+  if (!content) return null
+
+  const regex = new RegExp(EXTERNAL_URL_REGEX.source, 'gi')
+  const match = regex.exec(content)
+  if (!match) return null
+
+  const url = match[0]
+  // Skip internal app URLs that are handled by the internal link resolver
+  const internalRegex = new RegExp(URL_REGEX.source, 'i')
+  if (internalRegex.test(url)) return null
+
+  return url
+})
+
+// Determine if the first external URL is a video embed
+const isVideoUrl = computed(() => {
+  const url = firstExternalUrl.value
+  if (!url) return false
+  return YOUTUBE_REGEX.test(url) || VIMEO_REGEX.test(url)
+})
+
+// The URL to show a link preview for (only if not a video)
+const linkPreviewUrl = computed<string | null>(() => {
+  if (!firstExternalUrl.value || isVideoUrl.value) return null
+  return firstExternalUrl.value
 })
 
 function formatEventDate(event: { startDate: string; startTime?: string | null; endTime?: string | null; allDay: boolean }): string {
@@ -115,7 +154,7 @@ async function resolveLinks() {
         })
       }
     } catch {
-      // Link resolution failed — will render as plain text
+      // Link resolution failed - will render as plain text
     }
   }
 }
@@ -221,6 +260,10 @@ onMounted(() => {
       </a>
       <span v-else class="text-segment">{{ seg.value }}</span>
     </template>
+    <!-- Video embed for YouTube/Vimeo -->
+    <VideoEmbed v-if="isVideoUrl && firstExternalUrl" :url="firstExternalUrl" />
+    <!-- Link preview for the first non-video external URL -->
+    <LinkPreview v-if="linkPreviewUrl" :url="linkPreviewUrl" />
   </span>
 </template>
 
