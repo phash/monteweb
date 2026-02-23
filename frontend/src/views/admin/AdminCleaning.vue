@@ -40,7 +40,6 @@ const { getDateClass, getDateTooltip } = useHolidays(currentYear)
 const showCreateDialog = ref(false)
 const showPutzOrgaDialog = ref(false)
 const showAssignmentsDialog = ref(false)
-const selectedConfig = ref<CleaningConfigInfo | null>(null)
 
 const dayOptions = [
   { label: t('cleaning.days.monday'), value: 1 },
