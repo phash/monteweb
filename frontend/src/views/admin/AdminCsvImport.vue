@@ -63,7 +63,7 @@ async function downloadExample() {
 function onFileSelect(event: Event) {
   const input = event.target as HTMLInputElement
   if (input.files && input.files.length > 0) {
-    selectedFile.value = input.files[0]
+    selectedFile.value = input.files[0] ?? null
     previewResult.value = null
     importResult.value = null
   }
@@ -73,8 +73,8 @@ function onDrop(event: DragEvent) {
   dragOver.value = false
   event.preventDefault()
   if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-    const file = event.dataTransfer.files[0]
-    if (file.name.endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel') {
+    const file = event.dataTransfer.files[0] ?? null
+    if (file && (file.name.endsWith('.csv') || file.type === 'text/csv' || file.type === 'application/vnd.ms-excel')) {
       selectedFile.value = file
       previewResult.value = null
       importResult.value = null

@@ -7,7 +7,6 @@ import { tasksApi } from '@/api/tasks.api'
 import type {
   TaskBoardResponse,
   TaskResponse,
-  TaskColumnResponse,
   CreateTaskRequest,
 } from '@/types/tasks'
 import { useLocaleDate } from '@/composables/useLocaleDate'
