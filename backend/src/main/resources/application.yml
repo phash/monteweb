@@ -127,3 +127,5 @@ monteweb:
       enabled: true
     fundgrube:
       enabled: true
+    tasks:
+      enabled: true
