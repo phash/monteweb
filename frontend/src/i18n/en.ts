@@ -753,6 +753,11 @@ export default {
     noRooms: 'No rooms found.',
     tags: 'Tags',
     tagsPlaceholder: 'Enter a tag and press Enter',
+    allSections: 'All sections',
+    allTypes: 'All types',
+    otherRooms: 'Other Rooms',
+    filterBySection: 'Section',
+    filterByType: 'Type',
   },
   discussions: {
     title: 'Discussions',

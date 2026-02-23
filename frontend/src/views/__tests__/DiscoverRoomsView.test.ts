@@ -21,6 +21,12 @@ vi.mock('@/api/rooms.api', () => ({
   },
 }))
 
+vi.mock('@/api/sections.api', () => ({
+  sectionsApi: {
+    getAll: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
+
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
 vi.mock('@/api/users.api', () => ({ usersApi: {} }))
 
@@ -37,10 +43,14 @@ const i18n = createI18n({
         joined: 'Beigetreten',
         allRooms: 'Alle Räume',
         noRooms: 'Keine Räume gefunden.',
-        requestJoin: 'Beitrittsanfrage',
-        requestSent: 'Anfrage gesendet',
-        joinRequestMessage: 'Nachricht',
-        myJoinRequests: 'Meine Anfragen',
+        allSections: 'Alle Bereiche',
+        allTypes: 'Alle Typen',
+        otherRooms: 'Sonstige Räume',
+        filterBySection: 'Bereich',
+        filterByType: 'Typ',
+        members: 'Mitglieder',
+        tags: 'Tags',
+        tagsPlaceholder: 'Tag eingeben',
       },
       rooms: {
         name: 'Name',
@@ -51,8 +61,21 @@ const i18n = createI18n({
         joinRequestSent: 'Anfrage gesendet',
         joinRequestMessage: 'Beitrittsanfrage für {room}',
         joinRequestPlaceholder: 'Nachricht an die Leitung (optional)...',
+        inviteOnly: 'Nur auf Einladung',
+        types: {
+          KLASSE: 'Klasse',
+          GRUPPE: 'Gruppe',
+          PROJEKT: 'Projekt',
+          INTEREST: 'Interessengruppe',
+          CUSTOM: 'Sonstige',
+        },
+        joinPolicies: {
+          OPEN: 'Offen',
+          REQUEST: 'Auf Anfrage',
+          INVITE_ONLY: 'Nur auf Einladung',
+        },
       },
-      common: { cancel: 'Abbrechen', save: 'Speichern', loading: 'Laden...' },
+      common: { cancel: 'Abbrechen', save: 'Speichern', loading: 'Laden...', create: 'Erstellen' },
     },
   },
 })
@@ -65,6 +88,7 @@ const stubs = {
     emits: ['click'],
   },
   Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity', 'size'] },
+  Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder'] },
   Dialog: {
     template: '<div v-if="visible" class="dialog-stub"><slot /><slot name="footer" /></div>',
     props: ['visible', 'header', 'modal'],

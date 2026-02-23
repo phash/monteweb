@@ -24,10 +24,17 @@ vi.mock('@/api/rooms.api', () => ({
   },
 }))
 
+vi.mock('@/api/sections.api', () => ({
+  sectionsApi: {
+    getAll: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
+
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
 vi.mock('@/api/users.api', () => ({ usersApi: {} }))
 
 import { roomsApi } from '@/api/rooms.api'
+import { sectionsApi } from '@/api/sections.api'
 
 const i18n = createI18n({
   legacy: false,
@@ -45,6 +52,11 @@ const i18n = createI18n({
         noRooms: 'Keine Räume gefunden.',
         tags: 'Tags',
         tagsPlaceholder: 'Tag eingeben',
+        allSections: 'Alle Bereiche',
+        allTypes: 'Alle Typen',
+        otherRooms: 'Sonstige Räume',
+        filterBySection: 'Bereich',
+        filterByType: 'Typ',
       },
       rooms: {
         name: 'Name',
@@ -64,6 +76,11 @@ const i18n = createI18n({
           INTEREST: 'Interessengruppe',
           CUSTOM: 'Sonstige',
         },
+        joinPolicies: {
+          OPEN: 'Offen',
+          REQUEST: 'Auf Anfrage',
+          INVITE_ONLY: 'Nur auf Einladung',
+        },
       },
       common: { cancel: 'Abbrechen', create: 'Erstellen', previous: 'Zurück', next: 'Weiter' },
     },
@@ -78,6 +95,7 @@ const stubs = {
     emits: ['click'],
   },
   Tag: { template: '<span class="tag-stub" :data-severity="severity">{{ value }}</span>', props: ['value', 'severity', 'size'] },
+  Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder'] },
   Dialog: {
     template: '<div v-if="visible" class="dialog-stub"><slot /><slot name="footer" /></div>',
     props: ['visible', 'header', 'modal'],
@@ -90,6 +108,9 @@ function mountWithBrowseRooms(browseRooms: any[] = []) {
   vi.mocked(roomsApi.browse).mockResolvedValue({
     data: { data: { content: browseRooms, totalPages: 1, last: true } },
   } as any)
+  vi.mocked(sectionsApi.getAll).mockResolvedValue({
+    data: { data: [] },
+  } as any)
 
   const pinia = createPinia()
   return mount(DiscoverRoomsView, {
@@ -101,14 +122,11 @@ describe('DiscoverRoomsView – JoinPolicy', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
-    vi.mocked(roomsApi.discover).mockResolvedValue({
-      data: { data: { content: [], totalPages: 0, last: true } },
-    } as any)
   })
 
   it('should render join button for OPEN joinPolicy rooms in browse list', async () => {
     const wrapper = mountWithBrowseRooms([
-      { id: 'r1', name: 'Open Room', type: 'GRUPPE', joinPolicy: 'OPEN', memberCount: 5, publicDescription: null, avatarUrl: null },
+      { id: 'r1', name: 'Open Room', type: 'GRUPPE', joinPolicy: 'OPEN', memberCount: 5, publicDescription: null, avatarUrl: null, sectionId: null, tags: [] },
     ])
 
     await wrapper.vm.$nextTick()
@@ -122,7 +140,7 @@ describe('DiscoverRoomsView – JoinPolicy', () => {
 
   it('should render request join button for REQUEST joinPolicy rooms', async () => {
     const wrapper = mountWithBrowseRooms([
-      { id: 'r2', name: 'Request Room', type: 'PROJEKT', joinPolicy: 'REQUEST', memberCount: 10, publicDescription: 'A project', avatarUrl: null },
+      { id: 'r2', name: 'Request Room', type: 'PROJEKT', joinPolicy: 'REQUEST', memberCount: 10, publicDescription: 'A project', avatarUrl: null, sectionId: null, tags: [] },
     ])
 
     await wrapper.vm.$nextTick()
@@ -136,7 +154,7 @@ describe('DiscoverRoomsView – JoinPolicy', () => {
 
   it('should render invite-only tag for INVITE_ONLY joinPolicy rooms', async () => {
     const wrapper = mountWithBrowseRooms([
-      { id: 'r3', name: 'Invite Room', type: 'KLASSE', joinPolicy: 'INVITE_ONLY', memberCount: 20, publicDescription: null, avatarUrl: null },
+      { id: 'r3', name: 'Invite Room', type: 'KLASSE', joinPolicy: 'INVITE_ONLY', memberCount: 20, publicDescription: null, avatarUrl: null, sectionId: null, tags: [] },
     ])
 
     await wrapper.vm.$nextTick()
@@ -150,9 +168,9 @@ describe('DiscoverRoomsView – JoinPolicy', () => {
 
   it('should show mixed joinPolicy rooms correctly', async () => {
     const wrapper = mountWithBrowseRooms([
-      { id: 'r1', name: 'Open Room', type: 'GRUPPE', joinPolicy: 'OPEN', memberCount: 5, publicDescription: null, avatarUrl: null },
-      { id: 'r2', name: 'Request Room', type: 'PROJEKT', joinPolicy: 'REQUEST', memberCount: 10, publicDescription: null, avatarUrl: null },
-      { id: 'r3', name: 'Invite Room', type: 'KLASSE', joinPolicy: 'INVITE_ONLY', memberCount: 20, publicDescription: null, avatarUrl: null },
+      { id: 'r1', name: 'Open Room', type: 'GRUPPE', joinPolicy: 'OPEN', memberCount: 5, publicDescription: null, avatarUrl: null, sectionId: null, tags: [] },
+      { id: 'r2', name: 'Request Room', type: 'PROJEKT', joinPolicy: 'REQUEST', memberCount: 10, publicDescription: null, avatarUrl: null, sectionId: null, tags: [] },
+      { id: 'r3', name: 'Invite Room', type: 'KLASSE', joinPolicy: 'INVITE_ONLY', memberCount: 20, publicDescription: null, avatarUrl: null, sectionId: null, tags: [] },
     ])
 
     await wrapper.vm.$nextTick()
@@ -169,7 +187,7 @@ describe('DiscoverRoomsView – JoinPolicy', () => {
     vi.mocked(roomsApi.joinRoom).mockResolvedValue({} as any)
 
     const wrapper = mountWithBrowseRooms([
-      { id: 'r1', name: 'Open Room', type: 'GRUPPE', joinPolicy: 'OPEN', memberCount: 5, publicDescription: null, avatarUrl: null },
+      { id: 'r1', name: 'Open Room', type: 'GRUPPE', joinPolicy: 'OPEN', memberCount: 5, publicDescription: null, avatarUrl: null, sectionId: null, tags: [] },
     ])
 
     await wrapper.vm.$nextTick()

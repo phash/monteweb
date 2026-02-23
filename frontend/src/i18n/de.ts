@@ -753,6 +753,11 @@ export default {
     noRooms: 'Keine Räume gefunden.',
     tags: 'Tags',
     tagsPlaceholder: 'Tag eingeben und Enter drücken',
+    allSections: 'Alle Bereiche',
+    allTypes: 'Alle Typen',
+    otherRooms: 'Sonstige Räume',
+    filterBySection: 'Bereich',
+    filterByType: 'Typ',
   },
   discussions: {
     title: 'Diskussionen',
