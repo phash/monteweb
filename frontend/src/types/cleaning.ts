@@ -49,6 +49,7 @@ export interface CleaningSlotInfo {
   currentRegistrations: number
   status: CleaningSlotStatus
   cancelled: boolean
+  jobId?: string | null
   registrations: RegistrationInfo[]
 }
 

@@ -17,11 +17,14 @@ import com.monteweb.school.SchoolSectionInfo;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.shared.util.SecurityUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +44,8 @@ import java.util.stream.Collectors;
 @ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
 @Transactional
 public class CleaningService implements CleaningModuleApi {
+
+    private static final Logger log = LoggerFactory.getLogger(CleaningService.class);
 
     private final CleaningConfigRepository configRepository;
     private final CleaningSlotRepository slotRepository;
@@ -127,6 +132,9 @@ public class CleaningService implements CleaningModuleApi {
                     currentUserId
             ));
         }
+
+        // Auto-generate slots
+        autoGenerateSlotsForConfig(config);
 
         return toConfigInfo(config);
     }
@@ -233,6 +241,49 @@ public class CleaningService implements CleaningModuleApi {
         slotRepository.saveAll(saved);
 
         return saved.stream().map(s -> toSlotInfo(s, config.getTitle())).toList();
+    }
+
+    /**
+     * Auto-generates slots for a single config.
+     * One-time: generates the single slot for the specific date.
+     * Recurring: generates slots from today to 6 months ahead.
+     */
+    private void autoGenerateSlotsForConfig(CleaningConfig config) {
+        try {
+            if (config.getSpecificDate() != null) {
+                generateSlots(config.getId(), config.getSpecificDate(), config.getSpecificDate());
+            } else {
+                LocalDate from = LocalDate.now();
+                LocalDate to = from.plusMonths(6);
+                generateSlots(config.getId(), from, to);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to auto-generate slots for config {}: {}", config.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Scheduled task: auto-generates cleaning slots for all active recurring configs.
+     * Runs daily at 2:00 AM. Generates slots for the next 3 months.
+     */
+    @Scheduled(cron = "0 0 2 * * *")
+    public void autoGenerateRecurringSlots() {
+        List<CleaningConfig> activeConfigs = configRepository.findByActiveTrue();
+        LocalDate from = LocalDate.now();
+        LocalDate to = from.plusMonths(3);
+        int totalGenerated = 0;
+        for (CleaningConfig config : activeConfigs) {
+            if (config.getSpecificDate() != null) continue; // skip one-time
+            try {
+                List<CleaningSlotInfo> slots = generateSlots(config.getId(), from, to);
+                totalGenerated += slots.size();
+            } catch (Exception e) {
+                log.warn("Failed to auto-generate slots for config {}: {}", config.getId(), e.getMessage());
+            }
+        }
+        if (totalGenerated > 0) {
+            log.info("Auto-generated {} cleaning slots for {} active configs", totalGenerated, activeConfigs.size());
+        }
     }
 
     // ── Slot Queries ────────────────────────────────────────────────────
@@ -614,12 +665,16 @@ public class CleaningService implements CleaningModuleApi {
                 .map(this::toRegistrationInfo)
                 .toList();
 
+        UUID jobId = configRepository.findById(slot.getConfigId())
+                .map(CleaningConfig::getJobId)
+                .orElse(null);
+
         return new CleaningSlotInfo(
                 slot.getId(), slot.getConfigId(), slot.getSectionId(), sectionName,
                 configTitle, slot.getSlotDate(), slot.getStartTime(), slot.getEndTime(),
                 slot.getMinParticipants(), slot.getMaxParticipants(),
                 regs.size(), CleaningSlotStatus.valueOf(slot.getStatus()),
-                slot.isCancelled(), regInfos);
+                slot.isCancelled(), jobId, regInfos);
     }
 
     private CleaningSlotInfo.RegistrationInfo toRegistrationInfo(CleaningRegistration reg) {

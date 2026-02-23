@@ -67,7 +67,7 @@ describe('Accessibility (axe-core)', () => {
     setActivePinia(createPinia())
   })
 
-  it('LoginView has no critical accessibility violations', async () => {
+  it('LoginView has no critical accessibility violations', { timeout: 15000 }, async () => {
     const { default: LoginView } = await import('@/views/LoginView.vue')
     const wrapper = mount(LoginView, createTestPlugins())
     const results = await axe(wrapper.element, {

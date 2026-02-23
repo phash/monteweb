@@ -20,6 +20,7 @@ public record CleaningSlotInfo(
         int currentRegistrations,
         CleaningSlotStatus status,
         boolean cancelled,
+        UUID jobId,
         List<RegistrationInfo> registrations
 ) {
     public record RegistrationInfo(

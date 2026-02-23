@@ -143,6 +143,16 @@ async function swap() {
         </div>
       </div>
 
+      <!-- Job Link -->
+      <div v-if="slot.jobId" class="job-link-card card">
+        <div class="job-link-content">
+          <i class="pi pi-briefcase" />
+          <span>{{ t('cleaning.linkedJob') }}</span>
+        </div>
+        <Button :label="t('cleaning.viewJob')" icon="pi pi-arrow-right" iconPos="right"
+                size="small" outlined @click="router.push({ name: 'jobs' })" />
+      </div>
+
       <!-- Action Buttons -->
       <div class="slot-actions">
         <Button v-if="canRegister" :label="t('cleaning.register')" icon="pi pi-plus" @click="register" />
@@ -221,6 +231,28 @@ async function swap() {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
+}
+
+.job-link-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, var(--mw-primary) 6%, var(--mw-bg-card));
+  border: 1px solid color-mix(in srgb, var(--mw-primary) 20%, transparent);
+}
+
+.job-link-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: var(--mw-text);
+}
+
+.job-link-content .pi {
+  color: var(--mw-primary);
 }
 
 .registrations-title {

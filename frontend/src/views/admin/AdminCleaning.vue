@@ -38,7 +38,6 @@ const currentYear = ref(new Date().getFullYear())
 const { getDateClass, getDateTooltip } = useHolidays(currentYear)
 
 const showCreateDialog = ref(false)
-const showGenerateDialog = ref(false)
 const showPutzOrgaDialog = ref(false)
 const showAssignmentsDialog = ref(false)
 const selectedConfig = ref<CleaningConfigInfo | null>(null)
@@ -82,12 +81,6 @@ const newConfig = ref({
   maxParticipants: 6,
   hoursCredit: 2.0
 })
-
-const generateRange = ref({
-  from: null as Date | null,
-  to: null as Date | null
-})
-
 
 onMounted(async () => {
   if (!adminStore.config) {
@@ -148,29 +141,6 @@ function formatSpecificDate(dateStr: string | null | undefined): string {
   if (!dateStr) return ''
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function openGenerate(config: CleaningConfigInfo) {
-  selectedConfig.value = config
-  generateRange.value = { from: null, to: null }
-  showGenerateDialog.value = true
-}
-
-async function generateSlots() {
-  if (!selectedConfig.value || !generateRange.value.from || !generateRange.value.to) return
-  try {
-    const from = generateRange.value.from!.toISOString().split('T')[0]
-    const to = generateRange.value.to!.toISOString().split('T')[0]
-    const slots = await cleaningStore.generateSlots(selectedConfig.value!.id, from!, to!)
-    showGenerateDialog.value = false
-    toast.add({
-      severity: 'success',
-      summary: t('cleaning.admin.slotsGenerated', { n: slots.length }),
-      life: 3000
-    })
-  } catch (e: any) {
-    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
-  }
 }
 
 async function toggleActive(config: CleaningConfigInfo) {
@@ -334,10 +304,6 @@ function assignmentStatusSeverity(status: string) {
       <Column :header="t('common.actions')">
         <template #body="{ data }">
           <div class="flex gap-1">
-            <Button icon="pi pi-calendar-plus" text rounded size="small"
-                    v-tooltip="t('cleaning.admin.generate')"
-                    :aria-label="t('cleaning.admin.generate')"
-                    @click="openGenerate(data)" :disabled="!data.active" />
             <Button :icon="data.active ? 'pi pi-ban' : 'pi pi-check'"
                     text rounded size="small"
                     :severity="data.active ? 'danger' : 'success'"
@@ -366,7 +332,6 @@ function assignmentStatusSeverity(status: string) {
         </div>
         <div class="mobile-card-actions">
           <Button v-if="config.jobId" icon="pi pi-users" text size="small" :label="t('cleaning.admin.registrations')" @click="openAssignments(config)" />
-          <Button icon="pi pi-calendar-plus" text size="small" :label="t('cleaning.admin.generate')" @click="openGenerate(config)" :disabled="!config.active" />
           <Button :icon="config.active ? 'pi pi-ban' : 'pi pi-check'" text size="small"
                   :severity="config.active ? 'danger' : 'success'"
                   :label="config.active ? t('common.inactive') : t('common.active')"
@@ -457,35 +422,6 @@ function assignmentStatusSeverity(status: string) {
         <Button :label="t('common.cancel')" severity="secondary" text @click="showCreateDialog = false" />
         <Button :label="t('common.create')" icon="pi pi-check" @click="createConfig"
                 :disabled="!newConfig.title || (scopeType === 'section' ? !newConfig.sectionId : !newConfig.roomId)" />
-      </template>
-    </Dialog>
-
-    <!-- Generate Slots Dialog -->
-    <Dialog v-model:visible="showGenerateDialog" :header="t('cleaning.admin.generateTitle')" modal
-            :style="{ width: '400px', maxWidth: '90vw' }">
-      <p class="mb-3">{{ t('cleaning.admin.generateHint', { title: selectedConfig?.title }) }}</p>
-      <div class="flex flex-col gap-3">
-        <div>
-          <label for="gen-from" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.fromDate') }}</label>
-          <DatePicker v-model="generateRange.from" dateFormat="dd.mm.yy" inputId="gen-from" class="w-full">
-            <template #date="{ date }">
-              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
-            </template>
-          </DatePicker>
-        </div>
-        <div>
-          <label for="gen-to" class="block text-sm font-medium mb-1">{{ t('cleaning.admin.toDate') }}</label>
-          <DatePicker v-model="generateRange.to" dateFormat="dd.mm.yy" inputId="gen-to" class="w-full">
-            <template #date="{ date }">
-              <span :class="getDateClass(date)" v-tooltip="getDateTooltip(date)">{{ date.day }}</span>
-            </template>
-          </DatePicker>
-        </div>
-      </div>
-      <template #footer>
-        <Button :label="t('common.cancel')" severity="secondary" text @click="showGenerateDialog = false" />
-        <Button :label="t('cleaning.admin.generate')" icon="pi pi-calendar-plus" @click="generateSlots"
-                :disabled="!generateRange.from || !generateRange.to" />
       </template>
     </Dialog>
 
