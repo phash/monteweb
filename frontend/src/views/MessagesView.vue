@@ -6,6 +6,7 @@ import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
 import { messagingApi } from '@/api/messaging.api'
+import { formatMentions } from '@/composables/useMentions'
 import type { MessageInfo } from '@/types/messaging'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -14,7 +15,7 @@ import NewMessageDialog from '@/components/messaging/NewMessageDialog.vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import ReactionBar from '@/components/common/ReactionBar.vue'
-import Textarea from 'primevue/textarea'
+import MentionInput from '@/components/common/MentionInput.vue'
 
 const { t } = useI18n()
 const { formatCompactDateTime } = useLocaleDate()
@@ -276,7 +277,7 @@ function formatTime(date: string | null) {
                   />
                 </div>
 
-                <p v-if="msg.content">{{ msg.content }}</p>
+                <p v-if="msg.content">{{ formatMentions(msg.content) }}</p>
 
                 <ReactionBar
                   :reactions="msg.reactions || []"
@@ -341,11 +342,11 @@ function formatTime(date: string | null) {
               :aria-label="t('messages.attachImage')"
               @click="triggerImageSelect"
             />
-            <Textarea
+            <MentionInput
               v-model="messageText"
               :placeholder="t('messages.writePlaceholder')"
               :autoResize="true"
-              rows="2"
+              :rows="2"
               class="input-field"
               @keydown.enter.exact.prevent="sendMessage"
             />

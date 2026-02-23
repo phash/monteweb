@@ -6,13 +6,14 @@ import { useAuthStore } from '@/stores/auth'
 import { messagingApi } from '@/api/messaging.api'
 import { useI18n } from 'vue-i18n'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import { formatMentions } from '@/composables/useMentions'
 import type { MessageInfo } from '@/types/messaging'
 import type { ChannelType } from '@/types/room'
 import Button from 'primevue/button'
-import Textarea from 'primevue/textarea'
 import SelectButton from 'primevue/selectbutton'
 import Dialog from 'primevue/dialog'
 import ReactionBar from '@/components/common/ReactionBar.vue'
+import MentionInput from '@/components/common/MentionInput.vue'
 
 const props = defineProps<{ roomId: string }>()
 
@@ -303,7 +304,7 @@ function getMessagePreview(msg: MessageInfo) {
               />
             </div>
 
-            <p v-if="item.msg.content" class="rc-content">{{ item.msg.content }}</p>
+            <p v-if="item.msg.content" class="rc-content">{{ formatMentions(item.msg.content) }}</p>
 
             <ReactionBar
               v-if="item.msg.reactions?.length || true"
@@ -374,11 +375,11 @@ function getMessagePreview(msg: MessageInfo) {
         :aria-label="t('chat.attachImage')"
         @click="triggerImageSelect"
       />
-      <Textarea
+      <MentionInput
         v-model="messageText"
         :placeholder="t('chat.placeholder')"
         :autoResize="true"
-        rows="1"
+        :rows="1"
         class="rc-textarea"
         @keydown.enter.exact.prevent="sendMessage"
       />

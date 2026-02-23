@@ -120,29 +120,70 @@ async function resolveLinks() {
   }
 }
 
-// Split content into text segments and link segments
-const segments = computed(() => {
+// Mention pattern: @[uuid:Display Name]
+const MENTION_REGEX_SRC = '@\\[([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):([^\\]]+)\\]'
+
+interface ContentSegment {
+  type: 'text' | 'link' | 'mention'
+  value: string
+  mentionName?: string
+  mentionId?: string
+}
+
+// Split content into text segments, link segments, and mention segments
+const segments = computed((): ContentSegment[] => {
   const content = props.content
-  if (linkUrls.value.length === 0) return [{ type: 'text' as const, value: content }]
+  if (!content) return []
 
+  // First pass: split by mentions
+  const mentionSegments: ContentSegment[] = []
+  let lastIndex = 0
+  const mentionRegex = new RegExp(MENTION_REGEX_SRC, 'gi')
+  let mentionMatch
+  while ((mentionMatch = mentionRegex.exec(content)) !== null) {
+    if (mentionMatch.index > lastIndex) {
+      mentionSegments.push({ type: 'text', value: content.slice(lastIndex, mentionMatch.index) })
+    }
+    mentionSegments.push({
+      type: 'mention',
+      value: mentionMatch[0],
+      mentionId: mentionMatch[1],
+      mentionName: mentionMatch[2],
+    })
+    lastIndex = mentionMatch.index + mentionMatch[0].length
+  }
+  if (lastIndex < content.length) {
+    mentionSegments.push({ type: 'text', value: content.slice(lastIndex) })
+  }
+
+  // If no links, return with mentions already parsed
+  if (linkUrls.value.length === 0) return mentionSegments
+
+  // Second pass: split text segments by link URLs
   const allUrls = linkUrls.value.map(l => l.url).sort((a, b) => b.length - a.length)
-  const result: { type: 'text' | 'link'; value: string }[] = []
-
-  // Build a regex that matches any of the URLs
   const escaped = allUrls.map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
   const combinedRegex = new RegExp(`(${escaped.join('|')})`, 'g')
 
-  let lastIndex = 0
-  let match
-  while ((match = combinedRegex.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      result.push({ type: 'text', value: content.slice(lastIndex, match.index) })
+  const result: ContentSegment[] = []
+  for (const seg of mentionSegments) {
+    if (seg.type !== 'text') {
+      result.push(seg)
+      continue
     }
-    result.push({ type: 'link', value: match[1] ?? match[0] })
-    lastIndex = match.index + match[0].length
-  }
-  if (lastIndex < content.length) {
-    result.push({ type: 'text', value: content.slice(lastIndex) })
+
+    let segLastIndex = 0
+    let match
+    const regex = new RegExp(combinedRegex.source, 'g')
+    while ((match = regex.exec(seg.value)) !== null) {
+      if (match.index > segLastIndex) {
+        result.push({ type: 'text', value: seg.value.slice(segLastIndex, match.index) })
+      }
+      result.push({ type: 'link', value: match[1] ?? match[0] })
+      segLastIndex = match.index + match[0].length
+    }
+    if (segLastIndex < seg.value.length) {
+      result.push({ type: 'text', value: seg.value.slice(segLastIndex) })
+    }
   }
 
   return result
@@ -163,8 +204,13 @@ onMounted(() => {
   <span class="rich-content">
     <template v-for="(seg, i) in segments" :key="i">
       <span v-if="seg.type === 'text'" class="text-segment">{{ seg.value }}</span>
+      <span
+        v-else-if="seg.type === 'mention'"
+        class="mention-tag"
+        :title="seg.mentionName"
+      >@{{ seg.mentionName }}</span>
       <a
-        v-else-if="resolvedLinks.has(seg.value)"
+        v-else-if="seg.type === 'link' && resolvedLinks.has(seg.value)"
         class="rich-link"
         :class="resolvedLinks.get(seg.value)!.type"
         href="#"
@@ -228,5 +274,12 @@ onMounted(() => {
 
 .rich-link i {
   font-size: 0.85em;
+}
+
+.mention-tag {
+  display: inline;
+  color: var(--mw-primary, #3b82f6);
+  font-weight: 600;
+  cursor: default;
 }
 </style>

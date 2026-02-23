@@ -11,6 +11,7 @@ public record FeedPostCreatedEvent(
         UUID authorId,
         String authorName,
         String title,
+        String content,
         SourceType sourceType,
         UUID sourceId
 ) {

@@ -150,7 +150,7 @@ public class FeedService implements FeedModuleApi {
 
         String authorName = userModuleApi.findById(authorId).map(UserInfo::displayName).orElse("Unknown");
         eventPublisher.publishEvent(new FeedPostCreatedEvent(
-                post.getId(), authorId, authorName, title, sourceType, sourceId
+                post.getId(), authorId, authorName, title, content, sourceType, sourceId
         ));
 
         return toPostInfo(post);
@@ -205,6 +205,12 @@ public class FeedService implements FeedModuleApi {
         comment.setAuthorId(authorId);
         comment.setContent(content);
         comment = commentRepository.save(comment);
+
+        String authorName = userModuleApi.findById(authorId).map(UserInfo::displayName).orElse("Unknown");
+        eventPublisher.publishEvent(new FeedCommentCreatedEvent(
+                comment.getId(), postId, authorId, authorName, content
+        ));
+
         return toCommentResponse(comment);
     }
 

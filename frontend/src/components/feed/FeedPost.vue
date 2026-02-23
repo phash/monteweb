@@ -6,10 +6,10 @@ import { useAuthStore } from '@/stores/auth'
 import { useFeedStore } from '@/stores/feed'
 import type { FeedPost } from '@/types/feed'
 import Button from 'primevue/button'
-import Textarea from 'primevue/textarea'
 import Tag from 'primevue/tag'
 import RichContent from '@/components/common/RichContent.vue'
 import ReactionBar from '@/components/common/ReactionBar.vue'
+import MentionInput from '@/components/common/MentionInput.vue'
 import { feedApi } from '@/api/feed.api'
 
 const props = defineProps<{ post: FeedPost }>()
@@ -130,11 +130,11 @@ async function handleCommentReaction(commentId: string, emoji: string) {
       </div>
 
       <div class="comment-input">
-        <Textarea
+        <MentionInput
           v-model="commentText"
           :placeholder="t('feed.commentPlaceholder')"
           :autoResize="true"
-          rows="2"
+          :rows="2"
           class="comment-textarea"
         />
         <Button

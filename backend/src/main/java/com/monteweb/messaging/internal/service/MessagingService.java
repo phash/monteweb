@@ -282,6 +282,7 @@ public class MessagingService implements MessagingModuleApi {
                 senderId,
                 senderName,
                 preview,
+                hasContent ? content : null,
                 recipientIds,
                 hasImage
         ));

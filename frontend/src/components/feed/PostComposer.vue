@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Textarea from 'primevue/textarea'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import MentionInput from '@/components/common/MentionInput.vue'
 
 const emit = defineEmits<{
   submit: [data: { title?: string; content: string }]
@@ -38,12 +38,11 @@ async function submit() {
       :aria-label="t('feed.titlePlaceholder')"
       class="composer-title"
     />
-    <Textarea
+    <MentionInput
       v-model="content"
       :placeholder="t('feed.contentPlaceholder')"
-      :aria-label="t('feed.contentPlaceholder')"
       :autoResize="true"
-      rows="3"
+      :rows="3"
       class="composer-content"
     />
     <div class="composer-actions">

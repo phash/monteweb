@@ -9,6 +9,7 @@ public record MessageSentEvent(
         UUID senderId,
         String senderName,
         String contentPreview,
+        String fullContent,
         List<UUID> recipientIds,
         boolean hasImage
 ) {

@@ -1880,6 +1880,9 @@ export default {
     pendingDeletions: 'Ausstehende Loeschungen',
     dataAccessLog: 'Datenzugriffs-Protokoll',
   },
+  mentions: {
+    noResults: 'Keine Benutzer gefunden',
+  },
   footer: {
     deployed: 'Deployed',
   },

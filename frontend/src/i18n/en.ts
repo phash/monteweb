@@ -1880,6 +1880,9 @@ export default {
     pendingDeletions: 'Pending deletions',
     dataAccessLog: 'Data access log',
   },
+  mentions: {
+    noResults: 'No users found',
+  },
   footer: {
     deployed: 'Deployed',
   },
