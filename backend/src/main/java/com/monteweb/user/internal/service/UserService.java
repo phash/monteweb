@@ -345,31 +345,16 @@ public class UserService implements UserModuleApi {
         data.put("rooms", roomModuleApi.exportUserData(userId));
         data.put("families", familyModuleApi.exportUserData(userId));
 
-        // Optional modules
-        if (messagingModuleApi != null) {
-            data.put("messaging", messagingModuleApi.exportUserData(userId));
-        }
-        if (calendarModuleApi != null) {
-            data.put("calendar", calendarModuleApi.exportUserData(userId));
-        }
-        if (jobboardModuleApi != null) {
-            data.put("jobboard", jobboardModuleApi.exportUserData(userId));
-        }
-        if (cleaningModuleApi != null) {
-            data.put("cleaning", cleaningModuleApi.exportUserData(userId));
-        }
-        if (formsModuleApi != null) {
-            data.put("forms", formsModuleApi.exportUserData(userId));
-        }
-        if (fotoboxModuleApi != null) {
-            data.put("fotobox", fotoboxModuleApi.exportUserData(userId));
-        }
-        if (fundgrubeModuleApi != null) {
-            data.put("fundgrube", fundgrubeModuleApi.exportUserData(userId));
-        }
-        if (filesModuleApi != null) {
-            data.put("files", filesModuleApi.exportUserData(userId));
-        }
+        // Optional modules — @Lazy proxies are non-null even when beans are absent,
+        // so catch NoSuchBeanDefinitionException for disabled modules.
+        safeExportModule(data, "messaging", () -> messagingModuleApi.exportUserData(userId));
+        safeExportModule(data, "calendar", () -> calendarModuleApi.exportUserData(userId));
+        safeExportModule(data, "jobboard", () -> jobboardModuleApi.exportUserData(userId));
+        safeExportModule(data, "cleaning", () -> cleaningModuleApi.exportUserData(userId));
+        safeExportModule(data, "forms", () -> formsModuleApi.exportUserData(userId));
+        safeExportModule(data, "fotobox", () -> fotoboxModuleApi.exportUserData(userId));
+        safeExportModule(data, "fundgrube", () -> fundgrubeModuleApi.exportUserData(userId));
+        safeExportModule(data, "files", () -> filesModuleApi.exportUserData(userId));
 
         data.put("exportedAt", Instant.now());
 
@@ -382,6 +367,14 @@ public class UserService implements UserModuleApi {
     /**
      * DSGVO: Log data access for audit trail (Art. 15 DSGVO).
      */
+    private void safeExportModule(Map<String, Object> data, String key, java.util.function.Supplier<Map<String, Object>> exporter) {
+        try {
+            data.put(key, exporter.get());
+        } catch (org.springframework.beans.factory.NoSuchBeanDefinitionException e) {
+            // Module disabled — @Lazy proxy could not resolve the bean
+        }
+    }
+
     @Transactional
     public void logDataAccess(UUID accessedBy, UUID targetUserId, String action, String details) {
         var log = new DataAccessLog();
