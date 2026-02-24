@@ -622,6 +622,13 @@ export default {
     commentPlaceholder: 'Write a comment...',
     linkPreview: 'Link Preview',
     videoEmbed: 'Video',
+    attachFiles: 'Attach files',
+    attachments: 'Attachments',
+    removeFile: 'Remove file',
+    filesSelected: '{count} file(s) selected',
+    fileTooLarge: 'File too large (max 50 MB)',
+    tooManyFiles: 'Maximum 10 files allowed',
+    uploadingAttachments: 'Uploading attachments...',
     sourceLabels: {
       ROOM: 'Room',
       SECTION: 'School section',

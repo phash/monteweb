@@ -171,18 +171,36 @@ async function loadPosts() {
   }
 }
 
-async function handlePost(data: { title?: string; content?: string; poll?: import('@/types/feed').CreatePollRequest }) {
-  if (data.poll) {
+async function handlePost(data: { title?: string; content?: string; poll?: import('@/types/feed').CreatePollRequest; files?: File[] }) {
+  const { files, ...postData } = data
+  let post: import('@/types/feed').FeedPost
+
+  if (postData.poll) {
     const res = await feedApi.createPost({
       sourceType: 'ROOM',
       sourceId: props.id,
-      ...data,
+      ...postData,
     })
-    roomPosts.value.unshift(res.data.data)
-  } else if (data.content) {
-    const res = await feedApi.createRoomPost(props.id, { title: data.title, content: data.content })
-    roomPosts.value.unshift(res.data.data)
+    post = res.data.data
+  } else if (postData.content) {
+    const res = await feedApi.createRoomPost(props.id, { title: postData.title, content: postData.content })
+    post = res.data.data
+  } else {
+    // Files only (with title) — use createPost for flexibility
+    const res = await feedApi.createPost({
+      sourceType: 'ROOM',
+      sourceId: props.id,
+      title: postData.title,
+    })
+    post = res.data.data
   }
+
+  if (files && files.length > 0) {
+    const res = await feedApi.uploadAttachments(post.id, files)
+    post = res.data.data
+  }
+
+  roomPosts.value.unshift(post)
 }
 
 async function handleRoomAvatarUpload(file: File) {

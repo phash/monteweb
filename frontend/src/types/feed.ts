@@ -43,9 +43,10 @@ export interface FeedPost {
 
 export interface FeedAttachment {
   id: string
-  fileUrl: string
   fileName: string
-  contentType: string
+  fileUrl: string
+  fileType: string
+  fileSize: number
 }
 
 export interface FeedComment {

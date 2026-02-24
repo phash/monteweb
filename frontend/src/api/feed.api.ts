@@ -66,4 +66,20 @@ export const feedApi = {
   closePoll(postId: string) {
     return client.post<ApiResponse<PollInfo>>(`/feed/posts/${postId}/poll/close`)
   },
+
+  uploadAttachments(postId: string, files: File[]) {
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    return client.post<ApiResponse<FeedPost>>(`/feed/posts/${postId}/attachments`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+
+  getAttachmentDownloadUrl(attachmentId: string) {
+    return `/api/v1/feed/attachments/${attachmentId}/download`
+  },
+
+  deleteAttachment(attachmentId: string) {
+    return client.delete<ApiResponse<void>>(`/feed/attachments/${attachmentId}`)
+  },
 }

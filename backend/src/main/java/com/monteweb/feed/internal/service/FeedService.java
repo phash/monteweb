@@ -17,7 +17,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -27,28 +30,37 @@ public class FeedService implements FeedModuleApi {
 
     private static final Set<String> ALLOWED_EMOJIS = Set.of("👍", "👎", "❤️", "😂", "😢");
 
+    private static final long MAX_ATTACHMENT_SIZE = 50L * 1024 * 1024; // 50 MB
+    private static final int MAX_ATTACHMENTS = 10;
+
     private final FeedPostRepository postRepository;
     private final FeedPostCommentRepository commentRepository;
+    private final FeedPostAttachmentRepository attachmentRepository;
     private final FeedReactionRepository reactionRepository;
     private final FeedPollRepository pollRepository;
     private final FeedPollVoteRepository pollVoteRepository;
+    private final FeedStorageService storageService;
     private final UserModuleApi userModuleApi;
     private final RoomModuleApi roomModuleApi;
     private final ApplicationEventPublisher eventPublisher;
 
     public FeedService(FeedPostRepository postRepository,
                        FeedPostCommentRepository commentRepository,
+                       FeedPostAttachmentRepository attachmentRepository,
                        FeedReactionRepository reactionRepository,
                        FeedPollRepository pollRepository,
                        FeedPollVoteRepository pollVoteRepository,
+                       FeedStorageService storageService,
                        UserModuleApi userModuleApi,
                        RoomModuleApi roomModuleApi,
                        ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
+        this.attachmentRepository = attachmentRepository;
         this.reactionRepository = reactionRepository;
         this.pollRepository = pollRepository;
         this.pollVoteRepository = pollVoteRepository;
+        this.storageService = storageService;
         this.userModuleApi = userModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.eventPublisher = eventPublisher;
@@ -138,9 +150,9 @@ public class FeedService implements FeedModuleApi {
     public FeedPostInfo createPost(UUID authorId, String title, String content,
                                    SourceType sourceType, UUID sourceId, boolean parentOnly,
                                    CreatePollRequest pollRequest) {
-        // Validate: must have content or poll
-        if ((content == null || content.isBlank()) && pollRequest == null) {
-            throw new BusinessException("Post must have content or a poll");
+        // Validate: must have content, poll, or title (for attachment-only posts)
+        if ((content == null || content.isBlank()) && pollRequest == null && (title == null || title.isBlank())) {
+            throw new BusinessException("Post must have content, title, or a poll");
         }
 
         // Validate author can post to this source
@@ -285,7 +297,75 @@ public class FeedService implements FeedModuleApi {
         if (!post.getAuthorId().equals(userId) && user.role() != UserRole.SUPERADMIN) {
             throw new ForbiddenException("Only the author or admin can delete this post");
         }
+        // Clean up attachment files from storage
+        for (var attachment : post.getAttachments()) {
+            storageService.delete(attachment.getFileUrl());
+        }
         postRepository.delete(post);
+    }
+
+    // --- Attachments ---
+
+    @Transactional
+    public FeedPostInfo addAttachments(UUID postId, UUID userId, List<MultipartFile> files) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        if (!post.getAuthorId().equals(userId)) {
+            var user = userModuleApi.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+            if (user.role() != UserRole.SUPERADMIN) {
+                throw new ForbiddenException("Only the author or admin can add attachments");
+            }
+        }
+        int totalAttachments = post.getAttachments().size() + files.size();
+        if (totalAttachments > MAX_ATTACHMENTS) {
+            throw new BusinessException("Maximum " + MAX_ATTACHMENTS + " attachments per post");
+        }
+        int sortOrder = post.getAttachments().size();
+        for (MultipartFile file : files) {
+            if (file.getSize() > MAX_ATTACHMENT_SIZE) {
+                throw new BusinessException("File too large: " + file.getOriginalFilename());
+            }
+            var attachment = new FeedPostAttachment();
+            attachment.setPost(post);
+            attachment.setFileName(file.getOriginalFilename());
+            attachment.setFileType(file.getContentType());
+            attachment.setFileSize(file.getSize());
+            attachment.setSortOrder(sortOrder++);
+            attachment = attachmentRepository.save(attachment);
+
+            String objectKey = storageService.upload(postId, attachment.getId(), file);
+            attachment.setFileUrl(objectKey);
+            attachmentRepository.save(attachment);
+        }
+        post = postRepository.findById(postId).orElseThrow();
+        return toPostInfo(post, userId);
+    }
+
+    public FeedPostAttachment getAttachment(UUID attachmentId) {
+        return attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPostAttachment", attachmentId));
+    }
+
+    public InputStream downloadAttachment(String storagePath) {
+        return storageService.download(storagePath);
+    }
+
+    @Transactional
+    public void deleteAttachment(UUID attachmentId, UUID userId) {
+        var attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPostAttachment", attachmentId));
+        var post = attachment.getPost();
+        if (!post.getAuthorId().equals(userId)) {
+            var user = userModuleApi.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+            if (user.role() != UserRole.SUPERADMIN) {
+                throw new ForbiddenException("Only the author or admin can delete attachments");
+            }
+        }
+        storageService.delete(attachment.getFileUrl());
+        post.getAttachments().remove(attachment);
+        attachmentRepository.delete(attachment);
     }
 
     @Transactional

@@ -23,11 +23,19 @@ onMounted(() => {
   feed.fetchBanners()
 })
 
-async function handlePost(data: { title?: string; content?: string; poll?: import('@/types/feed').CreatePollRequest }) {
-  await feed.createPost({
+async function handlePost(data: { title?: string; content?: string; poll?: import('@/types/feed').CreatePollRequest; files?: File[] }) {
+  const { files, ...postData } = data
+  const post = await feed.createPost({
     sourceType: 'SCHOOL',
-    ...data,
+    ...postData,
   })
+  if (files && files.length > 0) {
+    const { feedApi } = await import('@/api/feed.api')
+    const res = await feedApi.uploadAttachments(post.id, files)
+    // Update the post in the store with attachments
+    const idx = feed.posts.findIndex(p => p.id === post.id)
+    if (idx >= 0) feed.posts[idx] = res.data.data
+  }
   toast.add({ severity: 'success', summary: t('feed.postCreated'), life: 3000 })
 }
 </script>

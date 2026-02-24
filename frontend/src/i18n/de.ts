@@ -622,6 +622,13 @@ export default {
     commentPlaceholder: 'Kommentar schreiben...',
     linkPreview: 'Link-Vorschau',
     videoEmbed: 'Video',
+    attachFiles: 'Dateien anhängen',
+    attachments: 'Anhänge',
+    removeFile: 'Datei entfernen',
+    filesSelected: '{count} Datei(en) ausgewählt',
+    fileTooLarge: 'Datei zu groß (max. 50 MB)',
+    tooManyFiles: 'Maximal 10 Dateien erlaubt',
+    uploadingAttachments: 'Anhänge werden hochgeladen...',
     sourceLabels: {
       ROOM: 'Raum',
       SECTION: 'Schulbereich',

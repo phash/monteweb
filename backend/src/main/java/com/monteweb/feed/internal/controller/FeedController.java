@@ -11,12 +11,17 @@ import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -145,6 +150,36 @@ public class FeedController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var poll = feedService.closeFeedPoll(id, userId);
         return ResponseEntity.ok(ApiResponse.ok(poll));
+    }
+
+    // --- Attachments ---
+
+    @PostMapping("/posts/{id}/attachments")
+    public ResponseEntity<ApiResponse<FeedPostInfo>> uploadAttachments(
+            @PathVariable UUID id,
+            @RequestParam("files") List<MultipartFile> files) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var post = feedService.addAttachments(id, userId, files);
+        return ResponseEntity.ok(ApiResponse.ok(post));
+    }
+
+    @GetMapping("/attachments/{id}/download")
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable UUID id) {
+        SecurityUtils.requireCurrentUserId();
+        var attachment = feedService.getAttachment(id);
+        var stream = feedService.downloadAttachment(attachment.getFileUrl());
+        String contentType = attachment.getFileType() != null ? attachment.getFileType() : "application/octet-stream";
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getFileName() + "\"")
+                .body(new InputStreamResource(stream));
+    }
+
+    @DeleteMapping("/attachments/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteAttachment(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        feedService.deleteAttachment(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Attachment deleted"));
     }
 
     // --- Link preview ---

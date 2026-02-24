@@ -12,6 +12,8 @@ const i18n = createI18n({
         post: 'Veröffentlichen',
         titlePlaceholder: 'Titel (optional)',
         contentPlaceholder: 'Was gibt es Neues?',
+        attachFiles: 'Dateien anhängen',
+        removeFile: 'Datei entfernen',
       },
       poll: {
         createPoll: 'Umfrage erstellen',

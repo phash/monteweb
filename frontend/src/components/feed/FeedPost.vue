@@ -12,6 +12,7 @@ import ReactionBar from '@/components/common/ReactionBar.vue'
 import InlinePoll from '@/components/common/InlinePoll.vue'
 import MentionInput from '@/components/common/MentionInput.vue'
 import { feedApi } from '@/api/feed.api'
+import type { FeedAttachment } from '@/types/feed'
 
 const props = defineProps<{ post: FeedPost }>()
 const { t } = useI18n()
@@ -78,6 +79,30 @@ async function handlePollClose() {
     props.post.poll = res.data.data
   } catch { /* ignore */ }
 }
+
+function getAttachmentIcon(attachment: FeedAttachment): string {
+  const type = attachment.fileType || ''
+  if (type.startsWith('image/')) return 'pi pi-image'
+  if (type === 'application/pdf') return 'pi pi-file-pdf'
+  if (type.startsWith('video/')) return 'pi pi-video'
+  if (type.startsWith('audio/')) return 'pi pi-volume-up'
+  return 'pi pi-file'
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function downloadAttachment(attachment: FeedAttachment) {
+  const url = feedApi.getAttachmentDownloadUrl(attachment.id)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = attachment.fileName
+  a.click()
+}
 </script>
 
 <template>
@@ -104,6 +129,21 @@ async function handlePollClose() {
       @vote="handlePollVote"
       @close="handlePollClose"
     />
+
+    <!-- Attachments -->
+    <div v-if="post.attachments?.length" class="post-attachments">
+      <div
+        v-for="attachment in post.attachments"
+        :key="attachment.id"
+        class="attachment-item"
+        @click="downloadAttachment(attachment)"
+      >
+        <i :class="getAttachmentIcon(attachment)" />
+        <span class="attachment-name">{{ attachment.fileName }}</span>
+        <span class="attachment-size">{{ formatFileSize(attachment.fileSize) }}</span>
+        <i class="pi pi-download attachment-download" />
+      </div>
+    </div>
 
     <ReactionBar
       :reactions="post.reactions || []"
@@ -228,6 +268,55 @@ async function handlePollClose() {
 .post-content {
   white-space: pre-wrap;
   margin-bottom: 0.5rem;
+}
+
+.post-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--mw-bg, #f8f9fa);
+  border: 1px solid var(--mw-border-light, #dee2e6);
+  border-radius: var(--mw-border-radius-sm, 4px);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  font-size: var(--mw-font-size-sm, 0.875rem);
+}
+
+.attachment-item:hover {
+  background: var(--mw-bg-highlight, #e9ecef);
+}
+
+.attachment-item > i:first-child {
+  color: var(--mw-primary, #3b82f6);
+  flex-shrink: 0;
+}
+
+.attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  flex-shrink: 0;
+}
+
+.attachment-download {
+  color: var(--mw-text-muted);
+  flex-shrink: 0;
+  font-size: var(--mw-font-size-sm, 0.875rem);
 }
 
 .post-footer {
