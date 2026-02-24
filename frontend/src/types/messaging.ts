@@ -37,6 +37,23 @@ export interface MessageReactionSummary {
   userReacted: boolean
 }
 
+export interface PollOptionInfo {
+  id: string
+  label: string
+  voteCount: number
+  userVoted: boolean
+}
+
+export interface PollInfo {
+  id: string
+  question: string
+  multiple: boolean
+  closed: boolean
+  totalVotes: number
+  options: PollOptionInfo[]
+  closesAt: string | null
+}
+
 export interface MessageInfo {
   id: string
   conversationId: string
@@ -47,6 +64,7 @@ export interface MessageInfo {
   images: MessageImageInfo[]
   replyTo: ReplyInfo | null
   reactions: MessageReactionSummary[]
+  poll: PollInfo | null
 }
 
 export interface StartConversationRequest {

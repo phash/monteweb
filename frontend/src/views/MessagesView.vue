@@ -15,6 +15,8 @@ import NewMessageDialog from '@/components/messaging/NewMessageDialog.vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import ReactionBar from '@/components/common/ReactionBar.vue'
+import InlinePoll from '@/components/common/InlinePoll.vue'
+import PollComposer from '@/components/common/PollComposer.vue'
 import MentionInput from '@/components/common/MentionInput.vue'
 
 const { t } = useI18n()
@@ -32,6 +34,7 @@ const selectedImage = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
 const fullSizeImageUrl = ref<string | null>(null)
 const showFullImage = ref(false)
+const showPollComposer = ref(false)
 
 onMounted(async () => {
   await messaging.fetchConversations()
@@ -138,7 +141,33 @@ function openFullImage(imageId: string) {
 function getMessagePreview(msg: MessageInfo) {
   if (msg.content) return msg.content
   if (msg.images?.length) return '\uD83D\uDDBC ' + t('messages.image')
+  if (msg.poll) return '\uD83D\uDCCA ' + msg.poll.question
   return ''
+}
+
+async function sendPollMessage(data: { question: string; options: string[]; multiple: boolean }) {
+  if (!selectedConversationId.value) return
+  await messagingApi.sendPollMessage(selectedConversationId.value, {
+    question: data.question,
+    options: data.options,
+    multiple: data.multiple,
+  })
+  showPollComposer.value = false
+  await messaging.fetchMessages(selectedConversationId.value)
+}
+
+async function handleMsgPollVote(msg: MessageInfo, optionIds: string[]) {
+  try {
+    const res = await messagingApi.voteMessagePoll(msg.id, optionIds)
+    msg.poll = res.data.data
+  } catch { /* ignore */ }
+}
+
+async function handleMsgPollClose(msg: MessageInfo) {
+  try {
+    const res = await messagingApi.closeMessagePoll(msg.id)
+    msg.poll = res.data.data
+  } catch { /* ignore */ }
 }
 
 async function toggleMute() {
@@ -279,6 +308,14 @@ function formatTime(date: string | null) {
 
                 <p v-if="msg.content">{{ formatMentions(msg.content) }}</p>
 
+                <InlinePoll
+                  v-if="msg.poll"
+                  :poll="msg.poll"
+                  :authorId="msg.senderId"
+                  @vote="(optionIds: string[]) => handleMsgPollVote(msg, optionIds)"
+                  @close="handleMsgPollClose(msg)"
+                />
+
                 <ReactionBar
                   :reactions="msg.reactions || []"
                   compact
@@ -327,6 +364,14 @@ function formatTime(date: string | null) {
             />
           </div>
 
+          <!-- Poll composer -->
+          <div v-if="showPollComposer" class="poll-composer-bar">
+            <PollComposer
+              @submit="sendPollMessage"
+              @cancel="showPollComposer = false"
+            />
+          </div>
+
           <div class="message-input">
             <input
               id="msg-image-input"
@@ -341,6 +386,13 @@ function formatTime(date: string | null) {
               severity="secondary"
               :aria-label="t('messages.attachImage')"
               @click="triggerImageSelect"
+            />
+            <Button
+              icon="pi pi-chart-bar"
+              text
+              severity="secondary"
+              :aria-label="t('poll.createPoll')"
+              @click="showPollComposer = !showPollComposer"
             />
             <MentionInput
               v-model="messageText"
@@ -735,6 +787,12 @@ function formatTime(date: string | null) {
 
 .input-field {
   flex: 1;
+}
+
+/* Poll composer bar */
+.poll-composer-bar {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--mw-border-light);
 }
 
 /* Full-size image dialog */

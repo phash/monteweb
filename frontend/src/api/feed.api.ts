@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest, CreateCommentRequest, ReactionSummary, LinkPreviewInfo } from '@/types/feed'
+import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest, CreateCommentRequest, ReactionSummary, LinkPreviewInfo, PollInfo } from '@/types/feed'
 
 export const feedApi = {
   getFeed(page = 0, size = 20) {
@@ -57,5 +57,13 @@ export const feedApi = {
 
   getLinkPreview(url: string) {
     return client.get<ApiResponse<LinkPreviewInfo>>('/feed/link-preview', { params: { url } })
+  },
+
+  votePoll(postId: string, optionIds: string[]) {
+    return client.post<ApiResponse<PollInfo>>(`/feed/posts/${postId}/poll/vote`, { optionIds })
+  },
+
+  closePoll(postId: string) {
+    return client.post<ApiResponse<PollInfo>>(`/feed/posts/${postId}/poll/close`)
   },
 }

@@ -2,6 +2,7 @@ package com.monteweb.feed.internal.controller;
 
 import com.monteweb.feed.FeedPostInfo;
 import com.monteweb.feed.LinkPreviewInfo;
+import com.monteweb.feed.PollInfo;
 import com.monteweb.feed.SourceType;
 import com.monteweb.feed.internal.dto.*;
 import com.monteweb.feed.internal.service.FeedService;
@@ -50,7 +51,8 @@ public class FeedController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var post = feedService.createPost(
                 userId, request.title(), request.content(),
-                request.sourceType(), request.sourceId(), request.parentOnly()
+                request.sourceType(), request.sourceId(), request.parentOnly(),
+                request.poll()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(post));
     }
@@ -127,6 +129,24 @@ public class FeedController {
         return ResponseEntity.ok(ApiResponse.ok(reactions));
     }
 
+    // --- Polls ---
+
+    @PostMapping("/posts/{id}/poll/vote")
+    public ResponseEntity<ApiResponse<PollInfo>> votePoll(
+            @PathVariable UUID id,
+            @RequestBody VotePollRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var poll = feedService.voteFeedPoll(id, userId, request.optionIds());
+        return ResponseEntity.ok(ApiResponse.ok(poll));
+    }
+
+    @PostMapping("/posts/{id}/poll/close")
+    public ResponseEntity<ApiResponse<PollInfo>> closePoll(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var poll = feedService.closeFeedPoll(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(poll));
+    }
+
     // --- Link preview ---
 
     @GetMapping("/link-preview")
@@ -173,7 +193,7 @@ public class FeedController {
                 post.id(), post.authorId(), post.authorName(), post.title(), post.content(),
                 post.sourceType(), post.sourceId(), post.sourceName(), post.pinned(),
                 post.parentOnly(), post.commentCount(), post.attachments(),
-                reactions, post.publishedAt(), post.createdAt()
+                reactions, post.poll(), post.publishedAt(), post.createdAt()
         );
     }
 

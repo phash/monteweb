@@ -171,9 +171,18 @@ async function loadPosts() {
   }
 }
 
-async function handlePost(data: { title?: string; content: string }) {
-  const res = await feedApi.createRoomPost(props.id, data)
-  roomPosts.value.unshift(res.data.data)
+async function handlePost(data: { title?: string; content?: string; poll?: import('@/types/feed').CreatePollRequest }) {
+  if (data.poll) {
+    const res = await feedApi.createPost({
+      sourceType: 'ROOM',
+      sourceId: props.id,
+      ...data,
+    })
+    roomPosts.value.unshift(res.data.data)
+  } else {
+    const res = await feedApi.createRoomPost(props.id, data)
+    roomPosts.value.unshift(res.data.data)
+  }
 }
 
 async function handleRoomAvatarUpload(file: File) {

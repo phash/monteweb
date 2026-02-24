@@ -13,6 +13,12 @@ const i18n = createI18n({
         titlePlaceholder: 'Titel (optional)',
         contentPlaceholder: 'Was gibt es Neues?',
       },
+      poll: {
+        createPoll: 'Umfrage erstellen',
+      },
+      common: {
+        close: 'Schließen',
+      },
     },
   },
 })
@@ -36,7 +42,8 @@ describe('PostComposer', () => {
 
   it('should render post button', () => {
     const wrapper = mount(PostComposer, { global: { plugins: [i18n], stubs } })
-    expect(wrapper.find('.button-stub').text()).toContain('Veröffentlichen')
+    const buttons = wrapper.findAll('.button-stub')
+    expect(buttons.some(b => b.text().includes('Veröffentlichen'))).toBe(true)
   })
 
   it('should have card class', () => {

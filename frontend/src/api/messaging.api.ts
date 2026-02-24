@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { ConversationInfo, MessageInfo, MessageReactionSummary, StartConversationRequest } from '@/types/messaging'
+import type { ConversationInfo, MessageInfo, MessageReactionSummary, PollInfo, StartConversationRequest } from '@/types/messaging'
 import { authenticatedImageUrl } from '@/composables/useImageToken'
 
 export const messagingApi = {
@@ -64,5 +64,17 @@ export const messagingApi = {
 
   toggleMessageReaction(messageId: string, emoji: string) {
     return client.post<ApiResponse<MessageReactionSummary[]>>(`/messages/messages/${messageId}/reactions`, { emoji })
+  },
+
+  sendPollMessage(conversationId: string, data: { question: string; options: string[]; multiple?: boolean; closesAt?: string }) {
+    return client.post<ApiResponse<MessageInfo>>(`/messages/conversations/${conversationId}/polls`, data)
+  },
+
+  voteMessagePoll(messageId: string, optionIds: string[]) {
+    return client.post<ApiResponse<PollInfo>>(`/messages/messages/${messageId}/poll/vote`, { optionIds })
+  },
+
+  closeMessagePoll(messageId: string) {
+    return client.post<ApiResponse<PollInfo>>(`/messages/messages/${messageId}/poll/close`)
   },
 }

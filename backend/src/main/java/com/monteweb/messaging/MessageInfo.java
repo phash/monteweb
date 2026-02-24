@@ -1,5 +1,7 @@
 package com.monteweb.messaging;
 
+import com.monteweb.feed.PollInfo;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -13,7 +15,8 @@ public record MessageInfo(
         Instant createdAt,
         List<MessageImageInfo> images,
         ReplyInfo replyTo,
-        List<ReactionSummary> reactions
+        List<ReactionSummary> reactions,
+        PollInfo poll
 ) {
     public record MessageImageInfo(
             UUID imageId,

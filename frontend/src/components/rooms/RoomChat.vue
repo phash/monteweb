@@ -13,6 +13,8 @@ import Button from 'primevue/button'
 import SelectButton from 'primevue/selectbutton'
 import Dialog from 'primevue/dialog'
 import ReactionBar from '@/components/common/ReactionBar.vue'
+import InlinePoll from '@/components/common/InlinePoll.vue'
+import PollComposer from '@/components/common/PollComposer.vue'
 import MentionInput from '@/components/common/MentionInput.vue'
 
 const props = defineProps<{ roomId: string }>()
@@ -31,6 +33,7 @@ const selectedImage = ref<File | null>(null)
 const imagePreviewUrl = ref<string | null>(null)
 const fullSizeImageUrl = ref<string | null>(null)
 const showFullImage = ref(false)
+const showPollComposer = ref(false)
 
 const channelOptions = computed(() => {
   return roomsStore.chatChannels.map(ch => ({
@@ -211,7 +214,34 @@ function clearReply() {
 function getMessagePreview(msg: MessageInfo) {
   if (msg.content) return msg.content
   if (msg.images?.length) return '\uD83D\uDDBC ' + t('chat.image')
+  if (msg.poll) return '\uD83D\uDCCA ' + msg.poll.question
   return ''
+}
+
+async function sendPollMessage(data: { question: string; options: string[]; multiple: boolean }) {
+  if (!currentChannel.value) return
+  await messagingApi.sendPollMessage(currentChannel.value.conversationId, {
+    question: data.question,
+    options: data.options,
+    multiple: data.multiple,
+  })
+  showPollComposer.value = false
+  await messagingStore.fetchMessages(currentChannel.value.conversationId)
+  scrollToBottom()
+}
+
+async function handleMsgPollVote(msg: MessageInfo, optionIds: string[]) {
+  try {
+    const res = await messagingApi.voteMessagePoll(msg.id, optionIds)
+    msg.poll = res.data.data
+  } catch { /* ignore */ }
+}
+
+async function handleMsgPollClose(msg: MessageInfo) {
+  try {
+    const res = await messagingApi.closeMessagePoll(msg.id)
+    msg.poll = res.data.data
+  } catch { /* ignore */ }
 }
 </script>
 
@@ -306,6 +336,14 @@ function getMessagePreview(msg: MessageInfo) {
 
             <p v-if="item.msg.content" class="rc-content">{{ formatMentions(item.msg.content) }}</p>
 
+            <InlinePoll
+              v-if="item.msg.poll"
+              :poll="item.msg.poll"
+              :authorId="item.msg.senderId"
+              @vote="(optionIds: string[]) => handleMsgPollVote(item.msg, optionIds)"
+              @close="handleMsgPollClose(item.msg)"
+            />
+
             <ReactionBar
               v-if="item.msg.reactions?.length || true"
               :reactions="item.msg.reactions || []"
@@ -358,6 +396,14 @@ function getMessagePreview(msg: MessageInfo) {
       />
     </div>
 
+    <!-- Poll Composer -->
+    <div v-if="showPollComposer" class="rc-poll-bar">
+      <PollComposer
+        @submit="sendPollMessage"
+        @cancel="showPollComposer = false"
+      />
+    </div>
+
     <!-- Input -->
     <div class="rc-input-area">
       <input
@@ -374,6 +420,14 @@ function getMessagePreview(msg: MessageInfo) {
         size="small"
         :aria-label="t('chat.attachImage')"
         @click="triggerImageSelect"
+      />
+      <Button
+        icon="pi pi-chart-bar"
+        text
+        severity="secondary"
+        size="small"
+        :aria-label="t('poll.createPoll')"
+        @click="showPollComposer = !showPollComposer"
       />
       <MentionInput
         v-model="messageText"
@@ -763,6 +817,13 @@ function getMessagePreview(msg: MessageInfo) {
 
 .rc-hidden-input {
   display: none;
+}
+
+/* ── Poll composer ───────────────────────── */
+.rc-poll-bar {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid var(--mw-border-light);
+  background: var(--mw-bg-card);
 }
 
 /* ── Input area ──────────────────────────── */

@@ -2115,6 +2115,18 @@ export default {
     noFile: 'No file selected',
     validating: 'Validating...',
   },
+  poll: {
+    createPoll: 'Create poll',
+    questionPlaceholder: 'Enter question...',
+    optionPlaceholder: 'Option {n}',
+    addOption: 'Add option',
+    multipleChoice: 'Multiple choice',
+    vote: 'Vote',
+    totalVotes: '{count} vote(s)',
+    closed: 'Closed',
+    closePoll: 'Close poll',
+    pollLabel: 'Poll',
+  },
   footer: {
     deployed: 'Deployed',
   },

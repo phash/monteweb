@@ -1,20 +1,14 @@
 package com.monteweb.messaging.internal.service;
 
 import com.monteweb.admin.AdminModuleApi;
+import com.monteweb.feed.PollInfo;
 import com.monteweb.messaging.ConversationInfo;
+import com.monteweb.messaging.internal.dto.CreateMessagePollRequest;
 import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.MessageSentEvent;
 import com.monteweb.messaging.MessagingModuleApi;
-import com.monteweb.messaging.internal.model.Conversation;
-import com.monteweb.messaging.internal.model.ConversationParticipant;
-import com.monteweb.messaging.internal.model.Message;
-import com.monteweb.messaging.internal.model.MessageImage;
-import com.monteweb.messaging.internal.model.MessageReaction;
-import com.monteweb.messaging.internal.repository.ConversationParticipantRepository;
-import com.monteweb.messaging.internal.repository.ConversationRepository;
-import com.monteweb.messaging.internal.repository.MessageImageRepository;
-import com.monteweb.messaging.internal.repository.MessageReactionRepository;
-import com.monteweb.messaging.internal.repository.MessageRepository;
+import com.monteweb.messaging.internal.model.*;
+import com.monteweb.messaging.internal.repository.*;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
@@ -45,6 +39,8 @@ public class MessagingService implements MessagingModuleApi {
     private final MessageRepository messageRepository;
     private final MessageImageRepository messageImageRepository;
     private final MessageReactionRepository messageReactionRepository;
+    private final MessagePollRepository messagePollRepository;
+    private final MessagePollVoteRepository messagePollVoteRepository;
     private final UserModuleApi userModuleApi;
     private final AdminModuleApi adminModuleApi;
     private final SimpMessagingTemplate messagingTemplate;
@@ -56,12 +52,16 @@ public class MessagingService implements MessagingModuleApi {
                             MessageRepository messageRepository,
                             MessageImageRepository messageImageRepository,
                             MessageReactionRepository messageReactionRepository,
+                            MessagePollRepository messagePollRepository,
+                            MessagePollVoteRepository messagePollVoteRepository,
                             UserModuleApi userModuleApi,
                             AdminModuleApi adminModuleApi,
                             SimpMessagingTemplate messagingTemplate,
                             ApplicationEventPublisher eventPublisher,
                             MessageStorageService storageService) {
         this.messageReactionRepository = messageReactionRepository;
+        this.messagePollRepository = messagePollRepository;
+        this.messagePollVoteRepository = messagePollVoteRepository;
         this.conversationRepository = conversationRepository;
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
@@ -183,7 +183,68 @@ public class MessagingService implements MessagingModuleApi {
 
         return page.map(m -> toMessageInfo(m,
                 imagesByMessageId.getOrDefault(m.getId(), List.of()),
-                replyMessages, replyImagesByMsgId));
+                replyMessages, replyImagesByMsgId, userId));
+    }
+
+    public MessageInfo sendPollMessage(UUID conversationId, UUID senderId, CreateMessagePollRequest pollRequest) {
+        requireParticipant(conversationId, senderId);
+
+        var message = new Message();
+        message.setConversationId(conversationId);
+        message.setSenderId(senderId);
+        message.setContent(null);
+        message = messageRepository.save(message);
+
+        // Create poll
+        var poll = new MessagePoll();
+        poll.setMessageId(message.getId());
+        poll.setQuestion(pollRequest.question());
+        poll.setMultiple(pollRequest.multiple());
+        poll.setClosesAt(pollRequest.closesAt());
+        poll = messagePollRepository.save(poll);
+
+        for (int i = 0; i < pollRequest.options().size(); i++) {
+            var option = new MessagePollOption();
+            option.setPoll(poll);
+            option.setLabel(pollRequest.options().get(i));
+            option.setPosition(i);
+            poll.getOptions().add(option);
+        }
+        messagePollRepository.save(poll);
+
+        // Update conversation timestamp
+        conversationRepository.findById(conversationId).ifPresent(c -> {
+            c.setUpdatedAt(Instant.now());
+            conversationRepository.save(c);
+        });
+
+        participantRepository.markAsRead(conversationId, senderId, Instant.now());
+
+        var messageInfo = toMessageInfo(message, List.of(), Map.of(), Map.of());
+
+        // Push via WebSocket
+        var participants = participantRepository.findByConversationId(conversationId);
+        for (var p : participants) {
+            messagingTemplate.convertAndSendToUser(
+                    p.getUserId().toString(), "/queue/messages", messageInfo);
+        }
+
+        // Publish event
+        var recipientIds = participants.stream()
+                .map(ConversationParticipant::getUserId)
+                .filter(id -> !id.equals(senderId))
+                .toList();
+        String senderName = userModuleApi.findById(senderId)
+                .map(u -> u.firstName() + " " + u.lastName())
+                .orElse("Unknown");
+
+        eventPublisher.publishEvent(new MessageSentEvent(
+                message.getId(), conversationId, senderId, senderName,
+                "\uD83D\uDCCA " + pollRequest.question(),
+                null, recipientIds, false
+        ));
+
+        return messageInfo;
     }
 
     public MessageInfo sendMessage(UUID conversationId, UUID senderId, String content,
@@ -475,6 +536,13 @@ public class MessagingService implements MessagingModuleApi {
     private MessageInfo toMessageInfo(Message m, List<MessageImage> images,
                                        Map<UUID, Message> replyMessages,
                                        Map<UUID, List<MessageImage>> replyImagesByMsgId) {
+        return toMessageInfo(m, images, replyMessages, replyImagesByMsgId, null);
+    }
+
+    private MessageInfo toMessageInfo(Message m, List<MessageImage> images,
+                                       Map<UUID, Message> replyMessages,
+                                       Map<UUID, List<MessageImage>> replyImagesByMsgId,
+                                       UUID currentUserId) {
         String senderName = userModuleApi.findById(m.getSenderId())
                 .map(u -> u.firstName() + " " + u.lastName())
                 .orElse("Unknown");
@@ -501,6 +569,10 @@ public class MessagingService implements MessagingModuleApi {
             }
         }
 
+        PollInfo pollInfo = messagePollRepository.findByMessageId(m.getId())
+                .map(poll -> toMessagePollInfo(poll, currentUserId))
+                .orElse(null);
+
         return new MessageInfo(
                 m.getId(),
                 m.getConversationId(),
@@ -510,8 +582,103 @@ public class MessagingService implements MessagingModuleApi {
                 m.getCreatedAt(),
                 imageInfos,
                 replyInfo,
-                List.of()
+                List.of(),
+                pollInfo
         );
+    }
+
+    private PollInfo toMessagePollInfo(MessagePoll poll, UUID currentUserId) {
+        var allOptionIds = poll.getOptions().stream().map(MessagePollOption::getId).toList();
+        var allVotes = messagePollVoteRepository.findByOptionIdIn(allOptionIds);
+        var userVotedOptionIds = currentUserId != null
+                ? allVotes.stream()
+                    .filter(v -> v.getUserId().equals(currentUserId))
+                    .map(MessagePollVote::getOptionId)
+                    .collect(Collectors.toSet())
+                : Set.<UUID>of();
+
+        var voteCounts = allVotes.stream()
+                .collect(Collectors.groupingBy(MessagePollVote::getOptionId, Collectors.counting()));
+
+        boolean closed = poll.getClosesAt() != null && Instant.now().isAfter(poll.getClosesAt());
+
+        var options = poll.getOptions().stream()
+                .map(o -> new PollInfo.OptionInfo(
+                        o.getId(),
+                        o.getLabel(),
+                        voteCounts.getOrDefault(o.getId(), 0L).intValue(),
+                        userVotedOptionIds.contains(o.getId())
+                ))
+                .toList();
+
+        return new PollInfo(
+                poll.getId(),
+                poll.getQuestion(),
+                poll.isMultiple(),
+                closed,
+                allVotes.size(),
+                options,
+                poll.getClosesAt()
+        );
+    }
+
+    // --- Message Polls ---
+
+    public PollInfo voteMessagePoll(UUID messageId, UUID userId, List<UUID> optionIds) {
+        var message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+        requireParticipant(message.getConversationId(), userId);
+
+        var poll = messagePollRepository.findByMessageId(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("MessagePoll", messageId));
+
+        if (poll.getClosesAt() != null && Instant.now().isAfter(poll.getClosesAt())) {
+            throw new BusinessException("Poll is closed");
+        }
+
+        if (!poll.isMultiple() && optionIds.size() > 1) {
+            throw new BusinessException("Only one option can be selected");
+        }
+
+        var validOptionIds = poll.getOptions().stream().map(MessagePollOption::getId).collect(Collectors.toSet());
+        for (UUID optionId : optionIds) {
+            if (!validOptionIds.contains(optionId)) {
+                throw new BusinessException("Invalid option");
+            }
+        }
+
+        messagePollVoteRepository.deleteByOptionIdInAndUserId(validOptionIds, userId);
+        messagePollVoteRepository.flush();
+
+        for (UUID optionId : optionIds) {
+            var vote = new MessagePollVote();
+            vote.setOptionId(optionId);
+            vote.setUserId(userId);
+            messagePollVoteRepository.save(vote);
+        }
+
+        return toMessagePollInfo(poll, userId);
+    }
+
+    public PollInfo closeMessagePoll(UUID messageId, UUID userId) {
+        var message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+
+        if (!message.getSenderId().equals(userId)) {
+            var user = userModuleApi.findById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+            if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+                throw new ForbiddenException("Only the poll creator or admin can close this poll");
+            }
+        }
+
+        var poll = messagePollRepository.findByMessageId(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("MessagePoll", messageId));
+
+        poll.setClosesAt(Instant.now());
+        messagePollRepository.save(poll);
+
+        return toMessagePollInfo(poll, userId);
     }
 
     // --- Message Reactions ---

@@ -2115,6 +2115,18 @@ export default {
     noFile: 'Keine Datei ausgewaehlt',
     validating: 'Validiere...',
   },
+  poll: {
+    createPoll: 'Umfrage erstellen',
+    questionPlaceholder: 'Frage eingeben...',
+    optionPlaceholder: 'Option {n}',
+    addOption: 'Option hinzufügen',
+    multipleChoice: 'Mehrfachauswahl',
+    vote: 'Abstimmen',
+    totalVotes: '{count} Stimme(n)',
+    closed: 'Beendet',
+    closePoll: 'Umfrage beenden',
+    pollLabel: 'Umfrage',
+  },
   footer: {
     deployed: 'Deployed',
   },

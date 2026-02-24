@@ -6,6 +6,23 @@ export interface ReactionSummary {
   userReacted: boolean
 }
 
+export interface PollOptionInfo {
+  id: string
+  label: string
+  voteCount: number
+  userVoted: boolean
+}
+
+export interface PollInfo {
+  id: string
+  question: string
+  multiple: boolean
+  closed: boolean
+  totalVotes: number
+  options: PollOptionInfo[]
+  closesAt: string | null
+}
+
 export interface FeedPost {
   id: string
   authorId: string
@@ -14,10 +31,11 @@ export interface FeedPost {
   sourceId: string | null
   sourceName: string | null
   title: string | null
-  content: string
+  content: string | null
   pinned: boolean
   attachments: FeedAttachment[]
   reactions: ReactionSummary[]
+  poll: PollInfo | null
   commentCount: number
   createdAt: string
   updatedAt: string | null
@@ -49,11 +67,19 @@ export interface SystemBanner {
   priority: number
 }
 
+export interface CreatePollRequest {
+  question: string
+  options: string[]
+  multiple?: boolean
+  closesAt?: string
+}
+
 export interface CreatePostRequest {
   sourceType: SourceType
   sourceId?: string
   title?: string
-  content: string
+  content?: string
+  poll?: CreatePollRequest
 }
 
 export interface CreateCommentRequest {

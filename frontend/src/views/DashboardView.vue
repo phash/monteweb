@@ -23,7 +23,7 @@ onMounted(() => {
   feed.fetchBanners()
 })
 
-async function handlePost(data: { title?: string; content: string }) {
+async function handlePost(data: { title?: string; content?: string; poll?: import('@/types/feed').CreatePollRequest }) {
   await feed.createPost({
     sourceType: 'SCHOOL',
     ...data,

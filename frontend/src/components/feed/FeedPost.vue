@@ -9,6 +9,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import RichContent from '@/components/common/RichContent.vue'
 import ReactionBar from '@/components/common/ReactionBar.vue'
+import InlinePoll from '@/components/common/InlinePoll.vue'
 import MentionInput from '@/components/common/MentionInput.vue'
 import { feedApi } from '@/api/feed.api'
 
@@ -63,6 +64,20 @@ async function handleCommentReaction(commentId: string, emoji: string) {
     if (comment) comment.reactions = res.data.data
   } catch { /* ignore */ }
 }
+
+async function handlePollVote(optionIds: string[]) {
+  try {
+    const res = await feedApi.votePoll(props.post.id, optionIds)
+    props.post.poll = res.data.data
+  } catch { /* ignore */ }
+}
+
+async function handlePollClose() {
+  try {
+    const res = await feedApi.closePoll(props.post.id)
+    props.post.poll = res.data.data
+  } catch { /* ignore */ }
+}
 </script>
 
 <template>
@@ -80,7 +95,15 @@ async function handleCommentReaction(commentId: string, emoji: string) {
     </div>
 
     <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
-    <p class="post-content"><RichContent :content="post.content" /></p>
+    <p v-if="post.content" class="post-content"><RichContent :content="post.content" /></p>
+
+    <InlinePoll
+      v-if="post.poll"
+      :poll="post.poll"
+      :authorId="post.authorId"
+      @vote="handlePollVote"
+      @close="handlePollClose"
+    />
 
     <ReactionBar
       :reactions="post.reactions || []"

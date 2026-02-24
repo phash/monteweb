@@ -1,6 +1,8 @@
 package com.monteweb.messaging.internal.controller;
 
+import com.monteweb.feed.PollInfo;
 import com.monteweb.messaging.ConversationInfo;
+import com.monteweb.messaging.internal.dto.CreateMessagePollRequest;
 import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.internal.service.MessagingService;
 import com.monteweb.shared.dto.ApiResponse;
@@ -149,6 +151,31 @@ public class MessagingController {
         } catch (java.io.IOException e) {
             throw new RuntimeException("Failed to read thumbnail", e);
         }
+    }
+
+    @PostMapping("/conversations/{conversationId}/polls")
+    public ResponseEntity<ApiResponse<MessageInfo>> sendPollMessage(
+            @PathVariable UUID conversationId,
+            @RequestBody CreateMessagePollRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var message = messagingService.sendPollMessage(conversationId, userId, request);
+        return ResponseEntity.ok(ApiResponse.ok(message));
+    }
+
+    @PostMapping("/messages/{messageId}/poll/vote")
+    public ResponseEntity<ApiResponse<PollInfo>> voteMessagePoll(
+            @PathVariable UUID messageId,
+            @RequestBody Map<String, List<UUID>> request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var poll = messagingService.voteMessagePoll(messageId, userId, request.get("optionIds"));
+        return ResponseEntity.ok(ApiResponse.ok(poll));
+    }
+
+    @PostMapping("/messages/{messageId}/poll/close")
+    public ResponseEntity<ApiResponse<PollInfo>> closeMessagePoll(@PathVariable UUID messageId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var poll = messagingService.closeMessagePoll(messageId, userId);
+        return ResponseEntity.ok(ApiResponse.ok(poll));
     }
 
     @PostMapping("/messages/{messageId}/reactions")

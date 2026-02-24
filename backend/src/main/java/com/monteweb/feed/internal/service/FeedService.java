@@ -1,12 +1,9 @@
 package com.monteweb.feed.internal.service;
 
 import com.monteweb.feed.*;
-import com.monteweb.feed.internal.model.FeedPost;
-import com.monteweb.feed.internal.model.FeedPostComment;
-import com.monteweb.feed.internal.model.FeedReaction;
-import com.monteweb.feed.internal.repository.FeedPostCommentRepository;
-import com.monteweb.feed.internal.repository.FeedPostRepository;
-import com.monteweb.feed.internal.repository.FeedReactionRepository;
+import com.monteweb.feed.internal.dto.CreatePollRequest;
+import com.monteweb.feed.internal.model.*;
+import com.monteweb.feed.internal.repository.*;
 import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.BusinessException;
@@ -33,6 +30,8 @@ public class FeedService implements FeedModuleApi {
     private final FeedPostRepository postRepository;
     private final FeedPostCommentRepository commentRepository;
     private final FeedReactionRepository reactionRepository;
+    private final FeedPollRepository pollRepository;
+    private final FeedPollVoteRepository pollVoteRepository;
     private final UserModuleApi userModuleApi;
     private final RoomModuleApi roomModuleApi;
     private final ApplicationEventPublisher eventPublisher;
@@ -40,12 +39,16 @@ public class FeedService implements FeedModuleApi {
     public FeedService(FeedPostRepository postRepository,
                        FeedPostCommentRepository commentRepository,
                        FeedReactionRepository reactionRepository,
+                       FeedPollRepository pollRepository,
+                       FeedPollVoteRepository pollVoteRepository,
                        UserModuleApi userModuleApi,
                        RoomModuleApi roomModuleApi,
                        ApplicationEventPublisher eventPublisher) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.reactionRepository = reactionRepository;
+        this.pollRepository = pollRepository;
+        this.pollVoteRepository = pollVoteRepository;
         this.userModuleApi = userModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.eventPublisher = eventPublisher;
@@ -128,6 +131,18 @@ public class FeedService implements FeedModuleApi {
     @Transactional
     public FeedPostInfo createPost(UUID authorId, String title, String content,
                                    SourceType sourceType, UUID sourceId, boolean parentOnly) {
+        return createPost(authorId, title, content, sourceType, sourceId, parentOnly, null);
+    }
+
+    @Transactional
+    public FeedPostInfo createPost(UUID authorId, String title, String content,
+                                   SourceType sourceType, UUID sourceId, boolean parentOnly,
+                                   CreatePollRequest pollRequest) {
+        // Validate: must have content or poll
+        if ((content == null || content.isBlank()) && pollRequest == null) {
+            throw new BusinessException("Post must have content or a poll");
+        }
+
         // Validate author can post to this source
         if (sourceType == SourceType.ROOM && sourceId != null) {
             if (!roomModuleApi.isUserInRoom(authorId, sourceId)) {
@@ -148,19 +163,103 @@ public class FeedService implements FeedModuleApi {
         var post = new FeedPost();
         post.setAuthorId(authorId);
         post.setTitle(title);
-        post.setContent(content);
+        post.setContent(content != null && !content.isBlank() ? content : null);
         post.setSourceType(sourceType);
         post.setSourceId(sourceId);
         post.setParentOnly(parentOnly);
 
         post = postRepository.save(post);
 
+        // Create poll if requested
+        if (pollRequest != null) {
+            createFeedPoll(post.getId(), pollRequest);
+        }
+
         String authorName = userModuleApi.findById(authorId).map(UserInfo::displayName).orElse("Unknown");
         eventPublisher.publishEvent(new FeedPostCreatedEvent(
-                post.getId(), authorId, authorName, title, content, sourceType, sourceId
+                post.getId(), authorId, authorName, title,
+                content != null ? content : pollRequest.question(),
+                sourceType, sourceId
         ));
 
-        return toPostInfo(post);
+        return toPostInfo(post, authorId);
+    }
+
+    private void createFeedPoll(UUID postId, CreatePollRequest request) {
+        var poll = new FeedPoll();
+        poll.setPostId(postId);
+        poll.setQuestion(request.question());
+        poll.setMultiple(request.multiple());
+        poll.setClosesAt(request.closesAt());
+        poll = pollRepository.save(poll);
+
+        for (int i = 0; i < request.options().size(); i++) {
+            var option = new FeedPollOption();
+            option.setPoll(poll);
+            option.setLabel(request.options().get(i));
+            option.setPosition(i);
+            poll.getOptions().add(option);
+        }
+        pollRepository.save(poll);
+    }
+
+    // --- Poll voting ---
+
+    @Transactional
+    public PollInfo voteFeedPoll(UUID postId, UUID userId, List<UUID> optionIds) {
+        var poll = pollRepository.findByPostId(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPoll", postId));
+
+        if (poll.getClosesAt() != null && Instant.now().isAfter(poll.getClosesAt())) {
+            throw new BusinessException("Poll is closed");
+        }
+
+        if (!poll.isMultiple() && optionIds.size() > 1) {
+            throw new BusinessException("Only one option can be selected");
+        }
+
+        // Validate options belong to this poll
+        var validOptionIds = poll.getOptions().stream().map(FeedPollOption::getId).collect(Collectors.toSet());
+        for (UUID optionId : optionIds) {
+            if (!validOptionIds.contains(optionId)) {
+                throw new BusinessException("Invalid option");
+            }
+        }
+
+        // Remove existing votes
+        pollVoteRepository.deleteByOptionIdInAndUserId(validOptionIds, userId);
+        pollVoteRepository.flush();
+
+        // Add new votes
+        for (UUID optionId : optionIds) {
+            var vote = new FeedPollVote();
+            vote.setOptionId(optionId);
+            vote.setUserId(userId);
+            pollVoteRepository.save(vote);
+        }
+
+        return toPollInfo(poll, userId);
+    }
+
+    @Transactional
+    public PollInfo closeFeedPoll(UUID postId, UUID userId) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+
+        // Only author or admin can close
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+        if (!post.getAuthorId().equals(userId) && user.role() != UserRole.SUPERADMIN) {
+            throw new ForbiddenException("Only the author or admin can close this poll");
+        }
+
+        var poll = pollRepository.findByPostId(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPoll", postId));
+
+        poll.setClosesAt(Instant.now());
+        pollRepository.save(poll);
+
+        return toPollInfo(poll, userId);
     }
 
     @Transactional
@@ -307,6 +406,10 @@ public class FeedService implements FeedModuleApi {
     }
 
     private FeedPostInfo toPostInfo(FeedPost post) {
+        return toPostInfo(post, null);
+    }
+
+    private FeedPostInfo toPostInfo(FeedPost post, UUID currentUserId) {
         String authorName = userModuleApi.findById(post.getAuthorId())
                 .map(UserInfo::displayName)
                 .orElse("System");
@@ -319,6 +422,10 @@ public class FeedService implements FeedModuleApi {
                         a.getFileSize() != null ? a.getFileSize() : 0
                 ))
                 .toList();
+
+        PollInfo pollInfo = pollRepository.findByPostId(post.getId())
+                .map(poll -> toPollInfo(poll, currentUserId))
+                .orElse(null);
 
         return new FeedPostInfo(
                 post.getId(),
@@ -334,8 +441,44 @@ public class FeedService implements FeedModuleApi {
                 post.getComments().size(),
                 attachments,
                 List.of(),
+                pollInfo,
                 post.getPublishedAt(),
                 post.getCreatedAt()
+        );
+    }
+
+    private PollInfo toPollInfo(FeedPoll poll, UUID currentUserId) {
+        var allOptionIds = poll.getOptions().stream().map(FeedPollOption::getId).toList();
+        var allVotes = pollVoteRepository.findByOptionIdIn(allOptionIds);
+        var userVotedOptionIds = currentUserId != null
+                ? allVotes.stream()
+                    .filter(v -> v.getUserId().equals(currentUserId))
+                    .map(FeedPollVote::getOptionId)
+                    .collect(Collectors.toSet())
+                : Set.<UUID>of();
+
+        var voteCounts = allVotes.stream()
+                .collect(Collectors.groupingBy(FeedPollVote::getOptionId, Collectors.counting()));
+
+        boolean closed = poll.getClosesAt() != null && Instant.now().isAfter(poll.getClosesAt());
+
+        var options = poll.getOptions().stream()
+                .map(o -> new PollInfo.OptionInfo(
+                        o.getId(),
+                        o.getLabel(),
+                        voteCounts.getOrDefault(o.getId(), 0L).intValue(),
+                        userVotedOptionIds.contains(o.getId())
+                ))
+                .toList();
+
+        return new PollInfo(
+                poll.getId(),
+                poll.getQuestion(),
+                poll.isMultiple(),
+                closed,
+                allVotes.size(),
+                options,
+                poll.getClosesAt()
         );
     }
 

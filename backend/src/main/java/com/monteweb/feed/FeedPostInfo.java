@@ -21,6 +21,7 @@ public record FeedPostInfo(
         int commentCount,
         List<AttachmentInfo> attachments,
         List<ReactionSummary> reactions,
+        PollInfo poll,
         Instant publishedAt,
         Instant createdAt
 ) {
