@@ -128,9 +128,7 @@ public class TenantConfig {
     @Column(name = "directory_admin_only", nullable = false)
     private boolean directoryAdminOnly = false;
 
-    @Column(name = "maintenance_enabled", nullable = false)
-    private boolean maintenanceEnabled = false;
-
+    // Maintenance mode (enabled via modules map)
     @Column(name = "maintenance_message", columnDefinition = "TEXT")
     private String maintenanceMessage;
 

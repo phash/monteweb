@@ -165,13 +165,16 @@ public class AdminService implements AdminModuleApi {
 
     @Override
     public boolean isMaintenanceEnabled() {
-        return getConfig().isMaintenanceEnabled();
+        return isModuleEnabled("maintenance");
     }
 
     @Transactional
     public TenantConfigInfo updateMaintenance(boolean enabled, String message) {
         var config = getConfig();
-        config.setMaintenanceEnabled(enabled);
+        // Toggle maintenance in modules map
+        var modules = new java.util.HashMap<>(config.getModules());
+        modules.put("maintenance", enabled);
+        config.setModules(modules);
         config.setMaintenanceMessage(message);
         return toInfo(configRepository.save(config));
     }
@@ -254,7 +257,7 @@ public class AdminService implements AdminModuleApi {
                 config.isLdapUseSsl(),
                 config.getLdapUrl() != null && !config.getLdapUrl().isBlank()
                         && config.getLdapBaseDn() != null && !config.getLdapBaseDn().isBlank(),
-                config.isMaintenanceEnabled(),
+                // Maintenance (enabled via modules map)
                 config.getMaintenanceMessage(),
                 // ClamAV virus scanner (enabled via modules map)
                 config.getClamavHost(),

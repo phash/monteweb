@@ -58,7 +58,7 @@ const ldapUseSsl = ref(false)
 const ldapPasswordStored = ref(false)
 const ldapExpanded = ref(false)
 
-// Maintenance mode
+// Maintenance mode (enabled via modules map)
 const maintenanceEnabled = ref(false)
 const maintenanceMessage = ref('')
 const savingMaintenance = ref(false)
@@ -136,8 +136,8 @@ onMounted(async () => {
     if (ldapEnabled.value) {
       ldapExpanded.value = true
     }
-    // Maintenance
-    maintenanceEnabled.value = adminStore.config.maintenanceEnabled ?? false
+    // Maintenance (enabled via modules map)
+    maintenanceEnabled.value = adminStore.isModuleEnabled('maintenance')
     maintenanceMessage.value = adminStore.config.maintenanceMessage ?? ''
     // ClamAV
     clamavHost.value = adminStore.config.clamavHost ?? 'clamav'

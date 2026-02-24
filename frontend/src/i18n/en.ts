@@ -407,6 +407,7 @@ export default {
       jitsi: 'Jitsi video conferencing: Start video meetings in calendar events and room chats',
       wopi: 'ONLYOFFICE integration: Edit documents directly in the browser (Word, Excel, PowerPoint)',
       clamav: 'ClamAV virus scanner: Automatically scan uploaded files for viruses',
+      maintenance: 'Maintenance mode: Lock the system for non-administrators',
     },
     theme: {
       primaryColor: 'Primary color',

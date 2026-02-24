@@ -13,7 +13,7 @@ const message = ref('')
 onMounted(async () => {
   try {
     await admin.fetchConfig()
-    if (admin.config && !admin.config.maintenanceEnabled) {
+    if (admin.config && !admin.isModuleEnabled('maintenance')) {
       router.replace('/')
       return
     }

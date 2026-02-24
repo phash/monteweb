@@ -53,7 +53,7 @@ public record TenantConfigInfo(
         String ldapDefaultRole,
         boolean ldapUseSsl,
         boolean ldapConfigured,
-        boolean maintenanceEnabled,
+        // Maintenance (enabled via modules map)
         String maintenanceMessage,
         // ClamAV virus scanner (enabled via modules map)
         String clamavHost,

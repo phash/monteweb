@@ -79,7 +79,7 @@ export interface TenantConfig {
   ldapUseSsl?: boolean
   ldapConfigured?: boolean
   directoryAdminOnly?: boolean
-  maintenanceEnabled?: boolean
+  // Maintenance (enabled via modules map)
   maintenanceMessage?: string | null
   // ClamAV virus scanner (enabled via modules map)
   clamavHost?: string

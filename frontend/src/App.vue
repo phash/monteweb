@@ -32,7 +32,7 @@ onMounted(async () => {
   await admin.fetchConfig()
 
   // Check for maintenance mode on startup
-  if (admin.config?.maintenanceEnabled && !auth.isAuthenticated) {
+  if (admin.isModuleEnabled('maintenance') && !auth.isAuthenticated) {
     router.replace('/maintenance')
     return
   }
@@ -41,7 +41,7 @@ onMounted(async () => {
   if (auth.isAuthenticated) {
     await auth.fetchUser()
     // Redirect non-admins during maintenance
-    if (admin.config?.maintenanceEnabled && !auth.isAdmin) {
+    if (admin.isModuleEnabled('maintenance') && !auth.isAdmin) {
       router.replace('/maintenance')
       return
     }
