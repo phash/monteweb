@@ -89,7 +89,6 @@ class MessagingServiceTest {
                 null, null, null, null,
                 null, null, null,
                 "DISABLED", null,
-                false,
                 // LDAP fields (enabled via modules map)
                 null, null, null,
                 null, null, null, null,

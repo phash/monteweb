@@ -18,7 +18,7 @@ const navItems = computed(() => {
     { to: '/rooms', icon: 'pi pi-th-large', label: t('nav.rooms'), name: 'rooms' },
   ]
 
-  if (!admin.config?.directoryAdminOnly || auth.isAdmin) {
+  if (!admin.isModuleEnabled('directoryAdminOnly') || auth.isAdmin) {
     items.push({ to: '/directory', icon: 'pi pi-address-book', label: t('nav.directory'), name: 'directory' })
   }
 

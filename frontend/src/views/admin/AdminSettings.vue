@@ -113,7 +113,7 @@ onMounted(async () => {
     defaultLanguage.value = adminStore.config.defaultLanguage ?? 'de'
     availableLanguages.value = adminStore.config.availableLanguages ?? ['de', 'en']
     requireUserApproval.value = adminStore.config.requireUserApproval ?? true
-    directoryAdminOnly.value = adminStore.config.directoryAdminOnly ?? false
+    directoryAdminOnly.value = adminStore.isModuleEnabled('directoryAdminOnly')
     requireAssignmentConfirmation.value = adminStore.config.requireAssignmentConfirmation ?? true
     twoFactorMode.value = adminStore.config.twoFactorMode ?? 'DISABLED'
     twoFactorGraceDeadline.value = adminStore.config.twoFactorGraceDeadline ?? null
@@ -156,11 +156,14 @@ async function saveSettings() {
     const langs = availableLanguages.value.includes(defaultLanguage.value)
       ? availableLanguages.value
       : [defaultLanguage.value, ...availableLanguages.value]
+    // Toggle directoryAdminOnly in modules map
+    const currentModules = adminStore.config?.modules ? { ...adminStore.config.modules } : {}
+    currentModules.directoryAdminOnly = directoryAdminOnly.value
+    await adminApi.updateModules(currentModules)
     await adminStore.updateConfig({
       defaultLanguage: defaultLanguage.value,
       availableLanguages: langs,
       requireUserApproval: requireUserApproval.value,
-      directoryAdminOnly: directoryAdminOnly.value,
       requireAssignmentConfirmation: requireAssignmentConfirmation.value,
       twoFactorMode: twoFactorMode.value,
     })

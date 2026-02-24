@@ -103,8 +103,7 @@ public class UserController {
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false, defaultValue = "") String q,
             @PageableDefault(size = 24, sort = "lastName") Pageable pageable) {
-        var config = adminModuleApi.getTenantConfig();
-        if (config.directoryAdminOnly() && SecurityContextHolder.getContext().getAuthentication()
+        if (adminModuleApi.isModuleEnabled("directoryAdminOnly") && SecurityContextHolder.getContext().getAuthentication()
                 .getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
             return ResponseEntity.status(403).body(ApiResponse.error("Directory access restricted to admins"));
         }

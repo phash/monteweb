@@ -54,7 +54,7 @@ public class AdminConfigController {
                 request.dataRetentionDaysNotifications(), request.dataRetentionDaysAudit(),
                 request.schoolFullName(), request.schoolAddress(), request.schoolPrincipal(),
                 request.techContactName(), request.techContactEmail(),
-                request.twoFactorMode(), request.directoryAdminOnly(),
+                request.twoFactorMode(),
                 request.ldapUrl(), request.ldapBaseDn(),
                 request.ldapBindDn(), request.ldapBindPassword(),
                 request.ldapUserSearchFilter(), request.ldapAttrEmail(),

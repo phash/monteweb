@@ -27,7 +27,7 @@ const primaryItems = computed(() => [
 const moreItems = computed(() => {
   const items: { to: string; icon: string; label: string; name: string }[] = []
 
-  if (!admin.config?.directoryAdminOnly || auth.isAdmin) {
+  if (!admin.isModuleEnabled('directoryAdminOnly') || auth.isAdmin) {
     items.push({ to: '/directory', icon: 'pi pi-address-book', label: t('nav.directory'), name: 'directory' })
   }
 

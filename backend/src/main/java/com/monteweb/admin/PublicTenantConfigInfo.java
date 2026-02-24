@@ -16,7 +16,6 @@ public record PublicTenantConfigInfo(
         String defaultLanguage,
         List<String> availableLanguages,
         boolean requireUserApproval,
-        boolean directoryAdminOnly,
         String maintenanceMessage,
         String jitsiServerUrl
 ) {
@@ -30,7 +29,6 @@ public record PublicTenantConfigInfo(
                 full.defaultLanguage(),
                 full.availableLanguages(),
                 full.requireUserApproval(),
-                full.directoryAdminOnly(),
                 full.maintenanceMessage(),
                 full.jitsiServerUrl()
         );

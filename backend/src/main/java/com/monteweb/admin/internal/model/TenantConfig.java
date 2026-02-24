@@ -125,8 +125,7 @@ public class TenantConfig {
 
     // --- LDAP/AD Integration ---
 
-    @Column(name = "directory_admin_only", nullable = false)
-    private boolean directoryAdminOnly = false;
+    // directoryAdminOnly enabled via modules map
 
     // Maintenance mode (enabled via modules map)
     @Column(name = "maintenance_message", columnDefinition = "TEXT")

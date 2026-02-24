@@ -409,6 +409,7 @@ export default {
       clamav: 'ClamAV-Virenscanner: Hochgeladene Dateien automatisch auf Viren pruefen',
       maintenance: 'Wartungsmodus: System fuer nicht-Administratoren sperren',
       ldap: 'LDAP/Active Directory: Benutzer-Authentifizierung ueber externen Verzeichnisdienst',
+      directoryAdminOnly: 'Verzeichnis nur fuer Admins: Benutzerverzeichnis nur fuer Administratoren sichtbar',
     },
     theme: {
       primaryColor: 'Primärfarbe',

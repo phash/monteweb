@@ -336,7 +336,7 @@ router.beforeEach(async (to) => {
   if (to.name === 'directory') {
     const { useAdminStore } = await import('@/stores/admin')
     const adminStore = useAdminStore()
-    if (adminStore.config?.directoryAdminOnly && !auth.isAdmin) {
+    if (adminStore.isModuleEnabled('directoryAdminOnly') && !auth.isAdmin) {
       return { name: 'dashboard' }
     }
   }

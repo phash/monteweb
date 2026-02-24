@@ -77,7 +77,7 @@ export interface TenantConfig {
   ldapDefaultRole?: string | null
   ldapUseSsl?: boolean
   ldapConfigured?: boolean
-  directoryAdminOnly?: boolean
+  // directoryAdminOnly enabled via modules map
   // Maintenance (enabled via modules map)
   maintenanceMessage?: string | null
   // ClamAV virus scanner (enabled via modules map)

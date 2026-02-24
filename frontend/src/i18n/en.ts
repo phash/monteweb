@@ -409,6 +409,7 @@ export default {
       clamav: 'ClamAV virus scanner: Automatically scan uploaded files for viruses',
       maintenance: 'Maintenance mode: Lock the system for non-administrators',
       ldap: 'LDAP/Active Directory: User authentication via external directory service',
+      directoryAdminOnly: 'Directory admin only: User directory visible to administrators only',
     },
     theme: {
       primaryColor: 'Primary color',

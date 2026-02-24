@@ -28,7 +28,7 @@ public record UpdateConfigRequest(
         String techContactName,
         String techContactEmail,
         String twoFactorMode,
-        Boolean directoryAdminOnly,
+        // directoryAdminOnly enabled via modules map
         // LDAP/AD fields (enabled via modules map)
         String ldapUrl,
         String ldapBaseDn,
