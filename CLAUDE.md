@@ -37,6 +37,12 @@ cd backend
 ./mvnw test -Dtest=AuthControllerIntegrationTest       # single test class
 ./mvnw test -Dtest="AuthControllerIntegrationTest#register_*"  # single method
 
+# Backup (optional)
+docker compose --profile backup up -d                  # automated daily backups
+docker compose exec backup backup.sh                   # manual backup
+docker compose exec backup restore.sh --list           # list backups
+docker compose exec backup restore.sh latest           # restore latest
+
 # Monitoring (optional)
 docker compose --profile monitoring up -d              # Grafana :3000, Prometheus :9090
 ```
@@ -132,7 +138,8 @@ frontend/src/
 - **Docker Compose:** Two isolated networks (`monteweb-frontend`, `monteweb-backend`), memory limits on all services, MinIO version pinned, Solr 9.8-slim for full-text search
 - **CI/CD:** GitHub Actions with SHA-pinned actions, concurrency groups, job timeouts, Docker Buildx with GHA cache, Trivy image scanning
 - **Dependabot:** Weekly updates for GitHub Actions, npm, Maven, Docker base images
-- **See also:** `INFRA-CHANGELOG.md` (all optimizations), `LOCAL-DEV-GUIDE.md` (comprehensive dev guide)
+- **Backup:** Optional profile (`--profile backup`). Alpine container with `pg_dump` + `mc` (MinIO Client). Daily/weekly/monthly rotation with configurable retention. Optional S3 remote upload. See `BACKUP.md`
+- **See also:** `INFRA-CHANGELOG.md` (all optimizations), `LOCAL-DEV-GUIDE.md` (comprehensive dev guide), `BACKUP.md` (backup & restore)
 
 ### Testing
 
