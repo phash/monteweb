@@ -10,6 +10,7 @@ import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserRole;
 import com.monteweb.user.internal.dto.SwitchRoleRequest;
+import com.monteweb.user.internal.dto.UpdateDigestRequest;
 import com.monteweb.user.internal.dto.UpdateProfileRequest;
 import com.monteweb.user.internal.service.UserService;
 import com.monteweb.shared.exception.ResourceNotFoundException;
@@ -59,6 +60,21 @@ public class UserController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userService.updateProfile(userId, request.firstName(), request.lastName(), request.phone());
         return ResponseEntity.ok(ApiResponse.ok(user));
+    }
+
+    @GetMapping("/me/digest")
+    public ResponseEntity<ApiResponse<Map<String, String>>> getDigestPreference() {
+        var userId = SecurityUtils.requireCurrentUserId();
+        var freq = userService.getDigestFrequency(userId);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("frequency", freq)));
+    }
+
+    @PutMapping("/me/digest")
+    public ResponseEntity<ApiResponse<Map<String, String>>> updateDigestPreference(
+            @Valid @RequestBody UpdateDigestRequest request) {
+        var userId = SecurityUtils.requireCurrentUserId();
+        userService.updateDigestFrequency(userId, request.frequency());
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("frequency", request.frequency())));
     }
 
     @GetMapping("/directory")

@@ -52,6 +52,10 @@ const stubs = {
   },
   Message: { template: '<div class="message-stub"><slot /></div>', props: ['severity', 'closable'] },
   LanguageSwitcher: { template: '<div class="language-switcher-stub" />' },
+  Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity'] },
+  Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue'] },
+  Dialog: { template: '<div class="dialog-stub"><slot /><slot name="footer" /></div>', props: ['visible', 'header', 'modal'] },
+  Password: { template: '<input type="password" class="password-stub" />', props: ['modelValue', 'feedback', 'toggleMask'] },
 }
 
 function mountProfile() {

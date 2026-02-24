@@ -66,4 +66,19 @@ public class EmailService {
             log.error("Failed to send welcome email to {}: {}", toEmail, e.getMessage());
         }
     }
+
+    public void sendGenericEmail(String toEmail, String subject, String body) {
+        var message = new SimpleMailMessage();
+        message.setFrom(properties.from());
+        message.setTo(toEmail);
+        message.setSubject(subject);
+        message.setText(body);
+
+        try {
+            mailSender.send(message);
+            log.info("Email sent to {}: {}", toEmail, subject);
+        } catch (Exception e) {
+            log.error("Failed to send email to {}: {}", toEmail, e.getMessage());
+        }
+    }
 }

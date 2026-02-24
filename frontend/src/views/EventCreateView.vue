@@ -36,7 +36,19 @@ const scope = ref<EventScope>('ROOM')
 const scopeId = ref<string | undefined>(undefined)
 const recurrence = ref<EventRecurrence>('NONE')
 const recurrenceEnd = ref<Date | null>(null)
+const eventColor = ref<string | null>(null)
+const customColor = ref('')
 const saving = ref(false)
+
+const pastelColors = [
+  '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
+  '#E8BAFF', '#FFB3E6', '#B3FFE6', '#FFE6B3', '#B3D9FF',
+  '#D9B3FF', '#FFB3B3', '#B3FFB3', '#B3FFFF', '#FFB3FF',
+  '#FFDAB3', '#C9FFB3', '#B3C9FF', '#FFB3D9', '#D9FFB3',
+  '#B3FFD9', '#FFD9B3', '#B3DAFF', '#E6B3FF', '#FFE6E6',
+  '#E6FFE6', '#E6E6FF', '#FFF0E6', '#E6FFF0', '#F0E6FF',
+  '#FFE6F0', '#F0FFE6',
+]
 
 // Auto-adjust end date when start date moves past it
 watch(startDate, (newStart) => {
@@ -94,6 +106,10 @@ onMounted(async () => {
       scopeId.value = e.scopeId || undefined
       recurrence.value = e.recurrence
       recurrenceEnd.value = e.recurrenceEnd ? new Date(e.recurrenceEnd) : null
+      eventColor.value = e.color || null
+      if (e.color && !pastelColors.includes(e.color)) {
+        customColor.value = e.color
+      }
     }
   }
 
@@ -134,6 +150,7 @@ async function handleSubmit() {
       scopeId: scope.value === 'SCHOOL' ? undefined : scopeId.value,
       recurrence: recurrence.value,
       recurrenceEnd: recurrenceEnd.value ? formatDateToISO(recurrenceEnd.value) : undefined,
+      color: eventColor.value || undefined,
     }
 
     if (isEdit.value && eventId.value) {
@@ -253,6 +270,43 @@ async function handleSubmit() {
         </div>
       </div>
 
+        <div class="field">
+          <label>{{ t('calendar.color') }}</label>
+          <p class="color-hint">{{ t('calendar.colorHint') }}</p>
+          <div class="color-palette">
+            <button
+              type="button"
+              class="color-swatch no-color"
+              :class="{ active: !eventColor }"
+              @click="eventColor = null; customColor = ''"
+              :title="t('common.none')"
+            >
+              <i class="pi pi-ban" />
+            </button>
+            <button
+              v-for="c in pastelColors"
+              :key="c"
+              type="button"
+              class="color-swatch"
+              :class="{ active: eventColor === c }"
+              :style="{ background: c }"
+              @click="eventColor = c; customColor = ''"
+            />
+          </div>
+          <div class="custom-color-row">
+            <label for="custom-color">{{ t('calendar.customColor') }}</label>
+            <div class="custom-color-input">
+              <input
+                id="custom-color"
+                type="color"
+                :value="customColor || '#cccccc'"
+                @input="(e: Event) => { const v = (e.target as HTMLInputElement).value; customColor = v; eventColor = v; }"
+              />
+              <span v-if="customColor" class="custom-color-label">{{ customColor }}</span>
+            </div>
+          </div>
+        </div>
+
       <div class="form-actions">
         <Button :label="t('common.cancel')" severity="secondary" text @click="router.back()" />
         <Button
@@ -305,6 +359,79 @@ async function handleSubmit() {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1.5rem;
+}
+
+.color-hint {
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  color: var(--mw-text-muted);
+  margin: 0 0 0.5rem;
+}
+
+.color-palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0.75rem;
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.1s;
+  padding: 0;
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.active {
+  border-color: var(--mw-primary);
+  box-shadow: 0 0 0 2px var(--mw-primary);
+}
+
+.color-swatch.no-color {
+  background: var(--p-surface-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--mw-text-muted);
+  font-size: 0.75rem;
+}
+
+.custom-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: var(--mw-font-size-sm);
+}
+
+.custom-color-row label {
+  font-weight: 500;
+}
+
+.custom-color-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.custom-color-input input[type="color"] {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--mw-border-light);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.custom-color-label {
+  font-family: monospace;
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
 }
 
 @media (max-width: 767px) {

@@ -19,6 +19,7 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import Password from 'primevue/password'
+import Select from 'primevue/select'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import type { UserRole } from '@/types/user'
 
@@ -32,6 +33,14 @@ const { isSupported: pushSupported, isSubscribed: pushSubscribed, permission: pu
 
 const pushEnabled = ref(false)
 const switching = ref(false)
+const digestFrequency = ref('NONE')
+const digestFrequencyOptions = [
+  { label: t('profile.digestFrequencies.NONE'), value: 'NONE' },
+  { label: t('profile.digestFrequencies.DAILY'), value: 'DAILY' },
+  { label: t('profile.digestFrequencies.WEEKLY'), value: 'WEEKLY' },
+  { label: t('profile.digestFrequencies.BIWEEKLY'), value: 'BIWEEKLY' },
+  { label: t('profile.digestFrequencies.MONTHLY'), value: 'MONTHLY' },
+]
 
 const form = ref({
   firstName: '',
@@ -63,6 +72,14 @@ onMounted(async () => {
   await checkSubscription()
   pushEnabled.value = pushSubscribed.value
   await messagingStore.fetchConversations()
+
+  // Load digest preference
+  try {
+    const digestRes = await usersApi.getDigestPreference()
+    digestFrequency.value = digestRes.data.data.frequency
+  } catch {
+    // Ignore
+  }
 
   // Check 2FA status
   try {
@@ -135,6 +152,15 @@ function getConversationName(conv: { title: string | null; participants: { displ
 
 async function unmuteChatFromProfile(conversationId: string) {
   await messagingStore.unmuteConversation(conversationId)
+}
+
+async function updateDigest() {
+  try {
+    await usersApi.updateDigestPreference(digestFrequency.value)
+    toast.add({ severity: 'success', summary: t('profile.digestSaved'), life: 3000 })
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
 }
 
 async function togglePush() {
@@ -487,6 +513,22 @@ async function cancelAccountDeletion() {
       </div>
     </div>
 
+    <!-- Email Digest -->
+    <div class="card profile-card digest-card">
+      <h3>{{ t('profile.emailDigest') }}</h3>
+      <p class="digest-hint">{{ t('profile.digestHint') }}</p>
+      <div class="digest-select">
+        <Select
+          v-model="digestFrequency"
+          :options="digestFrequencyOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full"
+          @update:model-value="updateDigest"
+        />
+      </div>
+    </div>
+
     <!-- Push Notifications -->
     <div v-if="pushSupported" class="card profile-card push-card">
       <h3>{{ t('profile.pushNotifications') }}</h3>
@@ -764,6 +806,25 @@ async function cancelAccountDeletion() {
 
 .muted-name {
   font-size: var(--mw-font-size-sm);
+}
+
+.digest-card {
+  margin-top: 1rem;
+}
+
+.digest-card h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.digest-hint {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+  margin: 0 0 0.75rem 0;
+}
+
+.digest-select {
+  max-width: 300px;
 }
 
 .push-card {

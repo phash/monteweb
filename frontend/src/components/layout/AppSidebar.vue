@@ -16,8 +16,11 @@ const navItems = computed(() => {
   const items = [
     { to: '/', icon: 'pi pi-home', label: t('nav.dashboard'), name: 'dashboard' },
     { to: '/rooms', icon: 'pi pi-th-large', label: t('nav.rooms'), name: 'rooms' },
-    { to: '/directory', icon: 'pi pi-address-book', label: t('nav.directory'), name: 'directory' },
   ]
+
+  if (!admin.config?.directoryAdminOnly || auth.isAdmin) {
+    items.push({ to: '/directory', icon: 'pi pi-address-book', label: t('nav.directory'), name: 'directory' })
+  }
 
   if (auth.canHaveFamily) {
     items.push({ to: '/family', icon: 'pi pi-users', label: t('nav.family'), name: 'family' })

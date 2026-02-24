@@ -195,6 +195,20 @@ public class UserService implements UserModuleApi {
         return toUserInfo(userRepository.save(user));
     }
 
+    public String getDigestFrequency(UUID userId) {
+        return userRepository.findById(userId)
+                .map(u -> u.getDigestFrequency())
+                .orElse("NONE");
+    }
+
+    @Transactional
+    public void updateDigestFrequency(UUID userId, String frequency) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setDigestFrequency(frequency);
+        userRepository.save(user);
+    }
+
     @Override
     @Transactional
     public void updatePasswordHash(UUID userId, String passwordHash) {
@@ -532,6 +546,37 @@ public class UserService implements UserModuleApi {
         var user = findEntityById(userId);
         user.setTotpRecoveryCodes(codes);
         userRepository.save(user);
+    }
+
+    @Override
+    public List<UserModuleApi.DigestUserInfo> findUsersForDigest() {
+        var now = Instant.now();
+        return userRepository.findAll().stream()
+                .filter(u -> u.isActive() && !"NONE".equals(u.getDigestFrequency()))
+                .filter(u -> shouldSendDigest(u, now))
+                .map(u -> new UserModuleApi.DigestUserInfo(u.getId(), u.getEmail(), u.getFirstName(), u.getDigestFrequency(), u.getDigestLastSentAt()))
+                .toList();
+    }
+
+    private boolean shouldSendDigest(User user, Instant now) {
+        var lastSent = user.getDigestLastSentAt();
+        if (lastSent == null) return true;
+        return switch (user.getDigestFrequency()) {
+            case "DAILY" -> lastSent.plus(23, ChronoUnit.HOURS).isBefore(now);
+            case "WEEKLY" -> lastSent.plus(6, ChronoUnit.DAYS).isBefore(now);
+            case "BIWEEKLY" -> lastSent.plus(13, ChronoUnit.DAYS).isBefore(now);
+            case "MONTHLY" -> lastSent.plus(28, ChronoUnit.DAYS).isBefore(now);
+            default -> false;
+        };
+    }
+
+    @Override
+    @Transactional
+    public void updateDigestSentAt(UUID userId, Instant sentAt) {
+        userRepository.findById(userId).ifPresent(u -> {
+            u.setDigestLastSentAt(sentAt);
+            userRepository.save(u);
+        });
     }
 
     private UserInfo toUserInfo(User user) {

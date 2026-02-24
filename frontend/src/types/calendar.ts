@@ -27,6 +27,7 @@ export interface CalendarEvent {
   declinedCount: number
   currentUserRsvp: RsvpStatus | null
   eventType: string
+  color: string | null
   linkedJobCount: number
   createdAt: string
   updatedAt: string
@@ -45,6 +46,8 @@ export interface CreateEventRequest {
   scopeId?: string
   recurrence?: EventRecurrence
   recurrenceEnd?: string
+  eventType?: string
+  color?: string
 }
 
 export interface UpdateEventRequest {
@@ -58,6 +61,7 @@ export interface UpdateEventRequest {
   endTime?: string
   recurrence?: EventRecurrence
   recurrenceEnd?: string
+  color?: string
 }
 
 export interface RsvpRequest {

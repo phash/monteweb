@@ -241,8 +241,17 @@ function goToEvent(id: string) {
   router.push({ name: 'event-detail', params: { id } })
 }
 
+function dayEvents(date: string): CalendarEvent[] {
+  return eventsByDate.value.get(date) || []
+}
+
 function dayEventCount(date: string): number {
-  return eventsByDate.value.get(date)?.length || 0
+  return dayEvents(date).length
+}
+
+function eventColorStyle(event: CalendarEvent): Record<string, string> {
+  const color = event.color || 'var(--mw-primary)'
+  return { '--event-color': color }
 }
 
 function formatEventDateDisplay(event: { allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null }) {
@@ -348,6 +357,7 @@ function formatSelectedDay(date: string): string {
           class="event-item card"
           :class="{ cancelled: event.cancelled }"
         >
+          <span class="event-color-bar" :style="{ background: event.color || 'var(--mw-primary)' }" />
           <div class="event-date-col">
             <span class="event-date-text">{{ formatEventDateDisplay(event) }}</span>
           </div>
@@ -392,13 +402,16 @@ function formatSelectedDay(date: string): string {
             @click="selectDay(day.date)"
           >
             <span class="day-number">{{ day.day }}</span>
-            <div v-if="dayEventCount(day.date) > 0" class="event-dots">
-              <span
-                v-for="n in Math.min(dayEventCount(day.date), 3)"
-                :key="n"
-                class="event-dot"
-              />
-              <span v-if="dayEventCount(day.date) > 3" class="event-dot-more">+{{ dayEventCount(day.date) - 3 }}</span>
+            <div v-if="dayEventCount(day.date) > 0" class="event-bars">
+              <div
+                v-for="event in dayEvents(day.date).slice(0, 2)"
+                :key="event.id"
+                class="event-bar"
+                :style="eventColorStyle(event)"
+              >
+                <span class="event-bar-title">{{ event.title }}</span>
+              </div>
+              <span v-if="dayEventCount(day.date) > 2" class="event-bar-more">+{{ dayEventCount(day.date) - 2 }}</span>
             </div>
           </div>
         </div>
@@ -419,6 +432,7 @@ function formatSelectedDay(date: string): string {
               <span v-if="event.allDay" class="all-day-badge">{{ t('calendar.allDay') }}</span>
               <span v-else-if="event.startTime">{{ event.startTime.substring(0, 5) }}</span>
             </div>
+            <span class="event-color-dot" :style="{ background: event.color || 'var(--mw-primary)' }" />
             <div class="day-event-info">
               <strong>{{ event.title }}</strong>
               <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
@@ -452,7 +466,7 @@ function formatSelectedDay(date: string): string {
               @click="selectDay(day.date)"
             >
               <span class="day-number">{{ day.day }}</span>
-              <span v-if="dayEventCount(day.date) > 0" class="mini-dot" />
+              <span v-if="dayEventCount(day.date) > 0" class="mini-dot" :style="{ background: dayEvents(day.date)[0]?.color || 'var(--mw-primary)' }" />
             </div>
           </div>
         </div>
@@ -472,6 +486,7 @@ function formatSelectedDay(date: string): string {
               <span v-if="event.allDay" class="all-day-badge">{{ t('calendar.allDay') }}</span>
               <span v-else-if="event.startTime">{{ event.startTime.substring(0, 5) }}</span>
             </div>
+            <span class="event-color-dot" :style="{ background: event.color || 'var(--mw-primary)' }" />
             <div class="day-event-info">
               <strong>{{ event.title }}</strong>
               <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
@@ -523,6 +538,7 @@ function formatSelectedDay(date: string): string {
               <span v-if="event.allDay" class="all-day-badge">{{ t('calendar.allDay') }}</span>
               <span v-else-if="event.startTime">{{ event.startTime.substring(0, 5) }}</span>
             </div>
+            <span class="event-color-dot" :style="{ background: event.color || 'var(--mw-primary)' }" />
             <div class="day-event-info">
               <strong>{{ event.title }}</strong>
               <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
@@ -679,16 +695,15 @@ function formatSelectedDay(date: string): string {
 }
 
 .day-cell {
-  aspect-ratio: 1;
+  min-height: 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   border-radius: 8px;
   cursor: default;
   position: relative;
   transition: background 0.15s;
-  padding: 0.25rem;
+  padding: 0.25rem 0.15rem;
 }
 
 .day-cell.has-events {
@@ -725,24 +740,49 @@ function formatSelectedDay(date: string): string {
   font-weight: 500;
 }
 
-.event-dots {
-  display: flex;
-  gap: 3px;
-  align-items: center;
-  margin-top: 2px;
+.event-color-bar {
+  width: 4px;
+  min-height: 32px;
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 
-.event-dot {
-  width: 6px;
-  height: 6px;
+.event-color-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--mw-primary);
+  flex-shrink: 0;
 }
 
-.event-dot-more {
+.event-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  margin-top: 2px;
+  overflow: hidden;
+}
+
+.event-bar {
+  background: color-mix(in srgb, var(--event-color) 20%, transparent);
+  border-left: 3px solid var(--event-color);
+  border-radius: 2px;
+  padding: 0 3px;
+  line-height: 1.3;
+}
+
+.event-bar-title {
   font-size: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.event-bar-more {
+  font-size: 0.55rem;
   color: var(--mw-text-muted);
-  line-height: 1;
+  text-align: center;
 }
 
 /* === MINI MONTH (3-month + year) === */
@@ -776,7 +816,6 @@ function formatSelectedDay(date: string): string {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--mw-primary);
 }
 
 .mini-month {

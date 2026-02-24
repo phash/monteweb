@@ -11,6 +11,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -81,6 +83,13 @@ public class NotificationService implements NotificationModuleApi {
     @Transactional
     public void deleteNotification(UUID notificationId, UUID userId) {
         repository.deleteByIdAndUserId(notificationId, userId);
+    }
+
+    public List<NotificationInfo> findUnreadSince(UUID userId, Instant since) {
+        return repository.findByUserIdAndCreatedAtAfterOrderByCreatedAtDesc(userId, since)
+                .stream()
+                .map(this::toInfo)
+                .toList();
     }
 
     private NotificationInfo toInfo(Notification n) {

@@ -95,6 +95,15 @@ export const usersApi = {
     return client.put<ApiResponse<UserInfo>>(`/admin/users/${userId}/assigned-roles`, { roles })
   },
 
+  // Email digest
+  getDigestPreference() {
+    return client.get<ApiResponse<{ frequency: string }>>('/users/me/digest')
+  },
+
+  updateDigestPreference(frequency: string) {
+    return client.put<ApiResponse<{ frequency: string }>>('/users/me/digest', { frequency })
+  },
+
   // DSGVO / GDPR (self-service)
   requestDeletion() {
     return client.delete('/users/me')

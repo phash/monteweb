@@ -111,7 +111,8 @@ public class CleaningService implements CleaningModuleApi {
                     null,
                     null, // recurrence
                     null, // recurrenceEnd
-                    "CLEANING"
+                    "CLEANING",
+                    null // color
             );
             var calendarEvent = calendarModuleApi.createEventFromSystem(calendarRequest, currentUserId);
             config.setCalendarEventId(calendarEvent.id());

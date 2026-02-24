@@ -25,6 +25,7 @@ public record EventInfo(
         LocalDate recurrenceEnd,
         boolean cancelled,
         String eventType,
+        String color,
         UUID createdBy,
         String creatorName,
         int attendingCount,

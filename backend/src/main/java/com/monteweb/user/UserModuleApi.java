@@ -3,6 +3,7 @@ package com.monteweb.user;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -126,4 +127,11 @@ public interface UserModuleApi {
      * Replaces the stored recovery codes (e.g. after one is consumed).
      */
     void setTotpRecoveryCodes(UUID userId, String[] codes);
+
+    // --- Email Digest ---
+
+    record DigestUserInfo(UUID id, String email, String firstName, String digestFrequency, Instant digestLastSentAt) {}
+
+    List<DigestUserInfo> findUsersForDigest();
+    void updateDigestSentAt(UUID userId, Instant sentAt);
 }

@@ -24,6 +24,7 @@ public record CreateEventRequest(
         UUID scopeId,
         EventRecurrence recurrence,
         LocalDate recurrenceEnd,
-        String eventType
+        String eventType,
+        String color
 ) {
 }

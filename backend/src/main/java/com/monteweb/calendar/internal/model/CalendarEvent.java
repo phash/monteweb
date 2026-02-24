@@ -67,6 +67,9 @@ public class CalendarEvent {
     @Column(name = "event_type", nullable = false, length = 30)
     private String eventType = "GENERAL";
 
+    @Column(length = 7)
+    private String color;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

@@ -100,6 +100,12 @@ public class User {
     @JdbcTypeCode(SqlTypes.ARRAY)
     private String[] totpRecoveryCodes;
 
+    @Column(name = "digest_frequency", nullable = false, length = 20)
+    private String digestFrequency = "NONE";
+
+    @Column(name = "digest_last_sent_at")
+    private Instant digestLastSentAt;
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();

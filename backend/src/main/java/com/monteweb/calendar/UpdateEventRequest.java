@@ -18,6 +18,7 @@ public record UpdateEventRequest(
         LocalDate endDate,
         LocalTime endTime,
         EventRecurrence recurrence,
-        LocalDate recurrenceEnd
+        LocalDate recurrenceEnd,
+        String color
 ) {
 }

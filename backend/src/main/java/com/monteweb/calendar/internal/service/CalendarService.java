@@ -103,6 +103,7 @@ public class CalendarService implements CalendarModuleApi {
         event.setRecurrence(request.recurrence() != null ? request.recurrence() : EventRecurrence.NONE);
         event.setRecurrenceEnd(request.recurrenceEnd());
         event.setCreatedBy(userId);
+        if (request.color() != null) event.setColor(request.color());
 
         event = eventRepository.save(event);
 
@@ -133,6 +134,7 @@ public class CalendarService implements CalendarModuleApi {
         if (request.endTime() != null) event.setEndTime(request.endTime());
         if (request.recurrence() != null) event.setRecurrence(request.recurrence());
         if (request.recurrenceEnd() != null) event.setRecurrenceEnd(request.recurrenceEnd());
+        if (request.color() != null) event.setColor(request.color());
 
         event = eventRepository.save(event);
         return toEventInfo(event, userId);
@@ -353,6 +355,7 @@ public class CalendarService implements CalendarModuleApi {
                 event.getRecurrenceEnd(),
                 event.isCancelled(),
                 event.getEventType(),
+                event.getColor(),
                 event.getCreatedBy(),
                 creatorName,
                 attendingCount,
