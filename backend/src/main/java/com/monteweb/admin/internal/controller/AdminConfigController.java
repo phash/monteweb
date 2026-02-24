@@ -61,7 +61,7 @@ public class AdminConfigController {
                 request.ldapAttrFirstName(), request.ldapAttrLastName(),
                 request.ldapDefaultRole(), request.ldapUseSsl(),
                 request.clamavEnabled(), request.clamavHost(), request.clamavPort(),
-                request.jitsiEnabled(), request.jitsiServerUrl(),
+                request.jitsiServerUrl(),
                 request.wopiEnabled(), request.wopiOfficeUrl());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }

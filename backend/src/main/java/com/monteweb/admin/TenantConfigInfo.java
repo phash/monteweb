@@ -59,8 +59,7 @@ public record TenantConfigInfo(
         boolean clamavEnabled,
         String clamavHost,
         int clamavPort,
-        // Jitsi video conferencing
-        boolean jitsiEnabled,
+        // Jitsi video conferencing (enabled via modules map)
         String jitsiServerUrl,
         // WOPI / ONLYOFFICE
         boolean wopiEnabled,

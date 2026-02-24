@@ -69,8 +69,7 @@ const clamavHost = ref('clamav')
 const clamavPort = ref(3310)
 const savingClamav = ref(false)
 
-// Jitsi video conferencing
-const jitsiEnabled = ref(false)
+// Jitsi video conferencing (enabled via modules page)
 const jitsiServerUrl = ref('https://meet.jit.si')
 const savingJitsi = ref(false)
 
@@ -147,7 +146,6 @@ onMounted(async () => {
     clamavHost.value = adminStore.config.clamavHost ?? 'clamav'
     clamavPort.value = adminStore.config.clamavPort ?? 3310
     // Jitsi
-    jitsiEnabled.value = adminStore.config.jitsiEnabled ?? false
     jitsiServerUrl.value = adminStore.config.jitsiServerUrl ?? 'https://meet.jit.si'
     // WOPI
     wopiEnabled.value = adminStore.config.wopiEnabled ?? false
@@ -216,7 +214,6 @@ async function saveJitsiConfig() {
   savingJitsi.value = true
   try {
     const res = await adminApi.updateConfig({
-      jitsiEnabled: jitsiEnabled.value,
       jitsiServerUrl: jitsiServerUrl.value,
     })
     adminStore.config = res.data.data
@@ -390,17 +387,13 @@ async function testLdapConnection() {
       <Button :label="t('common.save')" :loading="savingClamav" @click="saveClamavConfig" />
     </div>
 
-    <!-- Jitsi Video Conferencing Section -->
-    <div class="settings-section">
+    <!-- Jitsi Video Conferencing Section (enable/disable via Modules page) -->
+    <div v-if="adminStore.isModuleEnabled('jitsi')" class="settings-section">
       <h2 class="text-lg font-semibold mb-3">{{ t('admin.jitsi.title') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="jitsiEnabled" />
-        <label>{{ t('admin.jitsi.enabled') }}</label>
-      </div>
-      <Message v-if="jitsiEnabled" severity="info" :closable="false">
+      <Message severity="info" :closable="false">
         {{ t('admin.jitsi.hint') }}
       </Message>
-      <div v-if="jitsiEnabled" class="mb-4">
+      <div class="mb-4">
         <label class="block text-sm font-medium mb-1">{{ t('admin.jitsi.serverUrl') }}</label>
         <InputText v-model="jitsiServerUrl" class="w-full" placeholder="https://meet.jit.si" />
       </div>

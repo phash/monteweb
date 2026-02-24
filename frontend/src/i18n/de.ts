@@ -404,6 +404,7 @@ export default {
       tasks: 'Kanban-Board pro Raum: Aufgaben erstellen, zuweisen und in konfigurierbaren Spalten verwalten',
       wiki: 'Wiki pro Raum: Markdown-Seiten mit Hierarchie, Versionierung und Suchfunktion',
       profilefields: 'Benutzerdefinierte Profilfelder: Administratoren können zusätzliche Felder für Benutzerprofile anlegen',
+      jitsi: 'Jitsi-Videokonferenzen: Video-Meetings in Kalender-Terminen und Raum-Chats starten',
     },
     theme: {
       primaryColor: 'Primärfarbe',

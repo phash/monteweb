@@ -85,8 +85,7 @@ export interface TenantConfig {
   clamavEnabled?: boolean
   clamavHost?: string
   clamavPort?: number
-  // Jitsi video conferencing
-  jitsiEnabled?: boolean
+  // Jitsi video conferencing (enabled via modules map)
   jitsiServerUrl?: string
   // WOPI / ONLYOFFICE
   wopiEnabled?: boolean

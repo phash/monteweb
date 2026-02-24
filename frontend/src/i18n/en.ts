@@ -404,6 +404,7 @@ export default {
       tasks: 'Kanban board per room: create, assign and manage tasks in configurable columns',
       wiki: 'Wiki per room: Markdown pages with hierarchy, versioning, and search',
       profilefields: 'Custom profile fields: Administrators can create additional fields for user profiles',
+      jitsi: 'Jitsi video conferencing: Start video meetings in calendar events and room chats',
     },
     theme: {
       primaryColor: 'Primary color',

@@ -45,8 +45,7 @@ public record UpdateConfigRequest(
         Boolean clamavEnabled,
         String clamavHost,
         Integer clamavPort,
-        // Jitsi video conferencing
-        Boolean jitsiEnabled,
+        // Jitsi video conferencing (enabled via modules map)
         String jitsiServerUrl,
         // WOPI / ONLYOFFICE
         Boolean wopiEnabled,

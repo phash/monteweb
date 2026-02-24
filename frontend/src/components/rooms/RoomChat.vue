@@ -73,7 +73,7 @@ const groupedMessages = computed(() => {
 
 onMounted(async () => {
   // Load Jitsi room name if Jitsi is enabled
-  if (adminStore.config?.jitsiEnabled) {
+  if (adminStore.isModuleEnabled('jitsi')) {
     try {
       const res = await roomsApi.getJitsiRoom(props.roomId)
       jitsiRoomName.value = res.data.data.jitsiRoomName || null
@@ -295,7 +295,7 @@ async function handleMsgPollClose(msg: MessageInfo) {
       </div>
       <div class="rc-header-actions">
         <Button
-          v-if="adminStore.config?.jitsiEnabled"
+          v-if="adminStore.isModuleEnabled('jitsi')"
           icon="pi pi-video"
           :label="t('admin.jitsi.startVideoChat')"
           text

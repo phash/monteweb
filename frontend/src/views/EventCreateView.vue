@@ -282,7 +282,7 @@ async function handleSubmit() {
         </div>
       </div>
 
-        <div v-if="admin.config?.jitsiEnabled && !isEdit" class="field-row">
+        <div v-if="admin.isModuleEnabled('jitsi') && !isEdit" class="field-row">
           <div class="field-check">
             <Checkbox v-model="addJitsi" :binary="true" inputId="addJitsi" />
             <label for="addJitsi">{{ t('admin.jitsi.addVideoConference') }}</label>

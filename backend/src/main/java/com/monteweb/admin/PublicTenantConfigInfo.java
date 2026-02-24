@@ -19,7 +19,6 @@ public record PublicTenantConfigInfo(
         boolean directoryAdminOnly,
         boolean maintenanceEnabled,
         String maintenanceMessage,
-        boolean jitsiEnabled,
         String jitsiServerUrl,
         boolean wopiEnabled
 ) {
@@ -36,7 +35,6 @@ public record PublicTenantConfigInfo(
                 full.directoryAdminOnly(),
                 full.maintenanceEnabled(),
                 full.maintenanceMessage(),
-                full.jitsiEnabled(),
                 full.jitsiServerUrl(),
                 full.wopiEnabled()
         );

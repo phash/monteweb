@@ -123,7 +123,7 @@ async function exportEvent() {
 }
 
 function jitsiEnabled() {
-  return admin.config?.jitsiEnabled === true
+  return admin.isModuleEnabled('jitsi')
 }
 
 function jitsiUrl() {

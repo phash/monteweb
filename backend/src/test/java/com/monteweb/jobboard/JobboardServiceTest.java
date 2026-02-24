@@ -126,8 +126,8 @@ class JobboardServiceTest {
                 false, null,
                 // ClamAV
                 false, null, 3310,
-                // Jitsi
-                false, null,
+                // Jitsi (enabled via modules)
+                null,
                 // WOPI
                 false, null
         );

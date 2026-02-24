@@ -186,10 +186,7 @@ public class TenantConfig {
     @Column(name = "clamav_port")
     private int clamavPort = 3310;
 
-    // --- Jitsi Video Conferencing ---
-
-    @Column(name = "jitsi_enabled", nullable = false)
-    private boolean jitsiEnabled = false;
+    // --- Jitsi Video Conferencing (enabled via modules map) ---
 
     @Column(name = "jitsi_server_url", length = 300)
     private String jitsiServerUrl = "https://meet.jit.si";
