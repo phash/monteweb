@@ -110,6 +110,8 @@ monteweb:
     public-key: ${VAPID_PUBLIC_KEY:}
     private-key: ${VAPID_PRIVATE_KEY:}
     subject: ${VAPID_SUBJECT:mailto:admin@monteweb.local}
+  solr:
+    url: ${SOLR_URL:http://localhost:8983/solr/monteweb}
   modules:
     messaging:
       enabled: true
@@ -130,4 +132,6 @@ monteweb:
     tasks:
       enabled: true
     wiki:
+      enabled: true
+    solr:
       enabled: true

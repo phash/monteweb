@@ -7,6 +7,8 @@ import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.wiki.WikiModuleApi;
+import com.monteweb.wiki.WikiPageDeletedEvent;
+import com.monteweb.wiki.WikiPageSavedEvent;
 import com.monteweb.wiki.internal.dto.*;
 import com.monteweb.wiki.internal.model.WikiPage;
 import com.monteweb.wiki.internal.model.WikiPageVersion;
@@ -14,6 +16,7 @@ import com.monteweb.wiki.internal.repository.WikiPageRepository;
 import com.monteweb.wiki.internal.repository.WikiPageVersionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +33,7 @@ public class WikiService implements WikiModuleApi {
     private final WikiPageVersionRepository versionRepo;
     private final UserModuleApi userModule;
     private final RoomModuleApi roomModule;
+    private final ApplicationEventPublisher eventPublisher;
 
     private static final Pattern NON_SLUG = Pattern.compile("[^a-z0-9-]");
     private static final Pattern MULTI_DASH = Pattern.compile("-{2,}");
@@ -143,6 +147,9 @@ public class WikiService implements WikiModuleApi {
 
         String userName = userModule.findById(userId).map(UserInfo::displayName).orElse("Unbekannt");
 
+        eventPublisher.publishEvent(new WikiPageSavedEvent(
+                page.getId(), page.getRoomId(), page.getTitle(), page.getContent(), page.getSlug()));
+
         return new WikiPageResponse(
                 page.getId(),
                 page.getRoomId(),
@@ -180,6 +187,9 @@ public class WikiService implements WikiModuleApi {
         version.setEditedBy(userId);
         versionRepo.save(version);
 
+        eventPublisher.publishEvent(new WikiPageSavedEvent(
+                page.getId(), page.getRoomId(), page.getTitle(), page.getContent(), page.getSlug()));
+
         return getPage(page.getRoomId(), page.getSlug());
     }
 
@@ -191,7 +201,9 @@ public class WikiService implements WikiModuleApi {
         requireRoomMembership(userId, page.getRoomId());
 
         // Children become root pages (parent_id set to NULL by ON DELETE SET NULL)
+        UUID deletedPageId = page.getId();
         pageRepo.delete(page);
+        eventPublisher.publishEvent(new WikiPageDeletedEvent(deletedPageId));
     }
 
     // ---- Version History ----
@@ -260,6 +272,24 @@ public class WikiService implements WikiModuleApi {
                         parentIds.contains(p.getId()),
                         p.getUpdatedAt()
                 ))
+                .toList();
+    }
+
+    // ---- Re-indexing ----
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> findAllPagesForIndexing() {
+        return pageRepo.findAll().stream()
+                .map(p -> {
+                    Map<String, Object> data = new LinkedHashMap<>();
+                    data.put("id", p.getId());
+                    data.put("roomId", p.getRoomId());
+                    data.put("title", p.getTitle());
+                    data.put("content", p.getContent());
+                    data.put("slug", p.getSlug());
+                    return data;
+                })
                 .toList();
     }
 

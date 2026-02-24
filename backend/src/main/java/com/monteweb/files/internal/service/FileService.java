@@ -7,6 +7,8 @@ import com.monteweb.files.internal.model.RoomFile;
 import com.monteweb.files.internal.model.RoomFolder;
 import com.monteweb.files.internal.repository.RoomFileRepository;
 import com.monteweb.files.internal.repository.RoomFolderRepository;
+import com.monteweb.files.FileDeletedEvent;
+import com.monteweb.files.FileUploadedEvent;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.user.UserRole;
@@ -15,6 +17,7 @@ import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserModuleApi;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -35,17 +38,20 @@ public class FileService implements FilesModuleApi {
     private final FileStorageService storageService;
     private final RoomModuleApi roomModuleApi;
     private final UserModuleApi userModuleApi;
+    private final ApplicationEventPublisher eventPublisher;
 
     public FileService(RoomFileRepository fileRepository,
                        RoomFolderRepository folderRepository,
                        FileStorageService storageService,
                        RoomModuleApi roomModuleApi,
-                       UserModuleApi userModuleApi) {
+                       UserModuleApi userModuleApi,
+                       ApplicationEventPublisher eventPublisher) {
         this.fileRepository = fileRepository;
         this.folderRepository = folderRepository;
         this.storageService = storageService;
         this.roomModuleApi = roomModuleApi;
         this.userModuleApi = userModuleApi;
+        this.eventPublisher = eventPublisher;
     }
 
     // ---- Public API (FilesModuleApi) ----
@@ -70,6 +76,22 @@ public class FileService implements FilesModuleApi {
     @Transactional(readOnly = true)
     public long getStorageUsedByRoom(UUID roomId) {
         return fileRepository.sumFileSizeByRoomId(roomId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FileInfo> findAllFiles() {
+        return fileRepository.findAll().stream()
+                .map(this::toFileInfo)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getStoragePath(UUID fileId) {
+        return fileRepository.findById(fileId)
+                .map(RoomFile::getStoragePath)
+                .orElse(null);
     }
 
     // ---- File operations ----
@@ -125,7 +147,12 @@ public class FileService implements FilesModuleApi {
         roomFile.setUploadedBy(userId);
         roomFile.setAudience(resolvedAudience);
 
-        return toFileInfo(fileRepository.save(roomFile));
+        var saved = fileRepository.save(roomFile);
+        eventPublisher.publishEvent(new FileUploadedEvent(
+                saved.getId(), roomId, saved.getOriginalName(),
+                saved.getContentType(), saved.getFileSize(),
+                saved.getStoragePath(), userId));
+        return toFileInfo(saved);
     }
 
     @Transactional(readOnly = true)
@@ -164,7 +191,9 @@ public class FileService implements FilesModuleApi {
         }
 
         storageService.delete(roomFile.getStoragePath());
+        UUID deletedFileId = roomFile.getId();
         fileRepository.delete(roomFile);
+        eventPublisher.publishEvent(new FileDeletedEvent(deletedFileId));
     }
 
     // ---- Folder operations ----

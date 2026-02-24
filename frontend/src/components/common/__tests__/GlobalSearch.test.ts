@@ -28,10 +28,16 @@ const i18n = createI18n({
         filterRooms: 'Raeume',
         filterPosts: 'Beitraege',
         filterEvents: 'Termine',
+        filterFiles: 'Dateien',
+        filterWiki: 'Wiki',
+        filterTasks: 'Aufgaben',
         typeUser: 'Benutzer',
         typeRoom: 'Raeume',
         typePost: 'Beitraege',
         typeEvent: 'Termine',
+        typeFile: 'Dateien',
+        typeWiki: 'Wiki-Seiten',
+        typeTask: 'Aufgaben',
       },
     },
   },
@@ -105,12 +111,15 @@ describe('GlobalSearch', () => {
     await flushPromises()
 
     const chips = wrapper.findAll('.filter-chip')
-    expect(chips.length).toBe(5)
+    expect(chips.length).toBe(8)
     expect(chips[0].text()).toBe('Alle')
     expect(chips[1].text()).toBe('Benutzer')
     expect(chips[2].text()).toBe('Raeume')
     expect(chips[3].text()).toBe('Beitraege')
     expect(chips[4].text()).toBe('Termine')
+    expect(chips[5].text()).toBe('Dateien')
+    expect(chips[6].text()).toBe('Wiki')
+    expect(chips[7].text()).toBe('Aufgaben')
   })
 
   it('should not search with less than 2 characters', async () => {

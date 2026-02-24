@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<schema name="monteweb" version="1.6">
+
+  <!-- Unique document ID: <doc_type>:<entity_id> e.g. FILE:550e8400-... -->
+  <uniqueKey>id</uniqueKey>
+
+  <field name="id"          type="string"   indexed="true" stored="true" required="true" />
+  <field name="doc_type"    type="string"   indexed="true" stored="true" required="true" />
+  <field name="entity_id"   type="string"   indexed="true" stored="true" />
+  <field name="title"       type="text_de"  indexed="true" stored="true" />
+  <field name="content"     type="text_de"  indexed="true" stored="true" />
+  <field name="file_content" type="text_de" indexed="true" stored="true" />
+  <field name="author_name" type="text_de"  indexed="true" stored="true" />
+  <field name="room_id"     type="string"   indexed="true" stored="true" />
+  <field name="room_name"   type="text_de"  indexed="true" stored="true" />
+  <field name="source_type" type="string"   indexed="true" stored="true" />
+  <field name="source_id"   type="string"   indexed="true" stored="true" />
+  <field name="url"         type="string"   indexed="false" stored="true" />
+  <field name="content_type" type="string"  indexed="true" stored="true" />
+  <field name="file_size"   type="plong"    indexed="true" stored="true" />
+  <field name="created_at"  type="pdate"    indexed="true" stored="true" />
+  <field name="updated_at"  type="pdate"    indexed="true" stored="true" />
+
+  <!-- Catch-all field for full-text search across all fields -->
+  <field name="text" type="text_de" indexed="true" stored="false" multiValued="true" />
+  <copyField source="title"        dest="text" />
+  <copyField source="content"      dest="text" />
+  <copyField source="file_content" dest="text" />
+  <copyField source="author_name"  dest="text" />
+  <copyField source="room_name"    dest="text" />
+
+  <!-- _version_ required by Solr for optimistic concurrency -->
+  <field name="_version_" type="plong" indexed="false" stored="false" />
+
+  <!-- ==================== Field Types ==================== -->
+
+  <fieldType name="string" class="solr.StrField" sortMissingLast="true" />
+  <fieldType name="plong"  class="solr.LongPointField" docValues="true" />
+  <fieldType name="pdate"  class="solr.DatePointField" docValues="true" />
+
+  <!-- German text: ICU tokenizer + lowercase + German stemmer + word delimiter -->
+  <fieldType name="text_de" class="solr.TextField" positionIncrementGap="100">
+    <analyzer type="index">
+      <tokenizer class="solr.StandardTokenizerFactory" />
+      <filter class="solr.LowerCaseFilterFactory" />
+      <filter class="solr.GermanNormalizationFilterFactory" />
+      <filter class="solr.GermanLightStemFilterFactory" />
+      <filter class="solr.StopFilterFactory" words="lang/stopwords_de.txt" ignoreCase="true" />
+    </analyzer>
+    <analyzer type="query">
+      <tokenizer class="solr.StandardTokenizerFactory" />
+      <filter class="solr.LowerCaseFilterFactory" />
+      <filter class="solr.GermanNormalizationFilterFactory" />
+      <filter class="solr.GermanLightStemFilterFactory" />
+      <filter class="solr.StopFilterFactory" words="lang/stopwords_de.txt" ignoreCase="true" />
+    </analyzer>
+  </fieldType>
+
+</schema>

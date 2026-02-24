@@ -4,6 +4,8 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.tasks.TaskDeletedEvent;
+import com.monteweb.tasks.TaskSavedEvent;
 import com.monteweb.tasks.TasksModuleApi;
 import com.monteweb.tasks.internal.dto.*;
 import com.monteweb.tasks.internal.model.Task;
@@ -16,6 +18,7 @@ import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,7 @@ public class TaskService implements TasksModuleApi {
     private final TaskRepository taskRepo;
     private final UserModuleApi userModule;
     private final RoomModuleApi roomModule;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ---- Board ----
 
@@ -129,6 +133,7 @@ public class TaskService implements TasksModuleApi {
         task.setPosition(maxPosition + 1);
         taskRepo.save(task);
 
+        publishTaskSaved(task, board.getRoomId());
         return toResponse(task);
     }
 
@@ -154,6 +159,7 @@ public class TaskService implements TasksModuleApi {
         if (request.position() != null) task.setPosition(request.position());
 
         taskRepo.save(task);
+        publishTaskSaved(task, board.getRoomId());
         return toResponse(task);
     }
 
@@ -183,7 +189,9 @@ public class TaskService implements TasksModuleApi {
         var board = boardRepo.findById(task.getBoardId())
                 .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
         requireRoomMembership(userId, board.getRoomId());
+        UUID deletedTaskId = task.getId();
         taskRepo.delete(task);
+        eventPublisher.publishEvent(new TaskDeletedEvent(deletedTaskId));
     }
 
     // ---- Columns ----
@@ -243,6 +251,25 @@ public class TaskService implements TasksModuleApi {
         columnRepo.delete(column);
     }
 
+    // ---- Re-indexing ----
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> findAllTasksForIndexing() {
+        return taskRepo.findAll().stream()
+                .map(t -> {
+                    Map<String, Object> data = new LinkedHashMap<>();
+                    data.put("id", t.getId());
+                    // Resolve room from board
+                    var board = boardRepo.findById(t.getBoardId()).orElse(null);
+                    data.put("roomId", board != null ? board.getRoomId() : null);
+                    data.put("title", t.getTitle());
+                    data.put("description", t.getDescription());
+                    return data;
+                })
+                .toList();
+    }
+
     // ---- DSGVO ----
 
     @Override
@@ -296,6 +323,14 @@ public class TaskService implements TasksModuleApi {
                 task.getPosition(),
                 task.getCreatedAt()
         );
+    }
+
+    private void publishTaskSaved(Task task, UUID roomId) {
+        String assigneeName = task.getAssigneeId() != null
+                ? userModule.findById(task.getAssigneeId()).map(UserInfo::displayName).orElse(null)
+                : null;
+        eventPublisher.publishEvent(new TaskSavedEvent(
+                task.getId(), roomId, task.getTitle(), task.getDescription(), assigneeName));
     }
 
     private Map<UUID, String> resolveUserNames(Set<UUID> userIds) {

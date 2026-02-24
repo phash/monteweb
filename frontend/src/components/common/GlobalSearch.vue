@@ -26,6 +26,9 @@ const filters: { key: SearchType; label: string; icon: string }[] = [
   { key: 'ROOM', label: 'search.filterRooms', icon: 'pi pi-home' },
   { key: 'POST', label: 'search.filterPosts', icon: 'pi pi-file' },
   { key: 'EVENT', label: 'search.filterEvents', icon: 'pi pi-calendar' },
+  { key: 'FILE', label: 'search.filterFiles', icon: 'pi pi-paperclip' },
+  { key: 'WIKI', label: 'search.filterWiki', icon: 'pi pi-book' },
+  { key: 'TASK', label: 'search.filterTasks', icon: 'pi pi-check-square' },
 ]
 
 const filteredResults = computed(() => results.value)
@@ -134,6 +137,9 @@ function typeIcon(type: string): string {
     case 'ROOM': return 'pi pi-home'
     case 'POST': return 'pi pi-file'
     case 'EVENT': return 'pi pi-calendar'
+    case 'FILE': return 'pi pi-paperclip'
+    case 'WIKI': return 'pi pi-book'
+    case 'TASK': return 'pi pi-check-square'
     default: return 'pi pi-search'
   }
 }
@@ -144,6 +150,9 @@ function typeLabel(type: string): string {
     case 'ROOM': return t('search.typeRoom')
     case 'POST': return t('search.typePost')
     case 'EVENT': return t('search.typeEvent')
+    case 'FILE': return t('search.typeFile')
+    case 'WIKI': return t('search.typeWiki')
+    case 'TASK': return t('search.typeTask')
     default: return type
   }
 }
@@ -238,10 +247,11 @@ onUnmounted(() => {
                 <i :class="typeIcon(result.type)" />
               </div>
               <div class="result-content">
-                <div class="result-title">{{ result.title }}</div>
+                <div class="result-title" v-html="result.snippet && result.type === 'FILE' ? result.title : result.title"></div>
                 <div class="result-subtitle" v-if="result.subtitle">
                   {{ result.subtitle }}
                 </div>
+                <div class="result-snippet" v-if="result.snippet" v-html="result.snippet"></div>
               </div>
               <div class="result-meta" v-if="result.timestamp">
                 <i class="pi pi-clock" />
@@ -445,6 +455,24 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 0.125rem;
+}
+
+.result-snippet {
+  font-size: 0.775rem;
+  color: var(--mw-text-secondary);
+  margin-top: 0.25rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.3;
+}
+
+.result-snippet :deep(mark) {
+  background: var(--mw-highlight, #fff3cd);
+  color: inherit;
+  padding: 0 0.125rem;
+  border-radius: 2px;
 }
 
 .result-meta {

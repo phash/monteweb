@@ -17,6 +17,16 @@ public interface FilesModuleApi {
     long getStorageUsedByRoom(UUID roomId);
 
     /**
+     * Returns all files for Solr re-indexing.
+     */
+    List<FileInfo> findAllFiles();
+
+    /**
+     * Returns the MinIO storage path for a file by ID.
+     */
+    String getStoragePath(UUID fileId);
+
+    /**
      * DSGVO: Export all files-related data for a user.
      */
     Map<String, Object> exportUserData(UUID userId);

@@ -62,6 +62,27 @@ services:
         limits:
           memory: 512M
 
+  solr:
+    image: solr:9.8-slim
+    container_name: monteweb-solr
+    restart: unless-stopped
+    command: solr-precreate monteweb /opt/solr/configsets/monteweb
+    volumes:
+      - solr_data:/var/solr
+      - ./solr/configsets/conf:/opt/solr/configsets/monteweb/conf:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8983/solr/monteweb/admin/ping || exit 1"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
   backend:
     build:
       context: ./backend
@@ -72,6 +93,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      solr:
         condition: service_healthy
     environment:
       DB_HOST: postgres
@@ -105,6 +128,7 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@monteweb.local}
+      SOLR_URL: http://solr:8983/solr/monteweb
     networks:
       - backend
       - frontend
@@ -220,6 +244,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  solr_data:
   caddy_data:
   caddy_config:
   prometheus_data:

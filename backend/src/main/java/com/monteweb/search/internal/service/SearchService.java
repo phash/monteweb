@@ -25,15 +25,18 @@ public class SearchService {
     private final RoomModuleApi roomModuleApi;
     private final FeedModuleApi feedModuleApi;
     private final CalendarModuleApi calendarModuleApi;
+    private final SolrSearchService solrSearchService;
 
     public SearchService(UserModuleApi userModuleApi,
                          RoomModuleApi roomModuleApi,
                          @Autowired(required = false) FeedModuleApi feedModuleApi,
-                         @Autowired(required = false) CalendarModuleApi calendarModuleApi) {
+                         @Autowired(required = false) CalendarModuleApi calendarModuleApi,
+                         @Autowired(required = false) SolrSearchService solrSearchService) {
         this.userModuleApi = userModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.feedModuleApi = feedModuleApi;
         this.calendarModuleApi = calendarModuleApi;
+        this.solrSearchService = solrSearchService;
     }
 
     public List<SearchResult> search(String query, String type, int limit, UUID userId) {
@@ -41,7 +44,16 @@ public class SearchService {
             return List.of();
         }
 
-        String q = query.trim();
+        // Delegate to Solr if available
+        if (solrSearchService != null) {
+            return solrSearchService.search(query.trim(), type, limit);
+        }
+
+        // Fallback: DB-based search
+        return searchDatabase(query.trim(), type, limit, userId);
+    }
+
+    private List<SearchResult> searchDatabase(String q, String type, int limit, UUID userId) {
         List<SearchResult> results = new ArrayList<>();
 
         if ("ALL".equals(type) || "USER".equals(type)) {

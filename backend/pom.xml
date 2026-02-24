@@ -176,6 +176,13 @@
             <version>0.4.21</version>
         </dependency>
 
+        <!-- Apache Solr client (SolrJ) for full-text search -->
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-solrj</artifactId>
+            <version>9.8.0</version>
+        </dependency>
+
         <!-- Monitoring / Prometheus -->
         <dependency>
             <groupId>io.micrometer</groupId>
