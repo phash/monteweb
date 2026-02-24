@@ -49,6 +49,7 @@ class JobboardServiceHoursTest {
     @Mock private CleaningModuleApi cleaningModuleApi;
     @Mock private CalendarModuleApi calendarModuleApi;
     @Mock private RoomModuleApi roomModuleApi;
+    @Mock private com.monteweb.jobboard.internal.service.JobStorageService storageService;
 
     private JobboardService service;
 
@@ -61,7 +62,7 @@ class JobboardServiceHoursTest {
                 jobRepository, assignmentRepository, attachmentRepository,
                 userModuleApi, familyModuleApi, adminModuleApi,
                 eventPublisher, cleaningModuleApi, calendarModuleApi,
-                roomModuleApi
+                roomModuleApi, storageService
         );
     }
 
@@ -83,9 +84,19 @@ class JobboardServiceHoursTest {
                 null, null, null, null,
                 null, null, null,
                 "DISABLED", null,
+                false,
+                // LDAP fields
                 false, null, null, null,
                 null, null, null, null,
-                "PARENT", false, false
+                "PARENT", false, false,
+                // Maintenance
+                false, null,
+                // ClamAV
+                false, null, 3310,
+                // Jitsi
+                false, null,
+                // WOPI
+                false, null
         );
     }
 
@@ -426,7 +437,7 @@ class JobboardServiceHoursTest {
                     jobRepository, assignmentRepository, attachmentRepository,
                     userModuleApi, familyModuleApi, adminModuleApi,
                     eventPublisher, null, calendarModuleApi,
-                    roomModuleApi
+                    roomModuleApi, null
             );
 
             when(familyModuleApi.findById(FAMILY_ID)).thenReturn(Optional.of(makeFamily(false)));
@@ -505,7 +516,7 @@ class JobboardServiceHoursTest {
                             USER_ID, "anna@test.de", "Anna", "Müller",
                             "Anna Müller", null, null,
                             com.monteweb.user.UserRole.PARENT,
-                            Set.of(), Set.of(), true
+                            Set.of(), Set.of(), true, "SYSTEM"
                     )));
             when(jobRepository.findById(assignment.getJobId()))
                     .thenReturn(Optional.of(job));

@@ -63,7 +63,7 @@ class JobboardServiceTest {
                 jobRepository, assignmentRepository, attachmentRepository,
                 userModuleApi, familyModuleApi, adminModuleApi,
                 eventPublisher, cleaningModuleApi, calendarModuleApi,
-                roomModuleApi
+                roomModuleApi, null
         );
     }
 
@@ -73,7 +73,7 @@ class JobboardServiceTest {
         return new UserInfo(
                 id, "user@monteweb.local", "Max", "Mustermann",
                 "Max Mustermann", null, null,
-                role, Set.of(), Set.of(), true
+                role, Set.of(), Set.of(), true, "SYSTEM"
         );
     }
 
@@ -117,9 +117,19 @@ class JobboardServiceTest {
                 null, null, null, null,
                 null, null, null,
                 "DISABLED", null,
+                false,
+                // LDAP fields
                 false, null, null, null,
                 null, null, null, null,
-                "PARENT", false, false
+                "PARENT", false, false,
+                // Maintenance
+                false, null,
+                // ClamAV
+                false, null, 3310,
+                // Jitsi
+                false, null,
+                // WOPI
+                false, null
         );
     }
 

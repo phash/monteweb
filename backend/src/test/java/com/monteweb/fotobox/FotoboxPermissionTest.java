@@ -51,7 +51,7 @@ class FotoboxPermissionTest {
         return new UserInfo(
                 id, id + "@monteweb.local", "Max", "Mustermann",
                 "Max Mustermann", null, null,
-                role, Set.of(), Set.of(), true
+                role, Set.of(), Set.of(), true, "SYSTEM"
         );
     }
 

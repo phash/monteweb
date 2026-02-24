@@ -64,7 +64,7 @@ class FamilyServiceTest {
         return new UserInfo(
                 id, "test@monteweb.local", "Max", "Mustermann",
                 "Max Mustermann", null, null,
-                role, Set.of(), Set.of(), true
+                role, Set.of(), Set.of(), true, "SYSTEM"
         );
     }
 

@@ -37,6 +37,9 @@ class MessagingServiceTest {
     @Mock private ConversationParticipantRepository participantRepository;
     @Mock private MessageRepository messageRepository;
     @Mock private MessageImageRepository messageImageRepository;
+    @Mock private MessageReactionRepository messageReactionRepository;
+    @Mock private MessagePollRepository messagePollRepository;
+    @Mock private MessagePollVoteRepository messagePollVoteRepository;
     @Mock private UserModuleApi userModuleApi;
     @Mock private AdminModuleApi adminModuleApi;
     @Mock private MessageChannel messageChannel;
@@ -57,6 +60,7 @@ class MessagingServiceTest {
         service = new MessagingService(
                 conversationRepository, participantRepository,
                 messageRepository, messageImageRepository,
+                messageReactionRepository, messagePollRepository, messagePollVoteRepository,
                 userModuleApi, adminModuleApi,
                 messagingTemplate, eventPublisher, null
         );
@@ -68,7 +72,7 @@ class MessagingServiceTest {
         return new UserInfo(
                 id, id + "@monteweb.local", "Max", "Mustermann",
                 "Max Mustermann", null, null,
-                role, Set.of(), Set.of(), true
+                role, Set.of(), Set.of(), true, "SYSTEM"
         );
     }
 
@@ -85,10 +89,19 @@ class MessagingServiceTest {
                 null, null, null, null,
                 null, null, null,
                 "DISABLED", null,
+                false,
                 // LDAP fields
                 false, null, null, null,
                 null, null, null, null,
-                "PARENT", false, false
+                "PARENT", false, false,
+                // Maintenance
+                false, null,
+                // ClamAV
+                false, null, 3310,
+                // Jitsi
+                false, null,
+                // WOPI
+                false, null
         );
     }
 

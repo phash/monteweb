@@ -70,7 +70,7 @@ class RoomServiceTest {
         return new UserInfo(
                 userId, userId + "@test.local", "First", "Last",
                 "First Last", null, null, role,
-                Set.of(), Set.of(), true
+                Set.of(), Set.of(), true, "SYSTEM"
         );
     }
 

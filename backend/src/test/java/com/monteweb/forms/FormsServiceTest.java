@@ -99,7 +99,7 @@ class FormsServiceTest {
 
     private UserInfo makeUser(UUID id, UserRole role) {
         return new UserInfo(id, "test@monteweb.local", "Test", "User", "Test User",
-                null, null, role, Set.of(), Set.of(), true);
+                null, null, role, Set.of(), Set.of(), true, "SYSTEM");
     }
 
     private SubmitResponseRequest makeSubmitRequest(UUID questionId, String text) {
