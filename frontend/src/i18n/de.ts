@@ -405,6 +405,7 @@ export default {
       wiki: 'Wiki pro Raum: Markdown-Seiten mit Hierarchie, Versionierung und Suchfunktion',
       profilefields: 'Benutzerdefinierte Profilfelder: Administratoren können zusätzliche Felder für Benutzerprofile anlegen',
       jitsi: 'Jitsi-Videokonferenzen: Video-Meetings in Kalender-Terminen und Raum-Chats starten',
+      wopi: 'ONLYOFFICE-Integration: Dokumente direkt im Browser bearbeiten (Word, Excel, PowerPoint)',
     },
     theme: {
       primaryColor: 'Primärfarbe',

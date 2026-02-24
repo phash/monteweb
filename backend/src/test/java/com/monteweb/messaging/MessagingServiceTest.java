@@ -100,8 +100,8 @@ class MessagingServiceTest {
                 false, null, 3310,
                 // Jitsi (enabled via modules)
                 null,
-                // WOPI
-                false, null
+                // WOPI (enabled via modules)
+                null
         );
     }
 

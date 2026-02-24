@@ -73,8 +73,7 @@ const savingClamav = ref(false)
 const jitsiServerUrl = ref('https://meet.jit.si')
 const savingJitsi = ref(false)
 
-// WOPI / ONLYOFFICE
-const wopiEnabled = ref(false)
+// WOPI / ONLYOFFICE (enabled via modules page)
 const wopiOfficeUrl = ref('')
 const savingWopi = ref(false)
 
@@ -148,7 +147,6 @@ onMounted(async () => {
     // Jitsi
     jitsiServerUrl.value = adminStore.config.jitsiServerUrl ?? 'https://meet.jit.si'
     // WOPI
-    wopiEnabled.value = adminStore.config.wopiEnabled ?? false
     wopiOfficeUrl.value = adminStore.config.wopiOfficeUrl ?? ''
   }
 })
@@ -229,7 +227,6 @@ async function saveWopiConfig() {
   savingWopi.value = true
   try {
     const res = await adminApi.updateConfig({
-      wopiEnabled: wopiEnabled.value,
       wopiOfficeUrl: wopiOfficeUrl.value || undefined,
     })
     adminStore.config = res.data.data
@@ -400,17 +397,13 @@ async function testLdapConnection() {
       <Button :label="t('common.save')" :loading="savingJitsi" @click="saveJitsiConfig" />
     </div>
 
-    <!-- WOPI / ONLYOFFICE Section -->
-    <div class="settings-section">
+    <!-- WOPI / ONLYOFFICE Section (enable/disable via Modules page) -->
+    <div v-if="adminStore.isModuleEnabled('wopi')" class="settings-section">
       <h2 class="text-lg font-semibold mb-3">{{ t('wopi.title') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="wopiEnabled" />
-        <label>{{ t('wopi.enabled') }}</label>
-      </div>
-      <Message v-if="wopiEnabled" severity="info" :closable="false">
+      <Message severity="info" :closable="false">
         {{ t('wopi.hint') }}
       </Message>
-      <div v-if="wopiEnabled" class="mb-4">
+      <div class="mb-4">
         <label class="block text-sm font-medium mb-1">{{ t('wopi.officeUrl') }}</label>
         <InputText v-model="wopiOfficeUrl" class="w-full" placeholder="https://office.example.com" />
         <small class="text-gray-500">{{ t('wopi.officeUrlHint') }}</small>

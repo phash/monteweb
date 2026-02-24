@@ -26,7 +26,7 @@ const auth = useAuthStore()
 const adminStore = useAdminStore()
 const rooms = useRoomsStore()
 
-const wopiEnabled = computed(() => adminStore.config?.wopiEnabled === true)
+const wopiEnabled = computed(() => adminStore.isModuleEnabled('wopi'))
 
 const files = ref<FileInfo[]>([])
 const folders = ref<FolderInfo[]>([])

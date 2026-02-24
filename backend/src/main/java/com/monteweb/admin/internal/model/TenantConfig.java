@@ -167,10 +167,7 @@ public class TenantConfig {
     @Column(name = "ldap_use_ssl", nullable = false)
     private boolean ldapUseSsl = false;
 
-    // --- WOPI / ONLYOFFICE ---
-
-    @Column(name = "wopi_enabled", nullable = false)
-    private boolean wopiEnabled = false;
+    // --- WOPI / ONLYOFFICE (enabled via modules map) ---
 
     @Column(name = "wopi_office_url", length = 300)
     private String wopiOfficeUrl;

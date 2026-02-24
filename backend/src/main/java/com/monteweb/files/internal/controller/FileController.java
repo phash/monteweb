@@ -124,12 +124,12 @@ public class FileController {
         // Verify file access
         fileService.getFileMetadata(roomId, fileId, userId);
 
-        // Check if WOPI is enabled
-        var config = adminModuleApi.getTenantConfig();
-        if (config == null || !config.wopiEnabled()) {
+        // Check if WOPI is enabled (via modules map)
+        if (!adminModuleApi.isModuleEnabled("wopi")) {
             return ResponseEntity.badRequest()
                     .body(ApiResponse.error("WOPI/ONLYOFFICE is not enabled"));
         }
+        var config = adminModuleApi.getTenantConfig();
 
         var token = wopiTokenService.createToken(fileId, userId, roomId, "EDIT");
 

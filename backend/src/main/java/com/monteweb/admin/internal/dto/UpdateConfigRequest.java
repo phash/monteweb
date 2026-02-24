@@ -47,8 +47,7 @@ public record UpdateConfigRequest(
         Integer clamavPort,
         // Jitsi video conferencing (enabled via modules map)
         String jitsiServerUrl,
-        // WOPI / ONLYOFFICE
-        Boolean wopiEnabled,
+        // WOPI / ONLYOFFICE (enabled via modules map)
         String wopiOfficeUrl
 ) {
 }

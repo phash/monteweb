@@ -56,7 +56,7 @@ public class AdminService implements AdminModuleApi {
                                           String ldapDefaultRole, Boolean ldapUseSsl,
                                           Boolean clamavEnabled, String clamavHost, Integer clamavPort,
                                           String jitsiServerUrl,
-                                          Boolean wopiEnabled, String wopiOfficeUrl) {
+                                          String wopiOfficeUrl) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -110,8 +110,7 @@ public class AdminService implements AdminModuleApi {
         if (clamavPort != null) config.setClamavPort(clamavPort);
         // Jitsi video conferencing (enabled via modules map)
         if (jitsiServerUrl != null) config.setJitsiServerUrl(jitsiServerUrl);
-        // WOPI / ONLYOFFICE
-        if (wopiEnabled != null) config.setWopiEnabled(wopiEnabled);
+        // WOPI / ONLYOFFICE (enabled via modules map)
         if (wopiOfficeUrl != null) config.setWopiOfficeUrl(wopiOfficeUrl);
         return toInfo(configRepository.save(config));
     }
@@ -264,8 +263,7 @@ public class AdminService implements AdminModuleApi {
                 config.getClamavPort(),
                 // Jitsi video conferencing (enabled via modules map)
                 config.getJitsiServerUrl(),
-                // WOPI / ONLYOFFICE
-                config.isWopiEnabled(),
+                // WOPI / ONLYOFFICE (enabled via modules map)
                 config.getWopiOfficeUrl()
         );
     }

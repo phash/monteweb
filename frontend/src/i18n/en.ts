@@ -405,6 +405,7 @@ export default {
       wiki: 'Wiki per room: Markdown pages with hierarchy, versioning, and search',
       profilefields: 'Custom profile fields: Administrators can create additional fields for user profiles',
       jitsi: 'Jitsi video conferencing: Start video meetings in calendar events and room chats',
+      wopi: 'ONLYOFFICE integration: Edit documents directly in the browser (Word, Excel, PowerPoint)',
     },
     theme: {
       primaryColor: 'Primary color',

@@ -19,8 +19,7 @@ public record PublicTenantConfigInfo(
         boolean directoryAdminOnly,
         boolean maintenanceEnabled,
         String maintenanceMessage,
-        String jitsiServerUrl,
-        boolean wopiEnabled
+        String jitsiServerUrl
 ) {
     public static PublicTenantConfigInfo from(TenantConfigInfo full) {
         return new PublicTenantConfigInfo(
@@ -35,8 +34,7 @@ public record PublicTenantConfigInfo(
                 full.directoryAdminOnly(),
                 full.maintenanceEnabled(),
                 full.maintenanceMessage(),
-                full.jitsiServerUrl(),
-                full.wopiEnabled()
+                full.jitsiServerUrl()
         );
     }
 }
