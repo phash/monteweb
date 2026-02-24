@@ -9,6 +9,8 @@ Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (Q
 
 **Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
+**20 backend modules**, 96 Flyway migrations (V001–V097), ~1341 frontend tests, ~490 backend tests
+
 ## Commands
 
 ```bash
@@ -25,13 +27,13 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (~1248 tests, ~135 files)
+npm test               # vitest run (~1341 tests, ~147 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
 # Backend tests (requires Docker for Testcontainers)
 cd backend
-./mvnw test                                            # all tests (41+ test classes)
+./mvnw test                                            # all tests (47 test classes, ~490 tests)
 ./mvnw test -Dtest=AuthControllerIntegrationTest       # single test class
 ./mvnw test -Dtest="AuthControllerIntegrationTest#register_*"  # single method
 
@@ -91,7 +93,7 @@ frontend/src/
 
 ### Database
 
-- **Flyway** V001–V079. Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V097 (96 migrations). Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
@@ -116,7 +118,12 @@ frontend/src/
 - `families.is_active`: BOOLEAN default true, family deactivation support
 - `tenant_config.require_assignment_confirmation`: BOOLEAN default true, auto-confirms job hours when false
 - `tenant_config.available_languages`: TEXT[] default `'{de,en}'`, stores selectable languages
+- `tenant_config.modules`: JSONB map of all feature toggles. Core modules (messaging, files, jobboard, cleaning, calendar, forms, fotobox, fundgrube, bookmarks, tasks, wiki, profilefields) plus DB-managed toggles migrated from dedicated columns (jitsi, wopi, clamav, maintenance, ldap, directoryAdminOnly). Admin UI at `/admin/modules`, backend check via `adminModuleApi.isModuleEnabled("name")`
 - `feed_post_attachments`: id, post_id (FK), file_name, file_url (MinIO path), file_type, file_size, sort_order, created_at
+- `task_boards` + `task_columns` + `tasks`: per-room kanban (V076), boards unique per room, columns ordered by position
+- `wiki_pages` + `wiki_page_versions`: per-room wiki (V077), slug unique per room, self-referencing parent_id
+- `bookmarks`: user bookmarks for posts, events, jobs, wiki pages (type + target_id)
+- `profile_field_definitions` + `profile_field_values`: custom profile fields defined by admins, values per user
 
 ### Infrastructure (Docker / CI/CD)
 
@@ -153,7 +160,22 @@ frontend/src/
 | forms | Survey/Consent, Multi-Section Scopes, Dashboard Widget, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
 | fotobox | Foto-Threads, Thumbnails, Lightbox, Thread-Audience | `monteweb.modules.fotobox.enabled` |
 | fundgrube | Schulweite Fundgrube, Fotos, Bereichsfilter, Claim-Workflow | `monteweb.modules.fundgrube.enabled` |
+| bookmarks | Lesezeichen fuer Posts, Events, Jobs, Wiki-Seiten | `monteweb.modules.bookmarks.enabled` |
+| tasks | Kanban-Board pro Raum, Aufgaben, Spalten | `monteweb.modules.tasks.enabled` |
+| wiki | Wiki pro Raum, Markdown, Versionen, Hierarchie | `monteweb.modules.wiki.enabled` |
+| profilefields | Benutzerdefinierte Profilfelder | `monteweb.modules.profilefields.enabled` |
 | search | Globale Suche (Ctrl+K), Solr Volltextsuche mit Tika-Extraktion | Solr: `monteweb.modules.solr.enabled` |
+
+**DB-managed toggles** (in `tenant_config.modules` JSONB, toggled via Admin UI):
+
+| Toggle | Beschreibung |
+|--------|-------------|
+| jitsi | Jitsi-Videokonferenzen in Kalender-Events und Raum-Chats |
+| wopi | ONLYOFFICE-Integration: Dokumente im Browser bearbeiten |
+| clamav | ClamAV-Virenscanner fuer Datei-Uploads |
+| maintenance | Wartungsmodus: System fuer nicht-Admins sperren |
+| ldap | LDAP/Active Directory Authentifizierung |
+| directoryAdminOnly | Benutzerverzeichnis nur fuer Admins sichtbar |
 
 Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.enabled`), Push (`monteweb.push.enabled`)
 
@@ -209,5 +231,9 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 - **Error Reports** `/api/v1/error-reports`: submit (public) | `/api/v1/admin/error-reports`: list, update status
 - **Section Admin** `/api/v1/section-admin`: rooms, members, overview for SECTION_ADMIN role
 - **Fundgrube** `/api/v1/fundgrube`: items CRUD, claim, images upload/download/thumbnail (`?token=` JWT)
+- **Bookmarks** `/api/v1/bookmarks`: CRUD bookmarks for posts, events, jobs, wiki pages
+- **Tasks** `/api/v1/rooms/{id}/tasks`: kanban boards, columns, tasks CRUD, drag & drop reorder
+- **Wiki** `/api/v1/rooms/{id}/wiki`: pages CRUD, versions, hierarchy, search
+- **Profile Fields** `/api/v1/profile-fields`: list, /me (GET/PUT) | `/api/v1/admin/profile-fields`: CRUD field definitions
 - **Search** `/api/v1/search`: global search (q, type, limit) | `/api/v1/admin/search`: reindex (Solr)
 - **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, delete, push subscribe/unsubscribe

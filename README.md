@@ -29,23 +29,33 @@ Modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Kripp
 - **Feiertage & Ferien** — Bundesland-abhaengige Feiertage (alle 16 Bundeslaender) und konfigurierbare Schulferien
 - **DSGVO** — Datenexport und Account-Loeschung
 - **Fehlerberichterstattung** — Automatisches Error-Reporting mit GitHub-Issue-Integration
-- **Admin** — Benutzerverwaltung, Modulsteuerung, Theme-Anpassung, Audit-Log, Fehlerberichte
+- **Lesezeichen** — Posts, Events, Jobs und Wiki-Seiten als Lesezeichen speichern
+- **Aufgaben (Kanban)** — Kanban-Board pro Raum: Aufgaben erstellen, zuweisen und in Spalten verwalten
+- **Wiki** — Wiki pro Raum: Markdown-Seiten mit Hierarchie, Versionierung und Suchfunktion
+- **Benutzerdefinierte Profilfelder** — Administratoren koennen zusaetzliche Felder fuer Benutzerprofile anlegen
+- **Volltextsuche** — Globale Suche (Ctrl+K) mit Solr-Volltextsuche, Tika-Extraktion fuer Dokumente
+- **2FA** — Optionale/Verpflichtende Zwei-Faktor-Authentifizierung (TOTP)
+- **LDAP/AD** — Authentifizierung ueber externen Verzeichnisdienst
+- **Jitsi** — Video-Meetings in Kalender-Terminen und Raum-Chats
+- **ONLYOFFICE** — Dokumente direkt im Browser bearbeiten (Word, Excel, PowerPoint)
+- **ClamAV** — Automatische Virenscanner fuer Datei-Uploads
+- **Admin** — Benutzerverwaltung, Modulsteuerung, Theme-Anpassung, Audit-Log, Fehlerberichte, CSV-Import
 - **Monitoring** — Prometheus + Grafana Dashboard (optional)
 
 ## Tech-Stack
 
 ### Backend
-Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (54 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO
+Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (96 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO, Apache Solr 9.8
 
 ### Frontend
 Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, vue-i18n, Axios, PWA (vite-plugin-pwa + Workbox)
 
 ### Infrastruktur
-Docker Compose, nginx (Reverse Proxy), GitHub Actions CI/CD, Prometheus + Grafana
+Docker Compose, nginx (Reverse Proxy), Caddy (Auto-SSL), GitHub Actions CI/CD, Prometheus + Grafana
 
 ### Tests
-- Frontend: 1058 Tests in 118 Dateien (Vitest + vue-test-utils)
-- Backend: 37 Testklassen (Testcontainers + MockMvc)
+- Frontend: ~1341 Tests in 147 Dateien (Vitest + vue-test-utils)
+- Backend: 47 Testklassen, ~490 Tests (Testcontainers + MockMvc)
 
 ## Schnellstart
 
@@ -82,7 +92,7 @@ npm run dev   # http://localhost:5173
 ## Tests
 
 ```bash
-# Frontend (1058 Tests)
+# Frontend (~1341 Tests)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker erforderlich)
@@ -121,6 +131,11 @@ monteweb/
 │   │   ├── forms/         # Formulare, Umfragen, Export
 │   │   ├── fotobox/       # Foto-Threads, Thumbnails
 │   │   ├── fundgrube/     # Fundgrube (Lost & Found)
+│   │   ├── bookmark/      # Lesezeichen
+│   │   ├── tasks/         # Kanban-Board pro Raum
+│   │   ├── wiki/          # Wiki pro Raum (Markdown)
+│   │   ├── profilefields/ # Benutzerdefinierte Profilfelder
+│   │   ├── search/        # Globale Suche (Solr)
 │   │   ├── admin/         # Systemkonfiguration, Audit-Log, Error-Reports
 │   │   └── shared/        # Security, DTOs, Exceptions, PDF-Service
 │   └── Dockerfile
@@ -154,9 +169,25 @@ Module koennen ueber Konfiguration aktiviert/deaktiviert werden:
 | Formulare | `monteweb.modules.forms.enabled` | `true` |
 | Fotobox | `monteweb.modules.fotobox.enabled` | `true` |
 | Fundgrube | `monteweb.modules.fundgrube.enabled` | `true` |
+| Lesezeichen | `monteweb.modules.bookmarks.enabled` | `true` |
+| Aufgaben (Kanban) | `monteweb.modules.tasks.enabled` | `true` |
+| Wiki | `monteweb.modules.wiki.enabled` | `true` |
+| Profilfelder | `monteweb.modules.profilefields.enabled` | `true` |
+| Solr-Volltextsuche | `monteweb.modules.solr.enabled` | `false` |
 | E-Mail-Versand | `monteweb.email.enabled` | `false` |
 | OIDC/SSO | `monteweb.oidc.enabled` | `false` |
 | Push Notifications | `monteweb.push.enabled` | `false` |
+
+Zusaetzliche DB-Toggles (Admin UI → Module):
+
+| Toggle | Beschreibung |
+|--------|-------------|
+| jitsi | Jitsi-Videokonferenzen |
+| wopi | ONLYOFFICE-Integration |
+| clamav | ClamAV-Virenscanner |
+| maintenance | Wartungsmodus |
+| ldap | LDAP/Active Directory |
+| directoryAdminOnly | Verzeichnis nur fuer Admins |
 
 ## Test-Accounts
 
