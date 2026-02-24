@@ -15,7 +15,8 @@ public record PublicTenantConfigInfo(
         boolean multilanguageEnabled,
         String defaultLanguage,
         List<String> availableLanguages,
-        boolean requireUserApproval
+        boolean requireUserApproval,
+        boolean directoryAdminOnly
 ) {
     public static PublicTenantConfigInfo from(TenantConfigInfo full) {
         return new PublicTenantConfigInfo(
@@ -26,7 +27,8 @@ public record PublicTenantConfigInfo(
                 full.multilanguageEnabled(),
                 full.defaultLanguage(),
                 full.availableLanguages(),
-                full.requireUserApproval()
+                full.requireUserApproval(),
+                full.directoryAdminOnly()
         );
     }
 }

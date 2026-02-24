@@ -297,6 +297,15 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
 
+  // Directory admin-only guard
+  if (to.name === 'directory') {
+    const { useAdminStore } = await import('@/stores/admin')
+    const adminStore = useAdminStore()
+    if (adminStore.config?.directoryAdminOnly && !auth.isAdmin) {
+      return { name: 'dashboard' }
+    }
+  }
+
   // Terms acceptance guard: redirect to /terms if user hasn't accepted current terms
   if (auth.isAuthenticated && to.meta.requiresAuth && to.name !== 'terms' && to.name !== 'privacy-policy') {
     if (!isTermsChecked()) {

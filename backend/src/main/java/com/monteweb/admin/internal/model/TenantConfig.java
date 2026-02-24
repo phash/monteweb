@@ -125,6 +125,9 @@ public class TenantConfig {
 
     // --- LDAP/AD Integration ---
 
+    @Column(name = "directory_admin_only", nullable = false)
+    private boolean directoryAdminOnly = false;
+
     @Column(name = "ldap_enabled", nullable = false)
     private boolean ldapEnabled = false;
 

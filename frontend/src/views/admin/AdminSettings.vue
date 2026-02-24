@@ -28,6 +28,7 @@ const testingLdap = ref(false)
 const defaultLanguage = ref('de')
 const availableLanguages = ref<string[]>(['de', 'en'])
 const requireUserApproval = ref(true)
+const directoryAdminOnly = ref(false)
 const requireAssignmentConfirmation = ref(true)
 const twoFactorMode = ref('DISABLED')
 const twoFactorGraceDeadline = ref<string | null>(null)
@@ -94,6 +95,7 @@ onMounted(async () => {
     defaultLanguage.value = adminStore.config.defaultLanguage ?? 'de'
     availableLanguages.value = adminStore.config.availableLanguages ?? ['de', 'en']
     requireUserApproval.value = adminStore.config.requireUserApproval ?? true
+    directoryAdminOnly.value = adminStore.config.directoryAdminOnly ?? false
     requireAssignmentConfirmation.value = adminStore.config.requireAssignmentConfirmation ?? true
     twoFactorMode.value = adminStore.config.twoFactorMode ?? 'DISABLED'
     twoFactorGraceDeadline.value = adminStore.config.twoFactorGraceDeadline ?? null
@@ -130,6 +132,7 @@ async function saveSettings() {
       defaultLanguage: defaultLanguage.value,
       availableLanguages: langs,
       requireUserApproval: requireUserApproval.value,
+      directoryAdminOnly: directoryAdminOnly.value,
       requireAssignmentConfirmation: requireAssignmentConfirmation.value,
       twoFactorMode: twoFactorMode.value,
     })
@@ -285,6 +288,18 @@ async function testLdapConnection() {
         <div>
           <label class="block text-sm font-medium">{{ t('admin.settings.requireUserApproval') }}</label>
           <small class="text-gray-500">{{ t('admin.settings.requireUserApprovalHint') }}</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Directory Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.directory') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="directoryAdminOnly" />
+        <div>
+          <label class="block text-sm font-medium">{{ t('admin.settings.directoryAdminOnly') }}</label>
+          <small class="text-gray-500">{{ t('admin.settings.directoryAdminOnlyHint') }}</small>
         </div>
       </div>
     </div>

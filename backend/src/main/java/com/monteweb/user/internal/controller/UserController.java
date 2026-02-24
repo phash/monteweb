@@ -1,5 +1,6 @@
 package com.monteweb.user.internal.controller;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.auth.AuthModuleApi;
 import com.monteweb.auth.TokenResponse;
 import com.monteweb.shared.dto.ApiResponse;
@@ -16,6 +17,7 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,10 +30,12 @@ public class UserController {
 
     private final UserService userService;
     private final AuthModuleApi authModuleApi;
+    private final AdminModuleApi adminModuleApi;
 
-    public UserController(UserService userService, AuthModuleApi authModuleApi) {
+    public UserController(UserService userService, AuthModuleApi authModuleApi, AdminModuleApi adminModuleApi) {
         this.userService = userService;
         this.authModuleApi = authModuleApi;
+        this.adminModuleApi = adminModuleApi;
     }
 
     @GetMapping("/me")
@@ -64,6 +68,11 @@ public class UserController {
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false, defaultValue = "") String q,
             @PageableDefault(size = 24, sort = "lastName") Pageable pageable) {
+        var config = adminModuleApi.getTenantConfig();
+        if (config.directoryAdminOnly() && SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
+            return ResponseEntity.status(403).body(ApiResponse.error("Directory access restricted to admins"));
+        }
         var page = userService.findDirectory(UserRole.fromStringOrNull(role), sectionId, roomId, q, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }

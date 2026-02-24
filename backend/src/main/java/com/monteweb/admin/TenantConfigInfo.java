@@ -40,6 +40,7 @@ public record TenantConfigInfo(
         String techContactEmail,
         String twoFactorMode,
         java.time.Instant twoFactorGraceDeadline,
+        boolean directoryAdminOnly,
         // LDAP/AD fields (password never exposed)
         boolean ldapEnabled,
         String ldapUrl,

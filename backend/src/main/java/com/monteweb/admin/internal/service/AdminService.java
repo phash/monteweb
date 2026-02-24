@@ -48,7 +48,7 @@ public class AdminService implements AdminModuleApi {
                                           Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit,
                                           String schoolFullName, String schoolAddress, String schoolPrincipal,
                                           String techContactName, String techContactEmail,
-                                          String twoFactorMode,
+                                          String twoFactorMode, Boolean directoryAdminOnly,
                                           Boolean ldapEnabled, String ldapUrl, String ldapBaseDn,
                                           String ldapBindDn, String ldapBindPassword,
                                           String ldapUserSearchFilter, String ldapAttrEmail,
@@ -87,6 +87,7 @@ public class AdminService implements AdminModuleApi {
                 config.setTwoFactorGraceDeadline(null);
             }
         }
+        if (directoryAdminOnly != null) config.setDirectoryAdminOnly(directoryAdminOnly);
         // LDAP/AD fields
         if (ldapEnabled != null) config.setLdapEnabled(ldapEnabled);
         if (ldapUrl != null) config.setLdapUrl(ldapUrl);
@@ -215,6 +216,7 @@ public class AdminService implements AdminModuleApi {
                 config.getTechContactEmail(),
                 config.getTwoFactorMode(),
                 config.getTwoFactorGraceDeadline(),
+                config.isDirectoryAdminOnly(),
                 // LDAP/AD fields (password never exposed)
                 config.isLdapEnabled(),
                 config.getLdapUrl(),

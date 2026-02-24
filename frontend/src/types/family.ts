@@ -78,4 +78,5 @@ export interface TenantConfig {
   ldapDefaultRole?: string | null
   ldapUseSsl?: boolean
   ldapConfigured?: boolean
+  directoryAdminOnly?: boolean
 }

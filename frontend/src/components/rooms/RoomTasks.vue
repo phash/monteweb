@@ -52,6 +52,9 @@ const editForm = ref<{ title: string; description: string; assigneeId: string | 
 })
 const saving = ref(false)
 
+// Help panel
+const showHelp = ref(false)
+
 // Column management dialog
 const showColumnDialog = ref(false)
 const newColumnName = ref('')
@@ -277,21 +280,47 @@ async function deleteColumn(columnId: string) {
 
     <template v-else-if="board">
       <div class="tasks-header">
+        <div class="tasks-header-left">
+          <Button
+            :label="t('tasks.newTask')"
+            icon="pi pi-plus"
+            size="small"
+            @click="openCreateDialog()"
+          />
+          <Button
+            v-if="props.isLeader || auth.isAdmin"
+            :label="t('tasks.manageColumns')"
+            icon="pi pi-cog"
+            size="small"
+            severity="secondary"
+            text
+            @click="showColumnDialog = true"
+          />
+        </div>
         <Button
-          :label="t('tasks.newTask')"
-          icon="pi pi-plus"
-          size="small"
-          @click="openCreateDialog()"
-        />
-        <Button
-          v-if="props.isLeader || auth.isAdmin"
-          :label="t('tasks.manageColumns')"
-          icon="pi pi-cog"
+          icon="pi pi-question-circle"
+          :label="t('tasks.help')"
           size="small"
           severity="secondary"
           text
-          @click="showColumnDialog = true"
+          @click="showHelp = !showHelp"
         />
+      </div>
+
+      <!-- Help panel -->
+      <div v-if="showHelp" class="help-panel">
+        <h3>{{ t('tasks.helpTitle') }}</h3>
+        <p>{{ t('tasks.helpIntro') }}</p>
+        <h4>{{ t('tasks.helpWhatIsKanban') }}</h4>
+        <p>{{ t('tasks.helpKanbanExplain') }}</p>
+        <h4>{{ t('tasks.helpHowToUse') }}</h4>
+        <ol>
+          <li>{{ t('tasks.helpStep1') }}</li>
+          <li>{{ t('tasks.helpStep2') }}</li>
+          <li>{{ t('tasks.helpStep3') }}</li>
+          <li>{{ t('tasks.helpStep4') }}</li>
+        </ol>
+        <p class="help-tip"><i class="pi pi-info-circle" /> {{ t('tasks.helpTip') }}</p>
       </div>
 
       <div class="kanban-board">
@@ -569,6 +598,53 @@ async function deleteColumn(columnId: string) {
   margin-bottom: 1rem;
 }
 
+.tasks-header-left {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.help-panel {
+  background: var(--mw-bg);
+  border: 1px solid var(--mw-border-light);
+  border-radius: var(--mw-border-radius-sm);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  font-size: var(--mw-font-size-sm);
+  line-height: 1.6;
+}
+
+.help-panel h3 {
+  font-size: var(--mw-font-size-md);
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.help-panel h4 {
+  font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.help-panel ol {
+  padding-left: 1.25rem;
+  margin: 0.25rem 0;
+}
+
+.help-panel li {
+  margin-bottom: 0.25rem;
+}
+
+.help-tip {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: color-mix(in srgb, var(--mw-primary) 8%, var(--mw-bg));
+  border-radius: var(--mw-border-radius-sm);
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
 .kanban-board {
   display: flex;
   gap: 0.75rem;
@@ -758,6 +834,10 @@ async function deleteColumn(columnId: string) {
     flex-direction: column;
     gap: 0.5rem;
     align-items: stretch;
+  }
+
+  .tasks-header-left {
+    flex-direction: column;
   }
 }
 </style>
