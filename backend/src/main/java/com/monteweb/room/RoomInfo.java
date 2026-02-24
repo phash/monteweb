@@ -19,6 +19,7 @@ public record RoomInfo(
         int memberCount,
         String joinPolicy,
         Instant expiresAt,
-        List<String> tags
+        List<String> tags,
+        String jitsiRoomName
 ) {
 }

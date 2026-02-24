@@ -129,9 +129,13 @@ monteweb:
       enabled: true
     fundgrube:
       enabled: true
+    bookmarks:
+      enabled: true
     tasks:
       enabled: true
     wiki:
       enabled: true
     solr:
+      enabled: true
+    profilefields:
       enabled: true

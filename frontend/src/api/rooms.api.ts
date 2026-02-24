@@ -121,6 +121,15 @@ export const roomsApi = {
     return client.get<ApiResponse<JoinRequestInfo[]>>('/rooms/my-join-requests')
   },
 
+  // Jitsi
+  getJitsiRoom(roomId: string) {
+    return client.get<ApiResponse<RoomInfo>>(`/rooms/${roomId}/jitsi`)
+  },
+
+  generateJitsiRoom(roomId: string) {
+    return client.post<ApiResponse<RoomInfo>>(`/rooms/${roomId}/jitsi`)
+  },
+
   // Room Chat
   getChatChannels(roomId: string) {
     return client.get<ApiResponse<RoomChatChannelInfo[]>>(`/rooms/${roomId}/chat/channels`)

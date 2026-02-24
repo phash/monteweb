@@ -13,6 +13,12 @@ const router = createRouter({
       meta: { guest: true },
     },
     {
+      path: '/maintenance',
+      name: 'maintenance',
+      component: () => import('@/views/MaintenanceView.vue'),
+      meta: { guest: true },
+    },
+    {
       path: '/privacy',
       name: 'privacy-policy',
       component: () => import('@/views/PrivacyPolicyView.vue'),
@@ -48,6 +54,12 @@ const router = createRouter({
           component: () => import('@/views/RoomDetailView.vue'),
           props: true,
           meta: { breadcrumbLabel: 'rooms.title' },
+        },
+        {
+          path: 'rooms/:roomId/files/:fileId/edit',
+          name: 'wopi-editor',
+          component: () => import('@/views/WopiEditorView.vue'),
+          props: true,
         },
         {
           path: 'family',
@@ -143,6 +155,11 @@ const router = createRouter({
           path: 'fundgrube',
           name: 'fundgrube',
           component: () => import('@/views/FundgrubeView.vue'),
+        },
+        {
+          path: 'bookmarks',
+          name: 'bookmarks',
+          component: () => import('@/views/BookmarksView.vue'),
         },
         {
           path: 'directory',
@@ -254,6 +271,24 @@ const router = createRouter({
               name: 'admin-csv-import',
               component: () => import('@/views/admin/AdminCsvImport.vue'),
               meta: { breadcrumbLabel: 'csvImport.title' },
+            },
+            {
+              path: 'profile-fields',
+              name: 'admin-profile-fields',
+              component: () => import('@/views/admin/AdminProfileFields.vue'),
+              meta: { breadcrumbLabel: 'profileFields.admin.title' },
+            },
+            {
+              path: 'analytics',
+              name: 'admin-analytics',
+              component: () => import('@/views/admin/AdminAnalytics.vue'),
+              meta: { breadcrumbLabel: 'admin.analytics.title' },
+            },
+            {
+              path: 'ical',
+              name: 'admin-ical',
+              component: () => import('@/views/admin/AdminICalSubscriptions.vue'),
+              meta: { breadcrumbLabel: 'calendar.ical.title' },
             },
           ],
         },

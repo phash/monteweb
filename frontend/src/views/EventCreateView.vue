@@ -5,6 +5,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
 import { useRoomsStore } from '@/stores/rooms'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
+import { calendarApi } from '@/api/calendar.api'
 import type { CreateEventRequest, EventScope, EventRecurrence } from '@/types/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
@@ -20,6 +22,7 @@ const route = useRoute()
 const calendar = useCalendarStore()
 const rooms = useRoomsStore()
 const auth = useAuthStore()
+const admin = useAdminStore()
 
 const isEdit = computed(() => route.name === 'event-edit')
 const eventId = computed(() => route.params.id as string)
@@ -38,6 +41,7 @@ const recurrence = ref<EventRecurrence>('NONE')
 const recurrenceEnd = ref<Date | null>(null)
 const eventColor = ref<string | null>(null)
 const customColor = ref('')
+const addJitsi = ref(false)
 const saving = ref(false)
 
 const pastelColors = [
@@ -156,7 +160,15 @@ async function handleSubmit() {
     if (isEdit.value && eventId.value) {
       await calendar.updateEvent(eventId.value, data)
     } else {
-      await calendar.createEvent(data)
+      const created = await calendar.createEvent(data)
+      // Auto-generate Jitsi room if checkbox was checked
+      if (addJitsi.value && created?.id) {
+        try {
+          await calendarApi.generateJitsiRoom(created.id)
+        } catch {
+          // ignore - event was created, jitsi is optional
+        }
+      }
     }
 
     router.push({ name: 'calendar' })
@@ -269,6 +281,13 @@ async function handleSubmit() {
           </div>
         </div>
       </div>
+
+        <div v-if="admin.config?.jitsiEnabled && !isEdit" class="field-row">
+          <div class="field-check">
+            <Checkbox v-model="addJitsi" :binary="true" inputId="addJitsi" />
+            <label for="addJitsi">{{ t('admin.jitsi.addVideoConference') }}</label>
+          </div>
+        </div>
 
         <div class="field">
           <label>{{ t('calendar.color') }}</label>

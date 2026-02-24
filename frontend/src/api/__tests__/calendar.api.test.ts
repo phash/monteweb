@@ -92,4 +92,56 @@ describe('calendarApi', () => {
       expect(client.get).toHaveBeenCalledWith('/calendar/events/evt-1/jobs')
     })
   })
+
+  describe('getICalSubscriptions', () => {
+    it('should GET /calendar/ical/subscriptions', async () => {
+      await calendarApi.getICalSubscriptions()
+      expect(client.get).toHaveBeenCalledWith('/calendar/ical/subscriptions')
+    })
+  })
+
+  describe('createICalSubscription', () => {
+    it('should POST /calendar/ical/subscriptions with data', async () => {
+      const data = { name: 'School Holidays', url: 'https://example.com/cal.ics', color: '#ff0000' }
+      await calendarApi.createICalSubscription(data)
+      expect(client.post).toHaveBeenCalledWith('/calendar/ical/subscriptions', data)
+    })
+  })
+
+  describe('deleteICalSubscription', () => {
+    it('should DELETE /calendar/ical/subscriptions/{id}', async () => {
+      await calendarApi.deleteICalSubscription('sub-1')
+      expect(client.delete).toHaveBeenCalledWith('/calendar/ical/subscriptions/sub-1')
+    })
+  })
+
+  describe('syncICalSubscription', () => {
+    it('should POST /calendar/ical/subscriptions/{id}/sync', async () => {
+      await calendarApi.syncICalSubscription('sub-1')
+      expect(client.post).toHaveBeenCalledWith('/calendar/ical/subscriptions/sub-1/sync')
+    })
+  })
+
+  describe('getICalEvents', () => {
+    it('should GET /calendar/ical/events with date range', async () => {
+      await calendarApi.getICalEvents('2026-01-01', '2026-12-31')
+      expect(client.get).toHaveBeenCalledWith('/calendar/ical/events', {
+        params: { from: '2026-01-01', to: '2026-12-31' },
+      })
+    })
+  })
+
+  describe('generateJitsiRoom', () => {
+    it('should POST /calendar/events/{id}/jitsi', async () => {
+      await calendarApi.generateJitsiRoom('evt-1')
+      expect(client.post).toHaveBeenCalledWith('/calendar/events/evt-1/jitsi')
+    })
+  })
+
+  describe('removeJitsiRoom', () => {
+    it('should DELETE /calendar/events/{id}/jitsi', async () => {
+      await calendarApi.removeJitsiRoom('evt-1')
+      expect(client.delete).toHaveBeenCalledWith('/calendar/events/evt-1/jitsi')
+    })
+  })
 })

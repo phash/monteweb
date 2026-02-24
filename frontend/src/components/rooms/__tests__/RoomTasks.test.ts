@@ -29,6 +29,12 @@ vi.mock('@/api/tasks.api', () => ({
               dueDate: '2026-03-01',
               position: 0,
               createdAt: '2026-02-20T10:00:00Z',
+              checklistItems: [
+                { id: 'ci-1', title: 'Item 1', checked: true, position: 0 },
+                { id: 'ci-2', title: 'Item 2', checked: false, position: 1 },
+              ],
+              checklistTotal: 2,
+              checklistChecked: 1,
             },
             {
               id: 'task-2',
@@ -42,6 +48,9 @@ vi.mock('@/api/tasks.api', () => ({
               dueDate: null,
               position: 0,
               createdAt: '2026-02-21T10:00:00Z',
+              checklistItems: [],
+              checklistTotal: 0,
+              checklistChecked: 0,
             },
           ],
         },
@@ -54,6 +63,9 @@ vi.mock('@/api/tasks.api', () => ({
     addColumn: vi.fn().mockResolvedValue({ data: { data: { id: 'col-new', name: 'Neu', position: 3 } } }),
     updateColumn: vi.fn().mockResolvedValue({ data: { data: {} } }),
     deleteColumn: vi.fn().mockResolvedValue({ data: { data: null } }),
+    addChecklistItem: vi.fn().mockResolvedValue({ data: { data: { id: 'ci-new', title: 'New', checked: false, position: 2 } } }),
+    toggleChecklistItem: vi.fn().mockResolvedValue({ data: { data: { id: 'ci-1', title: 'Item 1', checked: false, position: 0 } } }),
+    deleteChecklistItem: vi.fn().mockResolvedValue({ data: { data: null } }),
   },
 }))
 
@@ -105,6 +117,12 @@ const i18n = createI18n({
         columnAddError: 'Fehler beim Hinzufügen',
         columnDeleteError: 'Konnte nicht gelöscht werden',
         loadError: 'Aufgaben konnten nicht geladen werden',
+        checklist: 'Checkliste',
+        addChecklistItem: 'Punkt hinzufügen',
+        checklistProgress: '{checked} von {total}',
+        checklistItemAdded: 'Checklistenpunkt hinzugefügt',
+        checklistItemDeleted: 'Checklistenpunkt gelöscht',
+        checklistError: 'Fehler bei der Checkliste',
       },
       common: {
         cancel: 'Abbrechen',
@@ -122,6 +140,15 @@ const i18n = createI18n({
 
 const stubs = {
   LoadingSpinner: { template: '<div class="loading-stub" />' },
+  Checkbox: {
+    template: '<input type="checkbox" class="checkbox-stub" />',
+    props: ['modelValue', 'binary'],
+    emits: ['update:modelValue'],
+  },
+  ProgressBar: {
+    template: '<div class="progressbar-stub" />',
+    props: ['value', 'showValue'],
+  },
   Button: {
     template:
       '<button class="button-stub" @click="$emit(\'click\')">{{ label }}</button>',
@@ -312,5 +339,33 @@ describe('RoomTasks', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.find('.dialog-stub').exists()).toBe(false)
+  })
+
+  it('should show checklist progress on task card with checklist items', async () => {
+    const wrapper = mountRoomTasks()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    const checklistProgress = wrapper.findAll('.task-checklist-progress')
+    expect(checklistProgress.length).toBe(1) // only task-1 has checklist items
+  })
+
+  it('should show progress bar on task card with checklist items', async () => {
+    const wrapper = mountRoomTasks()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    const progressBars = wrapper.findAll('.task-checklist-bar')
+    expect(progressBars.length).toBe(1) // only task-1 has checklist items
+  })
+
+  it('should not show checklist progress for tasks without checklist items', async () => {
+    const wrapper = mountRoomTasks()
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+
+    // task-2 has no checklist items, so only 1 progress indicator total
+    const checklistProgress = wrapper.findAll('.task-checklist-progress')
+    expect(checklistProgress.length).toBe(1)
   })
 })

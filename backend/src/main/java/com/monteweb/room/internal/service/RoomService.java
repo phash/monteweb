@@ -528,8 +528,24 @@ public class RoomService implements RoomModuleApi {
                 room.getMembers().size(),
                 room.getJoinPolicy(),
                 room.getExpiresAt(),
-                room.getTags() != null ? Arrays.asList(room.getTags()) : List.of()
+                room.getTags() != null ? Arrays.asList(room.getTags()) : List.of(),
+                room.getJitsiRoomName()
         );
+    }
+
+    @Transactional
+    public RoomInfo generateJitsiRoom(UUID roomId) {
+        var room = findEntityById(roomId);
+        String shortId = roomId.toString().substring(0, 8);
+        room.setJitsiRoomName("monteweb-room-" + shortId);
+        roomRepository.save(room);
+        return toRoomInfo(room);
+    }
+
+    @Transactional(readOnly = true)
+    public RoomInfo getJitsiRoom(UUID roomId) {
+        var room = findEntityById(roomId);
+        return toRoomInfo(room);
     }
 
     // ---- Chat participant sync ----

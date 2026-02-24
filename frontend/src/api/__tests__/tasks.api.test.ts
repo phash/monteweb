@@ -89,4 +89,31 @@ describe('tasksApi', () => {
       expect(client.delete).toHaveBeenCalledWith('/rooms/room-1/tasks/columns/col-1')
     })
   })
+
+  describe('addChecklistItem', () => {
+    it('should call POST /rooms/{roomId}/tasks/{taskId}/checklist', async () => {
+      await tasksApi.addChecklistItem('room-1', 'task-1', 'Buy milk')
+      expect(client.post).toHaveBeenCalledWith('/rooms/room-1/tasks/task-1/checklist', {
+        title: 'Buy milk',
+      })
+    })
+  })
+
+  describe('toggleChecklistItem', () => {
+    it('should call PUT /rooms/{roomId}/tasks/{taskId}/checklist/{itemId}/toggle', async () => {
+      await tasksApi.toggleChecklistItem('room-1', 'task-1', 'item-1')
+      expect(client.put).toHaveBeenCalledWith(
+        '/rooms/room-1/tasks/task-1/checklist/item-1/toggle',
+      )
+    })
+  })
+
+  describe('deleteChecklistItem', () => {
+    it('should call DELETE /rooms/{roomId}/tasks/{taskId}/checklist/{itemId}', async () => {
+      await tasksApi.deleteChecklistItem('room-1', 'task-1', 'item-1')
+      expect(client.delete).toHaveBeenCalledWith(
+        '/rooms/room-1/tasks/task-1/checklist/item-1',
+      )
+    })
+  })
 })

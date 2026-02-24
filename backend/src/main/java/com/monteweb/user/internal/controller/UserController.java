@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -75,6 +76,24 @@ public class UserController {
         var userId = SecurityUtils.requireCurrentUserId();
         userService.updateDigestFrequency(userId, request.frequency());
         return ResponseEntity.ok(ApiResponse.ok(Map.of("frequency", request.frequency())));
+    }
+
+    @GetMapping("/me/dark-mode")
+    public ResponseEntity<ApiResponse<Map<String, String>>> getDarkMode() {
+        var userId = SecurityUtils.requireCurrentUserId();
+        var mode = userService.getDarkMode(userId);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("darkMode", mode)));
+    }
+
+    @PutMapping("/me/dark-mode")
+    public ResponseEntity<ApiResponse<Map<String, String>>> updateDarkMode(@RequestBody Map<String, String> body) {
+        var userId = SecurityUtils.requireCurrentUserId();
+        var mode = body.getOrDefault("darkMode", "SYSTEM");
+        if (!Set.of("SYSTEM", "LIGHT", "DARK").contains(mode)) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Invalid dark mode: must be SYSTEM, LIGHT, or DARK"));
+        }
+        userService.updateDarkMode(userId, mode);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("darkMode", mode)));
     }
 
     @GetMapping("/directory")

@@ -12,11 +12,13 @@ import type {
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
+import ProgressBar from 'primevue/progressbar'
+import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
-import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 
 const props = defineProps<{ roomId: string; isLeader: boolean }>()
@@ -59,6 +61,10 @@ const showHelp = ref(false)
 const showColumnDialog = ref(false)
 const newColumnName = ref('')
 const addingColumn = ref(false)
+
+// Checklist
+const newChecklistItemTitle = ref('')
+const addingChecklistItem = ref(false)
 
 // Drag state
 const dragTaskId = ref<string | null>(null)
@@ -188,6 +194,54 @@ async function deleteTask() {
     await loadBoard()
   } catch {
     toast.add({ severity: 'error', summary: t('tasks.deleteError'), life: 5000 })
+  }
+}
+
+// ---- Checklist ----
+async function addChecklistItem() {
+  if (!editingTask.value || !newChecklistItemTitle.value.trim()) return
+  addingChecklistItem.value = true
+  try {
+    await tasksApi.addChecklistItem(props.roomId, editingTask.value.id, newChecklistItemTitle.value.trim())
+    newChecklistItemTitle.value = ''
+    toast.add({ severity: 'success', summary: t('tasks.checklistItemAdded'), life: 2000 })
+    await refreshEditingTask()
+  } catch {
+    toast.add({ severity: 'error', summary: t('tasks.checklistError'), life: 5000 })
+  } finally {
+    addingChecklistItem.value = false
+  }
+}
+
+async function toggleChecklistItem(itemId: string) {
+  if (!editingTask.value) return
+  try {
+    await tasksApi.toggleChecklistItem(props.roomId, editingTask.value.id, itemId)
+    await refreshEditingTask()
+  } catch {
+    toast.add({ severity: 'error', summary: t('tasks.checklistError'), life: 5000 })
+  }
+}
+
+async function deleteChecklistItem(itemId: string) {
+  if (!editingTask.value) return
+  try {
+    await tasksApi.deleteChecklistItem(props.roomId, editingTask.value.id, itemId)
+    toast.add({ severity: 'success', summary: t('tasks.checklistItemDeleted'), life: 2000 })
+    await refreshEditingTask()
+  } catch {
+    toast.add({ severity: 'error', summary: t('tasks.checklistError'), life: 5000 })
+  }
+}
+
+async function refreshEditingTask() {
+  const res = await tasksApi.getBoard(props.roomId)
+  board.value = res.data.data
+  if (editingTask.value && board.value) {
+    const updated = board.value.tasks.find(t => t.id === editingTask.value!.id)
+    if (updated) {
+      editingTask.value = updated
+    }
   }
 }
 
@@ -363,7 +417,17 @@ async function deleteColumn(columnId: string) {
                   <i class="pi pi-calendar" />
                   {{ formatShortDate(task.dueDate) }}
                 </span>
+                <span v-if="task.checklistTotal > 0" class="task-checklist-progress">
+                  <i class="pi pi-check-square" />
+                  {{ t('tasks.checklistProgress', { checked: task.checklistChecked, total: task.checklistTotal }) }}
+                </span>
               </div>
+              <ProgressBar
+                v-if="task.checklistTotal > 0"
+                :value="Math.round((task.checklistChecked / task.checklistTotal) * 100)"
+                :showValue="false"
+                class="task-checklist-bar"
+              />
             </div>
           </div>
 
@@ -506,6 +570,61 @@ async function deleteColumn(columnId: string) {
             showIcon
           />
         </div>
+        <!-- Checklist -->
+        <div v-if="editingTask" class="form-field checklist-section">
+          <label>{{ t('tasks.checklist') }}</label>
+          <div v-if="editingTask.checklistItems.length > 0" class="checklist-items">
+            <div
+              v-for="item in editingTask.checklistItems"
+              :key="item.id"
+              class="checklist-item"
+            >
+              <Checkbox
+                :modelValue="item.checked"
+                :binary="true"
+                @update:modelValue="toggleChecklistItem(item.id)"
+              />
+              <span class="checklist-item-title" :class="{ checked: item.checked }">
+                {{ item.title }}
+              </span>
+              <Button
+                icon="pi pi-times"
+                text
+                rounded
+                severity="danger"
+                size="small"
+                class="checklist-item-delete"
+                @click="deleteChecklistItem(item.id)"
+              />
+            </div>
+          </div>
+          <div v-if="editingTask.checklistTotal > 0" class="checklist-progress-info">
+            <ProgressBar
+              :value="Math.round((editingTask.checklistChecked / editingTask.checklistTotal) * 100)"
+              :showValue="false"
+              class="checklist-bar"
+            />
+            <span class="text-muted text-sm">
+              {{ t('tasks.checklistProgress', { checked: editingTask.checklistChecked, total: editingTask.checklistTotal }) }}
+            </span>
+          </div>
+          <div class="add-checklist-form">
+            <InputText
+              v-model="newChecklistItemTitle"
+              :placeholder="t('tasks.addChecklistItem')"
+              class="flex-1"
+              @keydown.enter="addChecklistItem"
+            />
+            <Button
+              icon="pi pi-plus"
+              size="small"
+              :loading="addingChecklistItem"
+              :disabled="!newChecklistItemTitle.trim()"
+              @click="addChecklistItem"
+            />
+          </div>
+        </div>
+
         <div v-if="editingTask" class="task-info-meta">
           <span class="text-muted text-sm">
             {{ t('common.createdBy') }}: {{ editingTask.createdByName }}
@@ -817,6 +936,74 @@ async function deleteColumn(columnId: string) {
 }
 
 .add-column-form .flex-1 {
+  flex: 1;
+}
+
+.task-checklist-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.task-checklist-bar {
+  height: 4px;
+  margin-top: 0.375rem;
+  border-radius: 2px;
+}
+
+.checklist-section {
+  border-top: 1px solid var(--mw-border-light);
+  padding-top: 0.75rem;
+}
+
+.checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.5rem;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.checklist-item-title {
+  flex: 1;
+  font-size: var(--mw-font-size-sm);
+  word-break: break-word;
+}
+
+.checklist-item-title.checked {
+  text-decoration: line-through;
+  color: var(--mw-text-muted);
+}
+
+.checklist-item-delete {
+  flex-shrink: 0;
+}
+
+.checklist-progress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.checklist-bar {
+  height: 6px;
+  border-radius: 3px;
+}
+
+.add-checklist-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.add-checklist-form .flex-1 {
   flex: 1;
 }
 

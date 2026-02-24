@@ -4,6 +4,13 @@ import { mount } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import ProfileView from '@/views/ProfileView.vue'
 
+vi.mock('@/composables/useDarkMode', () => ({
+  useDarkMode: () => ({
+    preference: { value: 'SYSTEM' },
+    loadFromUser: vi.fn(),
+    setPreference: vi.fn(),
+  }),
+}))
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
 vi.mock('@/api/users.api', () => ({
   usersApi: {
@@ -11,6 +18,8 @@ vi.mock('@/api/users.api', () => ({
     updateMe: vi.fn().mockResolvedValue({}),
     uploadAvatar: vi.fn().mockResolvedValue({}),
     removeAvatar: vi.fn().mockResolvedValue({}),
+    updateDarkMode: vi.fn().mockResolvedValue({ data: { data: { darkMode: 'DARK' } } }),
+    getDarkMode: vi.fn().mockResolvedValue({ data: { data: { darkMode: 'SYSTEM' } } }),
   },
 }))
 vi.mock('@/api/client', () => ({
@@ -34,6 +43,10 @@ const i18n = createI18n({
         pushNotifications: 'Push-Benachrichtigungen',
         enablePush: 'Push aktivieren',
         pushDenied: 'Push blockiert',
+        darkMode: 'Erscheinungsbild',
+        darkModeHint: 'Wähle zwischen hellem und dunklem Design',
+        darkModeOptions: { SYSTEM: 'System', LIGHT: 'Hell', DARK: 'Dunkel' },
+        darkModeSaved: 'Design gespeichert',
       },
       auth: { email: 'E-Mail', firstName: 'Vorname', lastName: 'Nachname', phone: 'Telefon' },
       common: { save: 'Speichern', removeAvatar: 'Avatar entfernen' },
@@ -94,5 +107,17 @@ describe('ProfileView', () => {
   it('should render form element', () => {
     const wrapper = mountProfile()
     expect(wrapper.find('form').exists()).toBe(true)
+  })
+
+  it('should render dark mode section', () => {
+    const wrapper = mountProfile()
+    expect(wrapper.find('.darkmode-card').exists()).toBe(true)
+  })
+
+  it('should render dark mode select with options', () => {
+    const wrapper = mountProfile()
+    const darkCard = wrapper.find('.darkmode-card')
+    expect(darkCard.exists()).toBe(true)
+    expect(darkCard.find('.select-stub').exists()).toBe(true)
   })
 })

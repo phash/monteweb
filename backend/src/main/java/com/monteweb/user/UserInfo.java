@@ -17,6 +17,7 @@ public record UserInfo(
         UserRole role,
         Set<String> specialRoles,
         Set<String> assignedRoles,
-        boolean active
+        boolean active,
+        String darkMode
 ) {
 }

@@ -53,7 +53,10 @@ public class AdminService implements AdminModuleApi {
                                           String ldapBindDn, String ldapBindPassword,
                                           String ldapUserSearchFilter, String ldapAttrEmail,
                                           String ldapAttrFirstName, String ldapAttrLastName,
-                                          String ldapDefaultRole, Boolean ldapUseSsl) {
+                                          String ldapDefaultRole, Boolean ldapUseSsl,
+                                          Boolean clamavEnabled, String clamavHost, Integer clamavPort,
+                                          Boolean jitsiEnabled, String jitsiServerUrl,
+                                          Boolean wopiEnabled, String wopiOfficeUrl) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -100,6 +103,17 @@ public class AdminService implements AdminModuleApi {
         if (ldapAttrLastName != null) config.setLdapAttrLastName(ldapAttrLastName);
         if (ldapDefaultRole != null) config.setLdapDefaultRole(ldapDefaultRole);
         if (ldapUseSsl != null) config.setLdapUseSsl(ldapUseSsl);
+        // Maintenance mode — handled via dedicated method
+        // ClamAV virus scanner
+        if (clamavEnabled != null) config.setClamavEnabled(clamavEnabled);
+        if (clamavHost != null) config.setClamavHost(clamavHost);
+        if (clamavPort != null) config.setClamavPort(clamavPort);
+        // Jitsi video conferencing
+        if (jitsiEnabled != null) config.setJitsiEnabled(jitsiEnabled);
+        if (jitsiServerUrl != null) config.setJitsiServerUrl(jitsiServerUrl);
+        // WOPI / ONLYOFFICE
+        if (wopiEnabled != null) config.setWopiEnabled(wopiEnabled);
+        if (wopiOfficeUrl != null) config.setWopiOfficeUrl(wopiOfficeUrl);
         return toInfo(configRepository.save(config));
     }
 
@@ -150,6 +164,19 @@ public class AdminService implements AdminModuleApi {
     @Override
     public String getLdapBindPassword() {
         return getConfig().getLdapBindPassword();
+    }
+
+    @Override
+    public boolean isMaintenanceEnabled() {
+        return getConfig().isMaintenanceEnabled();
+    }
+
+    @Transactional
+    public TenantConfigInfo updateMaintenance(boolean enabled, String message) {
+        var config = getConfig();
+        config.setMaintenanceEnabled(enabled);
+        config.setMaintenanceMessage(message);
+        return toInfo(configRepository.save(config));
     }
 
     /**
@@ -229,7 +256,19 @@ public class AdminService implements AdminModuleApi {
                 config.getLdapDefaultRole(),
                 config.isLdapUseSsl(),
                 config.getLdapUrl() != null && !config.getLdapUrl().isBlank()
-                        && config.getLdapBaseDn() != null && !config.getLdapBaseDn().isBlank()
+                        && config.getLdapBaseDn() != null && !config.getLdapBaseDn().isBlank(),
+                config.isMaintenanceEnabled(),
+                config.getMaintenanceMessage(),
+                // ClamAV virus scanner
+                config.isClamavEnabled(),
+                config.getClamavHost(),
+                config.getClamavPort(),
+                // Jitsi video conferencing
+                config.isJitsiEnabled(),
+                config.getJitsiServerUrl(),
+                // WOPI / ONLYOFFICE
+                config.isWopiEnabled(),
+                config.getWopiOfficeUrl()
         );
     }
 }

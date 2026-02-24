@@ -2,6 +2,7 @@ package com.monteweb.tasks.internal.dto;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 public record TaskResponse(
@@ -15,6 +16,9 @@ public record TaskResponse(
         String createdByName,
         LocalDate dueDate,
         int position,
-        Instant createdAt
+        Instant createdAt,
+        List<ChecklistItemResponse> checklistItems,
+        int checklistTotal,
+        int checklistChecked
 ) {
 }

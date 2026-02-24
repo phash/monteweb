@@ -79,4 +79,16 @@ export interface TenantConfig {
   ldapUseSsl?: boolean
   ldapConfigured?: boolean
   directoryAdminOnly?: boolean
+  maintenanceEnabled?: boolean
+  maintenanceMessage?: string | null
+  // ClamAV virus scanner
+  clamavEnabled?: boolean
+  clamavHost?: string
+  clamavPort?: number
+  // Jitsi video conferencing
+  jitsiEnabled?: boolean
+  jitsiServerUrl?: string
+  // WOPI / ONLYOFFICE
+  wopiEnabled?: boolean
+  wopiOfficeUrl?: string | null
 }

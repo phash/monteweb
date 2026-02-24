@@ -58,6 +58,27 @@ const ldapUseSsl = ref(false)
 const ldapPasswordStored = ref(false)
 const ldapExpanded = ref(false)
 
+// Maintenance mode
+const maintenanceEnabled = ref(false)
+const maintenanceMessage = ref('')
+const savingMaintenance = ref(false)
+
+// ClamAV virus scanner
+const clamavEnabled = ref(false)
+const clamavHost = ref('clamav')
+const clamavPort = ref(3310)
+const savingClamav = ref(false)
+
+// Jitsi video conferencing
+const jitsiEnabled = ref(false)
+const jitsiServerUrl = ref('https://meet.jit.si')
+const savingJitsi = ref(false)
+
+// WOPI / ONLYOFFICE
+const wopiEnabled = ref(false)
+const wopiOfficeUrl = ref('')
+const savingWopi = ref(false)
+
 const languageOptions = [
   { label: 'Deutsch', value: 'de' },
   { label: 'English', value: 'en' },
@@ -118,6 +139,19 @@ onMounted(async () => {
     if (ldapEnabled.value) {
       ldapExpanded.value = true
     }
+    // Maintenance
+    maintenanceEnabled.value = adminStore.config.maintenanceEnabled ?? false
+    maintenanceMessage.value = adminStore.config.maintenanceMessage ?? ''
+    // ClamAV
+    clamavEnabled.value = adminStore.config.clamavEnabled ?? false
+    clamavHost.value = adminStore.config.clamavHost ?? 'clamav'
+    clamavPort.value = adminStore.config.clamavPort ?? 3310
+    // Jitsi
+    jitsiEnabled.value = adminStore.config.jitsiEnabled ?? false
+    jitsiServerUrl.value = adminStore.config.jitsiServerUrl ?? 'https://meet.jit.si'
+    // WOPI
+    wopiEnabled.value = adminStore.config.wopiEnabled ?? false
+    wopiOfficeUrl.value = adminStore.config.wopiOfficeUrl ?? ''
   }
 })
 
@@ -145,6 +179,68 @@ async function saveSettings() {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   } finally {
     saving.value = false
+  }
+}
+
+async function saveMaintenance() {
+  savingMaintenance.value = true
+  try {
+    const res = await adminApi.updateMaintenance(maintenanceEnabled.value, maintenanceMessage.value)
+    adminStore.config = res.data.data
+    toast.add({ severity: 'success', summary: t('admin.maintenance.saved'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    savingMaintenance.value = false
+  }
+}
+
+async function saveClamavConfig() {
+  savingClamav.value = true
+  try {
+    const res = await adminApi.updateConfig({
+      clamavEnabled: clamavEnabled.value,
+      clamavHost: clamavHost.value,
+      clamavPort: clamavPort.value,
+    })
+    adminStore.config = res.data.data
+    toast.add({ severity: 'success', summary: t('admin.clamav.saved'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    savingClamav.value = false
+  }
+}
+
+async function saveJitsiConfig() {
+  savingJitsi.value = true
+  try {
+    const res = await adminApi.updateConfig({
+      jitsiEnabled: jitsiEnabled.value,
+      jitsiServerUrl: jitsiServerUrl.value,
+    })
+    adminStore.config = res.data.data
+    toast.add({ severity: 'success', summary: t('admin.jitsi.saved'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    savingJitsi.value = false
+  }
+}
+
+async function saveWopiConfig() {
+  savingWopi.value = true
+  try {
+    const res = await adminApi.updateConfig({
+      wopiEnabled: wopiEnabled.value,
+      wopiOfficeUrl: wopiOfficeUrl.value || undefined,
+    })
+    adminStore.config = res.data.data
+    toast.add({ severity: 'success', summary: t('wopi.saved'), life: 3000 })
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  } finally {
+    savingWopi.value = false
   }
 }
 
@@ -253,6 +349,81 @@ async function testLdapConnection() {
 <template>
   <div class="p-4">
     <h1 class="text-2xl font-bold mb-6">{{ t('admin.settings.title') }}</h1>
+
+    <!-- Maintenance Mode Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.maintenance.title') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="maintenanceEnabled" />
+        <label>{{ t('admin.maintenance.enabled') }}</label>
+      </div>
+      <Message v-if="maintenanceEnabled" severity="warn" :closable="false">
+        {{ t('admin.maintenance.warning') }}
+      </Message>
+      <div v-if="maintenanceEnabled" class="mb-4">
+        <label class="block text-sm font-medium mb-1">{{ t('admin.maintenance.message') }}</label>
+        <InputText v-model="maintenanceMessage" class="w-full" :placeholder="t('admin.maintenance.messagePlaceholder')" />
+      </div>
+      <Button :label="t('common.save')" :loading="savingMaintenance" @click="saveMaintenance" />
+    </div>
+
+    <!-- ClamAV Virus Scanner Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.clamav.title') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="clamavEnabled" />
+        <label>{{ t('admin.clamav.enabled') }}</label>
+      </div>
+      <Message v-if="clamavEnabled" severity="info" :closable="false">
+        {{ t('admin.clamav.hint') }}
+      </Message>
+      <div v-if="clamavEnabled" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.host') }}</label>
+          <InputText v-model="clamavHost" class="w-full" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.port') }}</label>
+          <InputNumber v-model="clamavPort" :min="1" :max="65535" class="w-full" />
+        </div>
+      </div>
+      <Button :label="t('common.save')" :loading="savingClamav" @click="saveClamavConfig" />
+    </div>
+
+    <!-- Jitsi Video Conferencing Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.jitsi.title') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="jitsiEnabled" />
+        <label>{{ t('admin.jitsi.enabled') }}</label>
+      </div>
+      <Message v-if="jitsiEnabled" severity="info" :closable="false">
+        {{ t('admin.jitsi.hint') }}
+      </Message>
+      <div v-if="jitsiEnabled" class="mb-4">
+        <label class="block text-sm font-medium mb-1">{{ t('admin.jitsi.serverUrl') }}</label>
+        <InputText v-model="jitsiServerUrl" class="w-full" placeholder="https://meet.jit.si" />
+      </div>
+      <Button :label="t('common.save')" :loading="savingJitsi" @click="saveJitsiConfig" />
+    </div>
+
+    <!-- WOPI / ONLYOFFICE Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('wopi.title') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="wopiEnabled" />
+        <label>{{ t('wopi.enabled') }}</label>
+      </div>
+      <Message v-if="wopiEnabled" severity="info" :closable="false">
+        {{ t('wopi.hint') }}
+      </Message>
+      <div v-if="wopiEnabled" class="mb-4">
+        <label class="block text-sm font-medium mb-1">{{ t('wopi.officeUrl') }}</label>
+        <InputText v-model="wopiOfficeUrl" class="w-full" placeholder="https://office.example.com" />
+        <small class="text-gray-500">{{ t('wopi.officeUrlHint') }}</small>
+      </div>
+      <Button :label="t('common.save')" :loading="savingWopi" @click="saveWopiConfig" />
+    </div>
 
     <!-- Language Section -->
     <div class="settings-section">

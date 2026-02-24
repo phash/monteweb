@@ -11,6 +11,7 @@ import RichContent from '@/components/common/RichContent.vue'
 import ReactionBar from '@/components/common/ReactionBar.vue'
 import InlinePoll from '@/components/common/InlinePoll.vue'
 import MentionInput from '@/components/common/MentionInput.vue'
+import BookmarkButton from '@/components/common/BookmarkButton.vue'
 import { feedApi } from '@/api/feed.api'
 import type { FeedAttachment } from '@/types/feed'
 
@@ -116,7 +117,10 @@ function downloadAttachment(attachment: FeedAttachment) {
         </span>
         <Tag v-if="post.pinned" :value="t('feed.pinned')" severity="warn" size="small" />
       </div>
-      <span class="post-date">{{ formatDate(post.createdAt) }}</span>
+      <div class="post-header-right">
+        <span class="post-date">{{ formatDate(post.createdAt) }}</span>
+        <BookmarkButton content-type="POST" :content-id="post.id" />
+      </div>
     </div>
 
     <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
@@ -252,6 +256,12 @@ function downloadAttachment(attachment: FeedAttachment) {
 
 .post-source {
   color: var(--mw-text-secondary);
+}
+
+.post-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 
 .post-date {

@@ -4,6 +4,7 @@ import type {
   TaskBoardResponse,
   TaskResponse,
   TaskColumnResponse,
+  ChecklistItemResponse,
   CreateTaskRequest,
   UpdateTaskRequest,
   MoveTaskRequest,
@@ -29,6 +30,24 @@ export const tasksApi = {
   },
   deleteTask(roomId: string, taskId: string) {
     return client.delete<ApiResponse<void>>(`/rooms/${roomId}/tasks/${taskId}`)
+  },
+
+  // Checklist
+  addChecklistItem(roomId: string, taskId: string, title: string) {
+    return client.post<ApiResponse<ChecklistItemResponse>>(
+      `/rooms/${roomId}/tasks/${taskId}/checklist`,
+      { title },
+    )
+  },
+  toggleChecklistItem(roomId: string, taskId: string, itemId: string) {
+    return client.put<ApiResponse<ChecklistItemResponse>>(
+      `/rooms/${roomId}/tasks/${taskId}/checklist/${itemId}/toggle`,
+    )
+  },
+  deleteChecklistItem(roomId: string, taskId: string, itemId: string) {
+    return client.delete<ApiResponse<void>>(
+      `/rooms/${roomId}/tasks/${taskId}/checklist/${itemId}`,
+    )
   },
 
   // Columns

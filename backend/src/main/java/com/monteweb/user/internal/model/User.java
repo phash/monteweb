@@ -103,6 +103,9 @@ public class User {
     @Column(name = "digest_frequency", nullable = false, length = 20)
     private String digestFrequency = "NONE";
 
+    @Column(name = "dark_mode", nullable = false, length = 10)
+    private String darkMode = "SYSTEM";
+
     @Column(name = "digest_last_sent_at")
     private Instant digestLastSentAt;
 

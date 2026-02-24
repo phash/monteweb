@@ -108,4 +108,28 @@ describe('usersApi', () => {
       expect(client.delete).toHaveBeenCalledWith('/admin/users/user-1/special-roles/CLEANING_MANAGER')
     })
   })
+
+  describe('getDarkMode', () => {
+    it('should GET /users/me/dark-mode', async () => {
+      await usersApi.getDarkMode()
+      expect(client.get).toHaveBeenCalledWith('/users/me/dark-mode')
+    })
+  })
+
+  describe('updateDarkMode', () => {
+    it('should PUT /users/me/dark-mode with preference', async () => {
+      await usersApi.updateDarkMode('DARK')
+      expect(client.put).toHaveBeenCalledWith('/users/me/dark-mode', { darkMode: 'DARK' })
+    })
+
+    it('should send SYSTEM preference', async () => {
+      await usersApi.updateDarkMode('SYSTEM')
+      expect(client.put).toHaveBeenCalledWith('/users/me/dark-mode', { darkMode: 'SYSTEM' })
+    })
+
+    it('should send LIGHT preference', async () => {
+      await usersApi.updateDarkMode('LIGHT')
+      expect(client.put).toHaveBeenCalledWith('/users/me/dark-mode', { darkMode: 'LIGHT' })
+    })
+  })
 })

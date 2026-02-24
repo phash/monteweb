@@ -43,6 +43,9 @@ const moreItems = computed(() => {
   if (admin.isModuleEnabled('forms')) {
     items.push({ to: '/forms', icon: 'pi pi-list-check', label: t('nav.forms'), name: 'forms' })
   }
+  if (admin.isModuleEnabled('bookmarks')) {
+    items.push({ to: '/bookmarks', icon: 'pi pi-bookmark', label: t('nav.bookmarks'), name: 'bookmarks' })
+  }
 
   items.push({ to: '/profile', icon: 'pi pi-user', label: t('nav.profile'), name: 'profile' })
 

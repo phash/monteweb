@@ -28,15 +28,18 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final CorsConfigurationSource corsConfigurationSource;
     private final OidcAuthenticationSuccessHandler oidcSuccessHandler;
+    private final MaintenanceModeFilter maintenanceModeFilter;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
                           CorsConfigurationSource corsConfigurationSource,
-                          @Autowired(required = false) OidcAuthenticationSuccessHandler oidcSuccessHandler) {
+                          @Autowired(required = false) OidcAuthenticationSuccessHandler oidcSuccessHandler,
+                          MaintenanceModeFilter maintenanceModeFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.corsConfigurationSource = corsConfigurationSource;
         this.oidcSuccessHandler = oidcSuccessHandler;
+        this.maintenanceModeFilter = maintenanceModeFilter;
     }
 
     @Bean
@@ -65,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/prometheus").hasRole("SUPERADMIN")
                         .requestMatchers("/actuator/**").hasRole("SUPERADMIN")
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/wopi/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/error-reports").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/config").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/privacy/policy").permitAll()
@@ -72,7 +76,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/admin/**").hasRole("SUPERADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(maintenanceModeFilter, JwtAuthenticationFilter.class);
 
         // Register OIDC success handler when OIDC is enabled
         if (oidcSuccessHandler != null) {

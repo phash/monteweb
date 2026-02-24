@@ -21,3 +21,9 @@ export interface FolderInfo {
   audience: FileAudience
   createdAt: string
 }
+
+export interface WopiSession {
+  wopiSrc: string
+  token: string
+  officeUrl: string
+}

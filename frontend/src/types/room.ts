@@ -17,6 +17,7 @@ export interface RoomInfo {
   joinPolicy: JoinPolicy
   expiresAt: string | null
   tags: string[]
+  jitsiRoomName?: string | null
 }
 
 export interface RoomSettings {

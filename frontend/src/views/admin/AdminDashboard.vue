@@ -16,6 +16,9 @@ const adminLinks = [
   { to: '/admin/settings', icon: 'pi pi-sliders-h', labelKey: 'admin.dashboard.settings', descKey: 'admin.dashboard.settingsDesc' },
   { to: '/admin/privacy', icon: 'pi pi-shield', labelKey: 'privacy.adminPrivacy', descKey: 'privacy.adminPrivacyDesc' },
   { to: '/admin/csv-import', icon: 'pi pi-file-import', labelKey: 'csvImport.title', descKey: 'csvImport.subtitle' },
+  { to: '/admin/analytics', icon: 'pi pi-chart-bar', labelKey: 'admin.analytics.title', descKey: 'admin.analytics.subtitle' },
+  { to: '/admin/ical', icon: 'pi pi-calendar-plus', labelKey: 'calendar.ical.title', descKey: 'admin.dashboard.icalDesc' },
+  { to: '/admin/profile-fields', icon: 'pi pi-id-card', labelKey: 'admin.dashboard.profileFields', descKey: 'admin.dashboard.profileFieldsDesc' },
 ]
 </script>
 

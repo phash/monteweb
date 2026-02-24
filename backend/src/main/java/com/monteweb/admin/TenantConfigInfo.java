@@ -52,6 +52,18 @@ public record TenantConfigInfo(
         String ldapAttrLastName,
         String ldapDefaultRole,
         boolean ldapUseSsl,
-        boolean ldapConfigured
+        boolean ldapConfigured,
+        boolean maintenanceEnabled,
+        String maintenanceMessage,
+        // ClamAV virus scanner
+        boolean clamavEnabled,
+        String clamavHost,
+        int clamavPort,
+        // Jitsi video conferencing
+        boolean jitsiEnabled,
+        String jitsiServerUrl,
+        // WOPI / ONLYOFFICE
+        boolean wopiEnabled,
+        String wopiOfficeUrl
 ) {
 }

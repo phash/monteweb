@@ -40,6 +40,16 @@ public record UpdateConfigRequest(
         String ldapAttrFirstName,
         String ldapAttrLastName,
         String ldapDefaultRole,
-        Boolean ldapUseSsl
+        Boolean ldapUseSsl,
+        // ClamAV virus scanner
+        Boolean clamavEnabled,
+        String clamavHost,
+        Integer clamavPort,
+        // Jitsi video conferencing
+        Boolean jitsiEnabled,
+        String jitsiServerUrl,
+        // WOPI / ONLYOFFICE
+        Boolean wopiEnabled,
+        String wopiOfficeUrl
 ) {
 }

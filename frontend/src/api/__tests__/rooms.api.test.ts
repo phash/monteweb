@@ -156,4 +156,16 @@ describe('roomsApi', () => {
       expect(client.post).toHaveBeenCalledWith('/rooms/room-1/chat/channels', { channelType: 'MAIN' })
     })
   })
+
+  describe('jitsi', () => {
+    it('should GET /rooms/{id}/jitsi', async () => {
+      await roomsApi.getJitsiRoom('room-1')
+      expect(client.get).toHaveBeenCalledWith('/rooms/room-1/jitsi')
+    })
+
+    it('should POST /rooms/{id}/jitsi to generate jitsi room', async () => {
+      await roomsApi.generateJitsiRoom('room-1')
+      expect(client.post).toHaveBeenCalledWith('/rooms/room-1/jitsi')
+    })
+  })
 })

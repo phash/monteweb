@@ -579,6 +579,19 @@ public class UserService implements UserModuleApi {
         });
     }
 
+    public String getDarkMode(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::getDarkMode)
+                .orElse("SYSTEM");
+    }
+
+    @Transactional
+    public void updateDarkMode(UUID userId, String darkMode) {
+        var user = findEntityById(userId);
+        user.setDarkMode(darkMode);
+        userRepository.save(user);
+    }
+
     private UserInfo toUserInfo(User user) {
         return new UserInfo(
                 user.getId(),
@@ -591,7 +604,8 @@ public class UserService implements UserModuleApi {
                 user.getRole(),
                 user.getSpecialRolesAsSet(),
                 user.getAssignedRolesAsSet(),
-                user.isActive()
+                user.isActive(),
+                user.getDarkMode()
         );
     }
 }

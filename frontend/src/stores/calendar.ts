@@ -1,10 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { calendarApi } from '@/api/calendar.api'
-import type { CalendarEvent, CreateEventRequest, UpdateEventRequest, RsvpStatus } from '@/types/calendar'
+import type { CalendarEvent, CreateEventRequest, UpdateEventRequest, RsvpStatus, ICalEvent } from '@/types/calendar'
 
 export const useCalendarStore = defineStore('calendar', () => {
   const events = ref<CalendarEvent[]>([])
+  const icalEvents = ref<ICalEvent[]>([])
   const currentEvent = ref<CalendarEvent | null>(null)
   const loading = ref(false)
   const totalEvents = ref(0)
@@ -83,8 +84,18 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
   }
 
+  async function fetchICalEvents(from: string, to: string) {
+    try {
+      const res = await calendarApi.getICalEvents(from, to)
+      icalEvents.value = res.data.data
+    } catch {
+      icalEvents.value = []
+    }
+  }
+
   return {
     events,
+    icalEvents,
     currentEvent,
     loading,
     totalEvents,
@@ -97,5 +108,6 @@ export const useCalendarStore = defineStore('calendar', () => {
     deleteEvent,
     rsvp,
     fetchRoomEvents,
+    fetchICalEvents,
   }
 })

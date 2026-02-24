@@ -6,7 +6,7 @@ import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { calendarApi } from '@/api/calendar.api'
-import type { CalendarEvent } from '@/types/calendar'
+import type { CalendarEvent, ICalEvent } from '@/types/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -27,6 +27,7 @@ const viewMode = ref<ViewMode>('agenda')
 const currentMonth = ref(new Date())
 const selectedDay = ref<string | null>(null)
 const showCleaning = ref(true)
+const showImported = ref(true)
 
 const viewOptions = computed(() => [
   { label: t('calendar.agenda'), value: 'agenda' },
@@ -73,10 +74,55 @@ const filteredEvents = computed(() => {
   return calendar.events.filter(e => e.eventType !== 'CLEANING')
 })
 
+// Convert iCal events to CalendarEvent-like shape for unified display
+const icalEventsAsCalendarEvents = computed((): CalendarEvent[] => {
+  if (!showImported.value) return []
+  return calendar.icalEvents.map((ie: ICalEvent): CalendarEvent => ({
+    id: ie.id,
+    title: ie.title,
+    description: ie.description,
+    location: ie.location,
+    allDay: ie.allDay,
+    startDate: ie.startDate,
+    startTime: ie.startTime,
+    endDate: ie.endDate || ie.startDate,
+    endTime: ie.endTime,
+    scope: 'SCHOOL',
+    scopeId: null,
+    scopeName: null,
+    recurrence: 'NONE',
+    recurrenceEnd: null,
+    cancelled: false,
+    createdBy: '',
+    creatorName: '',
+    attendingCount: 0,
+    maybeCount: 0,
+    declinedCount: 0,
+    currentUserRsvp: null,
+    eventType: 'ICAL',
+    color: null,
+    jitsiRoomName: null,
+    linkedJobCount: 0,
+    createdAt: '',
+    updatedAt: '',
+  }))
+})
+
+// All events (regular + imported)
+const allFilteredEvents = computed(() => {
+  return [...filteredEvents.value, ...icalEventsAsCalendarEvents.value].sort((a, b) => {
+    if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate)
+    if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime)
+    if (a.allDay && !b.allDay) return -1
+    if (!a.allDay && b.allDay) return 1
+    return 0
+  })
+})
+
 // Map events by date (YYYY-MM-DD) for calendar grid
 const eventsByDate = computed(() => {
   const map = new Map<string, CalendarEvent[]>()
-  for (const event of filteredEvents.value) {
+  for (const event of allFilteredEvents.value) {
     const startDate = event.startDate
     const endDate = event.endDate
     // Add event to each day it spans
@@ -204,7 +250,10 @@ watch([viewMode, dateRange], () => {
 })
 
 async function loadEvents() {
-  await calendar.fetchEvents(dateRange.value.from, dateRange.value.to)
+  await Promise.all([
+    calendar.fetchEvents(dateRange.value.from, dateRange.value.to),
+    calendar.fetchICalEvents(dateRange.value.from, dateRange.value.to),
+  ])
 }
 
 function prevMonth() {
@@ -331,6 +380,9 @@ function formatSelectedDay(date: string): string {
     <div class="filter-toggle">
       <Checkbox v-model="showCleaning" :binary="true" inputId="showCleaning" />
       <label for="showCleaning">{{ t('calendar.showCleaning') }}</label>
+      <span class="filter-separator" />
+      <Checkbox v-model="showImported" :binary="true" inputId="showImported" />
+      <label for="showImported">{{ t('calendar.ical.showImported') }}</label>
     </div>
 
     <div class="month-nav card">
@@ -345,17 +397,18 @@ function formatSelectedDay(date: string): string {
     <!-- AGENDA VIEW -->
     <template v-if="viewMode === 'agenda'">
       <EmptyState
-        v-if="!filteredEvents.length && !calendar.loading"
+        v-if="!allFilteredEvents.length && !calendar.loading"
         icon="pi pi-calendar"
         :message="t('calendar.noEvents')"
       />
       <div v-else class="event-list">
-        <router-link
-          v-for="event in filteredEvents"
+        <component
+          :is="event.eventType === 'ICAL' ? 'div' : 'router-link'"
+          v-for="event in allFilteredEvents"
           :key="event.id"
-          :to="{ name: 'event-detail', params: { id: event.id } }"
+          v-bind="event.eventType === 'ICAL' ? {} : { to: { name: 'event-detail', params: { id: event.id } } }"
           class="event-item card"
-          :class="{ cancelled: event.cancelled }"
+          :class="{ cancelled: event.cancelled, 'ical-event': event.eventType === 'ICAL' }"
         >
           <span class="event-color-bar" :style="{ background: event.color || 'var(--mw-primary)' }" />
           <div class="event-date-col">
@@ -366,7 +419,8 @@ function formatSelectedDay(date: string): string {
               <strong>{{ event.title }}</strong>
               <Tag v-if="event.cancelled" :value="t('calendar.cancelled')" severity="danger" size="small" />
               <Tag v-if="event.eventType === 'CLEANING'" :value="t('calendar.cleaning')" severity="warn" size="small" icon="pi pi-sparkles" />
-              <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag v-if="event.eventType === 'ICAL'" value="iCal" severity="secondary" size="small" icon="pi pi-calendar-plus" />
+              <Tag v-if="event.eventType !== 'ICAL'" :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
               <Tag v-if="event.linkedJobCount > 0" :value="t('jobboard.jobCount', { n: event.linkedJobCount })" severity="secondary" size="small" icon="pi pi-briefcase" />
             </div>
             <div class="event-meta">
@@ -377,8 +431,8 @@ function formatSelectedDay(date: string): string {
               <span v-if="event.attendingCount > 0">{{ t('calendar.attendingCount', { n: event.attendingCount }) }}</span>
             </div>
           </div>
-          <i class="pi pi-chevron-right event-arrow" />
-        </router-link>
+          <i v-if="event.eventType !== 'ICAL'" class="pi pi-chevron-right event-arrow" />
+        </component>
       </div>
     </template>
 
@@ -579,6 +633,18 @@ function formatSelectedDay(date: string): string {
   gap: 0.5rem;
   margin-bottom: 0.75rem;
   font-size: var(--mw-font-size-sm);
+  flex-wrap: wrap;
+}
+
+.filter-separator {
+  width: 1px;
+  height: 16px;
+  background: var(--mw-border-light);
+  margin: 0 0.25rem;
+}
+
+.event-item.ical-event {
+  cursor: default;
 }
 
 .month-nav {

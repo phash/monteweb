@@ -99,6 +99,20 @@ public class CalendarController {
         return ResponseEntity.ok(ApiResponse.ok(event));
     }
 
+    @PostMapping("/events/{id}/jitsi")
+    public ResponseEntity<ApiResponse<EventInfo>> generateJitsiRoom(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var event = calendarService.generateJitsiRoom(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(event));
+    }
+
+    @DeleteMapping("/events/{id}/jitsi")
+    public ResponseEntity<ApiResponse<EventInfo>> removeJitsiRoom(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var event = calendarService.removeJitsiRoom(id, userId);
+        return ResponseEntity.ok(ApiResponse.ok(event));
+    }
+
     @GetMapping("/rooms/{roomId}/events")
     public ResponseEntity<ApiResponse<PageResponse<EventInfo>>> getRoomEvents(
             @PathVariable UUID roomId,

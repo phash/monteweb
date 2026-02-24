@@ -87,6 +87,14 @@ client.interceptors.response.use(
       }
     }
 
+    // Handle maintenance mode (503)
+    if (error.response?.status === 503 && error.response?.data?.maintenance) {
+      window.dispatchEvent(new CustomEvent('monteweb:maintenance', {
+        detail: { message: error.response.data.message },
+      }))
+      return Promise.reject(error)
+    }
+
     // Report server errors
     if (error.response?.status >= 500) {
       window.dispatchEvent(new CustomEvent('monteweb:server-error', {

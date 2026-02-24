@@ -274,6 +274,18 @@ public class RoomController {
         return ResponseEntity.ok(ApiResponse.ok(null, "Room muted"));
     }
 
+    @GetMapping("/{id}/jitsi")
+    public ResponseEntity<ApiResponse<RoomInfo>> getJitsiRoom(@PathVariable UUID id) {
+        var room = roomService.getJitsiRoom(id);
+        return ResponseEntity.ok(ApiResponse.ok(room));
+    }
+
+    @PostMapping("/{id}/jitsi")
+    public ResponseEntity<ApiResponse<RoomInfo>> generateJitsiRoom(@PathVariable UUID id) {
+        var room = roomService.generateJitsiRoom(id);
+        return ResponseEntity.ok(ApiResponse.ok(room));
+    }
+
     @PostMapping("/{id}/unmute")
     public ResponseEntity<ApiResponse<Void>> unmuteRoom(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();

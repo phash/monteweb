@@ -12,6 +12,7 @@ export interface UserInfo {
   specialRoles: string[]
   assignedRoles: string[]
   active: boolean
+  darkMode: string
 }
 
 export interface LoginRequest {

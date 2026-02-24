@@ -70,6 +70,9 @@ public class CalendarEvent {
     @Column(length = 7)
     private String color;
 
+    @Column(name = "jitsi_room_name", length = 200)
+    private String jitsiRoomName;
+
     @Column(name = "created_by")
     private UUID createdBy;
 

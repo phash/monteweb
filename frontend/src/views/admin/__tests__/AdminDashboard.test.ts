@@ -30,6 +30,13 @@ const i18n = createI18n({
           theme: 'Design & Einstellungen', themeDesc: 'Konfiguration',
           settings: 'Einstellungen', settingsDesc: 'Sprache, Registrierung und Jobbörse',
         },
+        analytics: { title: 'Statistiken', subtitle: 'Nutzungsübersicht' },
+      },
+      profileFields: {
+        admin: { title: 'Profilfelder', subtitle: 'Benutzerdefinierte Profilfelder verwalten' },
+      },
+      calendar: {
+        ical: { title: 'iCal-Abonnements' },
       },
       errorReports: {
         title: 'Fehlermeldungen', subtitle: 'Automatisch erfasste Fehler verwalten',
@@ -57,7 +64,7 @@ describe('AdminDashboard', () => {
 
   it('should render admin tiles', () => {
     const wrapper = mount(AdminDashboard, { global: { plugins: [i18n], stubs } })
-    expect(wrapper.findAll('.router-link-stub')).toHaveLength(11)
+    expect(wrapper.findAll('.router-link-stub')).toHaveLength(14)
   })
 
   it('should render tile labels', () => {

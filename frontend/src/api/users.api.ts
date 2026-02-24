@@ -95,6 +95,15 @@ export const usersApi = {
     return client.put<ApiResponse<UserInfo>>(`/admin/users/${userId}/assigned-roles`, { roles })
   },
 
+  // Dark mode
+  getDarkMode() {
+    return client.get<ApiResponse<{ darkMode: string }>>('/users/me/dark-mode')
+  },
+
+  updateDarkMode(darkMode: string) {
+    return client.put<ApiResponse<{ darkMode: string }>>('/users/me/dark-mode', { darkMode })
+  },
+
   // Email digest
   getDigestPreference() {
     return client.get<ApiResponse<{ frequency: string }>>('/users/me/digest')

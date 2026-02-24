@@ -128,6 +128,12 @@ public class TenantConfig {
     @Column(name = "directory_admin_only", nullable = false)
     private boolean directoryAdminOnly = false;
 
+    @Column(name = "maintenance_enabled", nullable = false)
+    private boolean maintenanceEnabled = false;
+
+    @Column(name = "maintenance_message", columnDefinition = "TEXT")
+    private String maintenanceMessage;
+
     @Column(name = "ldap_enabled", nullable = false)
     private boolean ldapEnabled = false;
 
@@ -160,6 +166,33 @@ public class TenantConfig {
 
     @Column(name = "ldap_use_ssl", nullable = false)
     private boolean ldapUseSsl = false;
+
+    // --- WOPI / ONLYOFFICE ---
+
+    @Column(name = "wopi_enabled", nullable = false)
+    private boolean wopiEnabled = false;
+
+    @Column(name = "wopi_office_url", length = 300)
+    private String wopiOfficeUrl;
+
+    // --- ClamAV Virus Scanner ---
+
+    @Column(name = "clamav_enabled", nullable = false)
+    private boolean clamavEnabled = false;
+
+    @Column(name = "clamav_host", length = 200)
+    private String clamavHost = "clamav";
+
+    @Column(name = "clamav_port")
+    private int clamavPort = 3310;
+
+    // --- Jitsi Video Conferencing ---
+
+    @Column(name = "jitsi_enabled", nullable = false)
+    private boolean jitsiEnabled = false;
+
+    @Column(name = "jitsi_server_url", length = 300)
+    private String jitsiServerUrl = "https://meet.jit.si";
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

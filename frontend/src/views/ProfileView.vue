@@ -8,6 +8,8 @@ import { useToast } from 'primevue/usetoast'
 import { usersApi } from '@/api/users.api'
 import { authApi } from '@/api/auth.api'
 import { usePushNotifications } from '@/composables/usePushNotifications'
+import { useDarkMode } from '@/composables/useDarkMode'
+import type { DarkModePreference } from '@/composables/useDarkMode'
 import { useConfirmDialog } from '@/composables/useConfirmDialog'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -22,8 +24,12 @@ import Password from 'primevue/password'
 import Select from 'primevue/select'
 import LanguageSwitcher from '@/components/common/LanguageSwitcher.vue'
 import type { UserRole } from '@/types/user'
+import { useProfileFieldsStore } from '@/stores/profilefields'
+import { useAdminStore } from '@/stores/admin'
+import DatePicker from 'primevue/datepicker'
+import Checkbox from 'primevue/checkbox'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const auth = useAuthStore()
 const messagingStore = useMessagingStore()
 const router = useRouter()
@@ -33,6 +39,12 @@ const { isSupported: pushSupported, isSubscribed: pushSubscribed, permission: pu
 
 const pushEnabled = ref(false)
 const switching = ref(false)
+const { preference: darkModePreference, setPreference: setDarkMode } = useDarkMode()
+const darkModeOptions = [
+  { label: t('profile.darkModeOptions.SYSTEM'), value: 'SYSTEM' },
+  { label: t('profile.darkModeOptions.LIGHT'), value: 'LIGHT' },
+  { label: t('profile.darkModeOptions.DARK'), value: 'DARK' },
+]
 const digestFrequency = ref('NONE')
 const digestFrequencyOptions = [
   { label: t('profile.digestFrequencies.NONE'), value: 'NONE' },
@@ -48,6 +60,13 @@ const form = ref({
   phone: '',
 })
 const saved = ref(false)
+
+// Profile fields
+const profileFieldsStore = useProfileFieldsStore()
+const adminStore = useAdminStore()
+const profileFieldValues = ref<Record<string, string>>({})
+const profileFieldsSaved = ref(false)
+const profileFieldsModuleEnabled = ref(false)
 
 // 2FA state
 const twoFactorEnabled = ref(false)
@@ -88,6 +107,19 @@ onMounted(async () => {
   } catch {
     // Ignore — 2FA status not critical
   }
+
+  // Load profile fields if module is enabled
+  try {
+    if (!adminStore.config) await adminStore.fetchConfig()
+    profileFieldsModuleEnabled.value = adminStore.isModuleEnabled('profilefields')
+    if (profileFieldsModuleEnabled.value) {
+      await profileFieldsStore.fetchDefinitions()
+      await profileFieldsStore.fetchMyValues()
+      profileFieldValues.value = { ...profileFieldsStore.values }
+    }
+  } catch {
+    // Ignore — profile fields not critical
+  }
 })
 
 async function save() {
@@ -95,6 +127,44 @@ async function save() {
   await auth.fetchUser()
   saved.value = true
   setTimeout(() => { saved.value = false }, 3000)
+}
+
+async function saveProfileFields() {
+  try {
+    await profileFieldsStore.updateMyValues(profileFieldValues.value)
+    profileFieldsSaved.value = true
+    toast.add({ severity: 'success', summary: t('profileFields.saved'), life: 3000 })
+    setTimeout(() => { profileFieldsSaved.value = false }, 3000)
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e?.response?.data?.message || t('error.unexpected'), life: 5000 })
+  }
+}
+
+function getFieldLabel(field: { labelDe: string; labelEn: string }): string {
+  return locale.value === 'en' ? field.labelEn : field.labelDe
+}
+
+function getProfileFieldDateValue(fieldId: string): Date | null {
+  const val = profileFieldValues.value[fieldId]
+  if (!val) return null
+  const d = new Date(val)
+  return isNaN(d.getTime()) ? null : d
+}
+
+function setProfileFieldDateValue(fieldId: string, date: Date | null) {
+  if (date) {
+    profileFieldValues.value[fieldId] = date.toISOString().slice(0, 10)
+  } else {
+    profileFieldValues.value[fieldId] = ''
+  }
+}
+
+function getProfileFieldBoolValue(fieldId: string): boolean {
+  return profileFieldValues.value[fieldId] === 'true'
+}
+
+function setProfileFieldBoolValue(fieldId: string, val: boolean) {
+  profileFieldValues.value[fieldId] = val ? 'true' : 'false'
 }
 
 async function handleAvatarUpload(file: File) {
@@ -152,6 +222,11 @@ function getConversationName(conv: { title: string | null; participants: { displ
 
 async function unmuteChatFromProfile(conversationId: string) {
   await messagingStore.unmuteConversation(conversationId)
+}
+
+async function onDarkModeChange(mode: DarkModePreference) {
+  await setDarkMode(mode)
+  toast.add({ severity: 'success', summary: t('profile.darkModeSaved'), life: 3000 })
 }
 
 async function updateDigest() {
@@ -349,6 +424,66 @@ async function cancelAccountDeletion() {
       </form>
     </div>
 
+    <!-- Custom Profile Fields -->
+    <div v-if="profileFieldsModuleEnabled && profileFieldsStore.definitions.length > 0" class="card profile-card custom-fields-card">
+      <h3>{{ t('profileFields.title') }}</h3>
+
+      <Message v-if="profileFieldsSaved" severity="success" :closable="false">
+        {{ t('profileFields.saved') }}
+      </Message>
+
+      <form @submit.prevent="saveProfileFields" class="profile-form">
+        <div v-for="field in profileFieldsStore.definitions" :key="field.id" class="form-field">
+          <label :for="'pf-' + field.id">
+            {{ getFieldLabel(field) }}
+            <span v-if="field.required" class="required-mark">*</span>
+          </label>
+
+          <InputText
+            v-if="field.fieldType === 'TEXT'"
+            :id="'pf-' + field.id"
+            v-model="profileFieldValues[field.id]"
+            class="w-full"
+          />
+
+          <DatePicker
+            v-else-if="field.fieldType === 'DATE'"
+            :id="'pf-' + field.id"
+            :modelValue="getProfileFieldDateValue(field.id)"
+            @update:modelValue="setProfileFieldDateValue(field.id, $event as Date | null)"
+            class="w-full"
+            dateFormat="dd.mm.yy"
+            showIcon
+          />
+
+          <Select
+            v-else-if="field.fieldType === 'SELECT'"
+            :id="'pf-' + field.id"
+            :modelValue="profileFieldValues[field.id]"
+            @update:modelValue="profileFieldValues[field.id] = $event as string"
+            :options="field.options ?? []"
+            class="w-full"
+            :placeholder="getFieldLabel(field)"
+            showClear
+          />
+
+          <div v-else-if="field.fieldType === 'BOOLEAN'" class="boolean-field">
+            <Checkbox
+              :id="'pf-' + field.id"
+              :modelValue="getProfileFieldBoolValue(field.id)"
+              @update:modelValue="setProfileFieldBoolValue(field.id, $event as boolean)"
+              :binary="true"
+            />
+            <label :for="'pf-' + field.id" class="boolean-label">
+              {{ getFieldLabel(field) }}
+            </label>
+          </div>
+        </div>
+
+        <Button type="submit" :label="t('common.save')" />
+      </form>
+    </div>
+
     <!-- Active Role Switcher -->
     <div v-if="auth.canSwitchRole" class="card profile-card role-switcher-card">
       <h3>{{ t('profile.activeRole') }}</h3>
@@ -490,6 +625,22 @@ async function cancelAccountDeletion() {
     <div class="card profile-card language-card">
       <h3>{{ t('profile.language') }}</h3>
       <LanguageSwitcher />
+    </div>
+
+    <!-- Appearance / Dark Mode -->
+    <div class="card profile-card darkmode-card">
+      <h3>{{ t('profile.darkMode') }}</h3>
+      <p class="darkmode-hint">{{ t('profile.darkModeHint') }}</p>
+      <div class="darkmode-select">
+        <Select
+          :modelValue="darkModePreference"
+          :options="darkModeOptions"
+          optionLabel="label"
+          optionValue="value"
+          class="w-full"
+          @update:modelValue="onDarkModeChange"
+        />
+      </div>
     </div>
 
     <!-- Muted Chats -->
@@ -643,6 +794,30 @@ async function cancelAccountDeletion() {
   color: var(--mw-text-secondary);
 }
 
+.custom-fields-card {
+  margin-top: 1rem;
+}
+
+.custom-fields-card h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.required-mark {
+  color: var(--p-red-500);
+}
+
+.boolean-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.boolean-label {
+  font-size: var(--mw-font-size-sm);
+  cursor: pointer;
+}
+
 .role-switcher-card {
   margin-top: 1rem;
 }
@@ -770,6 +945,25 @@ async function cancelAccountDeletion() {
 .language-card h3 {
   margin: 0 0 0.75rem 0;
   font-size: var(--mw-font-size-md);
+}
+
+.darkmode-card {
+  margin-top: 1rem;
+}
+
+.darkmode-card h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: var(--mw-font-size-md);
+}
+
+.darkmode-hint {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+  margin: 0 0 0.75rem 0;
+}
+
+.darkmode-select {
+  max-width: 300px;
 }
 
 .muted-chats-card {

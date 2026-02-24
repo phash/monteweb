@@ -16,6 +16,7 @@ import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
 import { useToast } from 'primevue/usetoast'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import BookmarkButton from '@/components/common/BookmarkButton.vue'
 
 const props = defineProps<{ id: string }>()
 const { t } = useI18n()
@@ -27,6 +28,7 @@ const admin = useAdminStore()
 
 const toast = useToast()
 const loading = ref(true)
+const generatingJitsi = ref(false)
 const showCancelDialog = ref(false)
 const showDeleteDialog = ref(false)
 const showLinkJobDialog = ref(false)
@@ -120,6 +122,44 @@ async function exportEvent() {
   }
 }
 
+function jitsiEnabled() {
+  return admin.config?.jitsiEnabled === true
+}
+
+function jitsiUrl() {
+  if (!calendar.currentEvent?.jitsiRoomName) return ''
+  const serverUrl = admin.config?.jitsiServerUrl || 'https://meet.jit.si'
+  const base = serverUrl.replace(/\/+$/, '')
+  return `${base}/${calendar.currentEvent.jitsiRoomName}`
+}
+
+function openJitsiMeeting() {
+  const url = jitsiUrl()
+  if (url) window.open(url, '_blank')
+}
+
+async function handleGenerateJitsi() {
+  generatingJitsi.value = true
+  try {
+    const res = await calendarApi.generateJitsiRoom(props.id)
+    calendar.currentEvent = res.data.data
+    toast.add({ severity: 'success', summary: t('admin.jitsi.videoConference') + ' ' + t('common.created'), life: 3000 })
+  } catch {
+    // ignore
+  } finally {
+    generatingJitsi.value = false
+  }
+}
+
+async function handleRemoveJitsi() {
+  try {
+    const res = await calendarApi.removeJitsiRoom(props.id)
+    calendar.currentEvent = res.data.data
+  } catch {
+    // ignore
+  }
+}
+
 function rsvpSeverity(status: string | null, target: string): 'success' | 'warn' | 'danger' | 'secondary' {
   if (status !== target) return 'secondary'
   switch (target) {
@@ -147,6 +187,7 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
     <template v-else-if="calendar.currentEvent">
       <div class="event-header">
         <PageTitle :title="calendar.currentEvent.title" />
+        <BookmarkButton content-type="EVENT" :content-id="calendar.currentEvent.id" />
         <Tag v-if="calendar.currentEvent.cancelled" :value="t('calendar.cancelled')" severity="danger" />
         <Tag :value="t(`calendar.scopes.${calendar.currentEvent.scope}`)" severity="info" />
       </div>
@@ -192,6 +233,37 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
 
       <div v-if="calendar.currentEvent.description" class="event-description card">
         <p>{{ calendar.currentEvent.description }}</p>
+      </div>
+
+      <!-- Jitsi Video Conference Section -->
+      <div v-if="jitsiEnabled()" class="jitsi-section card">
+        <h2>{{ t('admin.jitsi.videoConference') }}</h2>
+        <div v-if="calendar.currentEvent.jitsiRoomName" class="jitsi-actions">
+          <Button
+            :label="t('admin.jitsi.joinMeeting')"
+            icon="pi pi-video"
+            severity="success"
+            @click="openJitsiMeeting"
+          />
+          <Button
+            v-if="canManage()"
+            :label="t('admin.jitsi.removeVideoConference')"
+            icon="pi pi-trash"
+            severity="danger"
+            text
+            @click="handleRemoveJitsi"
+          />
+        </div>
+        <div v-else-if="canManage()">
+          <Button
+            :label="t('admin.jitsi.addVideoConference')"
+            icon="pi pi-video"
+            severity="secondary"
+            :loading="generatingJitsi"
+            @click="handleGenerateJitsi"
+          />
+        </div>
+        <p v-else class="text-muted">{{ t('admin.jitsi.videoConference') }}: --</p>
       </div>
 
       <!-- RSVP Section -->
@@ -384,6 +456,23 @@ function rsvpSeverity(status: string | null, target: string): 'success' | 'warn'
 .event-description p {
   white-space: pre-wrap;
   margin: 0;
+}
+
+.jitsi-section {
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.jitsi-section h2 {
+  font-size: var(--mw-font-size-md);
+  margin: 0 0 0.75rem;
+}
+
+.jitsi-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .rsvp-section {

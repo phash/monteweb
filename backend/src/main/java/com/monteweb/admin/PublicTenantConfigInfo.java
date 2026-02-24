@@ -16,7 +16,12 @@ public record PublicTenantConfigInfo(
         String defaultLanguage,
         List<String> availableLanguages,
         boolean requireUserApproval,
-        boolean directoryAdminOnly
+        boolean directoryAdminOnly,
+        boolean maintenanceEnabled,
+        String maintenanceMessage,
+        boolean jitsiEnabled,
+        String jitsiServerUrl,
+        boolean wopiEnabled
 ) {
     public static PublicTenantConfigInfo from(TenantConfigInfo full) {
         return new PublicTenantConfigInfo(
@@ -28,7 +33,12 @@ public record PublicTenantConfigInfo(
                 full.defaultLanguage(),
                 full.availableLanguages(),
                 full.requireUserApproval(),
-                full.directoryAdminOnly()
+                full.directoryAdminOnly(),
+                full.maintenanceEnabled(),
+                full.maintenanceMessage(),
+                full.jitsiEnabled(),
+                full.jitsiServerUrl(),
+                full.wopiEnabled()
         );
     }
 }

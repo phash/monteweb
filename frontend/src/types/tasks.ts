@@ -11,6 +11,13 @@ export interface TaskColumnResponse {
   position: number
 }
 
+export interface ChecklistItemResponse {
+  id: string
+  title: string
+  checked: boolean
+  position: number
+}
+
 export interface TaskResponse {
   id: string
   columnId: string
@@ -23,6 +30,9 @@ export interface TaskResponse {
   dueDate: string | null
   position: number
   createdAt: string
+  checklistItems: ChecklistItemResponse[]
+  checklistTotal: number
+  checklistChecked: number
 }
 
 export interface CreateTaskRequest {

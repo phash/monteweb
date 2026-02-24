@@ -1,8 +1,10 @@
 package com.monteweb.files.internal.controller;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.files.FileInfo;
 import com.monteweb.files.FolderInfo;
 import com.monteweb.files.internal.service.FileService;
+import com.monteweb.files.internal.service.WopiTokenService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -22,9 +26,15 @@ import java.util.UUID;
 public class FileController {
 
     private final FileService fileService;
+    private final WopiTokenService wopiTokenService;
+    private final AdminModuleApi adminModuleApi;
 
-    public FileController(FileService fileService) {
+    public FileController(FileService fileService,
+                          WopiTokenService wopiTokenService,
+                          AdminModuleApi adminModuleApi) {
         this.fileService = fileService;
+        this.wopiTokenService = wopiTokenService;
+        this.adminModuleApi = adminModuleApi;
     }
 
     // ---- Files ----
@@ -102,6 +112,33 @@ public class FileController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         fileService.deleteFolder(roomId, folderId, userId);
         return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    // ---- WOPI Session ----
+
+    @PostMapping("/{fileId}/wopi-session")
+    public ResponseEntity<ApiResponse<Map<String, String>>> createWopiSession(
+            @PathVariable UUID roomId,
+            @PathVariable UUID fileId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        // Verify file access
+        fileService.getFileMetadata(roomId, fileId, userId);
+
+        // Check if WOPI is enabled
+        var config = adminModuleApi.getTenantConfig();
+        if (config == null || !config.wopiEnabled()) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("WOPI/ONLYOFFICE is not enabled"));
+        }
+
+        var token = wopiTokenService.createToken(fileId, userId, roomId, "EDIT");
+
+        Map<String, String> session = new LinkedHashMap<>();
+        session.put("wopiSrc", "/wopi/files/" + token.getToken());
+        session.put("token", token.getToken());
+        session.put("officeUrl", config.wopiOfficeUrl());
+
+        return ResponseEntity.ok(ApiResponse.ok(session));
     }
 
     public record CreateFolderRequest(UUID parentId, String name, String audience) {

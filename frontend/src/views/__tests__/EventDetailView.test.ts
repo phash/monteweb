@@ -19,10 +19,25 @@ vi.mock('@/api/calendar.api', () => ({
           allDay: false, location: 'Aula', cancelled: false,
           createdBy: 'user-1', attendingCount: 2, maybeCount: 1, declinedCount: 0,
           myRsvp: null, recurrence: 'NONE', linkedJobCount: 0,
+          jitsiRoomName: null,
         },
       },
     }),
     getEventJobs: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    generateJitsiRoom: vi.fn().mockResolvedValue({
+      data: {
+        data: {
+          id: 'evt-1', title: 'Test Event', jitsiRoomName: 'monteweb-event-evt-1aaa',
+        },
+      },
+    }),
+    removeJitsiRoom: vi.fn().mockResolvedValue({
+      data: {
+        data: {
+          id: 'evt-1', title: 'Test Event', jitsiRoomName: null,
+        },
+      },
+    }),
   },
 }))
 
@@ -69,7 +84,15 @@ const i18n = createI18n({
         noOpenJobs: 'Keine offenen Jobs zum Verknüpfen verfügbar.',
         createLinkedJob: 'Job erstellen',
       },
-      common: { cancel: 'Abbrechen', delete: 'Löschen', back: 'Zurück', loading: 'Laden...' },
+      common: { cancel: 'Abbrechen', delete: 'Löschen', back: 'Zurück', loading: 'Laden...', yes: 'Ja', no: 'Nein', edit: 'Bearbeiten', created: 'erstellt' },
+      admin: {
+        jitsi: {
+          joinMeeting: 'Besprechung beitreten',
+          addVideoConference: 'Videokonferenz hinzufügen',
+          removeVideoConference: 'Videokonferenz entfernen',
+          videoConference: 'Videokonferenz',
+        },
+      },
     },
   },
 })

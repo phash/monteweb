@@ -3,6 +3,8 @@ import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoomsStore } from '@/stores/rooms'
 import { useMessagingStore } from '@/stores/messaging'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
+import { roomsApi } from '@/api/rooms.api'
 import { messagingApi } from '@/api/messaging.api'
 import { useI18n } from 'vue-i18n'
 import { useLocaleDate } from '@/composables/useLocaleDate'
@@ -24,6 +26,7 @@ const { formatTime: localeFormatTime, formatShortDate } = useLocaleDate()
 const roomsStore = useRoomsStore()
 const messagingStore = useMessagingStore()
 const authStore = useAuthStore()
+const adminStore = useAdminStore()
 
 const activeChannel = ref<ChannelType>('MAIN')
 const messageText = ref('')
@@ -34,6 +37,8 @@ const imagePreviewUrl = ref<string | null>(null)
 const fullSizeImageUrl = ref<string | null>(null)
 const showFullImage = ref(false)
 const showPollComposer = ref(false)
+const jitsiRoomName = ref<string | null>(null)
+const generatingJitsi = ref(false)
 
 const channelOptions = computed(() => {
   return roomsStore.chatChannels.map(ch => ({
@@ -67,6 +72,13 @@ const groupedMessages = computed(() => {
 })
 
 onMounted(async () => {
+  // Load Jitsi room name if Jitsi is enabled
+  if (adminStore.config?.jitsiEnabled) {
+    try {
+      const res = await roomsApi.getJitsiRoom(props.roomId)
+      jitsiRoomName.value = res.data.data.jitsiRoomName || null
+    } catch { /* ignore */ }
+  }
   await roomsStore.fetchChatChannels(props.roomId)
   if (roomsStore.chatChannels.length === 0) {
     await roomsStore.getOrCreateChatChannel(props.roomId, 'MAIN')
@@ -218,6 +230,25 @@ function getMessagePreview(msg: MessageInfo) {
   return ''
 }
 
+async function startVideoChat() {
+  generatingJitsi.value = true
+  try {
+    let roomName = jitsiRoomName.value
+    if (!roomName) {
+      const res = await roomsApi.generateJitsiRoom(props.roomId)
+      roomName = res.data.data.jitsiRoomName || null
+      jitsiRoomName.value = roomName
+    }
+    if (roomName) {
+      const serverUrl = adminStore.config?.jitsiServerUrl || 'https://meet.jit.si'
+      const base = serverUrl.replace(/\/+$/, '')
+      window.open(`${base}/${roomName}`, '_blank')
+    }
+  } finally {
+    generatingJitsi.value = false
+  }
+}
+
 async function sendPollMessage(data: { question: string; options: string[]; multiple: boolean }) {
   if (!currentChannel.value) return
   await messagingApi.sendPollMessage(currentChannel.value.conversationId, {
@@ -263,6 +294,16 @@ async function handleMsgPollClose(msg: MessageInfo) {
         </span>
       </div>
       <div class="rc-header-actions">
+        <Button
+          v-if="adminStore.config?.jitsiEnabled"
+          icon="pi pi-video"
+          :label="t('admin.jitsi.startVideoChat')"
+          text
+          severity="success"
+          size="small"
+          :loading="generatingJitsi"
+          @click="startVideoChat"
+        />
         <span v-if="isMuted" class="rc-muted-badge">
           <i class="pi pi-volume-off" />
           {{ t('chat.muted') }}

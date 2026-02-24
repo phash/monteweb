@@ -120,4 +120,22 @@ describe('filesApi', () => {
       expect(client.delete).toHaveBeenCalledWith('/rooms/room-1/files/folders/folder-1')
     })
   })
+
+  describe('createWopiSession', () => {
+    it('should POST /rooms/{roomId}/files/{fileId}/wopi-session', async () => {
+      await filesApi.createWopiSession('room-1', 'file-1')
+      expect(client.post).toHaveBeenCalledWith('/rooms/room-1/files/file-1/wopi-session')
+    })
+
+    it('should return WOPI session data', async () => {
+      const mockSession = {
+        wopiSrc: '/wopi/files/abc123',
+        token: 'abc123',
+        officeUrl: 'https://office.example.com',
+      }
+      vi.mocked(client.post).mockResolvedValueOnce({ data: { data: mockSession } })
+      const res = await filesApi.createWopiSession('room-1', 'file-1')
+      expect(res.data.data).toEqual(mockSession)
+    })
+  })
 })

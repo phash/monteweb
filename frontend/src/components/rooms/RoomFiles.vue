@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { useRoomsStore } from '@/stores/rooms'
 import { filesApi } from '@/api/files.api'
 import type { FileInfo, FolderInfo, FileAudience } from '@/types/files'
@@ -14,11 +16,17 @@ import Select from 'primevue/select'
 import Tag from 'primevue/tag'
 import { audienceSeverity } from '@/utils/audienceSeverity'
 
+const OFFICE_EXTENSIONS = ['doc', 'docx', 'odt', 'xls', 'xlsx', 'ods', 'ppt', 'pptx', 'odp']
+
 const props = defineProps<{ roomId: string }>()
 const { t } = useI18n()
+const router = useRouter()
 const { formatShortDate } = useLocaleDate()
 const auth = useAuthStore()
+const adminStore = useAdminStore()
 const rooms = useRoomsStore()
+
+const wopiEnabled = computed(() => adminStore.config?.wopiEnabled === true)
 
 const files = ref<FileInfo[]>([])
 const folders = ref<FolderInfo[]>([])
@@ -127,6 +135,15 @@ function audienceLabel(audience: string): string {
     default: return t('files.audienceAll')
   }
 }
+
+function isOfficeFile(fileName: string): boolean {
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+  return OFFICE_EXTENSIONS.includes(ext)
+}
+
+function openInEditor(file: FileInfo) {
+  router.push({ name: 'wopi-editor', params: { roomId: props.roomId, fileId: file.id } })
+}
 </script>
 
 <template>
@@ -204,6 +221,16 @@ function audienceLabel(audience: string): string {
         <span class="file-size">{{ formatSize(file.fileSize) }}</span>
         <span class="file-date">{{ formatDate(file.createdAt) }}</span>
         <span class="file-uploader">{{ file.uploaderName }}</span>
+        <Button
+          v-if="wopiEnabled && isOfficeFile(file.originalName)"
+          icon="pi pi-pencil"
+          :label="t('wopi.editOnline')"
+          text
+          severity="info"
+          size="small"
+          :aria-label="t('wopi.editOnline')"
+          @click.stop="openInEditor(file)"
+        />
         <Button icon="pi pi-trash" text severity="danger" size="small" :aria-label="t('common.delete')" @click.stop="deleteFile(file)" />
       </div>
     </div>

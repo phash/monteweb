@@ -26,6 +26,7 @@ public record EventInfo(
         boolean cancelled,
         String eventType,
         String color,
+        String jitsiRoomName,
         UUID createdBy,
         String creatorName,
         int attendingCount,

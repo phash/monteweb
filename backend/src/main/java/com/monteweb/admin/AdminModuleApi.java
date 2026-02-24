@@ -15,4 +15,6 @@ public interface AdminModuleApi {
      * This is kept separate from TenantConfigInfo to avoid exposing it in API responses.
      */
     String getLdapBindPassword();
+
+    boolean isMaintenanceEnabled();
 }

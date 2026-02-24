@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
-import type { CalendarEvent, CreateEventRequest, UpdateEventRequest, RsvpStatus } from '@/types/calendar'
+import type { CalendarEvent, CreateEventRequest, UpdateEventRequest, RsvpStatus, ICalSubscription, ICalEvent } from '@/types/calendar'
 import type { JobInfo } from '@/types/jobboard'
 
 export const calendarApi = {
@@ -44,11 +44,42 @@ export const calendarApi = {
     return client.get<ApiResponse<JobInfo[]>>(`/calendar/events/${eventId}/jobs`)
   },
 
+  generateJitsiRoom(eventId: string) {
+    return client.post<ApiResponse<CalendarEvent>>(`/calendar/events/${eventId}/jitsi`)
+  },
+
+  removeJitsiRoom(eventId: string) {
+    return client.delete<ApiResponse<CalendarEvent>>(`/calendar/events/${eventId}/jitsi`)
+  },
+
   exportEvent(id: string) {
     return client.get(`/calendar/events/${id}/export`, { responseType: 'blob' })
   },
 
   exportCalendar(from: string, to: string) {
     return client.get('/calendar/export', { params: { from, to }, responseType: 'blob' })
+  },
+
+  // iCal subscriptions (admin)
+  getICalSubscriptions() {
+    return client.get<ApiResponse<ICalSubscription[]>>('/calendar/ical/subscriptions')
+  },
+
+  createICalSubscription(data: { name: string; url: string; color?: string }) {
+    return client.post<ApiResponse<ICalSubscription>>('/calendar/ical/subscriptions', data)
+  },
+
+  deleteICalSubscription(id: string) {
+    return client.delete<ApiResponse<void>>(`/calendar/ical/subscriptions/${id}`)
+  },
+
+  syncICalSubscription(id: string) {
+    return client.post<ApiResponse<void>>(`/calendar/ical/subscriptions/${id}/sync`)
+  },
+
+  getICalEvents(from: string, to: string) {
+    return client.get<ApiResponse<ICalEvent[]>>('/calendar/ical/events', {
+      params: { from, to },
+    })
   },
 }

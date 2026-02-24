@@ -60,6 +60,38 @@ public class TaskController {
         return ApiResponse.ok(null);
     }
 
+    // ---- Checklist ----
+
+    @PostMapping("/{taskId}/checklist")
+    public ApiResponse<ChecklistItemResponse> addChecklistItem(
+            @PathVariable UUID roomId,
+            @PathVariable UUID taskId,
+            @Valid @RequestBody CreateChecklistItemRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(taskService.addChecklistItem(taskId, userId, request.title()));
+    }
+
+    @PutMapping("/{taskId}/checklist/{itemId}/toggle")
+    public ApiResponse<ChecklistItemResponse> toggleChecklistItem(
+            @PathVariable UUID roomId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID itemId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(taskService.toggleChecklistItem(itemId, userId));
+    }
+
+    @DeleteMapping("/{taskId}/checklist/{itemId}")
+    public ApiResponse<Void> deleteChecklistItem(
+            @PathVariable UUID roomId,
+            @PathVariable UUID taskId,
+            @PathVariable UUID itemId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        taskService.deleteChecklistItem(itemId, userId);
+        return ApiResponse.ok(null);
+    }
+
+    // ---- Columns ----
+
     @PostMapping("/columns")
     public ApiResponse<TaskColumnResponse> addColumn(
             @PathVariable UUID roomId,

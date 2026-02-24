@@ -16,6 +16,7 @@ import InputNumber from 'primevue/inputnumber'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
+import BookmarkButton from '@/components/common/BookmarkButton.vue'
 
 const props = defineProps<{ id: string }>()
 const { t } = useI18n()
@@ -230,6 +231,7 @@ function formatDate(date: string | null) {
     <template v-else-if="jobboard.currentJob">
       <div class="job-header">
         <PageTitle :title="jobboard.currentJob.title" />
+        <BookmarkButton content-type="JOB" :content-id="jobboard.currentJob.id" />
         <Tag
           :value="t(`jobboard.statuses.${jobboard.currentJob.status}`)"
           :severity="statusSeverity(jobboard.currentJob.status)"

@@ -5,6 +5,7 @@ import com.monteweb.admin.internal.dto.CsvImportResult;
 import com.monteweb.admin.internal.dto.UpdateConfigRequest;
 import com.monteweb.admin.internal.model.AuditLogEntry;
 import com.monteweb.admin.internal.service.AdminService;
+import com.monteweb.admin.internal.service.AnalyticsService;
 import com.monteweb.admin.internal.service.AuditService;
 import com.monteweb.admin.internal.service.CsvImportService;
 import com.monteweb.shared.dto.ApiResponse;
@@ -28,11 +29,14 @@ public class AdminConfigController {
     private final AdminService adminService;
     private final AuditService auditService;
     private final CsvImportService csvImportService;
+    private final AnalyticsService analyticsService;
 
-    public AdminConfigController(AdminService adminService, AuditService auditService, CsvImportService csvImportService) {
+    public AdminConfigController(AdminService adminService, AuditService auditService,
+                                 CsvImportService csvImportService, AnalyticsService analyticsService) {
         this.adminService = adminService;
         this.auditService = auditService;
         this.csvImportService = csvImportService;
+        this.analyticsService = analyticsService;
     }
 
     @GetMapping("/config")
@@ -55,7 +59,10 @@ public class AdminConfigController {
                 request.ldapBindDn(), request.ldapBindPassword(),
                 request.ldapUserSearchFilter(), request.ldapAttrEmail(),
                 request.ldapAttrFirstName(), request.ldapAttrLastName(),
-                request.ldapDefaultRole(), request.ldapUseSsl());
+                request.ldapDefaultRole(), request.ldapUseSsl(),
+                request.clamavEnabled(), request.clamavHost(), request.clamavPort(),
+                request.jitsiEnabled(), request.jitsiServerUrl(),
+                request.wopiEnabled(), request.wopiOfficeUrl());
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 
@@ -74,6 +81,14 @@ public class AdminConfigController {
     @PostMapping("/config/logo")
     public ResponseEntity<ApiResponse<TenantConfigInfo>> uploadLogo(@RequestParam("file") MultipartFile file) {
         var config = adminService.uploadLogo(file);
+        return ResponseEntity.ok(ApiResponse.ok(config));
+    }
+
+    @PutMapping("/config/maintenance")
+    public ResponseEntity<ApiResponse<TenantConfigInfo>> updateMaintenance(@RequestBody Map<String, Object> body) {
+        boolean enabled = Boolean.TRUE.equals(body.get("maintenanceEnabled"));
+        String message = body.get("maintenanceMessage") instanceof String m ? m : null;
+        var config = adminService.updateMaintenance(enabled, message);
         return ResponseEntity.ok(ApiResponse.ok(config));
     }
 
@@ -101,6 +116,11 @@ public class AdminConfigController {
         } catch (Exception e) {
             return ResponseEntity.ok(ApiResponse.ok(Map.of("success", false, "message", e.getMessage() != null ? e.getMessage() : "Connection failed")));
         }
+    }
+
+    @GetMapping("/analytics")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getAnalytics() {
+        return ResponseEntity.ok(ApiResponse.ok(analyticsService.getAnalytics()));
     }
 
     @GetMapping("/audit-log")

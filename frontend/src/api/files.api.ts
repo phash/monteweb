@@ -1,6 +1,6 @@
 import client from './client'
 import type { ApiResponse } from '@/types/api'
-import type { FileInfo, FolderInfo } from '@/types/files'
+import type { FileInfo, FolderInfo, WopiSession } from '@/types/files'
 
 export const filesApi = {
   listFiles(roomId: string, folderId?: string) {
@@ -45,5 +45,9 @@ export const filesApi = {
 
   deleteFolder(roomId: string, folderId: string) {
     return client.delete<ApiResponse<void>>(`/rooms/${roomId}/files/folders/${folderId}`)
+  },
+
+  createWopiSession(roomId: string, fileId: string) {
+    return client.post<ApiResponse<WopiSession>>(`/rooms/${roomId}/files/${fileId}/wopi-session`)
   },
 }

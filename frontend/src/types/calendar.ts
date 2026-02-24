@@ -28,6 +28,7 @@ export interface CalendarEvent {
   currentUserRsvp: RsvpStatus | null
   eventType: string
   color: string | null
+  jitsiRoomName: string | null
   linkedJobCount: number
   createdAt: string
   updatedAt: string
@@ -66,4 +67,27 @@ export interface UpdateEventRequest {
 
 export interface RsvpRequest {
   status: RsvpStatus
+}
+
+export interface ICalSubscription {
+  id: string
+  name: string
+  url: string
+  color: string | null
+  lastSyncedAt: string | null
+  active: boolean
+  createdAt: string | null
+}
+
+export interface ICalEvent {
+  id: string
+  subscriptionId: string
+  title: string
+  description: string | null
+  location: string | null
+  startDate: string
+  endDate: string | null
+  startTime: string | null
+  endTime: string | null
+  allDay: boolean
 }

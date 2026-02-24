@@ -44,6 +44,9 @@ const navItems = computed(() => {
   if (admin.isModuleEnabled('fundgrube')) {
     items.push({ to: '/fundgrube', icon: 'pi pi-box', label: t('nav.fundgrube'), name: 'fundgrube' })
   }
+  if (admin.isModuleEnabled('bookmarks')) {
+    items.push({ to: '/bookmarks', icon: 'pi pi-bookmark', label: t('nav.bookmarks'), name: 'bookmarks' })
+  }
 
   if (auth.isSectionAdmin && !auth.isAdmin) {
     items.push({ to: '/section-admin', icon: 'pi pi-sitemap', label: t('sectionAdmin.title'), name: 'section-admin' })

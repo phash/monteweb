@@ -232,6 +232,25 @@ public class CalendarService implements CalendarModuleApi {
                 .map(e -> toEventInfo(e, null));
     }
 
+    @Transactional
+    public EventInfo generateJitsiRoom(UUID eventId, UUID userId) {
+        var event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Event not found"));
+        String shortId = eventId.toString().substring(0, 8);
+        event.setJitsiRoomName("monteweb-event-" + shortId);
+        eventRepository.save(event);
+        return toEventInfo(event, userId);
+    }
+
+    @Transactional
+    public EventInfo removeJitsiRoom(UUID eventId, UUID userId) {
+        var event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Event not found"));
+        event.setJitsiRoomName(null);
+        eventRepository.save(event);
+        return toEventInfo(event, userId);
+    }
+
     @Override
     public EventInfo createEventFromSystem(CreateEventRequest request, UUID createdBy) {
         var event = new CalendarEvent();
@@ -356,6 +375,7 @@ public class CalendarService implements CalendarModuleApi {
                 event.isCancelled(),
                 event.getEventType(),
                 event.getColor(),
+                event.getJitsiRoomName(),
                 event.getCreatedBy(),
                 creatorName,
                 attendingCount,

@@ -8,9 +8,11 @@ import com.monteweb.tasks.TaskDeletedEvent;
 import com.monteweb.tasks.TaskSavedEvent;
 import com.monteweb.tasks.TasksModuleApi;
 import com.monteweb.tasks.internal.dto.*;
+import com.monteweb.tasks.internal.model.ChecklistItem;
 import com.monteweb.tasks.internal.model.Task;
 import com.monteweb.tasks.internal.model.TaskBoard;
 import com.monteweb.tasks.internal.model.TaskColumn;
+import com.monteweb.tasks.internal.repository.ChecklistItemRepository;
 import com.monteweb.tasks.internal.repository.TaskBoardRepository;
 import com.monteweb.tasks.internal.repository.TaskColumnRepository;
 import com.monteweb.tasks.internal.repository.TaskRepository;
@@ -32,6 +34,7 @@ public class TaskService implements TasksModuleApi {
     private final TaskBoardRepository boardRepo;
     private final TaskColumnRepository columnRepo;
     private final TaskRepository taskRepo;
+    private final ChecklistItemRepository checklistRepo;
     private final UserModuleApi userModule;
     private final RoomModuleApi roomModule;
     private final ApplicationEventPublisher eventPublisher;
@@ -85,20 +88,40 @@ public class TaskService implements TasksModuleApi {
                 .map(c -> new TaskColumnResponse(c.getId(), c.getName(), c.getPosition()))
                 .toList();
 
+        // Load checklist items for all tasks in batch
+        List<UUID> taskIds = tasks.stream().map(Task::getId).toList();
+        List<ChecklistItem> allChecklistItems = taskIds.isEmpty()
+                ? List.of()
+                : checklistRepo.findByTaskIdIn(taskIds);
+        Map<UUID, List<ChecklistItem>> checklistByTask = allChecklistItems.stream()
+                .collect(java.util.stream.Collectors.groupingBy(ChecklistItem::getTaskId));
+
         var taskResponses = tasks.stream()
-                .map(t -> new TaskResponse(
-                        t.getId(),
-                        t.getColumnId(),
-                        t.getTitle(),
-                        t.getDescription(),
-                        t.getAssigneeId(),
-                        t.getAssigneeId() != null ? userNames.getOrDefault(t.getAssigneeId(), "Unbekannt") : null,
-                        t.getCreatedBy(),
-                        userNames.getOrDefault(t.getCreatedBy(), "Unbekannt"),
-                        t.getDueDate(),
-                        t.getPosition(),
-                        t.getCreatedAt()
-                ))
+                .map(t -> {
+                    List<ChecklistItem> items = checklistByTask.getOrDefault(t.getId(), List.of());
+                    List<ChecklistItemResponse> itemResponses = items.stream()
+                            .sorted(Comparator.comparingInt(ChecklistItem::getPosition))
+                            .map(i -> new ChecklistItemResponse(i.getId(), i.getTitle(), i.isChecked(), i.getPosition()))
+                            .toList();
+                    int total = items.size();
+                    int checked = (int) items.stream().filter(ChecklistItem::isChecked).count();
+                    return new TaskResponse(
+                            t.getId(),
+                            t.getColumnId(),
+                            t.getTitle(),
+                            t.getDescription(),
+                            t.getAssigneeId(),
+                            t.getAssigneeId() != null ? userNames.getOrDefault(t.getAssigneeId(), "Unbekannt") : null,
+                            t.getCreatedBy(),
+                            userNames.getOrDefault(t.getCreatedBy(), "Unbekannt"),
+                            t.getDueDate(),
+                            t.getPosition(),
+                            t.getCreatedAt(),
+                            itemResponses,
+                            total,
+                            checked
+                    );
+                })
                 .toList();
 
         return new TaskBoardResponse(board.getId(), board.getRoomId(), columnResponses, taskResponses);
@@ -192,6 +215,55 @@ public class TaskService implements TasksModuleApi {
         UUID deletedTaskId = task.getId();
         taskRepo.delete(task);
         eventPublisher.publishEvent(new TaskDeletedEvent(deletedTaskId));
+    }
+
+    // ---- Checklist ----
+
+    @Transactional
+    public ChecklistItemResponse addChecklistItem(UUID taskId, UUID userId, String title) {
+        var task = requireTask(taskId);
+        var board = boardRepo.findById(task.getBoardId())
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+        requireRoomMembership(userId, board.getRoomId());
+
+        int maxPosition = checklistRepo.findByTaskIdOrderByPosition(taskId)
+                .stream().mapToInt(ChecklistItem::getPosition).max().orElse(-1);
+
+        var item = new ChecklistItem();
+        item.setTaskId(taskId);
+        item.setTitle(title);
+        item.setChecked(false);
+        item.setPosition(maxPosition + 1);
+        checklistRepo.save(item);
+
+        return new ChecklistItemResponse(item.getId(), item.getTitle(), item.isChecked(), item.getPosition());
+    }
+
+    @Transactional
+    public ChecklistItemResponse toggleChecklistItem(UUID itemId, UUID userId) {
+        var item = checklistRepo.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Checklist item not found: " + itemId));
+        var task = requireTask(item.getTaskId());
+        var board = boardRepo.findById(task.getBoardId())
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+        requireRoomMembership(userId, board.getRoomId());
+
+        item.setChecked(!item.isChecked());
+        checklistRepo.save(item);
+
+        return new ChecklistItemResponse(item.getId(), item.getTitle(), item.isChecked(), item.getPosition());
+    }
+
+    @Transactional
+    public void deleteChecklistItem(UUID itemId, UUID userId) {
+        var item = checklistRepo.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Checklist item not found: " + itemId));
+        var task = requireTask(item.getTaskId());
+        var board = boardRepo.findById(task.getBoardId())
+                .orElseThrow(() -> new ResourceNotFoundException("Board not found"));
+        requireRoomMembership(userId, board.getRoomId());
+
+        checklistRepo.delete(item);
     }
 
     // ---- Columns ----
@@ -310,6 +382,13 @@ public class TaskService implements TasksModuleApi {
         String createdByName = userModule.findById(task.getCreatedBy())
                 .map(UserInfo::displayName).orElse("Unbekannt");
 
+        List<ChecklistItem> items = checklistRepo.findByTaskIdOrderByPosition(task.getId());
+        List<ChecklistItemResponse> itemResponses = items.stream()
+                .map(i -> new ChecklistItemResponse(i.getId(), i.getTitle(), i.isChecked(), i.getPosition()))
+                .toList();
+        int total = items.size();
+        int checked = (int) items.stream().filter(ChecklistItem::isChecked).count();
+
         return new TaskResponse(
                 task.getId(),
                 task.getColumnId(),
@@ -321,7 +400,10 @@ public class TaskService implements TasksModuleApi {
                 createdByName,
                 task.getDueDate(),
                 task.getPosition(),
-                task.getCreatedAt()
+                task.getCreatedAt(),
+                itemResponses,
+                total,
+                checked
         );
     }
 

@@ -234,6 +234,41 @@ services:
     depends_on:
       - prometheus
 
+  # ── Optional: ONLYOFFICE Document Server (WOPI) ─────────────────────
+  # Enable with: docker compose --profile office up -d
+  onlyoffice:
+    image: onlyoffice/documentserver:8.3
+    container_name: monteweb-onlyoffice
+    restart: unless-stopped
+    profiles: ["office"]
+    environment:
+      - JWT_ENABLED=false
+    ports:
+      - "8443:443"
+    volumes:
+      - onlyoffice_data:/var/lib/onlyoffice
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # ── Optional: ClamAV Virus Scanner ───────────────────────────────────
+  # Enable with: docker compose --profile clamav up -d
+  clamav:
+    image: clamav/clamav:1.4
+    container_name: monteweb-clamav
+    restart: unless-stopped
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    profiles:
+      - clamav
+
 networks:
   frontend:
     name: monteweb-frontend
@@ -249,3 +284,4 @@ volumes:
   caddy_config:
   prometheus_data:
   grafana_data:
+  onlyoffice_data:

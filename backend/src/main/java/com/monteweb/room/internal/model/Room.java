@@ -64,6 +64,9 @@ public class Room {
     @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.ARRAY)
     private String[] tags = {};
 
+    @Column(name = "jitsi_room_name", length = 200)
+    private String jitsiRoomName;
+
     @Column(name = "created_by", nullable = false)
     private UUID createdBy;
 
