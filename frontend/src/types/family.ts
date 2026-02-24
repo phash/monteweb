@@ -67,7 +67,6 @@ export interface TenantConfig {
   twoFactorMode?: string
   twoFactorGraceDeadline?: string | null
   // LDAP/AD fields
-  ldapEnabled?: boolean
   ldapUrl?: string | null
   ldapBaseDn?: string | null
   ldapBindDn?: string | null

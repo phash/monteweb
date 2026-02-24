@@ -121,8 +121,8 @@ onMounted(async () => {
     targetCleaningHours.value = adminStore.config.targetCleaningHours ?? 3
     bundesland.value = adminStore.config.bundesland || 'BY'
     schoolVacations.value = (adminStore.config.schoolVacations || []).map(v => ({ ...v }))
-    // LDAP fields
-    ldapEnabled.value = adminStore.config.ldapEnabled ?? false
+    // LDAP fields (enabled via modules map)
+    ldapEnabled.value = adminStore.isModuleEnabled('ldap')
     ldapUrl.value = adminStore.config.ldapUrl ?? ''
     ldapBaseDn.value = adminStore.config.ldapBaseDn ?? ''
     ldapBindDn.value = adminStore.config.ldapBindDn ?? ''
@@ -285,8 +285,11 @@ async function saveVacationsConfig() {
 async function saveLdapConfig() {
   savingLdap.value = true
   try {
+    // Toggle LDAP in modules map
+    const currentModules = adminStore.config?.modules ? { ...adminStore.config.modules } : {}
+    currentModules.ldap = ldapEnabled.value
+    await adminApi.updateModules(currentModules)
     const data: Record<string, any> = {
-      ldapEnabled: ldapEnabled.value,
       ldapUrl: ldapUrl.value || undefined,
       ldapBaseDn: ldapBaseDn.value || undefined,
       ldapBindDn: ldapBindDn.value || undefined,

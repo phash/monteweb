@@ -49,7 +49,7 @@ public class AdminService implements AdminModuleApi {
                                           String schoolFullName, String schoolAddress, String schoolPrincipal,
                                           String techContactName, String techContactEmail,
                                           String twoFactorMode, Boolean directoryAdminOnly,
-                                          Boolean ldapEnabled, String ldapUrl, String ldapBaseDn,
+                                          String ldapUrl, String ldapBaseDn,
                                           String ldapBindDn, String ldapBindPassword,
                                           String ldapUserSearchFilter, String ldapAttrEmail,
                                           String ldapAttrFirstName, String ldapAttrLastName,
@@ -91,8 +91,7 @@ public class AdminService implements AdminModuleApi {
             }
         }
         if (directoryAdminOnly != null) config.setDirectoryAdminOnly(directoryAdminOnly);
-        // LDAP/AD fields
-        if (ldapEnabled != null) config.setLdapEnabled(ldapEnabled);
+        // LDAP/AD fields (enabled via modules map)
         if (ldapUrl != null) config.setLdapUrl(ldapUrl);
         if (ldapBaseDn != null) config.setLdapBaseDn(ldapBaseDn);
         if (ldapBindDn != null) config.setLdapBindDn(ldapBindDn);
@@ -244,8 +243,7 @@ public class AdminService implements AdminModuleApi {
                 config.getTwoFactorMode(),
                 config.getTwoFactorGraceDeadline(),
                 config.isDirectoryAdminOnly(),
-                // LDAP/AD fields (password never exposed)
-                config.isLdapEnabled(),
+                // LDAP/AD fields (password never exposed; enabled via modules map)
                 config.getLdapUrl(),
                 config.getLdapBaseDn(),
                 config.getLdapBindDn(),

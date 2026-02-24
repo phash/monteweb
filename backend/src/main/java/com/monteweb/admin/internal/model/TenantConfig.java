@@ -132,9 +132,6 @@ public class TenantConfig {
     @Column(name = "maintenance_message", columnDefinition = "TEXT")
     private String maintenanceMessage;
 
-    @Column(name = "ldap_enabled", nullable = false)
-    private boolean ldapEnabled = false;
-
     @Column(name = "ldap_url", length = 255)
     private String ldapUrl;
 

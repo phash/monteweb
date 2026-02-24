@@ -33,7 +33,7 @@ public class LdapAuthService {
      */
     public boolean isLdapEnabled() {
         var config = adminModuleApi.getTenantConfig();
-        return config.ldapEnabled() && config.ldapConfigured();
+        return adminModuleApi.isModuleEnabled("ldap") && config.ldapConfigured();
     }
 
     /**
@@ -45,7 +45,7 @@ public class LdapAuthService {
      */
     public LdapUserInfo authenticate(String username, String password) {
         var config = adminModuleApi.getTenantConfig();
-        if (!config.ldapEnabled() || !config.ldapConfigured()) {
+        if (!adminModuleApi.isModuleEnabled("ldap") || !config.ldapConfigured()) {
             return null;
         }
 

@@ -41,8 +41,7 @@ public record TenantConfigInfo(
         String twoFactorMode,
         java.time.Instant twoFactorGraceDeadline,
         boolean directoryAdminOnly,
-        // LDAP/AD fields (password never exposed)
-        boolean ldapEnabled,
+        // LDAP/AD fields (password never exposed; enabled via modules map)
         String ldapUrl,
         String ldapBaseDn,
         String ldapBindDn,

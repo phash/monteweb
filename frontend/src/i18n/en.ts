@@ -408,6 +408,7 @@ export default {
       wopi: 'ONLYOFFICE integration: Edit documents directly in the browser (Word, Excel, PowerPoint)',
       clamav: 'ClamAV virus scanner: Automatically scan uploaded files for viruses',
       maintenance: 'Maintenance mode: Lock the system for non-administrators',
+      ldap: 'LDAP/Active Directory: User authentication via external directory service',
     },
     theme: {
       primaryColor: 'Primary color',

@@ -118,8 +118,8 @@ class JobboardServiceTest {
                 null, null, null,
                 "DISABLED", null,
                 false,
-                // LDAP fields
-                false, null, null, null,
+                // LDAP fields (enabled via modules map)
+                null, null, null,
                 null, null, null, null,
                 "PARENT", false, false,
                 // Maintenance (enabled via modules)
