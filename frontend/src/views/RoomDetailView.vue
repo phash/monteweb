@@ -179,8 +179,8 @@ async function handlePost(data: { title?: string; content?: string; poll?: impor
       ...data,
     })
     roomPosts.value.unshift(res.data.data)
-  } else {
-    const res = await feedApi.createRoomPost(props.id, data)
+  } else if (data.content) {
+    const res = await feedApi.createRoomPost(props.id, { title: data.title, content: data.content })
     roomPosts.value.unshift(res.data.data)
   }
 }
