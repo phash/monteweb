@@ -81,8 +81,7 @@ export interface TenantConfig {
   directoryAdminOnly?: boolean
   maintenanceEnabled?: boolean
   maintenanceMessage?: string | null
-  // ClamAV virus scanner
-  clamavEnabled?: boolean
+  // ClamAV virus scanner (enabled via modules map)
   clamavHost?: string
   clamavPort?: number
   // Jitsi video conferencing (enabled via modules map)

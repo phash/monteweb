@@ -44,11 +44,10 @@ public class ClamAvService {
     }
 
     /**
-     * Returns whether ClamAV scanning is enabled in tenant configuration.
+     * Returns whether ClamAV scanning is enabled (via modules map).
      */
     public boolean isEnabled() {
-        var config = adminModuleApi.getTenantConfig();
-        return config.clamavEnabled();
+        return adminModuleApi.isModuleEnabled("clamav");
     }
 
     /**

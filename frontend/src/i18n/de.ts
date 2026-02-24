@@ -406,6 +406,7 @@ export default {
       profilefields: 'Benutzerdefinierte Profilfelder: Administratoren können zusätzliche Felder für Benutzerprofile anlegen',
       jitsi: 'Jitsi-Videokonferenzen: Video-Meetings in Kalender-Terminen und Raum-Chats starten',
       wopi: 'ONLYOFFICE-Integration: Dokumente direkt im Browser bearbeiten (Word, Excel, PowerPoint)',
+      clamav: 'ClamAV-Virenscanner: Hochgeladene Dateien automatisch auf Viren pruefen',
     },
     theme: {
       primaryColor: 'Primärfarbe',

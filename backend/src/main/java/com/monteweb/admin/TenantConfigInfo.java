@@ -55,8 +55,7 @@ public record TenantConfigInfo(
         boolean ldapConfigured,
         boolean maintenanceEnabled,
         String maintenanceMessage,
-        // ClamAV virus scanner
-        boolean clamavEnabled,
+        // ClamAV virus scanner (enabled via modules map)
         String clamavHost,
         int clamavPort,
         // Jitsi video conferencing (enabled via modules map)

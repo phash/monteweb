@@ -63,8 +63,7 @@ const maintenanceEnabled = ref(false)
 const maintenanceMessage = ref('')
 const savingMaintenance = ref(false)
 
-// ClamAV virus scanner
-const clamavEnabled = ref(false)
+// ClamAV virus scanner (enabled via modules page)
 const clamavHost = ref('clamav')
 const clamavPort = ref(3310)
 const savingClamav = ref(false)
@@ -141,7 +140,6 @@ onMounted(async () => {
     maintenanceEnabled.value = adminStore.config.maintenanceEnabled ?? false
     maintenanceMessage.value = adminStore.config.maintenanceMessage ?? ''
     // ClamAV
-    clamavEnabled.value = adminStore.config.clamavEnabled ?? false
     clamavHost.value = adminStore.config.clamavHost ?? 'clamav'
     clamavPort.value = adminStore.config.clamavPort ?? 3310
     // Jitsi
@@ -195,7 +193,6 @@ async function saveClamavConfig() {
   savingClamav.value = true
   try {
     const res = await adminApi.updateConfig({
-      clamavEnabled: clamavEnabled.value,
       clamavHost: clamavHost.value,
       clamavPort: clamavPort.value,
     })
@@ -361,17 +358,13 @@ async function testLdapConnection() {
       <Button :label="t('common.save')" :loading="savingMaintenance" @click="saveMaintenance" />
     </div>
 
-    <!-- ClamAV Virus Scanner Section -->
-    <div class="settings-section">
+    <!-- ClamAV Virus Scanner Section (enable/disable via Modules page) -->
+    <div v-if="adminStore.isModuleEnabled('clamav')" class="settings-section">
       <h2 class="text-lg font-semibold mb-3">{{ t('admin.clamav.title') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="clamavEnabled" />
-        <label>{{ t('admin.clamav.enabled') }}</label>
-      </div>
-      <Message v-if="clamavEnabled" severity="info" :closable="false">
+      <Message severity="info" :closable="false">
         {{ t('admin.clamav.hint') }}
       </Message>
-      <div v-if="clamavEnabled" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.host') }}</label>
           <InputText v-model="clamavHost" class="w-full" />

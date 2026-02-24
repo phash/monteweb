@@ -172,10 +172,7 @@ public class TenantConfig {
     @Column(name = "wopi_office_url", length = 300)
     private String wopiOfficeUrl;
 
-    // --- ClamAV Virus Scanner ---
-
-    @Column(name = "clamav_enabled", nullable = false)
-    private boolean clamavEnabled = false;
+    // --- ClamAV Virus Scanner (enabled via modules map) ---
 
     @Column(name = "clamav_host", length = 200)
     private String clamavHost = "clamav";

@@ -41,8 +41,7 @@ public record UpdateConfigRequest(
         String ldapAttrLastName,
         String ldapDefaultRole,
         Boolean ldapUseSsl,
-        // ClamAV virus scanner
-        Boolean clamavEnabled,
+        // ClamAV virus scanner (enabled via modules map)
         String clamavHost,
         Integer clamavPort,
         // Jitsi video conferencing (enabled via modules map)

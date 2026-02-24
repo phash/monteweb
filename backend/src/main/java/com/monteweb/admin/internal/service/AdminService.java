@@ -54,7 +54,7 @@ public class AdminService implements AdminModuleApi {
                                           String ldapUserSearchFilter, String ldapAttrEmail,
                                           String ldapAttrFirstName, String ldapAttrLastName,
                                           String ldapDefaultRole, Boolean ldapUseSsl,
-                                          Boolean clamavEnabled, String clamavHost, Integer clamavPort,
+                                          String clamavHost, Integer clamavPort,
                                           String jitsiServerUrl,
                                           String wopiOfficeUrl) {
         var config = getConfig();
@@ -104,8 +104,7 @@ public class AdminService implements AdminModuleApi {
         if (ldapDefaultRole != null) config.setLdapDefaultRole(ldapDefaultRole);
         if (ldapUseSsl != null) config.setLdapUseSsl(ldapUseSsl);
         // Maintenance mode — handled via dedicated method
-        // ClamAV virus scanner
-        if (clamavEnabled != null) config.setClamavEnabled(clamavEnabled);
+        // ClamAV virus scanner (enabled via modules map)
         if (clamavHost != null) config.setClamavHost(clamavHost);
         if (clamavPort != null) config.setClamavPort(clamavPort);
         // Jitsi video conferencing (enabled via modules map)
@@ -257,8 +256,7 @@ public class AdminService implements AdminModuleApi {
                         && config.getLdapBaseDn() != null && !config.getLdapBaseDn().isBlank(),
                 config.isMaintenanceEnabled(),
                 config.getMaintenanceMessage(),
-                // ClamAV virus scanner
-                config.isClamavEnabled(),
+                // ClamAV virus scanner (enabled via modules map)
                 config.getClamavHost(),
                 config.getClamavPort(),
                 // Jitsi video conferencing (enabled via modules map)

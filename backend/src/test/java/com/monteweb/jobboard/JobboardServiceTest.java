@@ -124,8 +124,8 @@ class JobboardServiceTest {
                 "PARENT", false, false,
                 // Maintenance
                 false, null,
-                // ClamAV
-                false, null, 3310,
+                // ClamAV (enabled via modules)
+                null, 3310,
                 // Jitsi (enabled via modules)
                 null,
                 // WOPI (enabled via modules)
