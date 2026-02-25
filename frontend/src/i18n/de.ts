@@ -748,6 +748,11 @@ export default {
     unmute: 'Stummschaltung aufheben',
     muted: 'Stumm',
     unmuted: 'Stummschaltung aufgehoben',
+    file: 'Datei',
+    attachFile: 'PDF anhängen',
+    linkFile: 'Datei verlinken',
+    selectRoom: 'Raum auswählen',
+    noFiles: 'Keine Dateien in diesem Raum',
   },
   cleaning: {
     title: 'Putz-Orga',

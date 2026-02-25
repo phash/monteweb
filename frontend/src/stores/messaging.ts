@@ -40,8 +40,8 @@ export const useMessagingStore = defineStore('messaging', () => {
     }
   }
 
-  async function sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string) {
-    const res = await messagingApi.sendMessage(conversationId, content, image, replyToId)
+  async function sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string, attachment?: File, linkedFileId?: string, linkedRoomId?: string, linkedFileName?: string) {
+    const res = await messagingApi.sendMessage(conversationId, content, image, replyToId, attachment, linkedFileId, linkedRoomId, linkedFileName)
     messages.value.push(res.data.data)
     replyToMessage.value = null
     return res.data.data
@@ -119,7 +119,7 @@ export const useMessagingStore = defineStore('messaging', () => {
     // Update conversation list
     const conv = conversations.value.find(c => c.id === message.conversationId)
     if (conv) {
-      conv.lastMessage = message.content ?? (message.images?.length ? '\uD83D\uDDBC Bild' : null)
+      conv.lastMessage = message.content ?? (message.images?.length ? '\uD83D\uDDBC Bild' : (message.attachments?.length ? '\uD83D\uDCCE Datei' : null))
       conv.lastMessageAt = message.createdAt
       conv.unreadCount++
       unreadCount.value++

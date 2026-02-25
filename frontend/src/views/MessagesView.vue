@@ -5,15 +5,19 @@ import { useRoute } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
+import { useRoomsStore } from '@/stores/rooms'
 import { messagingApi } from '@/api/messaging.api'
+import { filesApi } from '@/api/files.api'
 import { formatMentions } from '@/composables/useMentions'
 import type { MessageInfo } from '@/types/messaging'
+import type { FileInfo } from '@/types/files'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import NewMessageDialog from '@/components/messaging/NewMessageDialog.vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
+import Select from 'primevue/select'
 import ReactionBar from '@/components/common/ReactionBar.vue'
 import InlinePoll from '@/components/common/InlinePoll.vue'
 import PollComposer from '@/components/common/PollComposer.vue'
@@ -24,6 +28,7 @@ const { formatCompactDateTime } = useLocaleDate()
 const route = useRoute()
 const auth = useAuthStore()
 const messaging = useMessagingStore()
+const rooms = useRoomsStore()
 
 const selectedConversationId = ref<string | null>(null)
 const messageText = ref('')
@@ -35,6 +40,12 @@ const imagePreviewUrl = ref<string | null>(null)
 const fullSizeImageUrl = ref<string | null>(null)
 const showFullImage = ref(false)
 const showPollComposer = ref(false)
+const selectedAttachment = ref<File | null>(null)
+const showFileLinkDialog = ref(false)
+const fileLinkRoomId = ref<string | null>(null)
+const fileLinkFiles = ref<FileInfo[]>([])
+const fileLinkLoading = ref(false)
+const selectedFileLink = ref<{ fileId: string; roomId: string; fileName: string } | null>(null)
 
 onMounted(async () => {
   await messaging.fetchConversations()
@@ -55,7 +66,7 @@ const selectedConversation = computed(() =>
 )
 
 const canSend = computed(() =>
-  (messageText.value.trim().length > 0 || selectedImage.value !== null)
+  (messageText.value.trim().length > 0 || selectedImage.value !== null || selectedAttachment.value !== null || selectedFileLink.value !== null)
 )
 
 function getConversationName(conv: typeof messaging.conversations[0]) {
@@ -69,6 +80,8 @@ async function selectConversation(id: string) {
   showMessages.value = true
   messaging.setReplyTo(null)
   clearImage()
+  clearAttachment()
+  clearFileLink()
   await messaging.fetchMessages(id)
   messaging.markAsRead(id)
 }
@@ -82,9 +95,15 @@ async function sendMessage() {
   const content = messageText.value.trim() || undefined
   const image = selectedImage.value || undefined
   const replyToId = messaging.replyToMessage?.id || undefined
-  await messaging.sendMessage(selectedConversationId.value, content, image, replyToId)
+  const attachment = selectedAttachment.value || undefined
+  const linkedFileId = selectedFileLink.value?.fileId || undefined
+  const linkedRoomId = selectedFileLink.value?.roomId || undefined
+  const linkedFileName = selectedFileLink.value?.fileName || undefined
+  await messaging.sendMessage(selectedConversationId.value, content, image, replyToId, attachment, linkedFileId, linkedRoomId, linkedFileName)
   messageText.value = ''
   clearImage()
+  clearAttachment()
+  clearFileLink()
 }
 
 function onImageSelect(event: Event) {
@@ -118,6 +137,82 @@ function triggerImageSelect() {
   input?.click()
 }
 
+function onAttachmentSelect(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  if (file.type !== 'application/pdf') return
+  if (file.size > 20 * 1024 * 1024) return
+
+  selectedAttachment.value = file
+}
+
+function clearAttachment() {
+  selectedAttachment.value = null
+  const input = document.getElementById('msg-attachment-input') as HTMLInputElement
+  if (input) input.value = ''
+}
+
+function triggerAttachmentSelect() {
+  const input = document.getElementById('msg-attachment-input') as HTMLInputElement
+  input?.click()
+}
+
+async function openFileLinkDialog() {
+  showFileLinkDialog.value = true
+  if (!rooms.myRooms.length) {
+    await rooms.fetchMyRooms()
+  }
+}
+
+async function onFileLinkRoomChange() {
+  if (!fileLinkRoomId.value) {
+    fileLinkFiles.value = []
+    return
+  }
+  fileLinkLoading.value = true
+  try {
+    const res = await filesApi.listFiles(fileLinkRoomId.value)
+    fileLinkFiles.value = res.data.data
+  } catch {
+    fileLinkFiles.value = []
+  } finally {
+    fileLinkLoading.value = false
+  }
+}
+
+function selectFileLink(file: FileInfo) {
+  selectedFileLink.value = {
+    fileId: file.id,
+    roomId: file.roomId,
+    fileName: file.originalName,
+  }
+  showFileLinkDialog.value = false
+  fileLinkRoomId.value = null
+  fileLinkFiles.value = []
+}
+
+function clearFileLink() {
+  selectedFileLink.value = null
+}
+
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function getFileIcon(contentType: string | null): string {
+  if (!contentType) return 'pi pi-file'
+  if (contentType === 'application/pdf') return 'pi pi-file-pdf'
+  if (contentType.startsWith('image/')) return 'pi pi-image'
+  if (contentType.includes('word') || contentType.includes('document')) return 'pi pi-file-word'
+  if (contentType.includes('spreadsheet') || contentType.includes('excel')) return 'pi pi-file-excel'
+  return 'pi pi-file'
+}
+
 function setReplyTo(msg: MessageInfo) {
   messaging.setReplyTo(msg)
 }
@@ -141,6 +236,10 @@ function openFullImage(imageId: string) {
 function getMessagePreview(msg: MessageInfo) {
   if (msg.content) return msg.content
   if (msg.images?.length) return '\uD83D\uDDBC ' + t('messages.image')
+  if (msg.attachments?.length) {
+    const att = msg.attachments[0]!
+    return '\uD83D\uDCCE ' + (att.originalFilename || att.linkedFileName || t('messages.file'))
+  }
   if (msg.poll) return '\uD83D\uDCCA ' + msg.poll.question
   return ''
 }
@@ -290,7 +389,8 @@ function formatTime(date: string | null) {
                   <div class="reply-sender">{{ msg.replyTo.senderName }}</div>
                   <div class="reply-content">
                     <i v-if="msg.replyTo.hasImage" class="pi pi-image reply-image-icon" />
-                    {{ msg.replyTo.contentPreview || (msg.replyTo.hasImage ? t('messages.image') : '') }}
+                    <i v-if="msg.replyTo.hasAttachment" class="pi pi-paperclip reply-image-icon" />
+                    {{ msg.replyTo.contentPreview || (msg.replyTo.hasImage ? t('messages.image') : (msg.replyTo.hasAttachment ? t('messages.file') : '')) }}
                   </div>
                 </div>
 
@@ -304,6 +404,22 @@ function formatTime(date: string | null) {
                     class="message-image"
                     @click="openFullImage(img.imageId)"
                   />
+                </div>
+
+                <!-- Attachments -->
+                <div v-if="msg.attachments?.length" class="message-attachments">
+                  <a
+                    v-for="att in msg.attachments"
+                    :key="att.id"
+                    class="attachment-chip"
+                    :href="att.attachmentType === 'FILE' ? messagingApi.attachmentUrl(att.id) : `/rooms/${att.linkedRoomId}/files`"
+                    :target="att.attachmentType === 'FILE_LINK' ? '_blank' : undefined"
+                    @click.stop
+                  >
+                    <i :class="att.attachmentType === 'FILE_LINK' ? 'pi pi-external-link' : getFileIcon(att.contentType)" />
+                    <span class="attachment-name">{{ att.originalFilename || att.linkedFileName || t('messages.file') }}</span>
+                    <span v-if="att.fileSize" class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
+                  </a>
                 </div>
 
                 <p v-if="msg.content">{{ formatMentions(msg.content) }}</p>
@@ -364,6 +480,33 @@ function formatTime(date: string | null) {
             />
           </div>
 
+          <!-- Attachment preview bar -->
+          <div v-if="selectedAttachment" class="image-preview-bar">
+            <i class="pi pi-file-pdf attachment-preview-icon" />
+            <span class="image-preview-name">{{ selectedAttachment.name }}</span>
+            <span class="attachment-size">{{ formatFileSize(selectedAttachment.size) }}</span>
+            <Button
+              icon="pi pi-times"
+              text
+              severity="secondary"
+              size="small"
+              @click="clearAttachment"
+            />
+          </div>
+
+          <!-- File link preview bar -->
+          <div v-if="selectedFileLink" class="image-preview-bar">
+            <i class="pi pi-external-link attachment-preview-icon" />
+            <span class="image-preview-name">{{ selectedFileLink.fileName }}</span>
+            <Button
+              icon="pi pi-times"
+              text
+              severity="secondary"
+              size="small"
+              @click="clearFileLink"
+            />
+          </div>
+
           <!-- Poll composer -->
           <div v-if="showPollComposer" class="poll-composer-bar">
             <PollComposer
@@ -380,12 +523,33 @@ function formatTime(date: string | null) {
               class="hidden-file-input"
               @change="onImageSelect"
             />
+            <input
+              id="msg-attachment-input"
+              type="file"
+              accept="application/pdf"
+              class="hidden-file-input"
+              @change="onAttachmentSelect"
+            />
             <Button
               icon="pi pi-camera"
               text
               severity="secondary"
               :aria-label="t('messages.attachImage')"
               @click="triggerImageSelect"
+            />
+            <Button
+              icon="pi pi-paperclip"
+              text
+              severity="secondary"
+              :aria-label="t('messages.attachFile')"
+              @click="triggerAttachmentSelect"
+            />
+            <Button
+              icon="pi pi-link"
+              text
+              severity="secondary"
+              :aria-label="t('messages.linkFile')"
+              @click="openFileLinkDialog"
             />
             <Button
               icon="pi pi-chart-bar"
@@ -448,6 +612,49 @@ function formatTime(date: string | null) {
       v-model:visible="showNewMessage"
       @conversation-started="onConversationStarted"
     />
+
+    <!-- File Link Dialog -->
+    <Dialog
+      v-model:visible="showFileLinkDialog"
+      :header="t('messages.linkFile')"
+      modal
+      :style="{ width: '500px', maxWidth: '90vw' }"
+    >
+      <div class="file-link-dialog">
+        <Select
+          v-model="fileLinkRoomId"
+          :options="rooms.myRooms"
+          optionLabel="name"
+          optionValue="id"
+          :placeholder="t('messages.selectRoom')"
+          class="w-full mb-3"
+          @change="onFileLinkRoomChange"
+        />
+        <LoadingSpinner v-if="fileLinkLoading" />
+        <div v-else-if="fileLinkFiles.length" class="file-link-list">
+          <div
+            v-for="file in fileLinkFiles"
+            :key="file.id"
+            class="file-link-item"
+            role="button"
+            tabindex="0"
+            @click="selectFileLink(file)"
+            @keydown.enter="selectFileLink(file)"
+          >
+            <i :class="getFileIcon(file.contentType)" />
+            <div class="file-link-info">
+              <span class="file-link-name">{{ file.originalName }}</span>
+              <span class="file-link-meta">{{ formatFileSize(file.fileSize) }}</span>
+            </div>
+          </div>
+        </div>
+        <EmptyState
+          v-else-if="fileLinkRoomId"
+          icon="pi pi-folder-open"
+          :message="t('messages.noFiles')"
+        />
+      </div>
+    </Dialog>
   </div>
 </template>
 
@@ -793,6 +1000,109 @@ function formatTime(date: string | null) {
 .poll-composer-bar {
   padding: 0.5rem 1rem;
   border-top: 1px solid var(--mw-border-light);
+}
+
+/* Message attachments */
+.message-attachments {
+  margin: 0.25rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--mw-border-radius-sm);
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  text-decoration: none;
+  font-size: var(--mw-font-size-xs);
+  cursor: pointer;
+  transition: background 0.15s;
+  max-width: 100%;
+}
+
+.attachment-chip:hover {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.message-item.own .attachment-chip {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.message-item.own .attachment-chip:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.attachment-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-size {
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.attachment-preview-icon {
+  font-size: 1.25rem;
+  color: var(--mw-primary);
+}
+
+/* File link dialog */
+.file-link-dialog {
+  min-height: 200px;
+}
+
+.file-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.file-link-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--mw-border-radius-sm);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.file-link-item:hover {
+  background: var(--mw-bg-hover);
+}
+
+.file-link-item i {
+  font-size: 1.25rem;
+  color: var(--mw-primary);
+}
+
+.file-link-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-link-name {
+  display: block;
+  font-size: var(--mw-font-size-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-link-meta {
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-secondary);
 }
 
 /* Full-size image dialog */

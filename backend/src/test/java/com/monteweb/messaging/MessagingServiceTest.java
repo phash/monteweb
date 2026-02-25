@@ -37,6 +37,7 @@ class MessagingServiceTest {
     @Mock private ConversationParticipantRepository participantRepository;
     @Mock private MessageRepository messageRepository;
     @Mock private MessageImageRepository messageImageRepository;
+    @Mock private MessageAttachmentRepository messageAttachmentRepository;
     @Mock private MessageReactionRepository messageReactionRepository;
     @Mock private MessagePollRepository messagePollRepository;
     @Mock private MessagePollVoteRepository messagePollVoteRepository;
@@ -59,7 +60,7 @@ class MessagingServiceTest {
         messagingTemplate = new SimpMessagingTemplate(messageChannel);
         service = new MessagingService(
                 conversationRepository, participantRepository,
-                messageRepository, messageImageRepository,
+                messageRepository, messageImageRepository, messageAttachmentRepository,
                 messageReactionRepository, messagePollRepository, messagePollVoteRepository,
                 userModuleApi, adminModuleApi,
                 messagingTemplate, eventPublisher, null
@@ -317,9 +318,9 @@ class MessagingServiceTest {
         void sendMessage_noContentNoImageThrows() {
             when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(true);
 
-            assertThatThrownBy(() -> service.sendMessage(CONV_ID, USER_A, null, null, null))
+            assertThatThrownBy(() -> service.sendMessage(CONV_ID, USER_A, null, null, null, null, null, null, null))
                     .isInstanceOf(BusinessException.class)
-                    .hasMessageContaining("text content or an image");
+                    .hasMessageContaining("text content, an image, or an attachment");
         }
 
         @Test
@@ -330,7 +331,7 @@ class MessagingServiceTest {
             when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(true);
             when(messageRepository.existsById(fakeReplyId)).thenReturn(false);
 
-            assertThatThrownBy(() -> service.sendMessage(CONV_ID, USER_A, "Hello", fakeReplyId, null))
+            assertThatThrownBy(() -> service.sendMessage(CONV_ID, USER_A, "Hello", fakeReplyId, null, null, null, null, null))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Reply-to message not found");
         }
@@ -357,7 +358,7 @@ class MessagingServiceTest {
 
             when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.PARENT)));
 
-            var result = service.sendMessage(CONV_ID, USER_A, "Hello World", null, null);
+            var result = service.sendMessage(CONV_ID, USER_A, "Hello World", null, null, null, null, null, null);
 
             assertThat(result).isNotNull();
             assertThat(result.id()).isEqualTo(msgId);

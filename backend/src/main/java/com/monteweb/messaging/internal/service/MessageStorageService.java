@@ -25,8 +25,11 @@ public class MessageStorageService {
     private static final Logger log = LoggerFactory.getLogger(MessageStorageService.class);
     private static final int THUMBNAIL_SIZE = 400;
     private static final float THUMBNAIL_QUALITY = 0.8f;
-    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+    private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif"
+    );
+    private static final Set<String> ALLOWED_ATTACHMENT_TYPES = Set.of(
+            "application/pdf"
     );
 
     private final MinioClient minioClient;
@@ -135,12 +138,51 @@ public class MessageStorageService {
         }
     }
 
+    public String validateAttachmentContentType(MultipartFile file) {
+        try {
+            byte[] header = new byte[12];
+            try (InputStream is = file.getInputStream()) {
+                int read = is.read(header);
+                if (read < 4) {
+                    throw new IllegalArgumentException("File too small to be valid");
+                }
+            }
+            // Check PDF magic bytes: %PDF
+            if (header[0] == 0x25 && header[1] == 0x50 && header[2] == 0x44 && header[3] == 0x46) {
+                return "application/pdf";
+            }
+            throw new IllegalArgumentException("Unsupported file type. Allowed: PDF");
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Could not validate file content: " + e.getMessage());
+        }
+    }
+
+    public String uploadAttachment(UUID conversationId, UUID attachmentId, String extension,
+                                   MultipartFile file, String contentType) {
+        String objectKey = "messages/" + conversationId + "/attachments/" + attachmentId + "." + extension;
+        try {
+            minioClient.putObject(PutObjectArgs.builder()
+                    .bucket(bucket)
+                    .object(objectKey)
+                    .stream(file.getInputStream(), file.getSize(), -1)
+                    .contentType(contentType)
+                    .build());
+            log.debug("Uploaded message attachment to {}/{}", bucket, objectKey);
+            return objectKey;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload attachment to storage: " + e.getMessage(), e);
+        }
+    }
+
     public static String extensionFromContentType(String contentType) {
         return switch (contentType) {
             case "image/jpeg" -> "jpg";
             case "image/png" -> "png";
             case "image/webp" -> "webp";
             case "image/gif" -> "gif";
+            case "application/pdf" -> "pdf";
             default -> "bin";
         };
     }

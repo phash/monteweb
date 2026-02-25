@@ -22,11 +22,15 @@ export const messagingApi = {
     })
   },
 
-  sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string) {
+  sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string, attachment?: File, linkedFileId?: string, linkedRoomId?: string, linkedFileName?: string) {
     const formData = new FormData()
     if (content) formData.append('content', content)
     if (image) formData.append('image', image)
     if (replyToId) formData.append('replyToId', replyToId)
+    if (attachment) formData.append('attachment', attachment)
+    if (linkedFileId) formData.append('linkedFileId', linkedFileId)
+    if (linkedRoomId) formData.append('linkedRoomId', linkedRoomId)
+    if (linkedFileName) formData.append('linkedFileName', linkedFileName)
     return client.post<ApiResponse<MessageInfo>>(
       `/messages/conversations/${conversationId}/messages`,
       formData,
@@ -60,6 +64,10 @@ export const messagingApi = {
 
   thumbnailUrl(imageId: string) {
     return authenticatedImageUrl(`/api/v1/messages/images/${imageId}/thumbnail`)
+  },
+
+  attachmentUrl(attachmentId: string) {
+    return authenticatedImageUrl(`/api/v1/messages/attachments/${attachmentId}`)
   },
 
   toggleMessageReaction(messageId: string, emoji: string) {

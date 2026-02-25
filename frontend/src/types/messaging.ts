@@ -23,12 +23,24 @@ export interface MessageImageInfo {
   fileSize: number
 }
 
+export interface MessageAttachmentInfo {
+  id: string
+  attachmentType: 'FILE' | 'FILE_LINK'
+  originalFilename: string | null
+  contentType: string | null
+  fileSize: number | null
+  linkedFileId: string | null
+  linkedFileName: string | null
+  linkedRoomId: string | null
+}
+
 export interface ReplyInfo {
   messageId: string
   senderId: string
   senderName: string
   contentPreview: string | null
   hasImage: boolean
+  hasAttachment: boolean
 }
 
 export interface MessageReactionSummary {
@@ -62,6 +74,7 @@ export interface MessageInfo {
   content: string | null
   createdAt: string
   images: MessageImageInfo[]
+  attachments: MessageAttachmentInfo[]
   replyTo: ReplyInfo | null
   reactions: MessageReactionSummary[]
   poll: PollInfo | null

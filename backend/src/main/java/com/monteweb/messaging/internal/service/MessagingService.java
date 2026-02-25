@@ -38,6 +38,7 @@ public class MessagingService implements MessagingModuleApi {
     private final ConversationParticipantRepository participantRepository;
     private final MessageRepository messageRepository;
     private final MessageImageRepository messageImageRepository;
+    private final MessageAttachmentRepository messageAttachmentRepository;
     private final MessageReactionRepository messageReactionRepository;
     private final MessagePollRepository messagePollRepository;
     private final MessagePollVoteRepository messagePollVoteRepository;
@@ -51,6 +52,7 @@ public class MessagingService implements MessagingModuleApi {
                             ConversationParticipantRepository participantRepository,
                             MessageRepository messageRepository,
                             MessageImageRepository messageImageRepository,
+                            MessageAttachmentRepository messageAttachmentRepository,
                             MessageReactionRepository messageReactionRepository,
                             MessagePollRepository messagePollRepository,
                             MessagePollVoteRepository messagePollVoteRepository,
@@ -66,6 +68,7 @@ public class MessagingService implements MessagingModuleApi {
         this.participantRepository = participantRepository;
         this.messageRepository = messageRepository;
         this.messageImageRepository = messageImageRepository;
+        this.messageAttachmentRepository = messageAttachmentRepository;
         this.userModuleApi = userModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.messagingTemplate = messagingTemplate;
@@ -159,11 +162,14 @@ public class MessagingService implements MessagingModuleApi {
         requireParticipant(conversationId, userId);
         var page = messageRepository.findByConversationIdOrderByCreatedAtDesc(conversationId, pageable);
 
-        // Batch-load images and reply data to avoid N+1
+        // Batch-load images, attachments and reply data to avoid N+1
         var messageIds = page.getContent().stream().map(Message::getId).toList();
         var allImages = messageImageRepository.findByMessageIdIn(messageIds);
         var imagesByMessageId = allImages.stream()
                 .collect(java.util.stream.Collectors.groupingBy(MessageImage::getMessageId));
+        var allAttachments = messageAttachmentRepository.findByMessageIdIn(messageIds);
+        var attachmentsByMessageId = allAttachments.stream()
+                .collect(java.util.stream.Collectors.groupingBy(MessageAttachment::getMessageId));
 
         // Collect reply-to IDs
         var replyToIds = page.getContent().stream()
@@ -180,10 +186,16 @@ public class MessagingService implements MessagingModuleApi {
                 ? Map.<UUID, List<MessageImage>>of()
                 : messageImageRepository.findByMessageIdIn(replyToIds).stream()
                     .collect(java.util.stream.Collectors.groupingBy(MessageImage::getMessageId));
+        // Attachments for replied-to messages
+        var replyAttachmentsByMsgId = replyToIds.isEmpty()
+                ? Map.<UUID, List<MessageAttachment>>of()
+                : messageAttachmentRepository.findByMessageIdIn(replyToIds).stream()
+                    .collect(java.util.stream.Collectors.groupingBy(MessageAttachment::getMessageId));
 
         return page.map(m -> toMessageInfo(m,
                 imagesByMessageId.getOrDefault(m.getId(), List.of()),
-                replyMessages, replyImagesByMsgId, userId));
+                attachmentsByMessageId.getOrDefault(m.getId(), List.of()),
+                replyMessages, replyImagesByMsgId, replyAttachmentsByMsgId, userId));
     }
 
     public MessageInfo sendPollMessage(UUID conversationId, UUID senderId, CreateMessagePollRequest pollRequest) {
@@ -220,7 +232,7 @@ public class MessagingService implements MessagingModuleApi {
 
         participantRepository.markAsRead(conversationId, senderId, Instant.now());
 
-        var messageInfo = toMessageInfo(message, List.of(), Map.of(), Map.of());
+        var messageInfo = toMessageInfo(message, List.of(), List.of(), Map.of(), Map.of(), Map.of());
 
         // Push via WebSocket
         var participants = participantRepository.findByConversationId(conversationId);
@@ -241,21 +253,25 @@ public class MessagingService implements MessagingModuleApi {
         eventPublisher.publishEvent(new MessageSentEvent(
                 message.getId(), conversationId, senderId, senderName,
                 "\uD83D\uDCCA " + pollRequest.question(),
-                null, recipientIds, false
+                null, recipientIds, false, false
         ));
 
         return messageInfo;
     }
 
     public MessageInfo sendMessage(UUID conversationId, UUID senderId, String content,
-                                    UUID replyToId, MultipartFile image) {
+                                    UUID replyToId, MultipartFile image,
+                                    MultipartFile attachment, UUID linkedFileId, UUID linkedRoomId,
+                                    String linkedFileName) {
         requireParticipant(conversationId, senderId);
 
-        // Validate: must have content or image
+        // Validate: must have content, image, or attachment
         boolean hasContent = content != null && !content.isBlank();
         boolean hasImage = image != null && !image.isEmpty();
-        if (!hasContent && !hasImage) {
-            throw new BusinessException("Message must have text content or an image");
+        boolean hasAttachment = attachment != null && !attachment.isEmpty();
+        boolean hasFileLink = linkedFileId != null;
+        if (!hasContent && !hasImage && !hasAttachment && !hasFileLink) {
+            throw new BusinessException("Message must have text content, an image, or an attachment");
         }
 
         // Validate replyToId
@@ -273,24 +289,21 @@ public class MessagingService implements MessagingModuleApi {
         // Handle image upload
         List<MessageImage> images = List.of();
         if (hasImage) {
-            // Validate file size (10MB)
             if (image.getSize() > 10 * 1024 * 1024) {
                 throw new BusinessException("Image file size exceeds 10MB limit");
             }
-            String contentType = storageService.validateAndDetectContentType(image);
-            String extension = MessageStorageService.extensionFromContentType(contentType);
+            String imgContentType = storageService.validateAndDetectContentType(image);
+            String extension = MessageStorageService.extensionFromContentType(imgContentType);
 
             var imgEntity = new MessageImage();
             imgEntity.setMessageId(message.getId());
             imgEntity.setUploadedBy(senderId);
             imgEntity.setOriginalFilename(image.getOriginalFilename() != null ? image.getOriginalFilename() : "image." + extension);
             imgEntity.setFileSize(image.getSize());
-            imgEntity.setContentType(contentType);
-
-            // Pre-generate ID for storage path
+            imgEntity.setContentType(imgContentType);
             imgEntity = messageImageRepository.save(imgEntity);
 
-            String storagePath = storageService.uploadOriginal(conversationId, imgEntity.getId(), extension, image, contentType);
+            String storagePath = storageService.uploadOriginal(conversationId, imgEntity.getId(), extension, image, imgContentType);
             String thumbPath = storageService.uploadThumbnail(conversationId, imgEntity.getId(), extension, image);
 
             imgEntity.setStoragePath(storagePath);
@@ -298,6 +311,45 @@ public class MessagingService implements MessagingModuleApi {
             messageImageRepository.save(imgEntity);
 
             images = List.of(imgEntity);
+        }
+
+        // Handle file attachment upload (PDF)
+        List<MessageAttachment> attachments = new java.util.ArrayList<>();
+        if (hasAttachment) {
+            if (attachment.getSize() > 20 * 1024 * 1024) {
+                throw new BusinessException("Attachment file size exceeds 20MB limit");
+            }
+            String attContentType = storageService.validateAttachmentContentType(attachment);
+            String extension = MessageStorageService.extensionFromContentType(attContentType);
+
+            var attEntity = new MessageAttachment();
+            attEntity.setMessageId(message.getId());
+            attEntity.setAttachmentType(MessageAttachment.AttachmentType.FILE);
+            attEntity.setUploadedBy(senderId);
+            attEntity.setOriginalFilename(attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "file." + extension);
+            attEntity.setFileSize(attachment.getSize());
+            attEntity.setContentType(attContentType);
+            attEntity = messageAttachmentRepository.save(attEntity);
+
+            String storagePath = storageService.uploadAttachment(conversationId, attEntity.getId(), extension, attachment, attContentType);
+            attEntity.setStoragePath(storagePath);
+            messageAttachmentRepository.save(attEntity);
+
+            attachments.add(attEntity);
+        }
+
+        // Handle file link (collaborative document)
+        if (hasFileLink) {
+            var linkEntity = new MessageAttachment();
+            linkEntity.setMessageId(message.getId());
+            linkEntity.setAttachmentType(MessageAttachment.AttachmentType.FILE_LINK);
+            linkEntity.setUploadedBy(senderId);
+            linkEntity.setLinkedFileId(linkedFileId);
+            linkEntity.setLinkedRoomId(linkedRoomId);
+            // Resolve the file name for display
+            linkEntity.setLinkedFileName(linkedFileName);
+            linkEntity = messageAttachmentRepository.save(linkEntity);
+            attachments.add(linkEntity);
         }
 
         // Update conversation timestamp
@@ -309,7 +361,7 @@ public class MessagingService implements MessagingModuleApi {
         // Mark as read for sender
         participantRepository.markAsRead(conversationId, senderId, Instant.now());
 
-        var messageInfo = toMessageInfo(message, images, Map.of(), Map.of());
+        var messageInfo = toMessageInfo(message, images, attachments, Map.of(), Map.of(), Map.of());
 
         // Push via WebSocket to all participants
         var participants = participantRepository.findByConversationId(conversationId);
@@ -333,8 +385,10 @@ public class MessagingService implements MessagingModuleApi {
         String preview;
         if (hasContent) {
             preview = content.length() > 100 ? content.substring(0, 100) + "..." : content;
-        } else {
+        } else if (hasImage) {
             preview = "\uD83D\uDDBC Bild";
+        } else {
+            preview = "\uD83D\uDCCE Datei";
         }
 
         eventPublisher.publishEvent(new MessageSentEvent(
@@ -345,7 +399,8 @@ public class MessagingService implements MessagingModuleApi {
                 preview,
                 hasContent ? content : null,
                 recipientIds,
-                hasImage
+                hasImage,
+                hasAttachment || hasFileLink
         ));
 
         return messageInfo;
@@ -374,6 +429,31 @@ public class MessagingService implements MessagingModuleApi {
     public MessageImage getImageEntity(UUID imageId) {
         return messageImageRepository.findById(imageId)
                 .orElseThrow(() -> new ResourceNotFoundException("MessageImage", imageId));
+    }
+
+    /**
+     * Get attachment for download — verifies the requester is a participant.
+     */
+    @Transactional(readOnly = true)
+    public java.io.InputStream getAttachmentForDownload(UUID attachmentId, UUID userId) {
+        var att = messageAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("MessageAttachment", attachmentId));
+
+        if (att.getAttachmentType() != MessageAttachment.AttachmentType.FILE) {
+            throw new BusinessException("Attachment is not a downloadable file");
+        }
+
+        var message = messageRepository.findById(att.getMessageId())
+                .orElseThrow(() -> new ResourceNotFoundException("Message", att.getMessageId()));
+        requireParticipant(message.getConversationId(), userId);
+
+        return storageService.download(att.getStoragePath());
+    }
+
+    @Transactional(readOnly = true)
+    public MessageAttachment getAttachmentEntity(UUID attachmentId) {
+        return messageAttachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("MessageAttachment", attachmentId));
     }
 
     public void markConversationAsRead(UUID conversationId, UUID userId) {
@@ -501,6 +581,10 @@ public class MessagingService implements MessagingModuleApi {
         var lastMsg = messageRepository.findFirstByConversationIdOrderByCreatedAtDesc(c.getId());
         String lastMessage = lastMsg.map(m -> {
             if (m.getContent() != null) return m.getContent();
+            // Check for attachments
+            if (!messageAttachmentRepository.findByMessageId(m.getId()).isEmpty()) {
+                return "\uD83D\uDCCE Datei";
+            }
             // Image-only message
             return "\uD83D\uDDBC Bild";
         }).orElse(null);
@@ -533,15 +617,17 @@ public class MessagingService implements MessagingModuleApi {
         );
     }
 
-    private MessageInfo toMessageInfo(Message m, List<MessageImage> images,
-                                       Map<UUID, Message> replyMessages,
-                                       Map<UUID, List<MessageImage>> replyImagesByMsgId) {
-        return toMessageInfo(m, images, replyMessages, replyImagesByMsgId, null);
-    }
-
-    private MessageInfo toMessageInfo(Message m, List<MessageImage> images,
+    private MessageInfo toMessageInfo(Message m, List<MessageImage> images, List<MessageAttachment> attachments,
                                        Map<UUID, Message> replyMessages,
                                        Map<UUID, List<MessageImage>> replyImagesByMsgId,
+                                       Map<UUID, List<MessageAttachment>> replyAttachmentsByMsgId) {
+        return toMessageInfo(m, images, attachments, replyMessages, replyImagesByMsgId, replyAttachmentsByMsgId, null);
+    }
+
+    private MessageInfo toMessageInfo(Message m, List<MessageImage> images, List<MessageAttachment> attachments,
+                                       Map<UUID, Message> replyMessages,
+                                       Map<UUID, List<MessageImage>> replyImagesByMsgId,
+                                       Map<UUID, List<MessageAttachment>> replyAttachmentsByMsgId,
                                        UUID currentUserId) {
         String senderName = userModuleApi.findById(m.getSenderId())
                 .map(u -> u.firstName() + " " + u.lastName())
@@ -550,6 +636,18 @@ public class MessagingService implements MessagingModuleApi {
         List<MessageInfo.MessageImageInfo> imageInfos = images.stream()
                 .map(img -> new MessageInfo.MessageImageInfo(
                         img.getId(), img.getOriginalFilename(), img.getContentType(), img.getFileSize()))
+                .toList();
+
+        List<MessageInfo.MessageAttachmentInfo> attachmentInfos = attachments.stream()
+                .map(att -> new MessageInfo.MessageAttachmentInfo(
+                        att.getId(),
+                        att.getAttachmentType().name(),
+                        att.getOriginalFilename(),
+                        att.getContentType(),
+                        att.getFileSize(),
+                        att.getLinkedFileId(),
+                        att.getLinkedFileName(),
+                        att.getLinkedRoomId()))
                 .toList();
 
         MessageInfo.ReplyInfo replyInfo = null;
@@ -564,8 +662,10 @@ public class MessagingService implements MessagingModuleApi {
                         : null;
                 boolean replyHasImage = replyImagesByMsgId.containsKey(replyMsg.getId())
                         && !replyImagesByMsgId.get(replyMsg.getId()).isEmpty();
+                boolean replyHasAttachment = replyAttachmentsByMsgId.containsKey(replyMsg.getId())
+                        && !replyAttachmentsByMsgId.get(replyMsg.getId()).isEmpty();
                 replyInfo = new MessageInfo.ReplyInfo(
-                        replyMsg.getId(), replyMsg.getSenderId(), replySenderName, contentPreview, replyHasImage);
+                        replyMsg.getId(), replyMsg.getSenderId(), replySenderName, contentPreview, replyHasImage, replyHasAttachment);
             }
         }
 
@@ -581,6 +681,7 @@ public class MessagingService implements MessagingModuleApi {
                 m.getContent(),
                 m.getCreatedAt(),
                 imageInfos,
+                attachmentInfos,
                 replyInfo,
                 List.of(),
                 pollInfo
@@ -730,6 +831,14 @@ public class MessagingService implements MessagingModuleApi {
                 storageService.delete(img.getThumbnailPath());
             }
             messageImageRepository.deleteAll(images);
+            // Delete associated attachments from MinIO
+            var attachments = messageAttachmentRepository.findByMessageId(msg.getId());
+            for (var att : attachments) {
+                if (att.getStoragePath() != null) {
+                    storageService.delete(att.getStoragePath());
+                }
+            }
+            messageAttachmentRepository.deleteAll(attachments);
             msg.setSenderId(null);
             msg.setContent(null);
             msg.setReplyToId(null);

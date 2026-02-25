@@ -11,6 +11,7 @@ import com.monteweb.shared.util.SecurityUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -74,10 +75,16 @@ public class MessagingController {
             @PathVariable UUID conversationId,
             @RequestPart(value = "content", required = false) String content,
             @RequestPart(value = "replyToId", required = false) String replyToId,
-            @RequestPart(value = "image", required = false) MultipartFile image) {
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            @RequestPart(value = "attachment", required = false) MultipartFile attachment,
+            @RequestPart(value = "linkedFileId", required = false) String linkedFileId,
+            @RequestPart(value = "linkedRoomId", required = false) String linkedRoomId,
+            @RequestPart(value = "linkedFileName", required = false) String linkedFileName) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         UUID replyTo = replyToId != null && !replyToId.isBlank() ? UUID.fromString(replyToId) : null;
-        var message = messagingService.sendMessage(conversationId, userId, content, replyTo, image);
+        UUID fileId = linkedFileId != null && !linkedFileId.isBlank() ? UUID.fromString(linkedFileId) : null;
+        UUID roomId = linkedRoomId != null && !linkedRoomId.isBlank() ? UUID.fromString(linkedRoomId) : null;
+        var message = messagingService.sendMessage(conversationId, userId, content, replyTo, image, attachment, fileId, roomId, linkedFileName);
         return ResponseEntity.ok(ApiResponse.ok(message));
     }
 
@@ -87,7 +94,9 @@ public class MessagingController {
             @RequestBody SendMessageRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         UUID replyTo = request.replyToId() != null ? UUID.fromString(request.replyToId()) : null;
-        var message = messagingService.sendMessage(conversationId, userId, request.content(), replyTo, null);
+        UUID fileId = request.linkedFileId() != null ? UUID.fromString(request.linkedFileId()) : null;
+        UUID roomId = request.linkedRoomId() != null ? UUID.fromString(request.linkedRoomId()) : null;
+        var message = messagingService.sendMessage(conversationId, userId, request.content(), replyTo, null, null, fileId, roomId, request.linkedFileName());
         return ResponseEntity.ok(ApiResponse.ok(message));
     }
 
@@ -153,6 +162,23 @@ public class MessagingController {
         }
     }
 
+    @GetMapping("/attachments/{attachmentId}")
+    public ResponseEntity<byte[]> getAttachment(@PathVariable UUID attachmentId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var att = messagingService.getAttachmentEntity(attachmentId);
+        try (var stream = messagingService.getAttachmentForDownload(attachmentId, userId)) {
+            String contentType = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
+            String filename = att.getOriginalFilename() != null ? att.getOriginalFilename() : "file";
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(contentType))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                    .header("Cache-Control", "private, max-age=86400")
+                    .body(stream.readAllBytes());
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("Failed to read attachment", e);
+        }
+    }
+
     @PostMapping("/conversations/{conversationId}/polls")
     public ResponseEntity<ApiResponse<MessageInfo>> sendPollMessage(
             @PathVariable UUID conversationId,
@@ -196,6 +222,6 @@ public class MessagingController {
     ) {
     }
 
-    public record SendMessageRequest(String content, String replyToId) {
+    public record SendMessageRequest(String content, String replyToId, String linkedFileId, String linkedRoomId, String linkedFileName) {
     }
 }

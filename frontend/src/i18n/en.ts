@@ -748,6 +748,11 @@ export default {
     unmute: 'Unmute',
     muted: 'Muted',
     unmuted: 'Unmuted',
+    file: 'File',
+    attachFile: 'Attach PDF',
+    linkFile: 'Link file',
+    selectRoom: 'Select room',
+    noFiles: 'No files in this room',
   },
   cleaning: {
     title: 'Cleaning',

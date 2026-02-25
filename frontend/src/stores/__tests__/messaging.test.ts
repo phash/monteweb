@@ -83,7 +83,7 @@ describe('Messaging Store', () => {
 
     expect(result.content).toBe('Hello!')
     expect(store.messages).toHaveLength(1)
-    expect(messagingApi.sendMessage).toHaveBeenCalledWith('1', 'Hello!', undefined, undefined)
+    expect(messagingApi.sendMessage).toHaveBeenCalledWith('1', 'Hello!', undefined, undefined, undefined, undefined, undefined, undefined)
   })
 
   it('should send message with image', async () => {
@@ -102,7 +102,7 @@ describe('Messaging Store', () => {
     const result = await store.sendMessage('1', undefined, file)
 
     expect(result.images).toHaveLength(1)
-    expect(messagingApi.sendMessage).toHaveBeenCalledWith('1', undefined, file, undefined)
+    expect(messagingApi.sendMessage).toHaveBeenCalledWith('1', undefined, file, undefined, undefined, undefined, undefined, undefined)
   })
 
   it('should send reply message', async () => {

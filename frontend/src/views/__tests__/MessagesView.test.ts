@@ -27,6 +27,17 @@ vi.mock('@/api/messaging.api', () => ({
 
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
 vi.mock('@/api/users.api', () => ({ usersApi: { search: vi.fn() } }))
+vi.mock('@/api/files.api', () => ({
+  filesApi: {
+    listFiles: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    listFolders: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
+vi.mock('@/api/rooms.api', () => ({
+  roomsApi: {
+    getMine: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
 
 const i18n = createI18n({
   legacy: false,
@@ -55,6 +66,14 @@ const i18n = createI18n({
         mute: 'Stummschalten',
         unmute: 'Stummschaltung aufheben',
         muted: 'Stumm',
+        file: 'Datei',
+        attachFile: 'PDF anhängen',
+        linkFile: 'Datei verlinken',
+        selectRoom: 'Raum auswählen',
+        noFiles: 'Keine Dateien',
+      },
+      poll: {
+        createPoll: 'Umfrage erstellen',
       },
       nav: { messages: 'Nachrichten' },
       common: { cancel: 'Abbrechen', back: 'Zurück', delete: 'Löschen', yes: 'Ja', no: 'Nein' },
@@ -74,6 +93,7 @@ const stubs = {
     emits: ['click'],
   },
   Textarea: { template: '<textarea class="textarea-stub" />', props: ['modelValue', 'placeholder', 'rows', 'autoResize'] },
+  Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder'] },
 }
 
 function mountMessages() {

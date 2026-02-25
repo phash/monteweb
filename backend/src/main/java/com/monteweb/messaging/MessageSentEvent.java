@@ -11,6 +11,7 @@ public record MessageSentEvent(
         String contentPreview,
         String fullContent,
         List<UUID> recipientIds,
-        boolean hasImage
+        boolean hasImage,
+        boolean hasAttachment
 ) {
 }

@@ -14,6 +14,7 @@ public record MessageInfo(
         String content,
         Instant createdAt,
         List<MessageImageInfo> images,
+        List<MessageAttachmentInfo> attachments,
         ReplyInfo replyTo,
         List<ReactionSummary> reactions,
         PollInfo poll
@@ -26,12 +27,25 @@ public record MessageInfo(
     ) {
     }
 
+    public record MessageAttachmentInfo(
+            UUID id,
+            String attachmentType,
+            String originalFilename,
+            String contentType,
+            Long fileSize,
+            UUID linkedFileId,
+            String linkedFileName,
+            UUID linkedRoomId
+    ) {
+    }
+
     public record ReplyInfo(
             UUID messageId,
             UUID senderId,
             String senderName,
             String contentPreview,
-            boolean hasImage
+            boolean hasImage,
+            boolean hasAttachment
     ) {
     }
 
