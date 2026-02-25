@@ -39,6 +39,8 @@ Modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Kripp
 - **Jitsi** — Video-Meetings in Kalender-Terminen und Raum-Chats
 - **ONLYOFFICE** — Dokumente direkt im Browser bearbeiten (Word, Excel, PowerPoint)
 - **ClamAV** — Automatische Virenscanner fuer Datei-Uploads
+- **Dark Mode** — Drei Modi (System/Hell/Dunkel) mit CSS Custom Properties
+- **Backup** — Automatisierte taegliche Backups (PostgreSQL + MinIO) mit Rotation und optionalem S3-Upload
 - **Admin** — Benutzerverwaltung, Modulsteuerung, Theme-Anpassung, Audit-Log, Fehlerberichte, CSV-Import
 - **Monitoring** — Prometheus + Grafana Dashboard (optional)
 
@@ -149,9 +151,11 @@ monteweb/
 │   │   ├── composables/   # Composables (Auth, WebSocket, Holidays, ...)
 │   │   └── i18n/          # Deutsch + Englisch
 │   └── Dockerfile
-├── monitoring/            # Prometheus + Grafana Config
-├── nginx/                 # Production Reverse Proxy
-├── docker-compose.yml     # Production Stack
+├── backup/               # Backup-Container (pg_dump + mc)
+├── solr/                 # Solr-Konfiguration (Schema, Stopwords)
+├── monitoring/           # Prometheus + Grafana Config
+├── nginx/                # Production Reverse Proxy
+├── docker-compose.yml    # Production Stack
 └── docker-compose.dev.yml # Entwicklungs-Infrastruktur
 ```
 
@@ -200,6 +204,40 @@ Zusaetzliche DB-Toggles (Admin UI → Module):
 | `sectionadmin@monteweb.local` | SECTION_ADMIN | `test1234` |
 
 Plus ~220 realistische Seed-Benutzer (z.B. `anna.mueller@monteweb.local`).
+
+## Docker Profiles
+
+Optionale Services werden ueber Docker Compose Profiles aktiviert:
+
+```bash
+docker compose --profile backup up -d      # Automatische Backups (taeglich 02:00)
+docker compose --profile monitoring up -d   # Prometheus + Grafana
+docker compose --profile ssl up -d          # Caddy Reverse Proxy (Auto-SSL)
+docker compose --profile office up -d       # ONLYOFFICE Document Server
+docker compose --profile clamav up -d       # ClamAV Virenscanner
+
+# Mehrere Profile kombinieren
+docker compose --profile backup --profile monitoring up -d
+```
+
+## Backup & Restore
+
+```bash
+# Backup-Service aktivieren
+docker compose --profile backup up -d
+
+# Manuelles Backup
+docker compose exec backup backup.sh
+
+# Backups auflisten
+docker compose exec backup restore.sh --list
+
+# Wiederherstellen
+docker compose exec backup restore.sh latest
+docker compose restart backend
+```
+
+Konfiguration ueber `.env` (Cron-Schedule, Aufbewahrung, S3-Remote). Details: [BACKUP.md](BACKUP.md)
 
 ## Monitoring (optional)
 

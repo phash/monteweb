@@ -81,7 +81,7 @@ com.monteweb.<module>/
 frontend/src/
 ├── api/           # Axios modules (authApi, feedApi, roomsApi...) — base /api/v1, auto JWT refresh
 ├── components/    # By domain: common/, layout/, feed/, rooms/, family/, messaging/
-├── composables/   # useLocaleDate, useWebSocket, useTheme, usePushNotifications, useHolidays, useConfirmDialog, useErrorReporting, useContextHelp, usePwaInstall
+├── composables/   # useLocaleDate, useWebSocket, useTheme, useDarkMode, usePushNotifications, useHolidays, useConfirmDialog, useErrorReporting, useContextHelp, usePwaInstall, useMentions, useImageToken
 ├── i18n/          # de.ts + en.ts — ALL user-facing text via t(), German default
 ├── router/        # Lazy-loaded routes, auth/admin guards, 404 catch-all
 ├── stores/        # Pinia composition stores (one per domain)
@@ -163,7 +163,7 @@ frontend/src/
 | files | Dateiablage via MinIO, Folder-Audience | `monteweb.modules.files.enabled` |
 | jobboard | Jobboerse, Elternstunden, Jahresabrechnung, PDF-Export | `monteweb.modules.jobboard.enabled` |
 | cleaning | Putz-Orga, QR-Check-in, PDF, Putzaktionen | `monteweb.modules.cleaning.enabled` |
-| calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed | `monteweb.modules.calendar.enabled` |
+| calendar | Events (Raum/Bereich/Schule), RSVP, Cancel→Feed, iCal-Subscriptions | `monteweb.modules.calendar.enabled` |
 | forms | Survey/Consent, Multi-Section Scopes, Dashboard Widget, CSV/PDF-Export | `monteweb.modules.forms.enabled` |
 | fotobox | Foto-Threads, Thumbnails, Lightbox, Thread-Audience | `monteweb.modules.fotobox.enabled` |
 | fundgrube | Schulweite Fundgrube, Fotos, Bereichsfilter, Claim-Workflow | `monteweb.modules.fundgrube.enabled` |
@@ -211,6 +211,10 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 21. **Chat-Stummschaltung:** Conversations koennen stummgeschaltet werden (`conversation_participants.muted`). Mute-Toggle in DM-View und RoomChat-Header. Profilseite zeigt alle stummgeschalteten Chats mit Unmute-Buttons
 22. **Feed-Anhaenge:** Posts koennen Datei-Anhaenge haben (MinIO upload, multi-file). Zwei-Schritt: Post erstellen → Dateien hochladen
 23. **Solr-Volltextsuche:** Apache Solr 9.8 mit deutscher Sprachanalyse (Stemming, Stopwords). 8 Dokumenttypen (USER, ROOM, POST, EVENT, FILE, WIKI, TASK). Echtzeit-Indexierung via Spring Events. Tika-Extraktion fuer Dateiinhalte (PDF, DOCX, etc.). Admin-Reindex via `POST /api/v1/admin/search/reindex`. Fallback auf DB-Suche wenn Solr deaktiviert
+24. **Dark Mode:** Drei Modi (SYSTEM/LIGHT/DARK), gespeichert in `users.dark_mode`. CSS Custom Properties `--mw-*` schalten um. `useDarkMode` Composable. Auch auf Login-Seite waehlbar
+25. **2FA (TOTP):** Drei Modi (DISABLED/OPTIONAL/MANDATORY). Bei MANDATORY 7-Tage Grace Period. Recovery Codes. Admin steuert Modus + Deadline
+26. **Backup:** Docker-Profile `backup`. Taeglich pg_dump + MinIO mirror. Rotation: 7 taegliche, 4 woechentliche, 3 monatliche. Optional S3-Remote-Upload. Siehe `BACKUP.md`
+27. **iCal-Subscriptions:** Externe Kalender via URL abonnieren, Events automatisch importieren (RFC 5545)
 
 ## Conventions
 
