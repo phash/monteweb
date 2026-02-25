@@ -26,6 +26,7 @@ import RoomEvents from '@/components/rooms/RoomEvents.vue'
 import RoomFotobox from '@/components/rooms/RoomFotobox.vue'
 import RoomTasks from '@/components/rooms/RoomTasks.vue'
 import RoomWiki from '@/components/rooms/RoomWiki.vue'
+import RoomSettings from '@/components/rooms/RoomSettings.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
@@ -573,6 +574,7 @@ async function toggleMute() {
           <Tab v-if="fotoboxEnabled" value="6">{{ t('fotobox.title') }}</Tab>
           <Tab v-if="tasksEnabled" value="7">{{ t('tasks.title') }}</Tab>
           <Tab v-if="wikiEnabled" value="8">{{ t('wiki.title') }}</Tab>
+          <Tab v-if="canEditRoom" value="9"><i class="pi pi-cog" /> {{ t('rooms.settings.tabTitle') }}</Tab>
         </TabList>
         <TabPanels>
           <!-- Info-Board Tab -->
@@ -774,6 +776,11 @@ async function toggleMute() {
           <!-- Wiki Tab -->
           <TabPanel v-if="wikiEnabled" value="8">
             <RoomWiki :room-id="id" :is-leader="isLeader" />
+          </TabPanel>
+
+          <!-- Settings Tab (Leader/Admin only) -->
+          <TabPanel v-if="canEditRoom" value="9">
+            <RoomSettings :roomId="id" />
           </TabPanel>
         </TabPanels>
       </Tabs>

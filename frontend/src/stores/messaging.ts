@@ -63,6 +63,19 @@ export const useMessagingStore = defineStore('messaging', () => {
     return conv
   }
 
+  async function startGroupConversation(title: string, participantIds: string[]) {
+    const res = await messagingApi.startConversation({
+      isGroup: true,
+      title,
+      participantIds,
+    })
+    const conv = res.data.data
+    if (!conversations.value.find(c => c.id === conv.id)) {
+      conversations.value.unshift(conv)
+    }
+    return conv
+  }
+
   async function fetchUnreadCount() {
     try {
       const res = await messagingApi.getUnreadCount()
@@ -140,6 +153,7 @@ export const useMessagingStore = defineStore('messaging', () => {
     sendMessage,
     setReplyTo,
     startDirectConversation,
+    startGroupConversation,
     fetchUnreadCount,
     markAsRead,
     muteConversation,

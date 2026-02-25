@@ -629,9 +629,11 @@ public class MessagingService implements MessagingModuleApi {
                                        Map<UUID, List<MessageImage>> replyImagesByMsgId,
                                        Map<UUID, List<MessageAttachment>> replyAttachmentsByMsgId,
                                        UUID currentUserId) {
-        String senderName = userModuleApi.findById(m.getSenderId())
-                .map(u -> u.firstName() + " " + u.lastName())
-                .orElse("Unknown");
+        String senderName = m.getSenderId() != null
+                ? userModuleApi.findById(m.getSenderId())
+                    .map(u -> u.firstName() + " " + u.lastName())
+                    .orElse("Unknown")
+                : "Unknown";
 
         List<MessageInfo.MessageImageInfo> imageInfos = images.stream()
                 .map(img -> new MessageInfo.MessageImageInfo(
@@ -654,9 +656,11 @@ public class MessagingService implements MessagingModuleApi {
         if (m.getReplyToId() != null) {
             var replyMsg = replyMessages.get(m.getReplyToId());
             if (replyMsg != null) {
-                String replySenderName = userModuleApi.findById(replyMsg.getSenderId())
-                        .map(u -> u.firstName() + " " + u.lastName())
-                        .orElse("Unknown");
+                String replySenderName = replyMsg.getSenderId() != null
+                        ? userModuleApi.findById(replyMsg.getSenderId())
+                            .map(u -> u.firstName() + " " + u.lastName())
+                            .orElse("Unknown")
+                        : "Unknown";
                 String contentPreview = replyMsg.getContent() != null
                         ? (replyMsg.getContent().length() > 80 ? replyMsg.getContent().substring(0, 80) + "..." : replyMsg.getContent())
                         : null;

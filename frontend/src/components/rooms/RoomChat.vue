@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { useRouter } from 'vue-router'
 import { useRoomsStore } from '@/stores/rooms'
 import { useMessagingStore } from '@/stores/messaging'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +23,7 @@ import MentionInput from '@/components/common/MentionInput.vue'
 const props = defineProps<{ roomId: string }>()
 
 const { t } = useI18n()
+const router = useRouter()
 const { formatTime: localeFormatTime, formatShortDate } = useLocaleDate()
 const roomsStore = useRoomsStore()
 const messagingStore = useMessagingStore()
@@ -350,9 +352,13 @@ async function handleMsgPollClose(msg: MessageInfo) {
           </div>
 
           <div class="rc-bubble">
-            <span v-if="!isOwnMessage(item.msg.senderId)" class="rc-sender">
+            <a
+              v-if="!isOwnMessage(item.msg.senderId)"
+              class="rc-sender"
+              @click.stop="router.push({ name: 'user-profile', params: { userId: item.msg.senderId } })"
+            >
               {{ item.msg.senderName }}
-            </span>
+            </a>
 
             <!-- Reply reference -->
             <div v-if="item.msg.replyTo" class="rc-reply-ref">
@@ -706,6 +712,12 @@ async function handleMsgPollClose(msg: MessageInfo) {
   font-weight: 700;
   margin-bottom: 0.125rem;
   color: var(--mw-primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.rc-sender:hover {
+  text-decoration: underline;
 }
 
 .rc-content {

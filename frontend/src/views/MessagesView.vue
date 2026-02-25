@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useAuthStore } from '@/stores/auth'
 import { useMessagingStore } from '@/stores/messaging'
@@ -26,6 +26,7 @@ import MentionInput from '@/components/common/MentionInput.vue'
 const { t } = useI18n()
 const { formatCompactDateTime } = useLocaleDate()
 const route = useRoute()
+const router = useRouter()
 const auth = useAuthStore()
 const messaging = useMessagingStore()
 const rooms = useRoomsStore()
@@ -382,7 +383,7 @@ function formatTime(date: string | null) {
               :class="{ own: msg.senderId === auth.user?.id }"
             >
               <div class="message-bubble">
-                <span v-if="msg.senderId !== auth.user?.id" class="sender-name">{{ msg.senderName }}</span>
+                <a v-if="msg.senderId !== auth.user?.id" class="sender-name" @click.stop="router.push({ name: 'user-profile', params: { userId: msg.senderId } })">{{ msg.senderName }}</a>
 
                 <!-- Reply reference -->
                 <div v-if="msg.replyTo" class="reply-block" @click.stop>
@@ -842,6 +843,13 @@ function formatTime(date: string | null) {
   font-weight: 600;
   display: block;
   margin-bottom: 0.125rem;
+  color: var(--mw-primary);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.sender-name:hover {
+  text-decoration: underline;
 }
 
 /* Reply block */

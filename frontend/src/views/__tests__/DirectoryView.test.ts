@@ -22,6 +22,15 @@ vi.mock('@/stores/admin', () => ({
   useAdminStore: vi.fn(() => mockAdmin),
 }))
 
+// --- mock messaging store
+const mockMessaging = {
+  startDirectConversation: vi.fn().mockResolvedValue({ id: 'conv-1' }),
+}
+
+vi.mock('@/stores/messaging', () => ({
+  useMessagingStore: vi.fn(() => mockMessaging),
+}))
+
 // --- mock users API
 vi.mock('@/api/users.api', () => ({
   usersApi: {
@@ -95,6 +104,17 @@ vi.mock('@/api/rooms.api', () => ({
   },
 }))
 
+// --- mock family API
+vi.mock('@/api/family.api', () => ({
+  familyApi: {
+    getAll: vi.fn().mockResolvedValue({
+      data: {
+        data: [],
+      },
+    }),
+  },
+}))
+
 // --- mock router
 const mockPush = vi.fn()
 vi.mock('vue-router', () => ({
@@ -112,14 +132,20 @@ const i18n = createI18n({
   messages: {
     de: {
       directory: {
-        title: 'Benutzerverzeichnis',
+        title: 'Verzeichnis',
+        tabUsers: 'Benutzer',
+        tabFamilies: 'Familien',
         search: 'Name oder E-Mail suchen...',
+        searchFamilies: 'Familie oder Mitglied suchen...',
         filterRole: 'Alle Rollen',
         filterSection: 'Alle Bereiche',
         filterRoom: 'Alle Räume',
         noResults: 'Keine Benutzer gefunden',
+        noFamilies: 'Keine Familien gefunden',
         showingCount: '{count} Benutzer',
         startChat: 'Nachricht senden',
+        memberCount: '{count} Mitglieder',
+        sendMessage: 'Nachricht senden',
         roles: {
           SUPERADMIN: 'Superadmin',
           SECTION_ADMIN: 'Bereichsadmin',
@@ -144,11 +170,17 @@ function mountView() {
       stubs: {
         PageTitle: { template: '<div class="page-title-stub"><slot /></div>', props: ['title'] },
         LoadingSpinner: { template: '<div class="loading-stub" />' },
+        EmptyState: { template: '<div class="empty-state-stub" />' },
         InputText: { template: '<input class="input-stub" />' },
         Select: { template: '<div class="select-stub" />' },
         Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity'] },
         Paginator: { template: '<div class="paginator-stub" />' },
         Avatar: { template: '<span class="avatar-stub" />' },
+        Tabs: { template: '<div class="tabs-stub"><slot /></div>', props: ['value'] },
+        TabList: { template: '<div class="tablist-stub"><slot /></div>' },
+        Tab: { template: '<div class="tab-stub"><slot /></div>', props: ['value'] },
+        TabPanels: { template: '<div class="tabpanels-stub"><slot /></div>' },
+        TabPanel: { template: '<div class="tabpanel-stub"><slot /></div>', props: ['value'] },
       },
     },
   })
@@ -159,6 +191,7 @@ describe('DirectoryView', () => {
     setActivePinia(createPinia())
     vi.mocked(usersApi.directory).mockClear()
     mockPush.mockClear()
+    mockMessaging.startDirectConversation.mockClear()
     mockAdmin.isModuleEnabled.mockImplementation((m: string) => m === 'messaging')
     mockAuth.user = { id: 'current-user-id', role: 'TEACHER' }
   })
@@ -224,45 +257,37 @@ describe('DirectoryView', () => {
     expect(w.text()).toContain('Keine Benutzer gefunden')
   })
 
-  it('navigates to messages on card click when messaging enabled', async () => {
+  it('navigates to user profile on card click', async () => {
     const w = mountView()
     await flushPromises()
     const cards = w.findAll('.user-card')
     await cards[0].trigger('click')
-    expect(mockPush).toHaveBeenCalledWith({ name: 'messages', query: { userId: 'user-1' } })
+    expect(mockPush).toHaveBeenCalledWith({ name: 'user-profile', params: { userId: 'user-1' } })
   })
 
-  it('does not navigate when clicking own card', async () => {
-    mockAuth.user = { id: 'user-1', role: 'TEACHER' }
+  it('navigates to user profile on any card click', async () => {
     const w = mountView()
     await flushPromises()
     const cards = w.findAll('.user-card')
-    await cards[0].trigger('click')
-    expect(mockPush).not.toHaveBeenCalled()
+    await cards[1].trigger('click')
+    expect(mockPush).toHaveBeenCalledWith({ name: 'user-profile', params: { userId: 'user-2' } })
   })
 
-  it('does not navigate when messaging disabled', async () => {
+  it('navigates to user profile even when messaging disabled', async () => {
     mockAdmin.isModuleEnabled.mockReturnValue(false)
     const w = mountView()
     await flushPromises()
     const cards = w.findAll('.user-card')
     await cards[0].trigger('click')
-    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockPush).toHaveBeenCalledWith({ name: 'user-profile', params: { userId: 'user-1' } })
   })
 
-  it('card has clickable class when messaging enabled', async () => {
+  it('all cards have clickable class', async () => {
     const w = mountView()
     await flushPromises()
     const cards = w.findAll('.user-card')
     expect(cards[0].classes()).toContain('clickable')
-  })
-
-  it('card does not have clickable class for own card', async () => {
-    mockAuth.user = { id: 'user-1', role: 'TEACHER' }
-    const w = mountView()
-    await flushPromises()
-    const cards = w.findAll('.user-card')
-    expect(cards[0].classes()).not.toContain('clickable')
+    expect(cards[1].classes()).toContain('clickable')
   })
 
   it('renders filter bar with search and selects', async () => {

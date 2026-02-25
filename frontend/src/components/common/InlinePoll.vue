@@ -141,10 +141,12 @@ function getPercentage(option: PollOption) {
 
 <style scoped>
 .inline-poll {
-  background: var(--mw-bg-hover);
+  background: var(--mw-bg-card);
+  border: 1px solid var(--mw-border-light);
   border-radius: var(--mw-border-radius);
   padding: 0.75rem;
   margin: 0.5rem 0;
+  color: var(--mw-text);
 }
 
 .poll-question {
@@ -226,7 +228,8 @@ function getPercentage(option: PollOption) {
 
 .option-count {
   font-size: var(--mw-font-size-xs);
-  color: var(--mw-text-muted);
+  color: var(--mw-text-secondary);
+  font-weight: 600;
 }
 
 .option-bar {
