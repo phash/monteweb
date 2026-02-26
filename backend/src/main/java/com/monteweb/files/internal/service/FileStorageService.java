@@ -35,8 +35,11 @@ public class FileStorageService {
 
     /**
      * Uploads a file and returns the storage path (object key).
+     *
+     * @param detectedContentType content type detected via magic bytes (not client-declared)
      */
-    public String upload(UUID roomId, UUID folderId, String storedName, MultipartFile file) {
+    public String upload(UUID roomId, UUID folderId, String storedName,
+                         MultipartFile file, String detectedContentType) {
         String folderPart = folderId != null ? folderId.toString() + "/" : "";
         String objectKey = "rooms/" + roomId + "/files/" + folderPart + storedName;
 
@@ -45,7 +48,7 @@ public class FileStorageService {
                     .bucket(bucket)
                     .object(objectKey)
                     .stream(file.getInputStream(), file.getSize(), -1)
-                    .contentType(file.getContentType())
+                    .contentType(detectedContentType)
                     .build());
             log.debug("Uploaded file to {}/{}", bucket, objectKey);
             return objectKey;

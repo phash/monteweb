@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.monteweb.shared.util.FileValidationUtils;
+
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
@@ -133,15 +135,18 @@ public class FileService implements FilesModuleApi {
             resolvedAudience = audience.toUpperCase();
         }
 
+        // Detect actual content type via magic bytes instead of trusting client header
+        String detectedContentType = FileValidationUtils.detectContentType(file);
+
         String storedName = UUID.randomUUID() + "_" + sanitizeFileName(file.getOriginalFilename());
-        String storagePath = storageService.upload(roomId, folderId, storedName, file);
+        String storagePath = storageService.upload(roomId, folderId, storedName, file, detectedContentType);
 
         var roomFile = new RoomFile();
         roomFile.setRoomId(roomId);
         roomFile.setFolderId(folderId);
         roomFile.setOriginalName(file.getOriginalFilename());
         roomFile.setStoredName(storedName);
-        roomFile.setContentType(file.getContentType());
+        roomFile.setContentType(detectedContentType);
         roomFile.setFileSize(file.getSize());
         roomFile.setStoragePath(storagePath);
         roomFile.setUploadedBy(userId);

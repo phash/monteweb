@@ -11,6 +11,7 @@ import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
@@ -248,10 +249,11 @@ public class JobboardController {
             throw new BusinessException("Maximum 5 attachments per job.");
         }
 
-        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+        // Detect actual content type via magic bytes instead of trusting client header
+        String contentType = FileValidationUtils.detectContentType(file);
         String ext = JobStorageService.extensionFromContentType(contentType);
         if (file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")) {
-            ext = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.') + 1);
+            ext = FileValidationUtils.getExtensionFromFilename(file.getOriginalFilename());
         }
 
         var attachment = new JobAttachment();
@@ -284,9 +286,12 @@ public class JobboardController {
                 .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
 
         var stream = storageService.download(attachment.getStoragePath());
+        String safeFilename = FileValidationUtils.sanitizeContentDispositionFilename(attachment.getOriginalFilename());
+        String safeContentType = FileValidationUtils.isSafeContentType(attachment.getContentType())
+                ? attachment.getContentType() : "application/octet-stream";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
-                .contentType(MediaType.parseMediaType(attachment.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFilename + "\"")
+                .contentType(MediaType.parseMediaType(safeContentType))
                 .contentLength(attachment.getFileSize())
                 .body(new InputStreamResource(stream));
     }

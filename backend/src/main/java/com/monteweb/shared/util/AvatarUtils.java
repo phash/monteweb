@@ -14,22 +14,26 @@ public final class AvatarUtils {
 
     /**
      * Validates the uploaded file is an image under 2MB and converts it to a base64 data URL.
+     * Uses magic byte validation to verify actual file content, not just the declared Content-Type.
      */
     public static String validateAndConvert(MultipartFile file) {
         if (file.isEmpty()) {
             throw new BusinessException("Avatar file is empty");
         }
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new BusinessException("File must be an image");
-        }
         if (file.getSize() > MAX_SIZE) {
             throw new BusinessException("Avatar must be smaller than 2MB");
+        }
+        // Validate actual image content via magic bytes (not client-declared Content-Type)
+        String detectedContentType;
+        try {
+            detectedContentType = FileValidationUtils.validateImageContentType(file);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException("File must be a valid image (JPEG, PNG, WebP, or GIF)");
         }
         try {
             byte[] bytes = file.getBytes();
             String base64 = Base64.getEncoder().encodeToString(bytes);
-            return "data:" + contentType + ";base64," + base64;
+            return "data:" + detectedContentType + ";base64," + base64;
         } catch (IOException e) {
             throw new BusinessException("Failed to read avatar file");
         }
