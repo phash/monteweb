@@ -16,6 +16,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -45,7 +46,7 @@ public class AdminConfigController {
     }
 
     @PutMapping("/config")
-    public ResponseEntity<ApiResponse<TenantConfigInfo>> updateConfig(@RequestBody UpdateConfigRequest request) {
+    public ResponseEntity<ApiResponse<TenantConfigInfo>> updateConfig(@Valid @RequestBody UpdateConfigRequest request) {
         var config = adminService.updateConfig(request.schoolName(), request.logoUrl(), request.targetHoursPerFamily(), request.targetCleaningHours(),
                 request.bundesland(), request.schoolVacations(), request.requireAssignmentConfirmation(),
                 request.multilanguageEnabled(), request.defaultLanguage(), request.availableLanguages(), request.requireUserApproval(),

@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Simple in-memory rate limiting filter for auth endpoints.
+ * Simple in-memory rate limiting filter for security-sensitive endpoints.
  * Uses a token-bucket approach per client IP address.
  * Includes periodic cleanup to prevent unbounded memory growth.
  * Can be disabled via monteweb.rate-limit.enabled=false (e.g. in tests).
@@ -30,6 +30,10 @@ public class RateLimitFilter implements Filter {
     private static final int REGISTER_MAX_REQUESTS = 5;
     private static final int PASSWORD_RESET_MAX_REQUESTS = 5;
     private static final int ERROR_REPORT_MAX_REQUESTS = 10;
+    private static final int FILE_UPLOAD_MAX_REQUESTS = 10;
+    private static final int SEARCH_MAX_REQUESTS = 30;
+    private static final int FORM_SUBMIT_MAX_REQUESTS = 10;
+    private static final int JOB_APPLY_MAX_REQUESTS = 10;
     private static final long WINDOW_MS = 60_000; // 1 minute
     private static final int MAX_BUCKETS = 10_000; // Hard cap to prevent memory exhaustion
 
@@ -53,6 +57,7 @@ public class RateLimitFilter implements Filter {
         String path = httpReq.getRequestURI();
 
         int maxRequests = -1;
+        String method = httpReq.getMethod();
         if (path.startsWith("/api/v1/auth/login")) {
             maxRequests = LOGIN_MAX_REQUESTS;
         } else if (path.startsWith("/api/v1/auth/register")) {
@@ -61,11 +66,21 @@ public class RateLimitFilter implements Filter {
             maxRequests = PASSWORD_RESET_MAX_REQUESTS;
         } else if (path.startsWith("/api/v1/error-reports")) {
             maxRequests = ERROR_REPORT_MAX_REQUESTS;
+        } else if ("POST".equals(method) && (path.contains("/files") || path.contains("/fotobox") || path.contains("/avatar"))) {
+            maxRequests = FILE_UPLOAD_MAX_REQUESTS;
+        } else if (path.startsWith("/api/v1/search")) {
+            maxRequests = SEARCH_MAX_REQUESTS;
+        } else if ("POST".equals(method) && path.contains("/forms") && path.contains("/respond")) {
+            maxRequests = FORM_SUBMIT_MAX_REQUESTS;
+        } else if ("POST".equals(method) && path.contains("/jobs") && path.contains("/apply")) {
+            maxRequests = JOB_APPLY_MAX_REQUESTS;
         }
 
         if (maxRequests > 0) {
             String clientIp = getClientIp(httpReq);
-            String bucketKey = clientIp + ":" + path;
+            // Normalize bucket key to prevent per-path-parameter buckets
+            String normalizedPath = normalizePath(path);
+            String bucketKey = clientIp + ":" + normalizedPath;
 
             // Prevent memory exhaustion from IP spoofing attacks
             if (buckets.size() >= MAX_BUCKETS) {
@@ -84,6 +99,15 @@ public class RateLimitFilter implements Filter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    /**
+     * Normalize the path to a category so that /api/v1/rooms/{uuid}/files and /api/v1/rooms/{other-uuid}/files
+     * share the same rate limit bucket.
+     */
+    private String normalizePath(String path) {
+        // Replace UUIDs in path with placeholder
+        return path.replaceAll("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}", "{id}");
     }
 
     private String getClientIp(HttpServletRequest request) {

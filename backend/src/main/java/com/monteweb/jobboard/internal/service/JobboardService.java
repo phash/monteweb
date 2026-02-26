@@ -271,7 +271,8 @@ public class JobboardService implements JobboardModuleApi {
     // ---- Assignment operations ----
 
     public JobAssignmentInfo applyForJob(UUID jobId, UUID userId) {
-        var job = jobRepository.findById(jobId)
+        // Acquire pessimistic lock to prevent race conditions on concurrent applications
+        var job = jobRepository.findByIdForUpdate(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
 
         // SUPERADMIN, SECTION_ADMIN, TEACHER do not perform parent hours

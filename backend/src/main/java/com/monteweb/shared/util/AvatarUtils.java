@@ -26,6 +26,8 @@ public final class AvatarUtils {
         if (file.getSize() > MAX_SIZE) {
             throw new BusinessException("Avatar must be smaller than 2MB");
         }
+        // Validate magic bytes to prevent content-type spoofing
+        FileValidationUtils.validateImage(file);
         try {
             byte[] bytes = file.getBytes();
             String base64 = Base64.getEncoder().encodeToString(bytes);

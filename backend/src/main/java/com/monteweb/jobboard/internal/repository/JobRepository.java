@@ -4,14 +4,26 @@ import com.monteweb.jobboard.JobStatus;
 import com.monteweb.jobboard.internal.model.Job;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface JobRepository extends JpaRepository<Job, UUID> {
+
+    /**
+     * Finds a job by ID with a pessimistic write lock to prevent race conditions
+     * during concurrent assignment operations.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT j FROM Job j WHERE j.id = :id")
+    Optional<Job> findByIdForUpdate(UUID id);
+
 
     Page<Job> findByStatusOrderByScheduledDateAscCreatedAtDesc(JobStatus status, Pageable pageable);
 

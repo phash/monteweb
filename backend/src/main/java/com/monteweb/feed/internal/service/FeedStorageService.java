@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.monteweb.shared.util.FileValidationUtils;
+
 import java.io.InputStream;
 import java.util.UUID;
 
@@ -28,6 +30,7 @@ public class FeedStorageService {
     }
 
     public String upload(UUID postId, UUID attachmentId, MultipartFile file) {
+        FileValidationUtils.validateUpload(file);
         String extension = getExtension(file.getOriginalFilename());
         String objectKey = "feed/" + postId + "/" + attachmentId + "." + extension;
         try {

@@ -10,41 +10,62 @@ export const useMessagingStore = defineStore('messaging', () => {
   const messages = ref<MessageInfo[]>([])
   const unreadCount = ref(0)
   const loading = ref(false)
+  const error = ref<string | null>(null)
   const replyToMessage = ref<MessageInfo | null>(null)
 
   async function fetchConversations() {
     loading.value = true
+    error.value = null
     try {
       const res = await messagingApi.getConversations()
       conversations.value = res.data.data
-    } catch {
+    } catch (e: any) {
       conversations.value = []
+      error.value = e?.response?.data?.message || 'Failed to load conversations'
     } finally {
       loading.value = false
     }
   }
 
   async function fetchConversation(id: string) {
-    const res = await messagingApi.getConversation(id)
-    currentConversation.value = res.data.data
+    error.value = null
+    try {
+      const res = await messagingApi.getConversation(id)
+      currentConversation.value = res.data.data
+    } catch (e: any) {
+      currentConversation.value = null
+      error.value = e?.response?.data?.message || 'Failed to load conversation'
+      throw e
+    }
   }
 
   async function fetchMessages(conversationId: string) {
     activeConversationId.value = conversationId
     loading.value = true
+    error.value = null
     try {
       const res = await messagingApi.getMessages(conversationId)
       messages.value = res.data.data.content.reverse()
+    } catch (e: any) {
+      messages.value = []
+      error.value = e?.response?.data?.message || 'Failed to load messages'
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function sendMessage(conversationId: string, content?: string, image?: File, replyToId?: string, attachment?: File, linkedFileId?: string, linkedRoomId?: string, linkedFileName?: string) {
-    const res = await messagingApi.sendMessage(conversationId, content, image, replyToId, attachment, linkedFileId, linkedRoomId, linkedFileName)
-    messages.value.push(res.data.data)
-    replyToMessage.value = null
-    return res.data.data
+    error.value = null
+    try {
+      const res = await messagingApi.sendMessage(conversationId, content, image, replyToId, attachment, linkedFileId, linkedRoomId, linkedFileName)
+      messages.value.push(res.data.data)
+      replyToMessage.value = null
+      return res.data.data
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || 'Failed to send message'
+      throw e
+    }
   }
 
   function setReplyTo(message: MessageInfo | null) {
@@ -146,6 +167,7 @@ export const useMessagingStore = defineStore('messaging', () => {
     messages,
     unreadCount,
     loading,
+    error,
     replyToMessage,
     fetchConversations,
     fetchConversation,
