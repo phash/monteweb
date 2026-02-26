@@ -156,7 +156,7 @@ jobs:
           image-ref: monteweb-backend:ci
           format: table
           severity: CRITICAL,HIGH
-          exit-code: 0
+          exit-code: 1
 
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@e368e328979b113139d6f9068e03accaed98a518 # v0.34.1
@@ -164,4 +164,4 @@ jobs:
           image-ref: monteweb-frontend:ci
           format: table
           severity: CRITICAL,HIGH
-          exit-code: 0
+          exit-code: 1

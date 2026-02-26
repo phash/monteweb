@@ -6,13 +6,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.net.InetAddress;
 import java.net.URI;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +29,12 @@ public class LinkPreviewService {
     private static final Duration CACHE_TTL = Duration.ofHours(1);
     private static final Duration FETCH_TIMEOUT = Duration.ofSeconds(3);
     private static final int MAX_RESPONSE_BYTES = 512 * 1024; // 512 KB
+
+    private static final Set<String> BLOCKED_HOSTS = Set.of(
+            "localhost", "127.0.0.1", "0.0.0.0", "[::1]",
+            "minio", "redis", "postgres", "solr", "backend", "frontend",
+            "metadata.google.internal", "metadata.internal"
+    );
 
     // Regex patterns for OpenGraph meta tags
     private static final Pattern OG_TITLE = Pattern.compile(
@@ -91,6 +100,11 @@ public class LinkPreviewService {
             SsrfProtectionUtils.validateUrl(url);
 
             var uri = URI.create(url);
+
+            if (!isAllowedHost(uri)) {
+                log.debug("Blocked link preview for internal/private host: {}", uri.getHost());
+                return null;
+            }
 
             var request = HttpRequest.newBuilder()
                     .uri(uri)
@@ -179,6 +193,31 @@ public class LinkPreviewService {
                 .replace("&quot;", "\"")
                 .replace("&#39;", "'")
                 .replace("&apos;", "'");
+    }
+
+    private boolean isAllowedHost(URI uri) {
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            return false;
+        }
+
+        String lowerHost = host.toLowerCase();
+        if (BLOCKED_HOSTS.contains(lowerHost)) {
+            return false;
+        }
+
+        try {
+            InetAddress addr = InetAddress.getByName(host);
+            if (addr.isLoopbackAddress() || addr.isLinkLocalAddress()
+                    || addr.isSiteLocalAddress() || addr.isAnyLocalAddress()
+                    || addr.isMulticastAddress()) {
+                return false;
+            }
+        } catch (UnknownHostException e) {
+            return false;
+        }
+
+        return true;
     }
 
     private void putCache(String url, LinkPreviewInfo preview) {

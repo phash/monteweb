@@ -108,6 +108,11 @@ export const useAuthStore = defineStore('auth', () => {
       const { clearImageToken } = useImageToken()
       clearImageToken()
       resetTermsCache()
+
+      // Clear service worker caches to prevent data leakage on shared devices
+      if ('caches' in window) {
+        caches.keys().then(names => names.forEach(name => caches.delete(name)))
+      }
     }
   }
 

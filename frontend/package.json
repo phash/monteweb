@@ -14,10 +14,14 @@
   "dependencies": {
     "@primevue/themes": "^4.5.4",
     "@stomp/stompjs": "^7.3.0",
+    "@types/dompurify": "^3.0.5",
+    "@types/qrcode": "^1.5.6",
     "axios": "^1.13.5",
+    "dompurify": "^3.3.1",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
+    "qrcode": "^1.5.4",
     "vue": "^3.5.29",
     "vue-i18n": "^11.2.8",
     "vue-router": "^5.0.3"

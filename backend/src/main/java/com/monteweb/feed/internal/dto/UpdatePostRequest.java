@@ -1,8 +1,10 @@
 package com.monteweb.feed.internal.dto;
 
+import jakarta.validation.constraints.Size;
+
 public record UpdatePostRequest(
-        String title,
-        String content,
+        @Size(max = 500) String title,
+        @Size(max = 50000) String content,
         Boolean parentOnly
 ) {
 }

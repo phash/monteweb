@@ -117,8 +117,17 @@ public class FileService implements FilesModuleApi {
                 .toList();
     }
 
+    private static final long MAX_FILE_SIZE = 100L * 1024 * 1024; // 100 MB
+
     public FileInfo uploadFile(UUID roomId, UUID folderId, UUID userId, MultipartFile file, String audience) {
         requireRoomMembership(userId, roomId);
+
+        if (file.isEmpty()) {
+            throw new BusinessException("File is empty");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException("File too large. Maximum size is 100 MB.");
+        }
 
         if (folderId != null) {
             folderRepository.findById(folderId)

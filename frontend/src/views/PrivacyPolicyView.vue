@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { privacyApi } from '@/api/privacy.api'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 const { t } = useI18n()
 const policy = ref<{ text: string | null; version: string | null }>({ text: null, version: null })
@@ -23,7 +24,7 @@ onMounted(async () => {
     <div v-if="loading" class="text-center py-8">
       <i class="pi pi-spin pi-spinner text-2xl" />
     </div>
-    <div v-else-if="policy.text" class="prose privacy-content" v-html="policy.text" />
+    <div v-else-if="policy.text" class="prose privacy-content" v-html="sanitizeHtml(policy.text)" />
     <p v-else class="text-muted">{{ t('privacy.noPrivacyPolicy') }}</p>
     <p v-if="policy.version" class="privacy-version">Version {{ policy.version }}</p>
   </div>

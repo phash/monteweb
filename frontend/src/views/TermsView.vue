@@ -7,6 +7,7 @@ import { privacyApi } from '@/api/privacy.api'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { markTermsAccepted } from '@/utils/termsCache'
+import { sanitizeHtml } from '@/utils/sanitize'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -54,7 +55,7 @@ async function handleAccept() {
       <i class="pi pi-spin pi-spinner text-2xl" />
     </div>
     <template v-else>
-      <div v-if="terms.text" class="prose terms-content" v-html="terms.text" />
+      <div v-if="terms.text" class="prose terms-content" v-html="sanitizeHtml(terms.text)" />
       <p v-else class="text-muted">{{ t('privacy.noTermsConfigured') }}</p>
       <p v-if="terms.version" class="terms-version">Version {{ terms.version }}</p>
       <div v-if="authStore.isAuthenticated && terms.text && !termsAccepted" class="terms-actions">

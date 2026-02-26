@@ -3,6 +3,7 @@ import type { ApiResponse } from '@/types/api'
 
 const client = axios.create({
   baseURL: '/api/v1',
+  timeout: 30000, // 30 seconds default timeout
   headers: {
     'Content-Type': 'application/json',
   },

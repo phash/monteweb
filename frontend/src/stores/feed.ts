@@ -9,6 +9,7 @@ export const useFeedStore = defineStore('feed', () => {
   const currentPost = ref<FeedPost | null>(null)
   const commentsByPost = ref<Record<string, FeedComment[]>>({})
   const loading = ref(false)
+  const error = ref<string | null>(null)
   const hasMore = ref(true)
   const page = ref(0)
 
@@ -21,12 +22,16 @@ export const useFeedStore = defineStore('feed', () => {
     if (!hasMore.value) return
 
     loading.value = true
+    error.value = null
     try {
       const res = await feedApi.getFeed(page.value)
       const data = res.data.data
       posts.value = reset ? data.content : [...posts.value, ...data.content]
       hasMore.value = !data.last
       page.value++
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || 'Failed to load feed'
+      throw e
     } finally {
       loading.value = false
     }
@@ -42,14 +47,26 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   async function createPost(data: CreatePostRequest) {
-    const res = await feedApi.createPost(data)
-    posts.value.unshift(res.data.data)
-    return res.data.data
+    error.value = null
+    try {
+      const res = await feedApi.createPost(data)
+      posts.value.unshift(res.data.data)
+      return res.data.data
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || 'Failed to create post'
+      throw e
+    }
   }
 
   async function deletePost(id: string) {
-    await feedApi.deletePost(id)
-    posts.value = posts.value.filter(p => p.id !== id)
+    error.value = null
+    try {
+      await feedApi.deletePost(id)
+      posts.value = posts.value.filter(p => p.id !== id)
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || 'Failed to delete post'
+      throw e
+    }
   }
 
   async function pinPost(id: string) {
@@ -64,13 +81,19 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   async function addComment(postId: string, content: string) {
-    const res = await feedApi.addComment(postId, { content })
-    if (!commentsByPost.value[postId]) {
-      commentsByPost.value[postId] = []
+    error.value = null
+    try {
+      const res = await feedApi.addComment(postId, { content })
+      if (!commentsByPost.value[postId]) {
+        commentsByPost.value[postId] = []
+      }
+      commentsByPost.value[postId].push(res.data.data)
+      const post = posts.value.find(p => p.id === postId)
+      if (post) post.commentCount++
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || 'Failed to add comment'
+      throw e
     }
-    commentsByPost.value[postId].push(res.data.data)
-    const post = posts.value.find(p => p.id === postId)
-    if (post) post.commentCount++
   }
 
   return {
@@ -79,6 +102,7 @@ export const useFeedStore = defineStore('feed', () => {
     currentPost,
     commentsByPost,
     loading,
+    error,
     hasMore,
     fetchFeed,
     fetchBanners,
