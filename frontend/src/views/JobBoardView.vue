@@ -8,7 +8,6 @@ import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
 import { useFamilyStore } from '@/stores/family'
-import { useCleaningStore } from '@/stores/cleaning'
 import { jobboardApi } from '@/api/jobboard.api'
 import * as cleaningApi from '@/api/cleaning.api'
 import { useCalendarStore } from '@/stores/calendar'
@@ -54,7 +53,6 @@ const showPendingTab = computed(() =>
 const pendingLoaded = ref(false)
 const confirmingId = ref<string | null>(null)
 const rejectingId = ref<string | null>(null)
-const cleaningStore = useCleaningStore()
 const cleaningEnabled = admin.isModuleEnabled('cleaning')
 const myCleaningSlots = ref<CleaningSlotInfo[]>([])
 const showDurationDialog = ref(false)

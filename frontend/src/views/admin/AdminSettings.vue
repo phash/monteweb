@@ -33,6 +33,10 @@ const requireAssignmentConfirmation = ref(true)
 const twoFactorMode = ref('DISABLED')
 const twoFactorGraceDeadline = ref<string | null>(null)
 
+// Communication settings
+const parentToParentMessaging = ref(false)
+const studentToStudentMessaging = ref(false)
+
 // Family settings
 const soleCustodyEnabled = ref(false)
 const requireFamilySwitchApproval = ref(false)
@@ -125,6 +129,9 @@ onMounted(async () => {
     targetCleaningHours.value = adminStore.config.targetCleaningHours ?? 3
     bundesland.value = adminStore.config.bundesland || 'BY'
     schoolVacations.value = (adminStore.config.schoolVacations || []).map(v => ({ ...v }))
+    // Communication settings
+    parentToParentMessaging.value = adminStore.config.parentToParentMessaging ?? false
+    studentToStudentMessaging.value = adminStore.config.studentToStudentMessaging ?? false
     // Family settings
     soleCustodyEnabled.value = adminStore.config.soleCustodyEnabled ?? false
     requireFamilySwitchApproval.value = adminStore.config.requireFamilySwitchApproval ?? false

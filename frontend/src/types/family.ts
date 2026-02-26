@@ -89,6 +89,9 @@ export interface TenantConfig {
   jitsiServerUrl?: string
   // WOPI / ONLYOFFICE (enabled via modules map)
   wopiOfficeUrl?: string | null
+  // Communication rules
+  parentToParentMessaging?: boolean
+  studentToStudentMessaging?: boolean
   // Family settings
   soleCustodyEnabled?: boolean
   requireFamilySwitchApproval?: boolean
