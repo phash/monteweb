@@ -446,6 +446,15 @@ public class FamilyService implements FamilyModuleApi {
         return toFamilyInfo(family);
     }
 
+    @Override
+    @Transactional
+    public void deactivateFamily(UUID familyId) {
+        var family = familyRepository.findById(familyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Family not found"));
+        family.setActive(false);
+        familyRepository.save(family);
+    }
+
     /**
      * DSGVO: Export all family data for a user.
      */

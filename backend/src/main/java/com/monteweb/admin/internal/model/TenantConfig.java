@@ -174,6 +174,14 @@ public class TenantConfig {
     @Column(name = "clamav_port")
     private int clamavPort = 3310;
 
+    // --- Family settings ---
+
+    @Column(name = "sole_custody_enabled", nullable = false)
+    private boolean soleCustodyEnabled = false;
+
+    @Column(name = "require_family_switch_approval", nullable = false)
+    private boolean requireFamilySwitchApproval = false;
+
     // --- Jitsi Video Conferencing (enabled via modules map) ---
 
     @Column(name = "jitsi_server_url", length = 300)

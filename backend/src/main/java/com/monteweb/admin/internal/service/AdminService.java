@@ -271,7 +271,10 @@ public class AdminService implements AdminModuleApi {
                 // Jitsi video conferencing (enabled via modules map)
                 config.getJitsiServerUrl(),
                 // WOPI / ONLYOFFICE (enabled via modules map)
-                config.getWopiOfficeUrl()
+                config.getWopiOfficeUrl(),
+                // Family settings
+                config.isSoleCustodyEnabled(),
+                config.isRequireFamilySwitchApproval()
         );
     }
 }

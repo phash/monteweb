@@ -60,6 +60,9 @@ public record TenantConfigInfo(
         // Jitsi video conferencing (enabled via modules map)
         String jitsiServerUrl,
         // WOPI / ONLYOFFICE (enabled via modules map)
-        String wopiOfficeUrl
+        String wopiOfficeUrl,
+        // Family settings
+        boolean soleCustodyEnabled,
+        boolean requireFamilySwitchApproval
 ) {
 }
