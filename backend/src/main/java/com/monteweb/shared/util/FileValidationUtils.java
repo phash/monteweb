@@ -5,7 +5,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -96,7 +95,7 @@ public final class FileValidationUtils {
         }
     }
 
-    static boolean isImageMagicBytes(byte[] header) {
+    public static boolean isImageMagicBytes(byte[] header) {
         if (header.length < 3) return false;
         return startsWith(header, JPEG_MAGIC)
                 || startsWith(header, PNG_MAGIC)
