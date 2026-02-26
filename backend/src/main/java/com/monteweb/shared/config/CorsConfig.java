@@ -20,7 +20,7 @@ public class CorsConfig {
         var config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(allowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Requested-With", "Accept-Language"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

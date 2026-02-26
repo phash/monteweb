@@ -1,5 +1,6 @@
 package com.monteweb.auth.internal.service;
 
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -12,8 +13,11 @@ import java.util.UUID;
 @Service
 public class RefreshTokenService {
 
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(RefreshTokenService.class);
+
     private static final String TOKEN_PREFIX = "refresh_token:";
     private static final String USER_TOKENS_PREFIX = "user_refresh_tokens:";
+    private static final String USED_TOKEN_PREFIX = "used_refresh_token:";
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final StringRedisTemplate redisTemplate;
@@ -47,8 +51,17 @@ public class RefreshTokenService {
 
     public UUID validateAndRotate(String refreshToken) {
         String key = TOKEN_PREFIX + refreshToken;
-        String userId = redisTemplate.opsForValue().get(key);
+        String usedKey = USED_TOKEN_PREFIX + refreshToken;
 
+        // Check if this token was already used (replay attack detection)
+        String previousUser = redisTemplate.opsForValue().get(usedKey);
+        if (previousUser != null) {
+            log.warn("Refresh token reuse detected for user {}. Revoking all sessions.", previousUser);
+            revokeAllForUser(UUID.fromString(previousUser));
+            return null;
+        }
+
+        String userId = redisTemplate.opsForValue().get(key);
         if (userId == null) {
             return null;
         }
@@ -56,6 +69,9 @@ public class RefreshTokenService {
         // Delete old token (rotation)
         redisTemplate.delete(key);
         redisTemplate.opsForSet().remove(USER_TOKENS_PREFIX + userId, refreshToken);
+
+        // Mark token as used for replay detection (keep for 7 days)
+        redisTemplate.opsForValue().set(usedKey, userId, refreshTokenExpiration);
 
         return UUID.fromString(userId);
     }

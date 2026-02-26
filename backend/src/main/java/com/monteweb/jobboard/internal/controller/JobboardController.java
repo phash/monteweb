@@ -11,6 +11,7 @@ import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.FileDownloadUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
@@ -285,8 +286,8 @@ public class JobboardController {
 
         var stream = storageService.download(attachment.getStoragePath());
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
-                .contentType(MediaType.parseMediaType(attachment.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, FileDownloadUtils.buildContentDisposition("attachment", attachment.getOriginalFilename()))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(attachment.getFileSize())
                 .body(new InputStreamResource(stream));
     }

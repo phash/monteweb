@@ -6,6 +6,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
 import { searchApi, type SearchResult, type SearchType } from '@/api/search.api'
+import { sanitizeSearchSnippet } from '@/utils/sanitize'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -247,11 +248,11 @@ onUnmounted(() => {
                 <i :class="typeIcon(result.type)" />
               </div>
               <div class="result-content">
-                <div class="result-title" v-html="result.snippet && result.type === 'FILE' ? result.title : result.title"></div>
+                <div class="result-title">{{ result.title }}</div>
                 <div class="result-subtitle" v-if="result.subtitle">
                   {{ result.subtitle }}
                 </div>
-                <div class="result-snippet" v-if="result.snippet" v-html="result.snippet"></div>
+                <div class="result-snippet" v-if="result.snippet" v-html="sanitizeSearchSnippet(result.snippet)"></div>
               </div>
               <div class="result-meta" v-if="result.timestamp">
                 <i class="pi pi-clock" />

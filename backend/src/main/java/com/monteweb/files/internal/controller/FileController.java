@@ -6,7 +6,11 @@ import com.monteweb.files.FolderInfo;
 import com.monteweb.files.internal.service.FileService;
 import com.monteweb.files.internal.service.WopiTokenService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.util.FileDownloadUtils;
 import com.monteweb.shared.util.SecurityUtils;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
@@ -69,9 +73,8 @@ public class FileController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + metadata.getOriginalName() + "\"")
-                .contentType(MediaType.parseMediaType(
-                        metadata.getContentType() != null ? metadata.getContentType() : "application/octet-stream"))
+                        FileDownloadUtils.buildContentDisposition("attachment", metadata.getOriginalName()))
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(metadata.getFileSize())
                 .body(new InputStreamResource(stream));
     }
@@ -99,7 +102,7 @@ public class FileController {
     @PostMapping("/folders")
     public ResponseEntity<ApiResponse<FolderInfo>> createFolder(
             @PathVariable UUID roomId,
-            @RequestBody CreateFolderRequest request) {
+            @Valid @RequestBody CreateFolderRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var folder = fileService.createFolder(roomId, request.parentId(), request.name(), request.audience(), userId);
         return ResponseEntity.ok(ApiResponse.ok(folder));
@@ -141,6 +144,6 @@ public class FileController {
         return ResponseEntity.ok(ApiResponse.ok(session));
     }
 
-    public record CreateFolderRequest(UUID parentId, String name, String audience) {
+    public record CreateFolderRequest(UUID parentId, @NotBlank @Size(max = 255) String name, String audience) {
     }
 }

@@ -75,8 +75,7 @@ async function submit() {
         }
         return
       }
-      const redirect = (route.query.redirect as string) || '/'
-      router.push(redirect)
+      router.push(safeRedirect(route.query.redirect as string))
     } else {
       await auth.register({
         email: form.value.email,
@@ -101,8 +100,7 @@ async function submit2fa() {
   error.value = ''
   try {
     await auth.verify2fa(tempToken.value, twoFactorCode.value)
-    const redirect = (route.query.redirect as string) || '/'
-    router.push(redirect)
+    router.push(safeRedirect(route.query.redirect as string))
   } catch (e: any) {
     error.value = e?.response?.data?.message || t('twoFactor.invalidCode')
   }
@@ -119,6 +117,13 @@ function back2fa() {
 function toggleMode() {
   isLogin.value = !isLogin.value
   error.value = ''
+}
+
+function safeRedirect(path: string | undefined): string {
+  if (!path || !path.startsWith('/') || path.startsWith('//') || path.includes('://')) {
+    return '/'
+  }
+  return path
 }
 
 function loginWithSso() {

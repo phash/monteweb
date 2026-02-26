@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -308,9 +308,13 @@ async function confirmDisable2fa() {
   }
 }
 
-const qrCodeUrl = computed(() => {
-  if (!setupQrUri.value) return ''
-  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupQrUri.value)}`
+const qrCanvas = ref<HTMLCanvasElement | null>(null)
+
+watch([setupQrUri, qrCanvas], async ([uri, canvas]) => {
+  if (uri && canvas) {
+    const QRCode = await import('qrcode')
+    await QRCode.toCanvas(canvas, uri, { width: 200, margin: 2 })
+  }
 })
 
 // DSGVO / Privacy
@@ -560,7 +564,7 @@ async function cancelAccountDeletion() {
       <div class="twofa-setup">
         <p class="twofa-step">1. {{ t('twoFactor.scanQr') }}</p>
         <div class="twofa-qr">
-          <img v-if="qrCodeUrl" :src="qrCodeUrl" alt="QR Code" width="200" height="200" />
+          <canvas ref="qrCanvas" width="200" height="200" />
         </div>
 
         <p class="twofa-step">{{ t('twoFactor.manualEntry') }}:</p>

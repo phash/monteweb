@@ -8,6 +8,7 @@ import type {
   WikiPageVersionResponse,
 } from '@/types/wiki'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import { sanitizeHtml } from '@/utils/sanitize'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -501,7 +502,7 @@ function renderMarkdown(md: string): string {
               </span>
             </div>
 
-            <div class="wiki-rendered-content" v-html="renderMarkdown(currentPage.content)" />
+            <div class="wiki-rendered-content" v-html="sanitizeHtml(renderMarkdown(currentPage.content))" />
 
             <!-- Child pages -->
             <div v-if="currentPage.children.length" class="wiki-children-section">
@@ -565,7 +566,7 @@ function renderMarkdown(md: string): string {
 
           <template v-if="showPreview">
             <div class="wiki-preview-label">{{ t('wiki.preview') }}</div>
-            <div class="wiki-rendered-content wiki-preview-box" v-html="renderMarkdown(editForm.content)" />
+            <div class="wiki-rendered-content wiki-preview-box" v-html="sanitizeHtml(renderMarkdown(editForm.content))" />
           </template>
           <template v-else>
             <div class="form-field">
@@ -647,7 +648,7 @@ function renderMarkdown(md: string): string {
               {{ formatDateTime(selectedVersion.createdAt) }}
             </span>
           </div>
-          <div class="wiki-rendered-content" v-html="renderMarkdown(selectedVersion.content)" />
+          <div class="wiki-rendered-content" v-html="sanitizeHtml(renderMarkdown(selectedVersion.content))" />
         </div>
       </template>
     </template>

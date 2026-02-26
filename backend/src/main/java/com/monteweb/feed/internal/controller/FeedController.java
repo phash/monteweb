@@ -9,6 +9,7 @@ import com.monteweb.feed.internal.service.FeedService;
 import com.monteweb.feed.internal.service.LinkPreviewService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
+import com.monteweb.shared.util.FileDownloadUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.core.io.InputStreamResource;
@@ -168,10 +169,9 @@ public class FeedController {
         SecurityUtils.requireCurrentUserId();
         var attachment = feedService.getAttachment(id);
         var stream = feedService.downloadAttachment(attachment.getFileUrl());
-        String contentType = attachment.getFileType() != null ? attachment.getFileType() : "application/octet-stream";
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + attachment.getFileName() + "\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, FileDownloadUtils.buildContentDisposition("attachment", attachment.getFileName()))
                 .body(new InputStreamResource(stream));
     }
 
