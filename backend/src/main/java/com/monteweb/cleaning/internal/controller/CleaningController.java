@@ -147,4 +147,15 @@ public class CleaningController {
         cleaningService.rejectCleaningRegistration(registrationId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
+
+    @PutMapping("/registrations/{registrationId}/update-minutes")
+    public ResponseEntity<ApiResponse<CleaningSlotInfo.RegistrationInfo>> updateRegistrationMinutes(
+            @PathVariable UUID registrationId,
+            @RequestBody UpdateMinutesRequest request) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var result = cleaningService.updateRegistrationMinutes(registrationId, request.actualMinutes(), userId);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    public record UpdateMinutesRequest(int actualMinutes) {}
 }

@@ -22,4 +22,8 @@ public record PageResponse<T>(
                 page.isLast()
         );
     }
+
+    public static <T> PageResponse<T> fromList(List<T> list) {
+        return new PageResponse<>(list, 0, list.size(), list.size(), 1, true);
+    }
 }

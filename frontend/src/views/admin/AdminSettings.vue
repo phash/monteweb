@@ -33,6 +33,10 @@ const requireAssignmentConfirmation = ref(true)
 const twoFactorMode = ref('DISABLED')
 const twoFactorGraceDeadline = ref<string | null>(null)
 
+// Family settings
+const soleCustodyEnabled = ref(false)
+const requireFamilySwitchApproval = ref(false)
+
 const twoFactorModeOptions = [
   { label: t('twoFactor.modes.DISABLED'), value: 'DISABLED' },
   { label: t('twoFactor.modes.OPTIONAL'), value: 'OPTIONAL' },
@@ -121,6 +125,9 @@ onMounted(async () => {
     targetCleaningHours.value = adminStore.config.targetCleaningHours ?? 3
     bundesland.value = adminStore.config.bundesland || 'BY'
     schoolVacations.value = (adminStore.config.schoolVacations || []).map(v => ({ ...v }))
+    // Family settings
+    soleCustodyEnabled.value = adminStore.config.soleCustodyEnabled ?? false
+    requireFamilySwitchApproval.value = adminStore.config.requireFamilySwitchApproval ?? false
     // LDAP fields (enabled via modules map)
     ldapEnabled.value = adminStore.isModuleEnabled('ldap')
     ldapUrl.value = adminStore.config.ldapUrl ?? ''
@@ -166,6 +173,10 @@ async function saveSettings() {
       requireUserApproval: requireUserApproval.value,
       requireAssignmentConfirmation: requireAssignmentConfirmation.value,
       twoFactorMode: twoFactorMode.value,
+      parentToParentMessaging: parentToParentMessaging.value,
+      studentToStudentMessaging: studentToStudentMessaging.value,
+      soleCustodyEnabled: soleCustodyEnabled.value,
+      requireFamilySwitchApproval: requireFamilySwitchApproval.value,
     })
     // Update grace deadline from response
     if (adminStore.config) {
@@ -460,6 +471,25 @@ async function testLdapConnection() {
       </div>
     </div>
 
+    <!-- Communication Section -->
+    <div v-if="adminStore.isModuleEnabled('messaging')" class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.communication') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="parentToParentMessaging" />
+        <div>
+          <label class="block text-sm font-medium">{{ t('admin.settings.parentToParentMessaging') }}</label>
+          <small class="text-gray-500">{{ t('admin.settings.parentToParentMessagingHint') }}</small>
+        </div>
+      </div>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="studentToStudentMessaging" />
+        <div>
+          <label class="block text-sm font-medium">{{ t('admin.settings.studentToStudentMessaging') }}</label>
+          <small class="text-gray-500">{{ t('admin.settings.studentToStudentMessagingHint') }}</small>
+        </div>
+      </div>
+    </div>
+
     <!-- Jobboard Section -->
     <div class="settings-section">
       <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.jobboard') }}</h2>
@@ -468,6 +498,25 @@ async function testLdapConnection() {
         <div>
           <label class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
           <small class="text-gray-500">{{ t('admin.requireConfirmationHint') }}</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Family Settings Section -->
+    <div class="settings-section">
+      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.family') }}</h2>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="soleCustodyEnabled" />
+        <div>
+          <label class="block text-sm font-medium">{{ t('admin.settings.soleCustodyEnabled') }}</label>
+          <small class="text-gray-500">{{ t('admin.settings.soleCustodyEnabledHint') }}</small>
+        </div>
+      </div>
+      <div class="mb-4 flex items-center gap-3">
+        <ToggleSwitch v-model="requireFamilySwitchApproval" />
+        <div>
+          <label class="block text-sm font-medium">{{ t('admin.settings.requireFamilySwitchApproval') }}</label>
+          <small class="text-gray-500">{{ t('admin.settings.requireFamilySwitchApprovalHint') }}</small>
         </div>
       </div>
     </div>

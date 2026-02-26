@@ -88,6 +88,10 @@ public class CleaningService implements CleaningModuleApi {
         config.setMaxParticipants(request.maxParticipants());
         config.setHoursCredit(request.hoursCredit());
         config.setRoomId(request.roomId());
+        if (request.participantCircle() != null) {
+            config.setParticipantCircle(request.participantCircle());
+        }
+        config.setParticipantCircleId(request.participantCircleId());
         if (request.specificDate() != null) {
             config.setSpecificDate(request.specificDate());
             config.setDayOfWeek(request.specificDate().getDayOfWeek().getValue());
@@ -345,6 +349,19 @@ public class CleaningService implements CleaningModuleApi {
         if (registrationRepository.existsBySlotIdAndUserId(slotId, userId)) {
             throw new BusinessException("Already registered for this slot");
         }
+
+        // Participant circle restriction
+        CleaningConfig config = configRepository.findById(slot.getConfigId())
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", slot.getConfigId()));
+        String circle = config.getParticipantCircle();
+        if (circle != null && !"SECTION".equals(circle)) {
+            if ("ROOM".equals(circle) && config.getParticipantCircleId() != null) {
+                if (roomModuleApi != null && !roomModuleApi.isUserInRoom(userId, config.getParticipantCircleId())) {
+                    throw new BusinessException("Registration restricted to members of the assigned room");
+                }
+            }
+        }
+
         long currentCount = registrationRepository.countBySlotId(slotId);
         if (currentCount >= slot.getMaxParticipants()) {
             throw new BusinessException("Slot is full");
@@ -494,6 +511,27 @@ public class CleaningService implements CleaningModuleApi {
                 hoursCredit, actualMinutes));
 
         return toSlotInfo(slot, config != null ? config.getTitle() : "");
+    }
+
+    /**
+     * Update actual minutes and confirm duration after checkout.
+     */
+    public CleaningSlotInfo.RegistrationInfo updateRegistrationMinutes(UUID registrationId, int actualMinutes, UUID userId) {
+        CleaningRegistration reg = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
+
+        if (!reg.getUserId().equals(userId)) {
+            throw new BusinessException("Can only update own registration");
+        }
+        if (!reg.isCheckedOut()) {
+            throw new BusinessException("Must check out before confirming duration");
+        }
+
+        reg.setActualMinutes(actualMinutes);
+        reg.setDurationConfirmed(true);
+        registrationRepository.save(reg);
+
+        return toRegistrationInfo(reg);
     }
 
     /**
@@ -656,7 +694,8 @@ public class CleaningService implements CleaningModuleApi {
                 config.getMinParticipants(), config.getMaxParticipants(),
                 config.getHoursCredit(), config.isActive(),
                 config.getSpecificDate(),
-                config.getCalendarEventId(), config.getJobId());
+                config.getCalendarEventId(), config.getJobId(),
+                config.getParticipantCircle(), config.getParticipantCircleId());
     }
 
     private CleaningSlotInfo toSlotInfo(CleaningSlot slot, String configTitle) {
@@ -683,7 +722,8 @@ public class CleaningService implements CleaningModuleApi {
                 reg.getId(), reg.getUserId(), reg.getUserName(), reg.getFamilyId(),
                 reg.isCheckedIn(), reg.isCheckedOut(), reg.getActualMinutes(),
                 reg.isNoShow(), reg.isSwapOffered(),
-                reg.isConfirmed(), reg.getConfirmedBy(), reg.getConfirmedAt());
+                reg.isConfirmed(), reg.getConfirmedBy(), reg.getConfirmedAt(),
+                reg.isDurationConfirmed());
     }
 
     private String getSectionName(UUID sectionId) {
@@ -732,7 +772,8 @@ public class CleaningService implements CleaningModuleApi {
             UUID sectionId, UUID roomId, String title, String description,
             int dayOfWeek, LocalTime startTime, LocalTime endTime,
             int minParticipants, int maxParticipants, BigDecimal hoursCredit,
-            LocalDate specificDate) {
+            LocalDate specificDate,
+            String participantCircle, UUID participantCircleId) {
     }
 
     public record UpdateConfigRequest(

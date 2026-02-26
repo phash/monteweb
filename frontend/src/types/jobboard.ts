@@ -1,5 +1,6 @@
 export type JobStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type AssignmentStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+export type JobVisibility = 'PRIVATE' | 'DRAFT' | 'PUBLIC'
 
 export interface JobAttachmentInfo {
   id: string
@@ -33,6 +34,9 @@ export interface JobInfo {
   eventTitle: string | null
   attachments: JobAttachmentInfo[]
   createdAt: string
+  visibility: JobVisibility
+  approvedBy: string | null
+  approvedAt: string | null
 }
 
 export interface JobAssignmentInfo {
@@ -91,4 +95,5 @@ export interface CreateJobRequest {
   scheduledTime?: string
   contactInfo?: string
   eventId?: string
+  visibility?: JobVisibility
 }

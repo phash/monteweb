@@ -61,6 +61,9 @@ public class CleaningRegistration {
 
     @Column(name = "confirmed_at")
     private Instant confirmedAt;
+
+    @Column(name = "duration_confirmed", nullable = false)
+    private boolean durationConfirmed = false;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

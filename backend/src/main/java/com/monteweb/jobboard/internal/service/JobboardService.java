@@ -146,6 +146,18 @@ public class JobboardService implements JobboardModuleApi {
         job.setContactInfo(request.contactInfo());
         job.setStatus(JobStatus.OPEN);
 
+        // Handle visibility
+        if (request.visibility() != null) {
+            job.setVisibility(request.visibility());
+        } else {
+            job.setVisibility(JobVisibility.PUBLIC);
+        }
+
+        // For PRIVATE jobs, auto-assign the creator
+        if (job.getVisibility() == JobVisibility.PRIVATE) {
+            job.setMaxAssignees(1);
+        }
+
         if (request.eventId() != null) {
             if (calendarModuleApi != null) {
                 calendarModuleApi.findById(request.eventId())
@@ -154,7 +166,25 @@ public class JobboardService implements JobboardModuleApi {
             job.setEventId(request.eventId());
         }
 
-        return toJobInfo(jobRepository.save(job));
+        var savedJob = jobRepository.save(job);
+
+        // For PRIVATE jobs, auto-create assignment for the creator
+        if (savedJob.getVisibility() == JobVisibility.PRIVATE) {
+            var families = familyModuleApi.findByUserId(userId);
+            if (!families.isEmpty()) {
+                var family = families.get(0);
+                var assignment = new JobAssignment();
+                assignment.setJobId(savedJob.getId());
+                assignment.setUserId(userId);
+                assignment.setFamilyId(family.id());
+                assignment.setStatus(AssignmentStatus.ASSIGNED);
+                assignmentRepository.save(assignment);
+                savedJob.setStatus(JobStatus.ASSIGNED);
+                savedJob = jobRepository.save(savedJob);
+            }
+        }
+
+        return toJobInfo(savedJob);
     }
 
     public JobInfo updateJob(UUID jobId, UUID userId, UpdateJobRequest request) {
@@ -266,6 +296,29 @@ public class JobboardService implements JobboardModuleApi {
         }
         assignmentRepository.deleteByJobId(jobId);
         jobRepository.delete(job);
+    }
+
+    /**
+     * Approve a draft job (JOBBOARD_ADMIN or SUPERADMIN only).
+     */
+    public JobInfo approveJob(UUID jobId, UUID approverId) {
+        var job = jobRepository.findById(jobId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
+        if (job.getVisibility() != JobVisibility.DRAFT) {
+            throw new BusinessException("Only draft jobs can be approved");
+        }
+        job.setVisibility(JobVisibility.PUBLIC);
+        job.setApprovedBy(approverId);
+        job.setApprovedAt(java.time.Instant.now());
+        return toJobInfo(jobRepository.save(job));
+    }
+
+    /**
+     * Get draft jobs awaiting approval.
+     */
+    @Transactional(readOnly = true)
+    public Page<JobInfo> getDraftJobs(Pageable pageable) {
+        return jobRepository.findDraftJobs(pageable).map(this::toJobInfo);
     }
 
     // ---- Assignment operations ----
@@ -695,7 +748,10 @@ public class JobboardService implements JobboardModuleApi {
                 job.getEventId(),
                 eventTitle,
                 attachments,
-                job.getCreatedAt()
+                job.getCreatedAt(),
+                job.getVisibility(),
+                job.getApprovedBy(),
+                job.getApprovedAt()
         );
     }
 
@@ -787,7 +843,8 @@ public class JobboardService implements JobboardModuleApi {
             java.time.LocalDate scheduledDate,
             String scheduledTime,
             String contactInfo,
-            UUID eventId
+            UUID eventId,
+            JobVisibility visibility
     ) {
     }
 

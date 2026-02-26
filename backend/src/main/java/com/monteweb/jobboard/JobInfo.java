@@ -27,6 +27,9 @@ public record JobInfo(
         UUID eventId,
         String eventTitle,
         List<JobAttachmentInfo> attachments,
-        Instant createdAt
+        Instant createdAt,
+        JobVisibility visibility,
+        UUID approvedBy,
+        Instant approvedAt
 ) {
 }

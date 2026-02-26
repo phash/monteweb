@@ -125,6 +125,10 @@ public class RoomService implements RoomModuleApi {
         return roomRepository.findByArchivedFalse(pageable).map(this::toRoomInfo);
     }
 
+    public List<RoomInfo> findByType(RoomType type) {
+        return roomRepository.findByTypeAndArchivedFalse(type).stream().map(this::toRoomInfo).toList();
+    }
+
     public List<RoomInfo> findMyRooms(UUID userId) {
         return findByUserId(userId);
     }
@@ -546,6 +550,95 @@ public class RoomService implements RoomModuleApi {
     public RoomInfo getJitsiRoom(UUID roomId) {
         var room = findEntityById(roomId);
         return toRoomInfo(room);
+    }
+
+    // ---- Class migration ----
+
+    /**
+     * Migrate members from one KLASSE room to another, or remove them from school entirely.
+     */
+    @Transactional
+    public int migrateMembers(UUID sourceRoomId, List<UUID> memberIds, UUID targetRoomId, boolean leaveSchool) {
+        var sourceRoom = findEntityById(sourceRoomId);
+        if (sourceRoom.getType() != RoomType.KLASSE) {
+            throw new BusinessException("Source room must be of type KLASSE");
+        }
+
+        int migrated = 0;
+        for (UUID memberId : memberIds) {
+            if (!memberRepository.existsByIdRoomIdAndIdUserId(sourceRoomId, memberId)) {
+                continue; // skip non-members
+            }
+
+            if (leaveSchool) {
+                // Remove from ALL rooms
+                var allMemberships = memberRepository.findByIdUserId(memberId);
+                for (var membership : allMemberships) {
+                    var room = findEntityById(membership.getId().getRoomId());
+                    room.getMembers().removeIf(m -> m.getUserId().equals(memberId));
+                    roomRepository.save(room);
+                    syncChatParticipantRemove(membership.getId().getRoomId(), memberId);
+                }
+                // Also remove family parents from all rooms and deactivate families
+                var families = familyModuleApi.findByUserId(memberId);
+                for (var family : families) {
+                    for (var fm : family.members()) {
+                        if ("PARENT".equals(fm.role())) {
+                            var parentMemberships = memberRepository.findByIdUserId(fm.userId());
+                            for (var pm : parentMemberships) {
+                                var room = findEntityById(pm.getId().getRoomId());
+                                room.getMembers().removeIf(m -> m.getUserId().equals(fm.userId()));
+                                roomRepository.save(room);
+                                syncChatParticipantRemove(pm.getId().getRoomId(), fm.userId());
+                            }
+                        }
+                    }
+                    familyModuleApi.deactivateFamily(family.id());
+                }
+            } else if (targetRoomId != null) {
+                var targetRoom = findEntityById(targetRoomId);
+                if (targetRoom.getType() != RoomType.KLASSE) {
+                    throw new BusinessException("Target room must be of type KLASSE");
+                }
+                // Remove from source
+                sourceRoom.getMembers().removeIf(m -> m.getUserId().equals(memberId));
+                syncChatParticipantRemove(sourceRoomId, memberId);
+
+                // Add to target (if not already)
+                if (!memberRepository.existsByIdRoomIdAndIdUserId(targetRoomId, memberId)) {
+                    RoomRole effectiveRole = resolveEffectiveRole(targetRoom, memberId, RoomRole.MEMBER);
+                    targetRoom.getMembers().add(new RoomMember(targetRoom, memberId, effectiveRole));
+                    syncChatParticipantAdd(targetRoomId, memberId);
+                }
+
+                // Auto-add family parents to target room
+                var families = familyModuleApi.findByUserId(memberId);
+                for (var family : families) {
+                    for (var fm : family.members()) {
+                        if ("PARENT".equals(fm.role()) && !memberRepository.existsByIdRoomIdAndIdUserId(targetRoomId, fm.userId())) {
+                            targetRoom.getMembers().add(new RoomMember(targetRoom, fm.userId(), RoomRole.PARENT_MEMBER));
+                            syncChatParticipantAdd(targetRoomId, fm.userId());
+                        }
+                    }
+                    // Remove parents from source if they have no other children there
+                    for (var fm : family.members()) {
+                        if ("PARENT".equals(fm.role()) && memberRepository.existsByIdRoomIdAndIdUserId(sourceRoomId, fm.userId())) {
+                            boolean hasOtherChildrenInSource = family.members().stream()
+                                    .filter(m -> "CHILD".equals(m.role()) && !memberIds.contains(m.userId()))
+                                    .anyMatch(m -> memberRepository.existsByIdRoomIdAndIdUserId(sourceRoomId, m.userId()));
+                            if (!hasOtherChildrenInSource) {
+                                sourceRoom.getMembers().removeIf(m -> m.getUserId().equals(fm.userId()));
+                                syncChatParticipantRemove(sourceRoomId, fm.userId());
+                            }
+                        }
+                    }
+                }
+                roomRepository.save(targetRoom);
+            }
+            migrated++;
+        }
+        roomRepository.save(sourceRoom);
+        return migrated;
     }
 
     // ---- Chat participant sync ----

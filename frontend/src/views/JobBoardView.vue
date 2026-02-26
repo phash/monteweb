@@ -8,8 +8,13 @@ import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useJobboardStore } from '@/stores/jobboard'
 import { useFamilyStore } from '@/stores/family'
+import { useCleaningStore } from '@/stores/cleaning'
 import { jobboardApi } from '@/api/jobboard.api'
+import * as cleaningApi from '@/api/cleaning.api'
 import { useCalendarStore } from '@/stores/calendar'
+import type { CleaningSlotInfo } from '@/types/cleaning'
+import Dialog from 'primevue/dialog'
+import InputNumber from 'primevue/inputnumber'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -49,11 +54,38 @@ const showPendingTab = computed(() =>
 const pendingLoaded = ref(false)
 const confirmingId = ref<string | null>(null)
 const rejectingId = ref<string | null>(null)
+const cleaningStore = useCleaningStore()
+const cleaningEnabled = admin.isModuleEnabled('cleaning')
+const myCleaningSlots = ref<CleaningSlotInfo[]>([])
+const showDurationDialog = ref(false)
+const durationRegistrationId = ref<string | null>(null)
+const durationMinutes = ref(0)
+const savingDuration = ref(false)
+const assignmentSort = ref<string>('date')
+const canSeeDrafts = computed(() =>
+  auth.isAdmin || auth.isSectionAdmin || auth.user?.specialRoles?.includes('JOBBOARD_ADMIN')
+)
+const draftsLoaded = ref(false)
+const approvingJobId = ref<string | null>(null)
+
+const sortedAssignments = computed(() => {
+  const list = [...jobboard.myAssignments]
+  if (assignmentSort.value === 'name') {
+    list.sort((a, b) => a.jobTitle.localeCompare(b.jobTitle))
+  } else {
+    list.sort((a, b) => new Date(b.assignedAt).getTime() - new Date(a.assignedAt).getTime())
+  }
+  return list
+})
 
 watch(activeTab, (val) => {
   if (val === 'pending' && !pendingLoaded.value) {
     pendingLoaded.value = true
     jobboard.fetchPendingConfirmations()
+  }
+  if (val === 'drafts' && !draftsLoaded.value) {
+    draftsLoaded.value = true
+    jobboard.fetchDraftJobs()
   }
 })
 
@@ -89,11 +121,54 @@ onMounted(async () => {
     const formatDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     promises.push(calendar.fetchEvents(formatDate(from), formatDate(to)))
   }
+  if (cleaningEnabled) {
+    promises.push(fetchMyCleaningSlots())
+  }
   if (canSeeCompleted.value) {
     promises.push(fetchCompletedJobs())
   }
   await Promise.all(promises)
 })
+
+async function handleApproveJob(jobId: string) {
+  approvingJobId.value = jobId
+  try {
+    await jobboard.approveJob(jobId)
+    toast.add({ severity: 'success', summary: t('jobboard.jobApproved'), life: 3000 })
+  } finally {
+    approvingJobId.value = null
+  }
+}
+
+async function fetchMyCleaningSlots() {
+  try {
+    const res = await cleaningApi.getMySlots()
+    myCleaningSlots.value = res.data.data
+  } catch {
+    myCleaningSlots.value = []
+  }
+}
+
+function openDurationDialog(registrationId: string, currentMinutes: number) {
+  durationRegistrationId.value = registrationId
+  durationMinutes.value = currentMinutes
+  showDurationDialog.value = true
+}
+
+async function saveDuration() {
+  if (!durationRegistrationId.value) return
+  savingDuration.value = true
+  try {
+    await cleaningApi.updateRegistrationMinutes(durationRegistrationId.value, durationMinutes.value)
+    toast.add({ severity: 'success', summary: t('jobboard.durationConfirmed'), life: 3000 })
+    showDurationDialog.value = false
+    await fetchMyCleaningSlots()
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), life: 3000 })
+  } finally {
+    savingDuration.value = false
+  }
+}
 
 function formatIsoDate(d: Date | null): string | undefined {
   if (!d) return undefined
@@ -153,12 +228,20 @@ function formatDate(date: string | null) {
   <div>
     <div class="page-header">
       <PageTitle :title="t('jobboard.title')" />
-      <Button
-        v-if="!auth.isStudent"
-        :label="t('jobboard.create')"
-        icon="pi pi-plus"
-        @click="router.push({ name: 'job-create' })"
-      />
+      <div class="header-actions">
+        <Button
+          :label="t('jobboard.createPrivate')"
+          icon="pi pi-lock"
+          severity="secondary"
+          @click="router.push({ name: 'job-create', query: { visibility: 'PRIVATE' } })"
+        />
+        <Button
+          v-if="!auth.isStudent"
+          :label="t('jobboard.create')"
+          icon="pi pi-plus"
+          @click="router.push({ name: 'job-create' })"
+        />
+      </div>
     </div>
 
     <Tabs v-model:value="activeTab">
@@ -168,6 +251,10 @@ function formatDate(date: string | null) {
         <Tab v-if="showPendingTab" value="pending">
           {{ t('jobboard.pendingTab') }}
           <span v-if="jobboard.pendingConfirmations.length" class="pending-badge">{{ jobboard.pendingConfirmations.length }}</span>
+        </Tab>
+        <Tab v-if="canSeeDrafts" value="drafts">
+          {{ t('jobboard.draftsTab') }}
+          <span v-if="jobboard.draftJobs.length" class="pending-badge">{{ jobboard.draftJobs.length }}</span>
         </Tab>
         <Tab v-if="canSeeCompleted" value="2">{{ t('jobboard.completedJobs') }}</Tab>
       </TabList>
@@ -281,14 +368,70 @@ function formatDate(date: string | null) {
             :familyId="familyStore.primaryFamily.id"
             compact
           />
+
+          <!-- Cleaning Slots Section -->
+          <div v-if="myCleaningSlots.length" class="cleaning-assignments-section">
+            <h4 class="section-heading"><i class="pi pi-sparkles" /> {{ t('jobboard.cleaningAssignments') }}</h4>
+            <div class="assignments-list">
+              <div
+                v-for="slot in myCleaningSlots"
+                :key="'cleaning-' + slot.id"
+                class="assignment-card card"
+              >
+                <div class="assignment-header">
+                  <h3>{{ slot.configTitle }}</h3>
+                  <Tag :value="slot.status" :severity="statusSeverity(slot.status)" size="small" />
+                </div>
+                <div class="assignment-meta">
+                  <span><i class="pi pi-calendar" /> {{ formatDate(slot.slotDate) }}</span>
+                  <span><i class="pi pi-clock" /> {{ slot.startTime }} - {{ slot.endTime }}</span>
+                  <span><i class="pi pi-map-marker" /> {{ slot.sectionName }}</span>
+                </div>
+                <div
+                  v-for="reg in slot.registrations.filter(r => r.userId === auth.user?.id)"
+                  :key="reg.id"
+                  class="assignment-meta cleaning-reg-status"
+                >
+                  <Tag v-if="reg.checkedOut && reg.durationConfirmed" :value="t('jobboard.durationConfirmed')" severity="success" size="small" />
+                  <Tag v-else-if="reg.checkedOut && !reg.durationConfirmed" :value="t('jobboard.confirmDuration')" severity="warn" size="small" />
+                  <span v-if="reg.actualMinutes != null">{{ reg.actualMinutes }} {{ t('jobboard.minutes') }}</span>
+                  <Tag v-if="reg.confirmed" :value="t('jobboard.confirmed')" severity="success" size="small" />
+                  <Button
+                    v-if="reg.checkedOut && !reg.durationConfirmed"
+                    :label="t('jobboard.confirmDuration')"
+                    icon="pi pi-pencil"
+                    size="small"
+                    severity="warn"
+                    @click="openDurationDialog(reg.id, reg.actualMinutes ?? 0)"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Job Assignments Section -->
+          <div v-if="jobboard.myAssignments.length" class="section-heading-with-sort">
+            <h4 v-if="myCleaningSlots.length"><i class="pi pi-briefcase" /> {{ t('jobboard.jobAssignments') }}</h4>
+            <Select
+              v-model="assignmentSort"
+              :options="[
+                { label: t('jobboard.sortByDate'), value: 'date' },
+                { label: t('jobboard.sortByName'), value: 'name' },
+              ]"
+              optionLabel="label"
+              optionValue="value"
+              class="sort-select"
+            />
+          </div>
+
           <EmptyState
-            v-if="!jobboard.myAssignments.length"
+            v-if="!jobboard.myAssignments.length && !myCleaningSlots.length"
             icon="pi pi-check-circle"
             :message="t('jobboard.noAssignments')"
           />
-          <div v-else class="assignments-list">
+          <div v-if="jobboard.myAssignments.length" class="assignments-list">
             <router-link
-              v-for="a in jobboard.myAssignments"
+              v-for="a in sortedAssignments"
               :key="a.id"
               :to="{ name: 'job-detail', params: { id: a.jobId } }"
               class="assignment-card card"
@@ -353,6 +496,45 @@ function formatDate(date: string | null) {
           </div>
         </TabPanel>
 
+        <!-- Draft Jobs (JOBBOARD_ADMIN) -->
+        <TabPanel v-if="canSeeDrafts" value="drafts">
+          <LoadingSpinner v-if="!draftsLoaded" />
+          <EmptyState
+            v-else-if="!jobboard.draftJobs.length"
+            icon="pi pi-eye-slash"
+            :message="t('jobboard.noDraftJobs')"
+          />
+          <div v-else class="assignments-list">
+            <div
+              v-for="job in jobboard.draftJobs"
+              :key="job.id"
+              class="assignment-card card"
+            >
+              <div class="assignment-header">
+                <router-link :to="{ name: 'job-detail', params: { id: job.id } }" class="job-link">
+                  <h3>{{ job.title }}</h3>
+                </router-link>
+                <Tag value="DRAFT" severity="warn" size="small" />
+              </div>
+              <div class="assignment-meta">
+                <span><i class="pi pi-tag" /> {{ job.category }}</span>
+                <span><i class="pi pi-user" /> {{ job.creatorName }}</span>
+                <span v-if="job.scheduledDate"><i class="pi pi-calendar" /> {{ formatDate(job.scheduledDate) }}</span>
+                <span><i class="pi pi-clock" /> {{ job.estimatedHours }}h</span>
+              </div>
+              <div class="pending-actions">
+                <Button
+                  :label="t('jobboard.approveJob')"
+                  icon="pi pi-check"
+                  size="small"
+                  :loading="approvingJobId === job.id"
+                  @click="handleApproveJob(job.id)"
+                />
+              </div>
+            </div>
+          </div>
+        </TabPanel>
+
         <!-- Completed Jobs (Admin/Teacher) -->
         <TabPanel v-if="canSeeCompleted" value="2">
           <LoadingSpinner v-if="completedLoading" />
@@ -387,6 +569,23 @@ function formatDate(date: string | null) {
         </TabPanel>
       </TabPanels>
     </Tabs>
+    <!-- Duration Confirmation Dialog -->
+    <Dialog
+      v-model:visible="showDurationDialog"
+      :header="t('jobboard.confirmDurationTitle')"
+      modal
+      :style="{ width: '400px', maxWidth: '95vw' }"
+    >
+      <p class="mb-3">{{ t('jobboard.confirmDurationDesc') }}</p>
+      <div class="duration-input">
+        <label>{{ t('jobboard.actualMinutes') }}</label>
+        <InputNumber v-model="durationMinutes" :min="1" :max="600" suffix=" min" />
+      </div>
+      <template #footer>
+        <Button :label="t('common.cancel')" severity="secondary" text @click="showDurationDialog = false" />
+        <Button :label="t('common.confirm')" :loading="savingDuration" @click="saveDuration" />
+      </template>
+    </Dialog>
   </div>
 </template>
 
@@ -523,5 +722,53 @@ function formatDate(date: string | null) {
 
 .job-link:hover h3 {
   text-decoration: underline;
+}
+
+.cleaning-assignments-section {
+  margin-bottom: 1.5rem;
+}
+
+.section-heading {
+  margin-bottom: 0.75rem;
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-secondary);
+}
+
+.section-heading h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--mw-font-size-md);
+}
+
+.cleaning-reg-status {
+  margin-top: 0.25rem;
+}
+
+.duration-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.duration-input label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 600;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.section-heading-with-sort {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.sort-select {
+  min-width: 160px;
 }
 </style>

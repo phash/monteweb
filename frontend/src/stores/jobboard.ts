@@ -173,6 +173,23 @@ export const useJobboardStore = defineStore('jobboard', () => {
     window.URL.revokeObjectURL(url)
   }
 
+  const draftJobs = ref<JobInfo[]>([])
+
+  async function fetchDraftJobs() {
+    try {
+      const res = await jobboardApi.getDraftJobs()
+      draftJobs.value = res.data.data.content
+    } catch {
+      draftJobs.value = []
+    }
+  }
+
+  async function approveJob(jobId: string) {
+    const res = await jobboardApi.approveJob(jobId)
+    draftJobs.value = draftJobs.value.filter(j => j.id !== jobId)
+    return res.data.data
+  }
+
   function updateAssignmentInList(updated: JobAssignmentInfo) {
     const idx = myAssignments.value.findIndex(a => a.id === updated.id)
     if (idx >= 0) myAssignments.value[idx] = updated
@@ -207,6 +224,9 @@ export const useJobboardStore = defineStore('jobboard', () => {
     fetchPendingConfirmations,
     fetchFamilyHours,
     fetchReport,
+    draftJobs,
+    fetchDraftJobs,
+    approveJob,
     exportCsv,
     exportPdf,
   }

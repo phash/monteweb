@@ -46,6 +46,13 @@ public interface FamilyModuleApi {
      */
     Optional<FamilyInfo> findByNameIgnoreCase(String name);
 
+
+    /**
+     * Deactivate a family (e.g. when all members leave school).
+     * No admin-role check — caller is responsible for authorization.
+     */
+    void deactivateFamily(UUID familyId);
+
     /**
      * Admin: Create a family with a given name (no creator user added). Used by CSV import.
      */

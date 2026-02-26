@@ -56,7 +56,11 @@ public class AdminService implements AdminModuleApi {
                                           String ldapDefaultRole, Boolean ldapUseSsl,
                                           String clamavHost, Integer clamavPort,
                                           String jitsiServerUrl,
-                                          String wopiOfficeUrl) {
+                                          String wopiOfficeUrl,
+                                          Boolean parentToParentMessaging,
+                                          Boolean studentToStudentMessaging,
+                                          Boolean soleCustodyEnabled,
+                                          Boolean requireFamilySwitchApproval) {
         var config = getConfig();
         if (schoolName != null) config.setSchoolName(schoolName);
         if (logoUrl != null) config.setLogoUrl(logoUrl);
@@ -109,6 +113,12 @@ public class AdminService implements AdminModuleApi {
         if (jitsiServerUrl != null) config.setJitsiServerUrl(jitsiServerUrl);
         // WOPI / ONLYOFFICE (enabled via modules map)
         if (wopiOfficeUrl != null) config.setWopiOfficeUrl(wopiOfficeUrl);
+        // Communication rules
+        if (parentToParentMessaging != null) config.setParentToParentMessaging(parentToParentMessaging);
+        if (studentToStudentMessaging != null) config.setStudentToStudentMessaging(studentToStudentMessaging);
+        // Family settings
+        if (soleCustodyEnabled != null) config.setSoleCustodyEnabled(soleCustodyEnabled);
+        if (requireFamilySwitchApproval != null) config.setRequireFamilySwitchApproval(requireFamilySwitchApproval);
         return toInfo(configRepository.save(config));
     }
 

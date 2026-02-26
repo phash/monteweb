@@ -22,6 +22,8 @@ public record CleaningConfigInfo(
         boolean active,
         LocalDate specificDate,
         UUID calendarEventId,
-        UUID jobId
+        UUID jobId,
+        String participantCircle,
+        UUID participantCircleId
 ) {
 }

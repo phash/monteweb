@@ -60,6 +60,12 @@ public class CleaningConfig {
     @Column(name = "room_id")
     private UUID roomId;
 
+    @Column(name = "participant_circle")
+    private String participantCircle = "SECTION";
+
+    @Column(name = "participant_circle_id")
+    private UUID participantCircleId;
+
     @Column(nullable = false)
     private boolean active = true;
 

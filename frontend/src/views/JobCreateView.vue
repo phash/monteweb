@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useJobboardStore } from '@/stores/jobboard'
 import { useAdminStore } from '@/stores/admin'
 import { useCalendarStore } from '@/stores/calendar'
 import { useRoomsStore } from '@/stores/rooms'
+import type { JobVisibility } from '@/types/jobboard'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -35,6 +36,8 @@ const selectedEventId = ref<string | null>(null)
 const selectedRoomId = ref<string | null>(null)
 const submitting = ref(false)
 const calendarEnabled = admin.isModuleEnabled('calendar')
+const visibility = computed<JobVisibility>(() => (route.query.visibility as JobVisibility) || 'PUBLIC')
+const isPrivate = computed(() => visibility.value === 'PRIVATE')
 
 onMounted(async () => {
   if (!rooms.myRooms.length) {
@@ -68,6 +71,7 @@ async function submit() {
       scheduledTime: scheduledTime.value.trim() || undefined,
       contactInfo: contactInfo.value.trim() || undefined,
       eventId: selectedEventId.value || undefined,
+      visibility: visibility.value,
     })
     router.push({ name: 'job-detail', params: { id: job.id } })
   } finally {
@@ -87,7 +91,7 @@ async function submit() {
       class="mb-1"
     />
 
-    <PageTitle :title="t('jobboard.create')" />
+    <PageTitle :title="isPrivate ? t('jobboard.createPrivate') : t('jobboard.create')" />
 
     <div class="create-form card">
       <div class="form-field">
@@ -121,7 +125,7 @@ async function submit() {
           <label for="job-hours">{{ t('jobboard.estimatedHours') }}</label>
           <InputNumber id="job-hours" v-model="estimatedHours" :minFractionDigits="1" :maxFractionDigits="2" :min="0.5" :step="0.5" />
         </div>
-        <div class="form-field">
+        <div v-if="!isPrivate" class="form-field">
           <label for="job-max-helpers">{{ t('jobboard.maxHelpers') }}</label>
           <InputNumber id="job-max-helpers" v-model="maxAssignees" :min="1" :max="20" />
         </div>

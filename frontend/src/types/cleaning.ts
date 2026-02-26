@@ -18,6 +18,8 @@ export interface CleaningConfigInfo {
   specificDate?: string | null
   calendarEventId?: string | null
   jobId?: string | null
+  participantCircle?: string | null
+  participantCircleId?: string | null
 }
 
 export interface RegistrationInfo {
@@ -33,6 +35,7 @@ export interface RegistrationInfo {
   confirmed: boolean
   confirmedBy?: string | null
   confirmedAt?: string | null
+  durationConfirmed: boolean
 }
 
 export interface CleaningSlotInfo {
@@ -72,6 +75,8 @@ export interface CreateConfigRequest {
   maxParticipants: number
   hoursCredit: number
   specificDate?: string
+  participantCircle?: string
+  participantCircleId?: string
 }
 
 export interface GenerateSlotsRequest {

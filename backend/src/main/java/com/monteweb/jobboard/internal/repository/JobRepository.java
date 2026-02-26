@@ -46,6 +46,7 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     @Query("""
             SELECT j FROM Job j WHERE j.status IN :statuses
+            AND j.visibility = 'PUBLIC'
             AND (:category IS NULL OR j.category = :category)
             AND (:eventId IS NULL OR j.eventId = :eventId)
             AND (:roomId IS NULL OR j.roomId = :roomId)
@@ -55,6 +56,13 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
             """)
     Page<Job> findWithFilters(List<JobStatus> statuses, String category, UUID eventId, UUID roomId,
                               LocalDate fromDate, LocalDate toDate, Pageable pageable);
+
+    @Query("""
+            SELECT j FROM Job j WHERE j.visibility = 'DRAFT'
+            AND j.status IN ('OPEN', 'ASSIGNED', 'IN_PROGRESS')
+            ORDER BY j.createdAt DESC
+            """)
+    Page<Job> findDraftJobs(Pageable pageable);
 
     List<Job> findByEventId(UUID eventId);
 

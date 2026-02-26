@@ -27,6 +27,7 @@ import RoomFotobox from '@/components/rooms/RoomFotobox.vue'
 import RoomTasks from '@/components/rooms/RoomTasks.vue'
 import RoomWiki from '@/components/rooms/RoomWiki.vue'
 import RoomSettings from '@/components/rooms/RoomSettings.vue'
+import RoomMigrationDialog from '@/components/rooms/RoomMigrationDialog.vue'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 import Tabs from 'primevue/tabs'
@@ -70,6 +71,9 @@ const showAddFamilyDialog = ref(false)
 const families = ref<FamilyInfo[]>([])
 const selectedFamilyId = ref<string | null>(null)
 const addingFamily = ref(false)
+
+// Migration dialog
+const showMigrationDialog = ref(false)
 
 // Add member dialog
 const showAddMemberDialog = ref(false)
@@ -612,6 +616,14 @@ async function toggleMute() {
                 severity="secondary"
                 @click="openAddFamilyDialog"
               />
+              <Button
+                v-if="isKlasse"
+                :label="t('rooms.migration.button')"
+                icon="pi pi-arrow-right-arrow-left"
+                size="small"
+                severity="warn"
+                @click="showMigrationDialog = true"
+              />
             </div>
 
             <!-- Pending join requests (Leader only) -->
@@ -874,6 +886,14 @@ async function toggleMute() {
         />
       </template>
     </Dialog>
+
+    <!-- Migration Dialog -->
+    <RoomMigrationDialog
+      v-model:visible="showMigrationDialog"
+      :roomId="id"
+      :members="rooms.currentRoom?.members ?? []"
+      @migrated="loadRoom"
+    />
   </div>
 </template>
 

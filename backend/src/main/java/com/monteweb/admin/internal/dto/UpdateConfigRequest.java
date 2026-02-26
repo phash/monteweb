@@ -51,6 +51,12 @@ public record UpdateConfigRequest(
         // Jitsi video conferencing (enabled via modules map)
         @Size(max = 500) String jitsiServerUrl,
         // WOPI / ONLYOFFICE (enabled via modules map)
-        @Size(max = 500) String wopiOfficeUrl
+        @Size(max = 500) String wopiOfficeUrl,
+        // Communication rules
+        Boolean parentToParentMessaging,
+        Boolean studentToStudentMessaging,
+        // Family settings
+        Boolean soleCustodyEnabled,
+        Boolean requireFamilySwitchApproval
 ) {
 }

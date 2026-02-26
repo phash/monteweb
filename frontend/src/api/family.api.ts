@@ -93,6 +93,15 @@ export const familyApi = {
     return client.get<ApiResponse<FamilyInvitationInfo[]>>(`/families/${familyId}/invitations`)
   },
 
+  // Sole custody
+  requestSoleCustody(familyId: string, soleCustody: boolean) {
+    return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}/sole-custody`, { soleCustody })
+  },
+
+  approveSoleCustody(familyId: string) {
+    return client.put<ApiResponse<FamilyInfo>>(`/families/${familyId}/sole-custody/approve`)
+  },
+
   // Family Calendar
   getFamilyCalendar(familyId: string, from: string, to: string) {
     return client.get<ApiResponse<CalendarEvent[]>>(`/families/${familyId}/calendar`, {

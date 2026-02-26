@@ -134,6 +134,31 @@ public class JobboardController {
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<JobInfo>> approveJob(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN
+                && !user.specialRoles().contains("JOBBOARD_ADMIN")) {
+            throw new ForbiddenException("Only JOBBOARD_ADMIN or administrators can approve jobs");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(jobboardService.approveJob(id, userId)));
+    }
+
+    @GetMapping("/drafts")
+    public ResponseEntity<ApiResponse<PageResponse<JobInfo>>> getDraftJobs(
+            @PageableDefault(size = 20) Pageable pageable) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN
+                && !user.specialRoles().contains("JOBBOARD_ADMIN")) {
+            throw new ForbiddenException("Not authorized to view draft jobs");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(jobboardService.getDraftJobs(pageable))));
+    }
+
     // ---- Assignments ----
 
     @GetMapping("/{id}/assignments")

@@ -10,7 +10,7 @@ export const roomsApi = {
     return client.get<ApiResponse<RoomInfo[]>>('/rooms/mine')
   },
 
-  getAll(params?: { page?: number; size?: number; includeArchived?: boolean }) {
+  getAll(params?: { page?: number; size?: number; includeArchived?: boolean; type?: string }) {
     return client.get<ApiResponse<PageResponse<RoomInfo>>>('/rooms', { params })
   },
 
@@ -137,5 +137,14 @@ export const roomsApi = {
 
   getOrCreateChatChannel(roomId: string, channelType = 'MAIN') {
     return client.post<ApiResponse<RoomChatChannelInfo>>(`/rooms/${roomId}/chat/channels`, { channelType })
+  },
+
+  // Class migration
+  migrateMembers(roomId: string, memberIds: string[], targetRoomId: string | null, leaveSchool: boolean) {
+    return client.post<ApiResponse<{ migrated: number }>>(`/rooms/${roomId}/migrate-members`, {
+      memberIds,
+      targetRoomId,
+      leaveSchool,
+    })
   },
 }

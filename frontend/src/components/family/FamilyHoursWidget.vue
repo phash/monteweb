@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { useJobboardStore } from '@/stores/jobboard'
 import { useAdminStore } from '@/stores/admin'
 import { jobboardApi } from '@/api/jobboard.api'
@@ -9,6 +10,7 @@ import Dialog from 'primevue/dialog'
 import type { JobAssignmentInfo } from '@/types/jobboard'
 
 const { t } = useI18n()
+const router = useRouter()
 const props = withDefaults(defineProps<{ familyId: string; compact?: boolean }>(), { compact: false })
 const jobboard = useJobboardStore()
 const admin = useAdminStore()
@@ -171,7 +173,14 @@ function formatDate(dateStr: string | null) {
       </div>
     </div>
 
-    <div class="click-hint">
+    <div v-if="jobboard.familyHours.totalHours === 0" class="no-hours-hint">
+      <span>{{ t('family.noHoursYet') }}</span>
+      <a class="jobboard-link" @click.stop="router.push({ name: 'jobs' })">
+        <i class="pi pi-arrow-right" />
+        {{ t('family.goToJobboard') }}
+      </a>
+    </div>
+    <div v-else class="click-hint">
       <i class="pi pi-list" />
       <span>{{ t('family.clickForJobs') }}</span>
     </div>
@@ -402,5 +411,28 @@ function formatDate(dateStr: string | null) {
   font-size: var(--mw-font-size-xs);
   color: var(--mw-text-muted);
   margin-top: 0.15rem;
+}
+
+.no-hours-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+}
+
+.jobboard-link {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--mw-primary, #3b82f6);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.jobboard-link:hover {
+  text-decoration: underline;
 }
 </style>

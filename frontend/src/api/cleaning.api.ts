@@ -63,6 +63,10 @@ export function rejectRegistration(registrationId: string) {
   return client.put<ApiResponse<void>>(`/cleaning/registrations/${registrationId}/reject`)
 }
 
+export function updateRegistrationMinutes(registrationId: string, actualMinutes: number) {
+  return client.put<ApiResponse<RegistrationInfo>>(`/cleaning/registrations/${registrationId}/update-minutes`, { actualMinutes })
+}
+
 // ── Admin: Configs ────────────────────────────────────────────────────
 
 export function getConfigs(sectionId?: string, roomId?: string) {

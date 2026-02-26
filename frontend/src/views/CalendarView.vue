@@ -4,9 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCalendarStore } from '@/stores/calendar'
 import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import { useHolidays } from '@/composables/useHolidays'
 import { calendarApi } from '@/api/calendar.api'
+import { jobboardApi } from '@/api/jobboard.api'
 import type { CalendarEvent, ICalEvent } from '@/types/calendar'
+import type { JobInfo } from '@/types/jobboard'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -14,6 +18,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Checkbox from 'primevue/checkbox'
 import SelectButton from 'primevue/selectbutton'
+// Tooltip directive is registered globally in main.ts
 
 type ViewMode = 'agenda' | 'month' | 'quarter' | 'year'
 
@@ -22,12 +27,20 @@ const { formatMonthYear, formatEventDate: formatEventDateLocale } = useLocaleDat
 const router = useRouter()
 const calendar = useCalendarStore()
 const auth = useAuthStore()
+const admin = useAdminStore()
 
 const viewMode = ref<ViewMode>('agenda')
 const currentMonth = ref(new Date())
 const selectedDay = ref<string | null>(null)
 const showCleaning = ref(true)
 const showImported = ref(true)
+const showJobs = ref(false)
+const openJobs = ref<JobInfo[]>([])
+
+const currentYear = computed(() => currentMonth.value.getFullYear())
+const { holidays, vacations, isVacation } = useHolidays(currentYear)
+
+const jobboardEnabled = computed(() => admin.isModuleEnabled('jobboard'))
 
 const viewOptions = computed(() => [
   { label: t('calendar.agenda'), value: 'agenda' },
@@ -108,9 +121,45 @@ const icalEventsAsCalendarEvents = computed((): CalendarEvent[] => {
   }))
 })
 
-// All events (regular + imported)
+// Convert open jobs to CalendarEvent-like shape for calendar display
+const jobsAsCalendarEvents = computed((): CalendarEvent[] => {
+  if (!showJobs.value) return []
+  return openJobs.value
+    .filter(job => job.scheduledDate)
+    .map((job): CalendarEvent => ({
+      id: `job-${job.id}`,
+      title: job.title,
+      description: job.description,
+      location: job.location,
+      allDay: !job.scheduledTime,
+      startDate: job.scheduledDate!,
+      startTime: job.scheduledTime,
+      endDate: job.scheduledDate!,
+      endTime: null,
+      scope: 'ROOM',
+      scopeId: job.roomId,
+      scopeName: job.roomName,
+      recurrence: 'NONE',
+      recurrenceEnd: null,
+      cancelled: false,
+      createdBy: job.createdBy,
+      creatorName: job.creatorName,
+      attendingCount: job.currentAssignees,
+      maybeCount: 0,
+      declinedCount: 0,
+      currentUserRsvp: null,
+      eventType: 'JOB',
+      color: '#f59e0b',
+      jitsiRoomName: null,
+      linkedJobCount: 0,
+      createdAt: job.createdAt,
+      updatedAt: job.createdAt,
+    }))
+})
+
+// All events (regular + imported + jobs)
 const allFilteredEvents = computed(() => {
-  return [...filteredEvents.value, ...icalEventsAsCalendarEvents.value].sort((a, b) => {
+  return [...filteredEvents.value, ...icalEventsAsCalendarEvents.value, ...jobsAsCalendarEvents.value].sort((a, b) => {
     if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate)
     if (a.startTime && b.startTime) return a.startTime.localeCompare(b.startTime)
     if (a.allDay && !b.allDay) return -1
@@ -135,6 +184,30 @@ const eventsByDate = computed(() => {
       map.get(key)!.push(event)
       d.setDate(d.getDate() + 1)
     }
+  }
+  return map
+})
+
+// Build a set of vacation date strings for fast lookup in grid views
+const vacationDates = computed(() => {
+  const set = new Set<string>()
+  for (const v of vacations.value) {
+    const start = new Date(v.from + 'T00:00:00')
+    const end = new Date(v.to + 'T00:00:00')
+    const d = new Date(start)
+    while (d <= end) {
+      set.add(formatDateToISO(d))
+      d.setDate(d.getDate() + 1)
+    }
+  }
+  return set
+})
+
+// Build a map of holiday date strings to names for fast lookup
+const holidayDates = computed(() => {
+  const map = new Map<string, string>()
+  for (const h of holidays.value) {
+    map.set(h.date, h.name)
   }
   return map
 })
@@ -249,11 +322,31 @@ watch([viewMode, dateRange], () => {
   loadEvents()
 })
 
+watch(showJobs, (val) => {
+  if (val && jobboardEnabled.value) {
+    loadJobs()
+  }
+})
+
 async function loadEvents() {
-  await Promise.all([
+  const promises: Promise<unknown>[] = [
     calendar.fetchEvents(dateRange.value.from, dateRange.value.to),
     calendar.fetchICalEvents(dateRange.value.from, dateRange.value.to),
-  ])
+  ]
+  if (showJobs.value && jobboardEnabled.value) {
+    promises.push(loadJobs())
+  }
+  await Promise.all(promises)
+}
+
+async function loadJobs() {
+  try {
+    const res = await jobboardApi.listJobs(0, 100, undefined, ['OPEN'], undefined,
+      dateRange.value.from, dateRange.value.to)
+    openJobs.value = res.data.data.content
+  } catch {
+    openJobs.value = []
+  }
 }
 
 function prevMonth() {
@@ -281,13 +374,17 @@ function goToday() {
 }
 
 function selectDay(date: string) {
-  if (eventsByDate.value.has(date)) {
-    selectedDay.value = selectedDay.value === date ? null : date
-  }
+  selectedDay.value = selectedDay.value === date ? null : date
 }
 
-function goToEvent(id: string) {
-  router.push({ name: 'event-detail', params: { id } })
+function goToEvent(event: CalendarEvent) {
+  if (event.eventType === 'ICAL') return
+  if (event.eventType === 'JOB') {
+    const jobId = event.id.replace('job-', '')
+    router.push({ name: 'job-detail', params: { id: jobId } })
+    return
+  }
+  router.push({ name: 'event-detail', params: { id: event.id } })
 }
 
 function dayEvents(date: string): CalendarEvent[] {
@@ -301,6 +398,41 @@ function dayEventCount(date: string): number {
 function eventColorStyle(event: CalendarEvent): Record<string, string> {
   const color = event.color || 'var(--mw-primary)'
   return { '--event-color': color }
+}
+
+function isDateVacation(date: string): boolean {
+  return vacationDates.value.has(date)
+}
+
+function isDateHoliday(date: string): string | null {
+  return holidayDates.value.get(date) || null
+}
+
+function getDateTooltipText(date: string): string | null {
+  const holiday = holidayDates.value.get(date)
+  if (holiday) return holiday
+  const d = new Date(date + 'T00:00:00')
+  const vac = isVacation(d)
+  if (vac) return vac
+  return null
+}
+
+function rsvpIcon(status: string | null): string {
+  switch (status) {
+    case 'ATTENDING': return 'pi pi-check-circle'
+    case 'MAYBE': return 'pi pi-question-circle'
+    case 'DECLINED': return 'pi pi-times-circle'
+    default: return ''
+  }
+}
+
+function rsvpSeverity(status: string | null): 'success' | 'warn' | 'danger' | 'secondary' {
+  switch (status) {
+    case 'ATTENDING': return 'success'
+    case 'MAYBE': return 'warn'
+    case 'DECLINED': return 'danger'
+    default: return 'secondary'
+  }
 }
 
 function formatEventDateDisplay(event: { allDay: boolean; startDate: string; startTime: string | null; endDate: string; endTime: string | null }) {
@@ -347,7 +479,7 @@ function formatSelectedDay(date: string): string {
 </script>
 
 <template>
-  <div>
+  <div class="calendar-page">
     <div class="calendar-header">
       <PageTitle :title="t('calendar.title')" />
       <div class="calendar-header-actions">
@@ -383,6 +515,11 @@ function formatSelectedDay(date: string): string {
       <span class="filter-separator" />
       <Checkbox v-model="showImported" :binary="true" inputId="showImported" />
       <label for="showImported">{{ t('calendar.ical.showImported') }}</label>
+      <template v-if="jobboardEnabled">
+        <span class="filter-separator" />
+        <Checkbox v-model="showJobs" :binary="true" inputId="showJobs" />
+        <label for="showJobs">{{ t('calendar.showJobs') }}</label>
+      </template>
     </div>
 
     <div class="month-nav card">
@@ -406,9 +543,9 @@ function formatSelectedDay(date: string): string {
           :is="event.eventType === 'ICAL' ? 'div' : 'router-link'"
           v-for="event in allFilteredEvents"
           :key="event.id"
-          v-bind="event.eventType === 'ICAL' ? {} : { to: { name: 'event-detail', params: { id: event.id } } }"
+          v-bind="event.eventType === 'ICAL' ? {} : event.eventType === 'JOB' ? { to: { name: 'job-detail', params: { id: event.id.replace('job-', '') } } } : { to: { name: 'event-detail', params: { id: event.id } } }"
           class="event-item card"
-          :class="{ cancelled: event.cancelled, 'ical-event': event.eventType === 'ICAL' }"
+          :class="{ cancelled: event.cancelled, 'ical-event': event.eventType === 'ICAL', 'job-event': event.eventType === 'JOB' }"
         >
           <span class="event-color-bar" :style="{ background: event.color || 'var(--mw-primary)' }" />
           <div class="event-date-col">
@@ -420,8 +557,16 @@ function formatSelectedDay(date: string): string {
               <Tag v-if="event.cancelled" :value="t('calendar.cancelled')" severity="danger" size="small" />
               <Tag v-if="event.eventType === 'CLEANING'" :value="t('calendar.cleaning')" severity="warn" size="small" icon="pi pi-sparkles" />
               <Tag v-if="event.eventType === 'ICAL'" value="iCal" severity="secondary" size="small" icon="pi pi-calendar-plus" />
-              <Tag v-if="event.eventType !== 'ICAL'" :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag v-if="event.eventType === 'JOB'" :value="t('calendar.jobEntry')" severity="warn" size="small" icon="pi pi-briefcase" />
+              <Tag v-if="event.eventType !== 'ICAL' && event.eventType !== 'JOB'" :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
               <Tag v-if="event.linkedJobCount > 0" :value="t('jobboard.jobCount', { n: event.linkedJobCount })" severity="secondary" size="small" icon="pi pi-briefcase" />
+              <Tag
+                v-if="event.currentUserRsvp"
+                :value="t(`calendar.rsvpStatus.${event.currentUserRsvp}`)"
+                :severity="rsvpSeverity(event.currentUserRsvp)"
+                size="small"
+                :icon="rsvpIcon(event.currentUserRsvp)"
+              />
             </div>
             <div class="event-meta">
               <span v-if="event.scopeName">{{ event.scopeName }}</span>
@@ -446,12 +591,15 @@ function formatSelectedDay(date: string): string {
           <div
             v-for="day in currentMonthGrid"
             :key="day.date"
+            v-tooltip.top="getDateTooltipText(day.date)"
             class="day-cell"
             :class="{
               'other-month': !day.currentMonth,
               today: day.isToday,
               'has-events': dayEventCount(day.date) > 0,
               selected: selectedDay === day.date,
+              'is-vacation': day.currentMonth && isDateVacation(day.date),
+              'is-holiday': day.currentMonth && isDateHoliday(day.date) !== null,
             }"
             @click="selectDay(day.date)"
           >
@@ -471,16 +619,32 @@ function formatSelectedDay(date: string): string {
         </div>
       </div>
 
+      <!-- Vacation legend -->
+      <div class="calendar-legend">
+        <span class="legend-item">
+          <span class="legend-swatch legend-vacation" />
+          {{ t('calendar.vacation') }}
+        </span>
+        <span class="legend-item">
+          <span class="legend-swatch legend-holiday" />
+          {{ t('calendar.holiday') }}
+        </span>
+      </div>
+
       <!-- Selected day detail -->
-      <div v-if="selectedDay && selectedDayEvents.length > 0" class="selected-day-events card">
-        <h3 class="selected-day-title">{{ formatSelectedDay(selectedDay) }}</h3>
-        <div class="day-event-list">
+      <div v-if="selectedDay" class="selected-day-events card">
+        <h3 class="selected-day-title">
+          {{ formatSelectedDay(selectedDay) }}
+          <Tag v-if="isDateHoliday(selectedDay)" :value="isDateHoliday(selectedDay)!" severity="danger" size="small" />
+          <Tag v-else-if="isDateVacation(selectedDay)" :value="t('calendar.vacation')" severity="secondary" size="small" />
+        </h3>
+        <div v-if="selectedDayEvents.length > 0" class="day-event-list">
           <div
             v-for="event in selectedDayEvents"
             :key="event.id"
             class="day-event-item"
-            :class="{ cancelled: event.cancelled }"
-            @click="goToEvent(event.id)"
+            :class="{ cancelled: event.cancelled, 'ical-event': event.eventType === 'ICAL' }"
+            @click="goToEvent(event)"
           >
             <div class="day-event-time">
               <span v-if="event.allDay" class="all-day-badge">{{ t('calendar.allDay') }}</span>
@@ -489,12 +653,22 @@ function formatSelectedDay(date: string): string {
             <span class="event-color-dot" :style="{ background: event.color || 'var(--mw-primary)' }" />
             <div class="day-event-info">
               <strong>{{ event.title }}</strong>
-              <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag v-if="event.eventType === 'JOB'" :value="t('calendar.jobEntry')" severity="warn" size="small" icon="pi pi-briefcase" />
+              <Tag v-else-if="event.eventType === 'ICAL'" value="iCal" severity="secondary" size="small" />
+              <Tag v-else :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
               <Tag v-if="event.cancelled" :value="t('calendar.cancelled')" severity="danger" size="small" />
+              <Tag
+                v-if="event.currentUserRsvp"
+                :value="t(`calendar.rsvpStatus.${event.currentUserRsvp}`)"
+                :severity="rsvpSeverity(event.currentUserRsvp)"
+                size="small"
+                :icon="rsvpIcon(event.currentUserRsvp)"
+              />
             </div>
-            <i class="pi pi-chevron-right event-arrow" />
+            <i v-if="event.eventType !== 'ICAL'" class="pi pi-chevron-right event-arrow" />
           </div>
         </div>
+        <p v-else class="no-events-hint">{{ t('calendar.noEventsForDay') }}</p>
       </div>
     </template>
 
@@ -510,12 +684,15 @@ function formatSelectedDay(date: string): string {
             <div
               v-for="day in m.grid"
               :key="day.date"
+              v-tooltip.top="getDateTooltipText(day.date)"
               class="day-cell mini"
               :class="{
                 'other-month': !day.currentMonth,
                 today: day.isToday,
                 'has-events': dayEventCount(day.date) > 0,
                 selected: selectedDay === day.date,
+                'is-vacation': day.currentMonth && isDateVacation(day.date),
+                'is-holiday': day.currentMonth && isDateHoliday(day.date) !== null,
               }"
               @click="selectDay(day.date)"
             >
@@ -526,15 +703,19 @@ function formatSelectedDay(date: string): string {
         </div>
       </div>
 
-      <div v-if="selectedDay && selectedDayEvents.length > 0" class="selected-day-events card">
-        <h3 class="selected-day-title">{{ formatSelectedDay(selectedDay) }}</h3>
-        <div class="day-event-list">
+      <div v-if="selectedDay" class="selected-day-events card">
+        <h3 class="selected-day-title">
+          {{ formatSelectedDay(selectedDay) }}
+          <Tag v-if="isDateHoliday(selectedDay)" :value="isDateHoliday(selectedDay)!" severity="danger" size="small" />
+          <Tag v-else-if="isDateVacation(selectedDay)" :value="t('calendar.vacation')" severity="secondary" size="small" />
+        </h3>
+        <div v-if="selectedDayEvents.length > 0" class="day-event-list">
           <div
             v-for="event in selectedDayEvents"
             :key="event.id"
             class="day-event-item"
-            :class="{ cancelled: event.cancelled }"
-            @click="goToEvent(event.id)"
+            :class="{ cancelled: event.cancelled, 'ical-event': event.eventType === 'ICAL' }"
+            @click="goToEvent(event)"
           >
             <div class="day-event-time">
               <span v-if="event.allDay" class="all-day-badge">{{ t('calendar.allDay') }}</span>
@@ -543,11 +724,21 @@ function formatSelectedDay(date: string): string {
             <span class="event-color-dot" :style="{ background: event.color || 'var(--mw-primary)' }" />
             <div class="day-event-info">
               <strong>{{ event.title }}</strong>
-              <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag v-if="event.eventType === 'JOB'" :value="t('calendar.jobEntry')" severity="warn" size="small" icon="pi pi-briefcase" />
+              <Tag v-else-if="event.eventType === 'ICAL'" value="iCal" severity="secondary" size="small" />
+              <Tag v-else :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag
+                v-if="event.currentUserRsvp"
+                :value="t(`calendar.rsvpStatus.${event.currentUserRsvp}`)"
+                :severity="rsvpSeverity(event.currentUserRsvp)"
+                size="small"
+                :icon="rsvpIcon(event.currentUserRsvp)"
+              />
             </div>
-            <i class="pi pi-chevron-right event-arrow" />
+            <i v-if="event.eventType !== 'ICAL'" class="pi pi-chevron-right event-arrow" />
           </div>
         </div>
+        <p v-else class="no-events-hint">{{ t('calendar.noEventsForDay') }}</p>
       </div>
     </template>
 
@@ -569,6 +760,8 @@ function formatSelectedDay(date: string): string {
                 today: day.isToday,
                 'has-events': dayEventCount(day.date) > 0,
                 selected: selectedDay === day.date,
+                'is-vacation': day.currentMonth && isDateVacation(day.date),
+                'is-holiday': day.currentMonth && isDateHoliday(day.date) !== null,
               }"
               @click="selectDay(day.date)"
             >
@@ -578,15 +771,19 @@ function formatSelectedDay(date: string): string {
         </div>
       </div>
 
-      <div v-if="selectedDay && selectedDayEvents.length > 0" class="selected-day-events card">
-        <h3 class="selected-day-title">{{ formatSelectedDay(selectedDay) }}</h3>
-        <div class="day-event-list">
+      <div v-if="selectedDay" class="selected-day-events card">
+        <h3 class="selected-day-title">
+          {{ formatSelectedDay(selectedDay) }}
+          <Tag v-if="isDateHoliday(selectedDay)" :value="isDateHoliday(selectedDay)!" severity="danger" size="small" />
+          <Tag v-else-if="isDateVacation(selectedDay)" :value="t('calendar.vacation')" severity="secondary" size="small" />
+        </h3>
+        <div v-if="selectedDayEvents.length > 0" class="day-event-list">
           <div
             v-for="event in selectedDayEvents"
             :key="event.id"
             class="day-event-item"
-            :class="{ cancelled: event.cancelled }"
-            @click="goToEvent(event.id)"
+            :class="{ cancelled: event.cancelled, 'ical-event': event.eventType === 'ICAL' }"
+            @click="goToEvent(event)"
           >
             <div class="day-event-time">
               <span v-if="event.allDay" class="all-day-badge">{{ t('calendar.allDay') }}</span>
@@ -595,22 +792,38 @@ function formatSelectedDay(date: string): string {
             <span class="event-color-dot" :style="{ background: event.color || 'var(--mw-primary)' }" />
             <div class="day-event-info">
               <strong>{{ event.title }}</strong>
-              <Tag :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag v-if="event.eventType === 'JOB'" :value="t('calendar.jobEntry')" severity="warn" size="small" icon="pi pi-briefcase" />
+              <Tag v-else-if="event.eventType === 'ICAL'" value="iCal" severity="secondary" size="small" />
+              <Tag v-else :value="t(`calendar.scopes.${event.scope}`)" :severity="scopeSeverity(event.scope)" size="small" />
+              <Tag
+                v-if="event.currentUserRsvp"
+                :value="t(`calendar.rsvpStatus.${event.currentUserRsvp}`)"
+                :severity="rsvpSeverity(event.currentUserRsvp)"
+                size="small"
+                :icon="rsvpIcon(event.currentUserRsvp)"
+              />
             </div>
-            <i class="pi pi-chevron-right event-arrow" />
+            <i v-if="event.eventType !== 'ICAL'" class="pi pi-chevron-right event-arrow" />
           </div>
         </div>
+        <p v-else class="no-events-hint">{{ t('calendar.noEventsForDay') }}</p>
       </div>
     </template>
   </div>
 </template>
 
 <style scoped>
+.calendar-page {
+  width: 100%;
+  max-width: 100%;
+}
+
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .calendar-header-actions {
@@ -645,6 +858,10 @@ function formatSelectedDay(date: string): string {
 
 .event-item.ical-event {
   cursor: default;
+}
+
+.event-item.job-event {
+  border-left: 3px solid #f59e0b;
 }
 
 .month-nav {
@@ -729,7 +946,7 @@ function formatSelectedDay(date: string): string {
 /* === MONTH GRID === */
 .month-grid {
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .weekday-header {
@@ -766,17 +983,13 @@ function formatSelectedDay(date: string): string {
   flex-direction: column;
   align-items: center;
   border-radius: 8px;
-  cursor: default;
+  cursor: pointer;
   position: relative;
   transition: background 0.15s;
   padding: 0.25rem 0.15rem;
 }
 
-.day-cell.has-events {
-  cursor: pointer;
-}
-
-.day-cell.has-events:hover {
+.day-cell:hover {
   background: var(--mw-bg-hover);
 }
 
@@ -784,9 +997,32 @@ function formatSelectedDay(date: string): string {
   opacity: 0.3;
 }
 
+/* Vacation background (gray) */
+.day-cell.is-vacation {
+  background: var(--p-surface-100, #f3f4f6);
+}
+
+.day-cell.is-vacation:hover {
+  background: var(--p-surface-200, #e5e7eb);
+}
+
+/* Holiday background (light red) */
+.day-cell.is-holiday {
+  background: color-mix(in srgb, var(--p-red-100, #fee2e2) 60%, transparent);
+}
+
+.day-cell.is-holiday:hover {
+  background: var(--p-red-100, #fee2e2);
+}
+
+.day-cell.is-holiday .day-number {
+  color: var(--p-red-600, #dc2626);
+  font-weight: 700;
+}
+
 .day-cell.today .day-number {
   background: var(--mw-primary);
-  color: white;
+  color: white !important;
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -851,11 +1087,43 @@ function formatSelectedDay(date: string): string {
   text-align: center;
 }
 
+/* === LEGEND === */
+.calendar-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  font-size: var(--mw-font-size-xs);
+  color: var(--mw-text-muted);
+  padding: 0 0.25rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid var(--mw-border-light);
+}
+
+.legend-vacation {
+  background: var(--p-surface-100, #f3f4f6);
+}
+
+.legend-holiday {
+  background: color-mix(in srgb, var(--p-red-100, #fee2e2) 60%, transparent);
+}
+
 /* === MINI MONTH (3-month + year) === */
 .day-cell.mini {
   aspect-ratio: 1;
   padding: 1px;
   border-radius: 4px;
+  min-height: unset;
 }
 
 .day-cell.mini .day-number {
@@ -874,6 +1142,20 @@ function formatSelectedDay(date: string): string {
 
 .day-cell.mini.has-events:hover {
   background: var(--p-blue-100, #dbeafe);
+}
+
+/* Vacation/holiday in mini view */
+.day-cell.mini.is-vacation:not(.has-events) {
+  background: var(--p-surface-100, #f3f4f6);
+}
+
+.day-cell.mini.is-holiday:not(.has-events) {
+  background: color-mix(in srgb, var(--p-red-100, #fee2e2) 60%, transparent);
+}
+
+.day-cell.mini.is-holiday .day-number {
+  color: var(--p-red-600, #dc2626);
+  font-weight: 700;
 }
 
 .mini-dot {
@@ -921,6 +1203,7 @@ function formatSelectedDay(date: string): string {
 
 .day-cell.year-cell {
   padding: 0;
+  min-height: unset;
 }
 
 .day-cell.year-cell .day-number {
@@ -944,6 +1227,10 @@ function formatSelectedDay(date: string): string {
 }
 
 .selected-day-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   font-size: var(--mw-font-size-md);
   margin-bottom: 0.75rem;
   padding-bottom: 0.5rem;
@@ -964,6 +1251,10 @@ function formatSelectedDay(date: string): string {
   border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s;
+}
+
+.day-event-item.ical-event {
+  cursor: default;
 }
 
 .day-event-item:hover {
@@ -998,8 +1289,23 @@ function formatSelectedDay(date: string): string {
   flex-wrap: wrap;
 }
 
+.no-events-hint {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-sm);
+  font-style: italic;
+}
+
 /* === RESPONSIVE === */
 @media (max-width: 767px) {
+  .calendar-header {
+    flex-direction: column;
+  }
+
+  .calendar-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .quarter-grid {
     grid-template-columns: 1fr;
   }

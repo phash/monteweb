@@ -4,6 +4,8 @@ export interface FamilyInfo {
   avatarUrl: string | null
   hoursExempt: boolean
   active: boolean
+  soleCustody: boolean
+  soleCustodyApproved: boolean
   members: FamilyMemberInfo[]
 }
 
@@ -87,4 +89,7 @@ export interface TenantConfig {
   jitsiServerUrl?: string
   // WOPI / ONLYOFFICE (enabled via modules map)
   wopiOfficeUrl?: string | null
+  // Family settings
+  soleCustodyEnabled?: boolean
+  requireFamilySwitchApproval?: boolean
 }

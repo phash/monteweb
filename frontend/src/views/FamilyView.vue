@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFamilyStore } from '@/stores/family'
 import { useAdminStore } from '@/stores/admin'
+import { useAuthStore } from '@/stores/auth'
 import type { FamilyInvitationInfo } from '@/types/family'
 import type { CalendarEvent } from '@/types/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
@@ -15,15 +16,19 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Dialog from 'primevue/dialog'
 import Tag from 'primevue/tag'
+import Checkbox from 'primevue/checkbox'
 import { familyApi } from '@/api/family.api'
 import { useToast } from 'primevue/usetoast'
 
 const { t } = useI18n()
 const family = useFamilyStore()
 const admin = useAdminStore()
+const auth = useAuthStore()
 const toast = useToast()
 
 const calendarEnabled = computed(() => admin.config?.modules?.calendar ?? false)
+const soleCustodyEnabled = computed(() => admin.config?.soleCustodyEnabled ?? false)
+const isAdminOrSectionAdmin = computed(() => auth.isAdmin || auth.isSectionAdmin)
 
 const showCreateDialog = ref(false)
 const showJoinDialog = ref(false)
@@ -190,6 +195,26 @@ async function downloadIcal(familyId: string) {
   }
 }
 
+async function toggleSoleCustody(familyId: string, value: boolean) {
+  try {
+    await familyApi.requestSoleCustody(familyId, value)
+    toast.add({ severity: 'success', summary: t('family.soleCustodyRequested'), life: 3000 })
+    await family.fetchFamilies()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
+async function approveSoleCustody(familyId: string) {
+  try {
+    await familyApi.approveSoleCustody(familyId)
+    toast.add({ severity: 'success', summary: t('family.soleCustodyApproved'), life: 3000 })
+    await family.fetchFamilies()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
+  }
+}
+
 function formatEventDate(event: CalendarEvent): string {
   const date = new Date(event.startDate + 'T00:00:00')
   const formatted = date.toLocaleDateString(undefined, {
@@ -353,6 +378,35 @@ function formatEventDate(event: CalendarEvent): string {
                 />
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Sole Custody Section -->
+        <div v-if="soleCustodyEnabled" class="sole-custody-section">
+          <div class="sole-custody-toggle">
+            <Checkbox
+              :modelValue="fam.soleCustody"
+              :binary="true"
+              :disabled="fam.soleCustodyApproved"
+              @update:modelValue="(val: boolean) => toggleSoleCustody(fam.id, val)"
+            />
+            <div>
+              <label class="sole-custody-label">{{ t('family.soleCustody') }}</label>
+              <p class="text-sm text-muted">{{ t('family.soleCustodyHint') }}</p>
+            </div>
+          </div>
+          <div v-if="fam.soleCustody && !fam.soleCustodyApproved" class="sole-custody-status">
+            <Tag :value="t('family.soleCustodyPending')" severity="warn" size="small" />
+            <Button
+              v-if="isAdminOrSectionAdmin"
+              :label="t('family.approveSoleCustody')"
+              icon="pi pi-check"
+              size="small"
+              @click="approveSoleCustody(fam.id)"
+            />
+          </div>
+          <div v-if="fam.soleCustody && fam.soleCustodyApproved" class="sole-custody-status">
+            <Tag :value="t('family.soleCustodyApprovedLabel')" severity="success" size="small" />
           </div>
         </div>
       </div>
@@ -643,5 +697,30 @@ h3 {
   display: flex;
   gap: 0.25rem;
   flex-shrink: 0;
+}
+
+.sole-custody-section {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mw-border-light);
+}
+
+.sole-custody-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.sole-custody-label {
+  font-size: var(--mw-font-size-sm);
+  font-weight: 500;
+}
+
+.sole-custody-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  margin-left: 2rem;
 }
 </style>

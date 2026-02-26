@@ -12,9 +12,9 @@ import type {
 
 export const jobboardApi = {
   listJobs(page = 0, size = 20, category?: string, status?: JobStatus[], eventId?: string,
-           fromDate?: string, toDate?: string, roomId?: string) {
+           fromDate?: string, toDate?: string, roomId?: string, sort?: string) {
     return client.get<ApiResponse<PageResponse<JobInfo>>>('/jobs', {
-      params: { page, size, category, status: status?.join(','), eventId, roomId, fromDate, toDate },
+      params: { page, size, category, status: status?.join(','), eventId, roomId, fromDate, toDate, sort },
     })
   },
 
@@ -48,6 +48,14 @@ export const jobboardApi = {
 
   deleteJob(id: string) {
     return client.delete<ApiResponse<void>>(`/jobs/${id}`, { params: { permanent: true } })
+  },
+
+  approveJob(id: string) {
+    return client.post<ApiResponse<JobInfo>>(`/jobs/${id}/approve`)
+  },
+
+  getDraftJobs(page = 0, size = 20) {
+    return client.get<ApiResponse<PageResponse<JobInfo>>>('/jobs/drafts', { params: { page, size } })
   },
 
   linkEvent(jobId: string, eventId: string) {

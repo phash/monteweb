@@ -6,6 +6,7 @@ import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomRole;
 import com.monteweb.room.internal.dto.*;
 import com.monteweb.room.internal.model.RoomSettings;
+import com.monteweb.room.internal.model.RoomType;
 import com.monteweb.room.internal.service.RoomService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
@@ -53,7 +54,13 @@ public class RoomController {
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<RoomInfo>>> getAllRooms(
             @RequestParam(defaultValue = "false") boolean includeArchived,
+            @RequestParam(required = false) String type,
             @PageableDefault(size = 20) Pageable pageable) {
+        if (type != null) {
+            var roomType = RoomType.valueOf(type);
+            var rooms = roomService.findByType(roomType);
+            return ResponseEntity.ok(ApiResponse.ok(PageResponse.fromList(rooms)));
+        }
         if (includeArchived) {
             requireSuperAdmin();
             return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(roomService.findAllIncludingArchived(pageable))));
@@ -413,7 +420,22 @@ public class RoomController {
         );
     }
 
+    @PostMapping("/{id}/migrate-members")
+    public ResponseEntity<ApiResponse<Map<String, Integer>>> migrateMembers(
+            @PathVariable UUID id,
+            @RequestBody MigrateMembersRequest request) {
+        requireLeaderOrAdmin(id);
+        int count = roomService.migrateMembers(id, request.memberIds(), request.targetRoomId(), request.leaveSchool());
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("migrated", count)));
+    }
+
     // ── Request DTOs ────────────────────────────────────────────────────
+
+    public record MigrateMembersRequest(
+            List<UUID> memberIds,
+            UUID targetRoomId,
+            boolean leaveSchool
+    ) {}
 
     public record CreateInterestRoomRequest(
             @jakarta.validation.constraints.NotBlank String name,

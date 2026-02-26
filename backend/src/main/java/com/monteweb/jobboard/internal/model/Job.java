@@ -1,6 +1,7 @@
 package com.monteweb.jobboard.internal.model;
 
 import com.monteweb.jobboard.JobStatus;
+import com.monteweb.jobboard.JobVisibility;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -73,6 +74,16 @@ public class Job {
 
     @Column(name = "closed_at")
     private Instant closedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private JobVisibility visibility = JobVisibility.PUBLIC;
+
+    @Column(name = "approved_by")
+    private UUID approvedBy;
+
+    @Column(name = "approved_at")
+    private Instant approvedAt;
 
     @PrePersist
     protected void onCreate() {

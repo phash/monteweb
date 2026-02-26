@@ -35,7 +35,8 @@ public record CleaningSlotInfo(
             boolean swapOffered,
             boolean confirmed,
             UUID confirmedBy,
-            Instant confirmedAt
+            Instant confirmedAt,
+            boolean durationConfirmed
     ) {
     }
 }
