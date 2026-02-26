@@ -7,6 +7,7 @@ import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.internal.service.MessagingService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
+import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Pageable;
@@ -168,7 +169,8 @@ public class MessagingController {
         var att = messagingService.getAttachmentEntity(attachmentId);
         try (var stream = messagingService.getAttachmentForDownload(attachmentId, userId)) {
             String contentType = att.getContentType() != null ? att.getContentType() : "application/octet-stream";
-            String filename = att.getOriginalFilename() != null ? att.getOriginalFilename() : "file";
+            String filename = FileValidationUtils.sanitizeContentDispositionFilename(
+                    att.getOriginalFilename() != null ? att.getOriginalFilename() : "file");
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")

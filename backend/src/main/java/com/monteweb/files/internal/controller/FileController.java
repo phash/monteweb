@@ -6,6 +6,7 @@ import com.monteweb.files.FolderInfo;
 import com.monteweb.files.internal.service.FileService;
 import com.monteweb.files.internal.service.WopiTokenService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
@@ -67,11 +68,12 @@ public class FileController {
         var metadata = fileService.getFileMetadata(roomId, fileId, userId);
         var stream = fileService.downloadFile(roomId, fileId, userId);
 
+        String safeFilename = FileValidationUtils.sanitizeContentDispositionFilename(metadata.getOriginalName());
+        String contentType = metadata.getContentType() != null ? metadata.getContentType() : "application/octet-stream";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + metadata.getOriginalName() + "\"")
-                .contentType(MediaType.parseMediaType(
-                        metadata.getContentType() != null ? metadata.getContentType() : "application/octet-stream"))
+                        "attachment; filename=\"" + safeFilename + "\"")
+                .contentType(MediaType.parseMediaType(contentType))
                 .contentLength(metadata.getFileSize())
                 .body(new InputStreamResource(stream));
     }

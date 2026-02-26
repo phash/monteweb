@@ -5,6 +5,7 @@ import com.monteweb.files.internal.model.WopiToken;
 import com.monteweb.files.internal.repository.RoomFileRepository;
 import com.monteweb.files.internal.service.FileStorageService;
 import com.monteweb.files.internal.service.WopiTokenService;
+import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.user.UserModuleApi;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -105,9 +106,10 @@ public class WopiController {
         }
 
         InputStream stream = storageService.download(file.getStoragePath());
+        String safeFilename = FileValidationUtils.sanitizeContentDispositionFilename(file.getOriginalName());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + file.getOriginalName() + "\"")
+                        "attachment; filename=\"" + safeFilename + "\"")
                 .contentType(MediaType.parseMediaType(
                         file.getContentType() != null ? file.getContentType() : "application/octet-stream"))
                 .contentLength(file.getFileSize())

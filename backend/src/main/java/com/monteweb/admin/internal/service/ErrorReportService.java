@@ -140,26 +140,27 @@ public class ErrorReportService {
         String truncatedMessage = report.getMessage().length() > 80
                 ? report.getMessage().substring(0, 80) + "..."
                 : report.getMessage();
-        String title = "[ErrorReport] " + (report.getErrorType() != null ? report.getErrorType() + ": " : "") + truncatedMessage;
+        String title = "[ErrorReport] " + escapeMarkdownTitle(
+                (report.getErrorType() != null ? report.getErrorType() + ": " : "") + truncatedMessage);
 
         String body = "## Error Report\n\n"
                 + "| Field | Value |\n"
                 + "|-------|-------|\n"
-                + "| **Source** | " + report.getSource() + " |\n"
-                + "| **Type** | " + (report.getErrorType() != null ? report.getErrorType() : "N/A") + " |\n"
-                + "| **Location** | " + (report.getLocation() != null ? report.getLocation() : "N/A") + " |\n"
+                + "| **Source** | " + escapeMarkdownCell(report.getSource()) + " |\n"
+                + "| **Type** | " + escapeMarkdownCell(report.getErrorType() != null ? report.getErrorType() : "N/A") + " |\n"
+                + "| **Location** | " + escapeMarkdownCell(report.getLocation() != null ? report.getLocation() : "N/A") + " |\n"
                 + "| **Occurrences** | " + report.getOccurrenceCount() + " |\n"
                 + "| **First Seen** | " + report.getFirstSeenAt() + " |\n"
                 + "| **Last Seen** | " + report.getLastSeenAt() + " |\n"
-                + "| **Fingerprint** | `" + report.getFingerprint() + "` |\n\n"
+                + "| **Fingerprint** | `" + escapeMarkdownCell(report.getFingerprint()) + "` |\n\n"
                 + "### Message\n\n"
-                + "```\n" + report.getMessage() + "\n```\n\n";
+                + "```\n" + escapeCodeBlock(report.getMessage()) + "\n```\n\n";
 
         if (report.getStackTrace() != null) {
             String stackTrace = report.getStackTrace().length() > 5000
                     ? report.getStackTrace().substring(0, 5000) + "\n... (truncated)"
                     : report.getStackTrace();
-            body += "### Stack Trace\n\n```\n" + stackTrace + "\n```\n";
+            body += "### Stack Trace\n\n```\n" + escapeCodeBlock(stackTrace) + "\n```\n";
         }
 
         String url = "https://api.github.com/repos/" + config.getGithubRepo() + "/issues";
@@ -256,5 +257,32 @@ public class ErrorReportService {
         // Replace numbers with placeholder
         normalized = normalized.replaceAll("\\d+", "<NUM>");
         return normalized;
+    }
+
+    /**
+     * Escape user-controlled text for safe use in GitHub markdown table cells.
+     * Prevents @mention pings and pipe characters from breaking table layout.
+     */
+    private static String escapeMarkdownCell(String text) {
+        if (text == null) return "";
+        return text.replace("|", "\\|").replace("@", "&#64;");
+    }
+
+    /**
+     * Escape user-controlled text for safe use in GitHub issue titles.
+     * Prevents @mention pings.
+     */
+    private static String escapeMarkdownTitle(String text) {
+        if (text == null) return "";
+        return text.replace("@", "&#64;");
+    }
+
+    /**
+     * Escape user-controlled text for safe inclusion in fenced code blocks.
+     * Prevents premature code block termination via triple backticks.
+     */
+    private static String escapeCodeBlock(String text) {
+        if (text == null) return "";
+        return text.replace("```", "` ` `");
     }
 }

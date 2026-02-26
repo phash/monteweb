@@ -1,5 +1,6 @@
 package com.monteweb.feed.internal.service;
 
+import com.monteweb.shared.util.FileValidationUtils;
 import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
@@ -27,15 +28,20 @@ public class FeedStorageService {
         this.bucket = bucket;
     }
 
-    public String upload(UUID postId, UUID attachmentId, MultipartFile file) {
-        String extension = getExtension(file.getOriginalFilename());
+    /**
+     * Uploads a feed attachment.
+     *
+     * @param detectedContentType content type detected via magic bytes (not client-declared)
+     */
+    public String upload(UUID postId, UUID attachmentId, MultipartFile file, String detectedContentType) {
+        String extension = FileValidationUtils.getExtensionFromFilename(file.getOriginalFilename());
         String objectKey = "feed/" + postId + "/" + attachmentId + "." + extension;
         try {
             minioClient.putObject(PutObjectArgs.builder()
                     .bucket(bucket)
                     .object(objectKey)
                     .stream(file.getInputStream(), file.getSize(), -1)
-                    .contentType(file.getContentType())
+                    .contentType(detectedContentType)
                     .build());
             log.debug("Uploaded feed attachment to {}/{}", bucket, objectKey);
             return objectKey;
@@ -66,11 +72,5 @@ public class FeedStorageService {
         } catch (Exception e) {
             log.warn("Failed to delete feed attachment {}: {}", storagePath, e.getMessage());
         }
-    }
-
-    private String getExtension(String filename) {
-        if (filename == null) return "bin";
-        int dot = filename.lastIndexOf('.');
-        return dot >= 0 ? filename.substring(dot + 1).toLowerCase() : "bin";
     }
 }

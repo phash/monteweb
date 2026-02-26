@@ -4,6 +4,7 @@ import com.monteweb.calendar.internal.model.ICalEvent;
 import com.monteweb.calendar.internal.model.ICalSubscription;
 import com.monteweb.calendar.internal.repository.ICalEventRepository;
 import com.monteweb.calendar.internal.repository.ICalSubscriptionRepository;
+import com.monteweb.shared.util.SsrfProtectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -48,6 +49,9 @@ public class ICalImportService {
     }
 
     public ICalSubscription createSubscription(String name, String url, String color, UUID createdBy) {
+        // Validate URL before persisting to fail fast on private/internal targets
+        SsrfProtectionUtils.validateUrl(url);
+
         var sub = new ICalSubscription();
         sub.setName(name);
         sub.setUrl(url);
@@ -63,25 +67,30 @@ public class ICalImportService {
         subscriptionRepository.deleteById(id);
     }
 
+    private static final int MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB
+
     public void syncSubscription(UUID subId) {
         var subOpt = subscriptionRepository.findById(subId);
         if (subOpt.isEmpty()) return;
 
         var sub = subOpt.get();
         try {
+            // SSRF protection: block requests to private/internal networks
+            SsrfProtectionUtils.validateUrl(sub.getUrl());
+
             var request = HttpRequest.newBuilder()
                     .uri(URI.create(sub.getUrl()))
-                    .timeout(Duration.ofSeconds(30))
+                    .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build();
 
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
             if (response.statusCode() != 200) {
                 log.warn("Failed to fetch iCal from {}: HTTP {}", sub.getUrl(), response.statusCode());
                 return;
             }
 
-            String body = response.body();
+            String body = SsrfProtectionUtils.readLimited(response.body(), MAX_RESPONSE_BYTES);
             List<ParsedEvent> parsed = parseICalEvents(body);
 
             for (var pe : parsed) {

@@ -9,6 +9,7 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
@@ -326,15 +327,18 @@ public class FeedService implements FeedModuleApi {
             if (file.getSize() > MAX_ATTACHMENT_SIZE) {
                 throw new BusinessException("File too large: " + file.getOriginalFilename());
             }
+            // Detect actual content type via magic bytes instead of trusting client header
+            String detectedContentType = FileValidationUtils.detectContentType(file);
+
             var attachment = new FeedPostAttachment();
             attachment.setPost(post);
             attachment.setFileName(file.getOriginalFilename());
-            attachment.setFileType(file.getContentType());
+            attachment.setFileType(detectedContentType);
             attachment.setFileSize(file.getSize());
             attachment.setSortOrder(sortOrder++);
             attachment = attachmentRepository.save(attachment);
 
-            String objectKey = storageService.upload(postId, attachment.getId(), file);
+            String objectKey = storageService.upload(postId, attachment.getId(), file, detectedContentType);
             attachment.setFileUrl(objectKey);
             attachmentRepository.save(attachment);
         }
