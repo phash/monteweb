@@ -29,6 +29,7 @@ public class RateLimitFilter implements Filter {
     private static final int LOGIN_MAX_REQUESTS = 10;
     private static final int REGISTER_MAX_REQUESTS = 5;
     private static final int PASSWORD_RESET_MAX_REQUESTS = 5;
+    private static final int TWO_FA_MAX_REQUESTS = 5;
     private static final int ERROR_REPORT_MAX_REQUESTS = 10;
     private static final long WINDOW_MS = 60_000; // 1 minute
     private static final int MAX_BUCKETS = 10_000; // Hard cap to prevent memory exhaustion
@@ -59,6 +60,8 @@ public class RateLimitFilter implements Filter {
             maxRequests = REGISTER_MAX_REQUESTS;
         } else if (path.startsWith("/api/v1/auth/password-reset")) {
             maxRequests = PASSWORD_RESET_MAX_REQUESTS;
+        } else if (path.startsWith("/api/v1/auth/2fa")) {
+            maxRequests = TWO_FA_MAX_REQUESTS;
         } else if (path.startsWith("/api/v1/error-reports")) {
             maxRequests = ERROR_REPORT_MAX_REQUESTS;
         }

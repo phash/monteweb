@@ -1,5 +1,6 @@
 package com.monteweb.jobboard.internal.controller;
 
+import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.*;
 import com.monteweb.jobboard.internal.model.JobAttachment;
 import com.monteweb.jobboard.internal.repository.JobAttachmentRepository;
@@ -37,13 +38,16 @@ public class JobboardController {
 
     private final JobboardService jobboardService;
     private final UserModuleApi userModuleApi;
+    private final FamilyModuleApi familyModuleApi;
     private final JobAttachmentRepository attachmentRepository;
     private final JobStorageService storageService;
 
     public JobboardController(JobboardService jobboardService, UserModuleApi userModuleApi,
+                              FamilyModuleApi familyModuleApi,
                               JobAttachmentRepository attachmentRepository, JobStorageService storageService) {
         this.jobboardService = jobboardService;
         this.userModuleApi = userModuleApi;
+        this.familyModuleApi = familyModuleApi;
         this.attachmentRepository = attachmentRepository;
         this.storageService = storageService;
     }
@@ -211,24 +215,53 @@ public class JobboardController {
 
     @GetMapping("/family/{familyId}/hours")
     public ResponseEntity<ApiResponse<FamilyHoursInfo>> getFamilyHours(@PathVariable UUID familyId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        requireFamilyMemberOrAdmin(userId, familyId);
         var hours = jobboardService.getFamilyHours(familyId)
-                .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Family", familyId));
+                .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         return ResponseEntity.ok(ApiResponse.ok(hours));
     }
 
     @GetMapping("/family/{familyId}/assignments")
     public ResponseEntity<ApiResponse<List<JobAssignmentInfo>>> getFamilyAssignments(@PathVariable UUID familyId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        requireFamilyMemberOrAdmin(userId, familyId);
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.getAssignmentsForFamily(familyId)));
     }
 
     @GetMapping("/report")
     public ResponseEntity<ApiResponse<List<FamilyHoursInfo>>> getAllFamilyHoursReport() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        requireAdminRole(userId);
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.getAllFamilyHoursReport()));
     }
 
     @GetMapping("/report/summary")
     public ResponseEntity<ApiResponse<ReportSummary>> getReportSummary() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        requireAdminRole(userId);
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.getReportSummary()));
+    }
+
+    private void requireFamilyMemberOrAdmin(UUID userId, UUID familyId) {
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN
+                || user.role() == UserRole.TEACHER) {
+            return; // admins and teachers can view any family's data
+        }
+        if (!familyModuleApi.isUserInFamily(userId, familyId)) {
+            throw new ForbiddenException("You can only view your own family's data");
+        }
+    }
+
+    private void requireAdminRole(UUID userId) {
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN
+                && user.role() != UserRole.TEACHER) {
+            throw new ForbiddenException("Only administrators and teachers can access reports");
+        }
     }
 
     // ---- Attachments ----

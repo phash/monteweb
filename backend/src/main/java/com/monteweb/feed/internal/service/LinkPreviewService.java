@@ -1,6 +1,7 @@
 package com.monteweb.feed.internal.service;
 
 import com.monteweb.feed.LinkPreviewInfo;
+import com.monteweb.shared.util.SsrfProtectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class LinkPreviewService {
     private static final int MAX_CACHE_SIZE = 1000;
     private static final Duration CACHE_TTL = Duration.ofHours(1);
     private static final Duration FETCH_TIMEOUT = Duration.ofSeconds(3);
+    private static final int MAX_RESPONSE_BYTES = 512 * 1024; // 512 KB
 
     // Regex patterns for OpenGraph meta tags
     private static final Pattern OG_TITLE = Pattern.compile(
@@ -85,11 +87,10 @@ public class LinkPreviewService {
         }
 
         try {
+            // SSRF protection: block private/internal IPs and non-HTTP schemes
+            SsrfProtectionUtils.validateUrl(url);
+
             var uri = URI.create(url);
-            var scheme = uri.getScheme();
-            if (scheme == null || (!scheme.equals("http") && !scheme.equals("https"))) {
-                return null;
-            }
 
             var request = HttpRequest.newBuilder()
                     .uri(uri)
@@ -99,14 +100,17 @@ public class LinkPreviewService {
                     .GET()
                     .build();
 
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
             if (response.statusCode() >= 200 && response.statusCode() < 400) {
-                var html = response.body();
+                // Limit response body to prevent OOM
+                var html = SsrfProtectionUtils.readLimited(response.body(), MAX_RESPONSE_BYTES);
                 var preview = parseOpenGraph(url, html);
                 putCache(url, preview);
                 return preview;
             }
+        } catch (IllegalArgumentException e) {
+            log.debug("URL blocked by SSRF protection: {}: {}", url, e.getMessage());
         } catch (Exception e) {
             log.debug("Failed to fetch link preview for {}: {}", url, e.getMessage());
         }
