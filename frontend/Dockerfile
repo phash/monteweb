@@ -13,6 +13,8 @@ LABEL org.opencontainers.image.title="MonteWeb Frontend" \
       org.opencontainers.image.description="MonteWeb School Intranet — Vue 3 SPA" \
       org.opencontainers.image.vendor="MonteWeb"
 
+RUN apk upgrade --no-cache
+
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
