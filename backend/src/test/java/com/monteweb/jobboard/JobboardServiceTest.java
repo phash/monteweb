@@ -11,6 +11,7 @@ import com.monteweb.jobboard.internal.model.JobAssignment;
 import com.monteweb.jobboard.internal.repository.JobAssignmentRepository;
 import com.monteweb.jobboard.internal.repository.JobAttachmentRepository;
 import com.monteweb.jobboard.internal.repository.JobRepository;
+import com.monteweb.jobboard.internal.service.JobStorageService;
 import com.monteweb.jobboard.internal.service.JobboardService;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.BusinessException;
@@ -49,6 +50,7 @@ class JobboardServiceTest {
     @Mock private CleaningModuleApi cleaningModuleApi;
     @Mock private CalendarModuleApi calendarModuleApi;
     @Mock private RoomModuleApi roomModuleApi;
+    @Mock private JobStorageService storageService;
 
     private JobboardService service;
 
@@ -63,7 +65,7 @@ class JobboardServiceTest {
                 jobRepository, assignmentRepository, attachmentRepository,
                 userModuleApi, familyModuleApi, adminModuleApi,
                 eventPublisher, cleaningModuleApi, calendarModuleApi,
-                roomModuleApi, null
+                roomModuleApi, storageService
         );
     }
 
@@ -155,7 +157,7 @@ class JobboardServiceTest {
         @DisplayName("PARENT kann sich erfolgreich bewerben")
         void applyForJob_success() {
             var job = makeJob(JOB_ID, JobStatus.OPEN, 3);
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(userModuleApi.findById(USER_ID)).thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
             when(assignmentRepository.findByJobIdAndUserId(JOB_ID, USER_ID)).thenReturn(Optional.empty());
             when(assignmentRepository.countByJobIdAndStatusNot(JOB_ID, AssignmentStatus.CANCELLED)).thenReturn(0L);
@@ -181,7 +183,7 @@ class JobboardServiceTest {
         @DisplayName("TEACHER wird abgelehnt (ForbiddenException)")
         void applyForJob_teacherBlocked() {
             var job = makeJob(JOB_ID, JobStatus.OPEN, 3);
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(userModuleApi.findById(USER_ID)).thenReturn(Optional.of(makeUser(USER_ID, UserRole.TEACHER)));
 
             assertThatThrownBy(() -> service.applyForJob(JOB_ID, USER_ID))
@@ -193,7 +195,7 @@ class JobboardServiceTest {
         @DisplayName("Job nicht OPEN wirft BusinessException")
         void applyForJob_jobNotOpen() {
             var job = makeJob(JOB_ID, JobStatus.ASSIGNED, 3);
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(userModuleApi.findById(USER_ID)).thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
 
             assertThatThrownBy(() -> service.applyForJob(JOB_ID, USER_ID))
@@ -206,7 +208,7 @@ class JobboardServiceTest {
         void applyForJob_duplicate() {
             var job = makeJob(JOB_ID, JobStatus.OPEN, 3);
             var existing = makeAssignment(ASSIGNMENT_ID, JOB_ID, USER_ID, FAMILY_ID, AssignmentStatus.ASSIGNED);
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(userModuleApi.findById(USER_ID)).thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
             when(assignmentRepository.findByJobIdAndUserId(JOB_ID, USER_ID)).thenReturn(Optional.of(existing));
 
@@ -219,7 +221,7 @@ class JobboardServiceTest {
         @DisplayName("Job voll wirft BusinessException")
         void applyForJob_jobFull() {
             var job = makeJob(JOB_ID, JobStatus.OPEN, 2);
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(userModuleApi.findById(USER_ID)).thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
             when(assignmentRepository.findByJobIdAndUserId(JOB_ID, USER_ID)).thenReturn(Optional.empty());
             when(assignmentRepository.countByJobIdAndStatusNot(JOB_ID, AssignmentStatus.CANCELLED)).thenReturn(2L);
@@ -234,7 +236,7 @@ class JobboardServiceTest {
         void applyForJob_reactivateCancelled() {
             var job = makeJob(JOB_ID, JobStatus.OPEN, 3);
             var cancelled = makeAssignment(ASSIGNMENT_ID, JOB_ID, USER_ID, FAMILY_ID, AssignmentStatus.CANCELLED);
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(userModuleApi.findById(USER_ID)).thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
             when(assignmentRepository.findByJobIdAndUserId(JOB_ID, USER_ID)).thenReturn(Optional.of(cancelled));
             when(assignmentRepository.countByJobIdAndStatusNot(JOB_ID, AssignmentStatus.CANCELLED)).thenReturn(0L);
@@ -260,7 +262,7 @@ class JobboardServiceTest {
             lenient().when(familyModuleApi.findById(FAMILY_ID)).thenReturn(Optional.of(makeFamily(FAMILY_ID)));
             lenient().when(attachmentRepository.findByJobIdOrderByCreatedAtAsc(JOB_ID)).thenReturn(List.of());
 
-            when(jobRepository.findById(JOB_ID)).thenReturn(Optional.of(job));
+            when(jobRepository.findByIdForUpdate(JOB_ID)).thenReturn(Optional.of(job));
             when(assignmentRepository.findByJobIdAndUserId(JOB_ID, USER_ID)).thenReturn(Optional.empty());
             // 1 existing assignee; max = 2; after this apply it becomes 2 → full
             when(assignmentRepository.countByJobIdAndStatusNot(JOB_ID, AssignmentStatus.CANCELLED)).thenReturn(1L);

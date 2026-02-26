@@ -86,7 +86,9 @@ public final class FileValidationUtils {
         return !lower.contains("html")
                 && !lower.contains("javascript")
                 && !lower.contains("svg")
-                && !lower.contains("xml")
+                && !lower.endsWith("+xml")
+                && !lower.equals("text/xml")
+                && !lower.equals("application/xml")
                 && !lower.equals("text/css");
     }
 

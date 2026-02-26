@@ -202,7 +202,7 @@ class JobboardServiceIntegrationTest {
 
     @Test
     void getReport_authenticatedUser_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = loginAs("lehrer@monteweb.local");
 
         mockMvc.perform(get("/api/v1/jobs/report")
                         .header("Authorization", "Bearer " + token))

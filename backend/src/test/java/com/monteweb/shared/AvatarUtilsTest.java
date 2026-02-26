@@ -22,7 +22,7 @@ class AvatarUtilsTest {
 
     @Test
     void validateAndConvert_jpegImage_shouldWork() {
-        byte[] imageBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+        byte[] imageBytes = new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0};
         var file = new MockMultipartFile("avatar", "photo.jpg", "image/jpeg", imageBytes);
 
         String result = AvatarUtils.validateAndConvert(file);
