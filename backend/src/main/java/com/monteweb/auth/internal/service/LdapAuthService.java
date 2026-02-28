@@ -103,7 +103,23 @@ public class LdapAuthService {
         return adminModuleApi.getLdapBindPassword();
     }
 
+    /**
+     * Validates the LDAP URL to prevent SSRF attacks.
+     * Only ldap:// and ldaps:// schemes are permitted.
+     */
+    static void validateLdapUrl(String url) {
+        if (url == null || url.isBlank()) {
+            throw new IllegalArgumentException("LDAP URL must not be blank");
+        }
+        String lower = url.toLowerCase();
+        if (!lower.startsWith("ldap://") && !lower.startsWith("ldaps://")) {
+            throw new IllegalArgumentException(
+                    "Invalid LDAP URL scheme — only ldap:// and ldaps:// are allowed");
+        }
+    }
+
     private Hashtable<String, String> buildBaseEnv(TenantConfigInfo config) {
+        validateLdapUrl(config.ldapUrl());
         Hashtable<String, String> env = new Hashtable<>();
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, config.ldapUrl());

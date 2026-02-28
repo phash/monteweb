@@ -78,8 +78,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
+        // SecurityUtils.requireCurrentUserId() throws IllegalStateException("No authenticated user")
+        // — that must be 401, not 409.
+        String msg = ex.getMessage();
+        if (msg != null && (msg.contains("authenticated") || msg.contains("No authenticated user"))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ErrorResponse.of("UNAUTHORIZED", "Authentication required", 401));
+        }
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ErrorResponse.of("CONFLICT", ex.getMessage(), 409));
+                .body(ErrorResponse.of("CONFLICT", msg, 409));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

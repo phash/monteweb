@@ -1,8 +1,10 @@
 package com.monteweb.shared.util;
 
 import com.monteweb.admin.AdminModuleApi;
+import com.monteweb.shared.exception.BusinessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -22,6 +24,9 @@ public class ClamAvService {
     private static final Logger log = LoggerFactory.getLogger(ClamAvService.class);
     private static final int CHUNK_SIZE = 2048;
     private static final int SOCKET_TIMEOUT_MS = 30_000;
+
+    @Value("${monteweb.clamav.fail-open:false}")
+    private boolean failOpen;
 
     private final AdminModuleApi adminModuleApi;
 
@@ -123,9 +128,11 @@ public class ClamAvService {
             log.error("Unexpected ClamAV response: {}", responseStr);
             return ScanResult.clean();
         } catch (Exception e) {
-            log.error("ClamAV scan failed: {}", e.getMessage(), e);
-            // On error, allow upload rather than blocking — log the failure
-            return ScanResult.clean();
+            log.error("ClamAV scan failed - {}: {}", failOpen ? "allowing upload (fail-open)" : "blocking upload (fail-closed)", e.getMessage());
+            if (failOpen) {
+                return ScanResult.clean();
+            }
+            throw new BusinessException("Virus scan service unavailable. Upload rejected for safety.");
         }
     }
 

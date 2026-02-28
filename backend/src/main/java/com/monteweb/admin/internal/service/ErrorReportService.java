@@ -32,6 +32,8 @@ public class ErrorReportService {
 
     private static final Logger log = LoggerFactory.getLogger(ErrorReportService.class);
     private static final Set<String> VALID_STATUSES = Set.of("NEW", "REPORTED", "RESOLVED", "IGNORED");
+    /** Hard cap on distinct fingerprints to prevent DB flooding from unauthenticated submissions. */
+    private static final long MAX_ERROR_REPORT_COUNT = 10_000;
 
     private final ErrorReportRepository errorReportRepository;
     private final TenantConfigRepository tenantConfigRepository;
@@ -53,6 +55,10 @@ public class ErrorReportService {
                 request.message(), request.location());
 
         Optional<ErrorReport> existing = errorReportRepository.findByFingerprint(fingerprint);
+        if (existing.isEmpty() && errorReportRepository.count() >= MAX_ERROR_REPORT_COUNT) {
+            log.warn("Error report rejected: storage cap of {} reached", MAX_ERROR_REPORT_COUNT);
+            return;
+        }
         if (existing.isPresent()) {
             var report = existing.get();
             report.setOccurrenceCount(report.getOccurrenceCount() + 1);

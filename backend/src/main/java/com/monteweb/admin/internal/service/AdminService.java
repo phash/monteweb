@@ -218,6 +218,14 @@ public class AdminService implements AdminModuleApi {
      * Tests an LDAP connection with the given parameters.
      */
     public void testLdapConnection(String url, String baseDn, String bindDn, String bindPassword, boolean useSsl) {
+        // SSRF prevention: only allow ldap:// and ldaps:// schemes
+        if (url == null || url.isBlank()) {
+            throw new BusinessException("LDAP URL must not be blank");
+        }
+        String urlLower = url.toLowerCase();
+        if (!urlLower.startsWith("ldap://") && !urlLower.startsWith("ldaps://")) {
+            throw new BusinessException("Invalid LDAP URL scheme — only ldap:// and ldaps:// are allowed");
+        }
         java.util.Hashtable<String, String> env = new java.util.Hashtable<>();
         env.put(javax.naming.Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(javax.naming.Context.PROVIDER_URL, url);

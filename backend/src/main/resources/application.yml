@@ -112,6 +112,10 @@ monteweb:
     subject: ${VAPID_SUBJECT:mailto:admin@monteweb.local}
   solr:
     url: ${SOLR_URL:http://localhost:8983/solr/monteweb}
+  clamav:
+    # fail-open: false means uploads are BLOCKED when ClamAV is unreachable (secure default)
+    # Set to true only if you want uploads to proceed when ClamAV is down
+    # fail-open: false
   modules:
     messaging:
       enabled: true

@@ -30,7 +30,7 @@ public class RateLimitFilter implements Filter {
     private static final int REGISTER_MAX_REQUESTS = 5;
     private static final int PASSWORD_RESET_MAX_REQUESTS = 5;
     private static final int TWO_FA_MAX_REQUESTS = 5;
-    private static final int ERROR_REPORT_MAX_REQUESTS = 10;
+    private static final int ERROR_REPORT_MAX_REQUESTS = 5;
     private static final int FILE_UPLOAD_MAX_REQUESTS = 10;
     private static final int SEARCH_MAX_REQUESTS = 30;
     private static final int FORM_SUBMIT_MAX_REQUESTS = 10;
@@ -114,9 +114,9 @@ public class RateLimitFilter implements Filter {
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            return xff.split(",")[0].trim();
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
         }
         return request.getRemoteAddr();
     }

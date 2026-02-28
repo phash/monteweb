@@ -2,6 +2,7 @@ package com.monteweb.auth.internal.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +22,8 @@ import java.util.List;
  * TOTP (Time-based One-Time Password) service implementing RFC 6238.
  * Uses HMAC-SHA1 with 30-second time steps and 6-digit codes.
  * No external libraries — uses javax.crypto.Mac directly.
+ *
+ * Used codes are tracked in Redis with a 90-second TTL to prevent replay attacks.
  */
 @Service
 public class TotpService {
@@ -32,12 +36,18 @@ public class TotpService {
     private static final String ISSUER = "MonteWeb";
     private static final int RECOVERY_CODE_COUNT = 8;
     private static final int RECOVERY_CODE_LENGTH = 8;
+    private static final String TOTP_USED_PREFIX = "totp_used:";
 
     // Base32 alphabet (RFC 4648)
     private static final String BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
     private final SecureRandom secureRandom = new SecureRandom();
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final StringRedisTemplate redisTemplate;
+
+    public TotpService(StringRedisTemplate redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
 
     /**
      * Generates a random TOTP secret encoded in Base32.
@@ -61,6 +71,7 @@ public class TotpService {
     /**
      * Verifies a TOTP code against the given secret.
      * Checks current time step and +/- 1 window for clock drift tolerance.
+     * Uses Redis to track used codes and prevent replay attacks (90-second TTL).
      */
     public boolean verifyCode(String secret, String code) {
         if (code == null || code.length() != CODE_DIGITS) {
@@ -79,8 +90,22 @@ public class TotpService {
 
         // Check current and adjacent time steps (window of 1)
         for (int i = -1; i <= 1; i++) {
-            int generatedCode = generateCode(secretBytes, currentTimeStep + i);
+            long timeStep = currentTimeStep + i;
+            int generatedCode = generateCode(secretBytes, timeStep);
             if (generatedCode == codeInt) {
+                // Atomically mark this (secret, timeStep) combination as used.
+                // Key uses a hash of the secret (not the secret itself) to avoid storing
+                // secrets in Redis. The 90-second TTL covers the full ±1 step window.
+                String redisKey = TOTP_USED_PREFIX
+                        + Integer.toHexString(secret.hashCode())
+                        + ":" + timeStep;
+                Boolean wasAbsent = redisTemplate.opsForValue()
+                        .setIfAbsent(redisKey, "1", Duration.ofSeconds(90));
+                if (Boolean.FALSE.equals(wasAbsent)) {
+                    // Key already existed — code was already used in this time window
+                    log.warn("TOTP replay attack detected for time step {}", timeStep);
+                    return false;
+                }
                 return true;
             }
         }

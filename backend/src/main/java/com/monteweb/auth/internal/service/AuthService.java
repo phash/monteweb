@@ -150,8 +150,12 @@ public class AuthService implements AuthModuleApi {
                 null, // no phone
                 role
         );
-        // LDAP-created users are immediately active (skip approval)
-        userModuleApi.setActive(newUser.id(), true);
+        // Respect requireUserApproval for LDAP-created users the same as for local registrations
+        var tenantConfig = adminModuleApi.getTenantConfig();
+        if (!tenantConfig.requireUserApproval()) {
+            userModuleApi.setActive(newUser.id(), true);
+        }
+        // If approval required: leave user inactive; admin must manually approve
         return userModuleApi.findById(newUser.id()).orElse(newUser);
     }
 

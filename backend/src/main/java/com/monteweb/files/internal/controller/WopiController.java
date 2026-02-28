@@ -7,8 +7,12 @@ import com.monteweb.files.internal.service.FileStorageService;
 import com.monteweb.files.internal.service.WopiTokenService;
 import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.user.UserModuleApi;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +38,7 @@ import java.util.Map;
 public class WopiController {
 
     private static final Logger log = LoggerFactory.getLogger(WopiController.class);
+    private static final long MAX_UPLOAD_BYTES = 50L * 1024 * 1024; // 50 MB
 
     private final WopiTokenService wopiTokenService;
     private final RoomFileRepository fileRepository;
@@ -41,19 +46,22 @@ public class WopiController {
     private final UserModuleApi userModuleApi;
     private final MinioClient minioClient;
     private final String bucket;
+    private final String onlyofficeJwtSecret;
 
     public WopiController(WopiTokenService wopiTokenService,
                           RoomFileRepository fileRepository,
                           FileStorageService storageService,
                           UserModuleApi userModuleApi,
                           MinioClient minioClient,
-                          @Value("${monteweb.storage.bucket}") String bucket) {
+                          @Value("${monteweb.storage.bucket}") String bucket,
+                          @Value("${onlyoffice.jwt.secret:}") String onlyofficeJwtSecret) {
         this.wopiTokenService = wopiTokenService;
         this.fileRepository = fileRepository;
         this.storageService = storageService;
         this.userModuleApi = userModuleApi;
         this.minioClient = minioClient;
         this.bucket = bucket;
+        this.onlyofficeJwtSecret = onlyofficeJwtSecret;
     }
 
     /**
@@ -118,9 +126,39 @@ public class WopiController {
 
     /**
      * WOPI PutFile — saves the uploaded content back to MinIO.
+     * Validates OnlyOffice JWT (if configured) and enforces a 50 MB size limit.
      */
     @PostMapping("/{token}/contents")
-    public ResponseEntity<Void> putFile(@PathVariable String token, InputStream body) {
+    public ResponseEntity<Void> putFile(@PathVariable String token, InputStream body,
+                                        HttpServletRequest request) {
+        // Validate OnlyOffice JWT when a secret is configured
+        if (onlyofficeJwtSecret != null && !onlyofficeJwtSecret.isBlank()
+                && !onlyofficeJwtSecret.equals("changeme-onlyoffice-jwt-secret")) {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                log.warn("WOPI PutFile rejected: missing or invalid Authorization header");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+            try {
+                String jwtToken = authHeader.substring(7);
+                Jwts.parser()
+                        .verifyWith(Keys.hmacShaKeyFor(onlyofficeJwtSecret.getBytes()))
+                        .build()
+                        .parseSignedClaims(jwtToken);
+            } catch (JwtException | IllegalArgumentException e) {
+                log.warn("WOPI PutFile rejected: invalid OnlyOffice JWT — {}", e.getMessage());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            }
+        }
+
+        // Enforce upload size limit before reading the body
+        long contentLength = request.getContentLengthLong();
+        if (contentLength > 0 && contentLength > MAX_UPLOAD_BYTES) {
+            log.warn("WOPI PutFile rejected: content-length {} exceeds limit of {} bytes",
+                    contentLength, MAX_UPLOAD_BYTES);
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).build();
+        }
+
         WopiToken wopiToken = wopiTokenService.validateToken(token);
         if (wopiToken == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
