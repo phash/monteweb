@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSGVO-Prüfbericht – MonteWeb</title>
+  <style>
+    :root {
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --red: #dc2626;
+      --red-light: #fee2e2;
+      --orange: #ea580c;
+      --orange-light: #fff7ed;
+      --yellow: #ca8a04;
+      --yellow-light: #fefce8;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --gray: #6b7280;
+      --gray-light: #f9fafb;
+      --border: #e5e7eb;
+      --text: #111827;
+      --text-secondary: #374151;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      background: #f3f4f6;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .page-wrapper {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      color: white;
+      padding: 40px 48px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
+    .header .subtitle { font-size: 16px; opacity: 0.85; margin-bottom: 20px; }
+    .header-meta {
+      display: flex; flex-wrap: wrap; gap: 24px;
+      font-size: 13px; opacity: 0.8;
+    }
+    .header-meta span { display: flex; align-items: center; gap: 6px; }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 9999px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .badge-critical { background: var(--red-light); color: var(--red); }
+    .badge-high     { background: var(--orange-light); color: var(--orange); }
+    .badge-medium   { background: var(--yellow-light); color: var(--yellow); }
+    .badge-low      { background: var(--blue-light); color: var(--blue); }
+    .badge-ok       { background: var(--green-light); color: var(--green); }
+    .badge-partial  { background: var(--yellow-light); color: var(--yellow); }
+    .badge-nok      { background: var(--red-light); color: var(--red); }
+
+    /* SUMMARY CARDS */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 768px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+    .summary-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .summary-card .count { font-size: 36px; font-weight: 700; }
+    .summary-card .label { font-size: 12px; color: var(--gray); margin-top: 4px; }
+    .summary-card.critical .count { color: var(--red); }
+    .summary-card.high     .count { color: var(--orange); }
+    .summary-card.medium   .count { color: var(--yellow); }
+    .summary-card.low      .count { color: var(--blue); }
+
+    /* OVERALL RATING */
+    .overall-rating {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 24px 32px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    .rating-icon { font-size: 48px; }
+    .rating-text h2 { font-size: 22px; font-weight: 700; }
+    .rating-text p { color: var(--text-secondary); margin-top: 4px; }
+
+    /* SECTION */
+    .section {
+      background: white;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .section-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .section-header h2 { font-size: 17px; font-weight: 600; }
+    .section-header .count-bubble {
+      background: var(--gray-light);
+      border-radius: 9999px;
+      padding: 2px 10px;
+      font-size: 12px;
+      color: var(--gray);
+    }
+    .section-header.critical { background: #fff1f0; border-left: 4px solid var(--red); }
+    .section-header.high     { background: #fff8f5; border-left: 4px solid var(--orange); }
+    .section-header.medium   { background: #fefce8; border-left: 4px solid var(--yellow); }
+    .section-header.low      { background: #eff6ff; border-left: 4px solid var(--blue); }
+    .section-header.positive { background: #f0fdf4; border-left: 4px solid var(--green); }
+    .section-header.info     { background: var(--gray-light); border-left: 4px solid var(--gray); }
+
+    /* FINDING CARD */
+    .finding {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .finding:last-child { border-bottom: none; }
+    .finding-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .finding-id {
+      font-family: monospace;
+      font-size: 12px;
+      color: white;
+      background: var(--gray);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    .finding-id.crit  { background: var(--red); }
+    .finding-id.high  { background: var(--orange); }
+    .finding-id.med   { background: var(--yellow); }
+    .finding-id.low   { background: var(--blue); }
+    .finding-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .finding-meta {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 4px 12px;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .meta-key { color: var(--gray); font-weight: 500; }
+    .meta-val { color: var(--text-secondary); }
+    .meta-val code {
+      background: var(--gray-light);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    .finding-desc {
+      margin-top: 10px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .finding-rec {
+      margin-top: 10px;
+      background: var(--blue-light);
+      border-left: 3px solid var(--blue);
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+      color: #1e40af;
+    }
+    .finding-rec strong { display: block; margin-bottom: 2px; }
+
+    /* POSITIVE ITEM */
+    .positive-item {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .positive-item:last-child { border-bottom: none; }
+    .positive-icon { color: var(--green); font-size: 16px; margin-top: 2px; }
+    .positive-text { font-size: 13px; color: var(--text-secondary); }
+    .positive-text strong { color: var(--text); display: block; margin-bottom: 2px; }
+
+    /* NEXT STEPS */
+    .steps-list {
+      padding: 16px 24px;
+    }
+    .step-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .step-item:last-child { border-bottom: none; }
+    .step-num {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .step-num.p1 { background: var(--red-light); color: var(--red); }
+    .step-num.p2 { background: var(--orange-light); color: var(--orange); }
+    .step-num.p3 { background: var(--yellow-light); color: var(--yellow); }
+    .step-num.p4 { background: var(--blue-light); color: var(--blue); }
+    .step-body { flex: 1; }
+    .step-title { font-weight: 600; font-size: 13px; }
+    .step-desc { font-size: 12px; color: var(--gray); margin-top: 2px; }
+
+    /* ARTICLE CHECKLIST */
+    .checklist {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding: 16px 24px;
+    }
+    @media (max-width: 600px) { .checklist { grid-template-columns: 1fr; } }
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .check-item .ci-status { font-size: 16px; flex-shrink: 0; }
+    .check-item .ci-text strong { display: block; font-weight: 600; }
+    .check-item .ci-text span { color: var(--gray); font-size: 12px; }
+    .check-item.ok     { background: #f0fdf4; border-color: #bbf7d0; }
+    .check-item.partial{ background: #fefce8; border-color: #fef08a; }
+    .check-item.nok    { background: #fff1f1; border-color: #fecaca; }
+
+    /* DOCUMENTATION TABLE */
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .doc-table th {
+      background: var(--gray-light);
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+    }
+    .doc-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .doc-table tr:last-child td { border-bottom: none; }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+      color: var(--gray);
+      font-size: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+
+    /* UTILS */
+    ul.pl { padding-left: 18px; }
+    ul.pl li { margin-bottom: 3px; }
+    .mt8 { margin-top: 8px; }
+    .text-sm { font-size: 12px; }
+    .text-gray { color: var(--gray); }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .alert-box {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin: 12px 24px;
+      color: #664d03;
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>DSGVO-Prüfbericht – MonteWeb</h1>
+    <div class="subtitle">Schul-Intranet für Montessori-Schulen | Vollständige DSGVO-Konformitätsprüfung</div>
+    <div class="header-meta">
+      <span>Datum: 28. Februar 2026</span>
+      <span>Prüfer: Datenschutzbeauftragter (KI-gestützt)</span>
+      <span>Stack: Java 21 + Spring Boot 3.4 + Vue 3 + PostgreSQL 16</span>
+      <span>Flyway-Migrationen: V001–V097 (96 Migrationen)</span>
+    </div>
+  </div>
+
+  <!-- OVERALL RATING -->
+  <div class="overall-rating">
+    <div class="rating-icon">&#9888;&#65039;</div>
+    <div class="rating-text">
+      <h2>Gesamtbewertung: <span style="color:#ca8a04">TEILWEISE KONFORM</span></h2>
+      <p>MonteWeb implementiert eine überdurchschnittliche DSGVO-Grundlage (Löschkonzept, Datenschutzerkl&#228;rung, Datenexport, Einwilligungen, Audit-Log, 2FA). Es bestehen jedoch kritische Lücken bei der Verarbeitung von Kinderdaten, der Konfigurationssicherheit und dem Verzeichnis von Verarbeitungstätigkeiten.</p>
+    </div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid">
+    <div class="summary-card critical">
+      <div class="count">3</div>
+      <div class="label">Kritische Findings</div>
+    </div>
+    <div class="summary-card high">
+      <div class="count">5</div>
+      <div class="label">Hohe Risiken</div>
+    </div>
+    <div class="summary-card medium">
+      <div class="count">7</div>
+      <div class="label">Mittlere Risiken</div>
+    </div>
+    <div class="summary-card low">
+      <div class="count">6</div>
+      <div class="label">Hinweise</div>
+    </div>
+  </div>
+
+  <!-- ===== KRITISCHE FINDINGS ===== -->
+  <div class="section">
+    <div class="section-header critical">
+      <h2>Kritische Findings</h2>
+      <span class="count-bubble">3 Findings – Sofortmaßnahmen erforderlich</span>
+    </div>
+
+    <!-- F-001 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id crit">F-001</span>
+        <span class="finding-title">Kinderdaten ohne spezifisches Schutzkonzept nach Art. 8 DSGVO</span>
+        <span class="badge badge-critical">KRITISCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 8 DSGVO (Bedingungen für die Einwilligung bei Kinderdaten), Art. 6 Abs. 1, Art. 9</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>Family.java</code>, <code>FamilyMember.java</code>, <code>ConsentRecord.java</code>, Rolle <code>STUDENT</code></span>
+      </div>
+      <div class="finding-desc">
+        MonteWeb verarbeitet explizit Daten von Schülerinnen und Schülern (Rolle <code>STUDENT</code>), die als Minderjährige im schulischen Kontext besonders schutzbedürftig sind. Das <code>ConsentRecord</code>-Modell bildet zwar Einwilligungen mit <code>granted_by</code> (elterliche Einwilligung) ab, es fehlt jedoch:
+        <ul class="pl mt8">
+          <li>Ein dokumentiertes Altersverifikationskonzept für die Einwilligungsfähigkeit</li>
+          <li>Eine explizite Unterscheidung zwischen schulpflichtigen Minderjährigen (&lt;16 Jahre) und Volljährigen in der Verarbeitungslogik</li>
+          <li>Eine Überprüfung, ob die Einwilligung tatsächlich von der erziehungsberechtigten Person erteilt wurde (kein technisches Enforcement)</li>
+          <li>Ein Konzept zum Umgang mit Daten bei Schulaustritt (Datenlöschung vs. Archivierung nach SchulG)</li>
+          <li>Die Fotobox-Funktion erlaubt das Hochladen und Anzeigen von Fotos – bei Kinderdaten nach Art. 8 DSGVO eine besonders kritische Verarbeitung ohne erkennbares Altersschutz-Konzept</li>
+        </ul>
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung (Sofortmaßnahme):</strong>
+        Dokumentiertes Kinderschutzkonzept erstellen: (1) Altersgrenze für Einwilligungsfähigkeit definieren (empfohlen: 16 Jahre gem. Art. 8 Abs. 1 DSGVO oder nationales Recht), (2) elterliche Einwilligung für Foto-Verarbeitung und öffentlich sichtbare Profilfelder technisch erzwingen, (3) spezifische Datenschutz-Folgenabschätzung (DSFA) für Kinderdatenverarbeitung gem. Art. 35 DSGVO erstellen, (4) Löschkonzept bei Schulaustritt implementieren.
+      </div>
+    </div>
+
+    <!-- F-002 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id crit">F-002</span>
+        <span class="finding-title">JWT-Secret mit unsicherem Default-Wert im Klartext in application.yml</span>
+        <span class="badge badge-critical">KRITISCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 32 Abs. 1 lit. a und b DSGVO (Sicherheit der Verarbeitung, Pseudonymisierung, Verschlüsselung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>backend/src/main/resources/application.yml</code>, Zeile 88</span>
+      </div>
+      <div class="finding-desc">
+        In <code>application.yml</code> ist als Fallback-Default für den JWT-Signing-Secret hinterlegt:
+        <br><code style="display:block;background:#f3f4f6;padding:8px;margin:8px 0;border-radius:4px;font-size:12px">jwt.secret: ${JWT_SECRET:dev-only-secret-change-in-production-must-be-at-least-64-characters-long}</code>
+        Wenn <code>JWT_SECRET</code> nicht als Umgebungsvariable gesetzt wird, startet die Anwendung mit einem bekannten, öffentlich im Repository einsehbaren Secret. Da JWTs mit diesem Secret signiert werden, könnten Angreifer gültige JWT-Tokens für beliebige Benutzer (inkl. SUPERADMIN) erzeugen. Dies gefährdet alle personenbezogenen Daten aller Nutzer direkt. Die Datei ist als Quellcode im Repository (.yml), damit potenziell öffentlich bekannt.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung (Sofortmaßnahme):</strong>
+        (1) Den Default-Wert entfernen, sodass die Anwendung ohne gesetztes <code>JWT_SECRET</code> nicht startet (<code>${JWT_SECRET:?JWT_SECRET must be set in production}</code>). Dies ist analog zur bestehenden Konfiguration für <code>POSTGRES_PASSWORD</code> in <code>docker-compose.yml</code>. (2) Überprüfen, ob das Default-Secret in einer bestehenden Produktionsinstallation verwendet wird und ggf. alle aktiven Sessions ungültig machen. (3) Regelmäßige Secret-Rotation dokumentieren.
+      </div>
+    </div>
+
+    <!-- F-003 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id crit">F-003</span>
+        <span class="finding-title">Fehlendes Verzeichnis von Verarbeitungstätigkeiten (VVT) nach Art. 30 DSGVO</span>
+        <span class="badge badge-critical">KRITISCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 30 DSGVO (Verzeichnis der Verarbeitungstätigkeiten)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val">Gesamte Anwendung – kein entsprechendes Dokument im Repository gefunden</span>
+      </div>
+      <div class="finding-desc">
+        Im gesamten Repository (Docs, Konfiguration, Code) findet sich kein Verzeichnis der Verarbeitungstätigkeiten nach Art. 30 DSGVO. MonteWeb verarbeitet personenbezogene Daten in mindestens 20 Verarbeitungskontexten (User-Profil, Familiendaten, Messaging, Kalender, Fotobox, Fundgrube, Jobboard, Putz-Orga, Formulare, Dateiablage, Wiki, Kanban-Tasks, LDAP-Auth, Fehlerberichte, Consent-Management, Audit-Log, Benachrichtigungen, Suchindex/Solr, Backup, Analytics-Dashboard). Als Bildungseinrichtung ist die Schule als Verantwortliche nach Art. 30 Abs. 1 DSGVO verpflichtet, dieses Verzeichnis zu führen und für Aufsichtsbehörden bereitzuhalten.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung (Sofortmaßnahme):</strong>
+        VVT gemäß Art. 30 DSGVO erstellen, das mindestens enthält: Name des Verantwortlichen, Zwecke der Verarbeitung, Kategorien betroffener Personen (Schüler, Eltern, Lehrer), Kategorien personenbezogener Daten, Empfänger (inkl. Auftragsverarbeiter), Löschfristen, technisch-organisatorische Maßnahmen. Das VVT muss schriftlich vorliegen und der Aufsichtsbehörde auf Anfrage zugänglich sein.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HOHE RISIKEN ===== -->
+  <div class="section">
+    <div class="section-header high">
+      <h2>Hohe Risiken</h2>
+      <span class="count-bubble">5 Findings – Zeitnahe Maßnahmen erforderlich</span>
+    </div>
+
+    <!-- F-004 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id high">F-004</span>
+        <span class="finding-title">Datenschutz-Folgenabschätzung (DSFA) fehlt für hochriskante Verarbeitungen</span>
+        <span class="badge badge-high">HOCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 35 DSGVO (Datenschutz-Folgenabschätzung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val">Gesamte Anwendung – kein DSFA-Dokument gefunden</span>
+      </div>
+      <div class="finding-desc">
+        MonteWeb führt mehrere Verarbeitungen durch, für die eine DSFA nach Art. 35 DSGVO zwingend erforderlich ist:
+        <ul class="pl mt8">
+          <li><strong>Systematische Überwachung von Minderjährigen:</strong> Fotobox, Aktivitäts-Tracking, Kommunikationsdaten von Schülern</li>
+          <li><strong>Umfangreiche Verarbeitung besonderer Datenkategorien:</strong> Fotodaten von Minderjährigen können Gesundheitsmerkmale offenbaren</li>
+          <li><strong>Neue Technologien:</strong> TOTP, OIDC/SSO, LDAP-Integration, Volltext-Suchindex (Solr mit persönlichen Daten)</li>
+          <li><strong>Aufsichtsbehörden-Positivliste:</strong> Systeme für Bildungseinrichtungen mit Daten von Minderjährigen befinden sich auf der Muss-Liste mehrerer Landesdatenschutzbehörden</li>
+        </ul>
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        DSFA gem. Art. 35 DSGVO für die Kernverarbeitungen (insb. Kinderdaten, Fotobox, Kommunikationsüberwachung) durchführen. DSFA muss Risiken beschreiben, bewerten und Maßnahmen zur Risikominderung festlegen. Ergebnis schriftlich dokumentieren.
+      </div>
+    </div>
+
+    <!-- F-005 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id high">F-005</span>
+        <span class="finding-title">LDAP-Bind-Passwort im Klartext in der Datenbank gespeichert</span>
+        <span class="badge badge-high">HOCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 32 Abs. 1 lit. a DSGVO (Verschlüsselung), Art. 5 Abs. 1 lit. f (Integrität und Vertraulichkeit)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>TenantConfig.java</code> Zeile 143: <code>ldap_bind_password VARCHAR(512)</code>, <code>AdminService.java</code> Zeile 101: <code>getLdapBindPassword()</code></span>
+      </div>
+      <div class="finding-desc">
+        Das LDAP-Bind-Passwort wird in der Tabelle <code>tenant_config</code> als Klartext-Zeichenkette gespeichert (<code>ldap_bind_password VARCHAR(512)</code>). Obwohl das Passwort nicht direkt in API-Antworten zurückgegeben wird (es existiert eine separate <code>getLdapBindPassword()</code>-Methode im Interface), ist es in der Datenbank unverschlüsselt gespeichert. Bei einem Datenbankdump oder einer SQL-Injection wäre das LDAP-Verzeichnispasswort kompromittiert, was einen vollständigen Identitätsdiebstahl aller Schulangehörigen ermöglichen könnte.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        LDAP-Bind-Passwort mit einem symmetrischen Schlüssel verschlüsselt in der DB speichern (z.B. via Spring Vault, Jasypt oder Postgres pgcrypto). Alternativ: LDAP-Passwort nur als Umgebungsvariable bereitstellen, nie in der DB persistieren. Zugriff auf <code>tenant_config</code>-Tabelle auf minimale DB-Rolle beschränken.
+      </div>
+    </div>
+
+    <!-- F-006 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id high">F-006</span>
+        <span class="finding-title">Fehlende Rechtsgrundlagen-Dokumentation für einzelne Verarbeitungen</span>
+        <span class="badge badge-high">HOCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 6 DSGVO (Rechtmäßigkeit der Verarbeitung), Art. 13 Abs. 1 lit. c (Informationspflicht)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val">Datenschutzerkl&#228;rung in <code>TenantConfig.privacyPolicyText</code>, <code>PrivacyController.java</code></span>
+      </div>
+      <div class="finding-desc">
+        Die Datenschutzerklärung ist als freier Text-Blob in der Datenbank gespeichert und wird über Platzhalter (<code>{{SCHOOL_NAME}}</code>, <code>{{SCHOOL_ADDRESS}}</code>) befüllt. Es fehlt:
+        <ul class="pl mt8">
+          <li>Eine Standardvorlage, die die Rechtsgrundlage für jede einzelne Verarbeitung explizit nennt (z.B. Fotobox: Art. 6 Abs. 1 lit. a – Einwilligung; Arbeitszeiterfassung ggf. Datenschutz-Analogie; Messaging: Art. 6 Abs. 1 lit. b)</li>
+          <li>Information über die Verarbeitung von Kinderdaten und die erforderliche elterliche Einwilligung</li>
+          <li>Hinweis auf Drittlandsübermittlung bei Nutzung von Jitsi (<code>meet.jit.si</code> = US-Server) oder ONLYOFFICE-Cloud</li>
+          <li>Die Datenschutzerklärung ist ein freies Textfeld – die Korrektheit des Inhalts ist nicht systemseitig sichergestellt</li>
+        </ul>
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        Rechtlich geprüfte Datenschutzerklärungsvorlage für Montessori-Schulen erstellen und im Admin-UI als Standardvorlage hinterlegen. Vorlage muss für jede Verarbeitungskategorie die Rechtsgrundlage nach Art. 6 DSGVO nennen. Automatische Warnung implementieren, wenn Datenschutzerklärung leer oder unverändert (Version 1.0) ist.
+      </div>
+    </div>
+
+    <!-- F-007 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id high">F-007</span>
+        <span class="finding-title">URL <code>window.location.href</code> mit potenziellem PII in Fehlerberichten übertragen</span>
+        <span class="badge badge-high">HOCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 5 Abs. 1 lit. c (Datensparsamkeit), Art. 32 (Sicherheit der Verarbeitung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>frontend/src/composables/useErrorReporting.ts</code>, Zeile 30–31</span>
+      </div>
+      <div class="finding-desc">
+        Das Frontend übermittelt bei Fehlerberichten automatisch <code>window.location.href</code> als <code>requestUrl</code> und <code>navigator.userAgent</code> als <code>userAgent</code> an den Server. URLs in Single-Page-Anwendungen können personenbezogene Daten enthalten (z.B. <code>/rooms/&lt;room-id&gt;/</code>, <code>/users/&lt;uuid&gt;</code>, Query-Parameter). Diese werden in der <code>error_reports</code>-Tabelle dauerhaft gespeichert und sind im Admin-Panel einsehbar. Der Endpunkt <code>POST /api/v1/error-reports</code> ist ohne Authentifizierung zugänglich (<code>SecurityConfig.java</code> Zeile 72: <code>.permitAll()</code>), was bedeutet, dass URL-Daten auch ohne Login gespeichert werden können.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) URL vor Speicherung sanitisieren: Query-Parameter und dynamische Segmente (UUIDs, numerische IDs) durch Platzhalter ersetzen (z.B. <code>/rooms/{id}/wiki</code>). (2) <code>userAgent</code> nur in anonymisierter/gekürzter Form speichern. (3) Für den Error-Report-Endpoint Rate-Limiting einführen, um Missbrauch zu verhindern. (4) Retention-Policy für Error-Reports konfigurierbar machen (aktuell keine automatische Löschung).
+      </div>
+    </div>
+
+    <!-- F-008 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id high">F-008</span>
+        <span class="finding-title">Jitsi-Default-Server (meet.jit.si) = Drittlandübermittlung ohne Schutzmaßnahme</span>
+        <span class="badge badge-high">HOCH</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 44–49 DSGVO (Übermittlung in Drittländer), Art. 13 Abs. 1 lit. f (Informationspflicht)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>TenantConfig.java</code> Zeile 188: <code>jitsiServerUrl = "https://meet.jit.si"</code>, <code>PublicTenantConfigInfo.java</code></span>
+      </div>
+      <div class="finding-desc">
+        Der Default-Jitsi-Server ist <code>meet.jit.si</code>, ein von 8x8 Inc. (USA) betriebener Dienst. Bei Nutzung dieser Infrastruktur werden Kommunikationsdaten (Videodaten, Metadaten der Teilnehmer) in die USA übermittelt. Nach dem Schrems-II-Urteil und ohne aktiven Adequacy-Beschluss für alle US-Anbieter ist dies ohne geeignete Garantien (SCC, BCR) nicht rechtmäßig. Besonders kritisch: Jitsi-Meetings können Kinderdaten (Schüler im Videounterricht) übertragen. Der Jitsi-Server-URL wird in der <code>PublicTenantConfigInfo</code> ohne Authentifizierung veröffentlicht, wodurch auch der tatsächlich verwendete Server für alle einsehbar ist.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) Default-Jitsi-URL auf leer/null setzen und Admin bei erster Nutzung zur Eingabe einer eigenen DSGVO-konformen Instanz verpflichten. (2) In der Admin-Oberfläche Hinweistext auf DSGVO-Konformität des gewählten Servers anzeigen. (3) Datenschutzerkl&#228;rung um Jitsi-Hinweis erweitern. (4) Alternativ: Self-hosted Jitsi-Instanz als empfohlene Lösung dokumentieren.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== MITTLERE RISIKEN ===== -->
+  <div class="section">
+    <div class="section-header medium">
+      <h2>Mittlere Risiken</h2>
+      <span class="count-bubble">7 Findings – Mittelfristige Maßnahmen empfohlen</span>
+    </div>
+
+    <!-- F-009 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-009</span>
+        <span class="finding-title">Datenexport nicht im maschinenlesbaren Format (Art. 20 DSGVO)</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 20 DSGVO (Recht auf Datenübertragbarkeit)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>UserController.java</code> <code>GET /api/v1/users/me/data-export</code>, <code>UserService.exportUserData()</code></span>
+      </div>
+      <div class="finding-desc">
+        Der Datenexport-Endpoint (<code>GET /api/v1/users/me/data-export</code>) gibt die Daten als <code>Map&lt;String, Object&gt;</code> JSON zurück. Art. 20 DSGVO verlangt die Herausgabe in einem "gängigen, maschinenlesbaren Format". JSON ist grundsätzlich akzeptabel, jedoch:
+        <ul class="pl mt8">
+          <li>Der Export enthält keine Binärdaten (Avatare, hochgeladene Dateien, Fotos) – nur Metadaten</li>
+          <li>Keine Download-Option im Frontend: Es ist unklar, ob der Export als Datei heruntergeladen werden kann oder nur im Browser angezeigt wird</li>
+          <li>Keine Benachrichtigung des Nutzers, dass der Export erfolgt ist (nur Audit-Log für Admins)</li>
+        </ul>
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) Frontend: Download-Button für Datenexport als JSON-Datei mit korrektem <code>Content-Disposition</code>-Header implementieren. (2) Hinweis ergänzen, dass Binärdaten (Fotos, Dateien) nicht enthalten sind und wie diese separat angefordert werden können. (3) Informations-E-Mail an Nutzer bei Datenexport-Request senden.
+      </div>
+    </div>
+
+    <!-- F-010 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-010</span>
+        <span class="finding-title">Fehlende AVV-Dokumentation für Drittanbieter (Auftragsverarbeitung)</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 28 DSGVO (Auftragsverarbeiter)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>docker-compose.yml</code>, <code>TenantConfig.java</code>, GitHub-Integration in <code>ErrorReportService.java</code></span>
+      </div>
+      <div class="finding-desc">
+        MonteWeb ist eine Self-hosted-Lösung, die Schulen selbst betreiben. Es gibt jedoch mehrere Konstellationen, in denen Auftragsverarbeitungsverträge (AVV) nach Art. 28 DSGVO erforderlich sein können:
+        <ul class="pl mt8">
+          <li><strong>GitHub-Integration:</strong> Beim Erstellen von GitHub-Issues werden Fehler-Stack-Traces (potenzielle PII wie URLs mit User-IDs) an GitHub (Microsoft, USA) übertragen</li>
+          <li><strong>ONLYOFFICE/WOPI:</strong> Bei Cloud-ONLYOFFICE-Nutzung werden Dokumentinhalte verarbeitet</li>
+          <li><strong>Backup S3:</strong> Optionaler S3-Remote-Upload sendet personenbezogene Daten an externe Anbieter</li>
+          <li><strong>E-Mail-Provider (SMTP):</strong> Bei externem SMTP-Anbieter sind personenbezogene Daten in E-Mails enthalten</li>
+        </ul>
+        Es existiert keinerlei Dokumentation oder Checkliste für erforderliche AVVs.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) AVV-Checkliste für Betreiber als Bestandteil der Installations-Dokumentation erstellen. (2) Admin-UI: Bei Aktivierung der GitHub-Integration und S3-Backup Hinweis auf AVV-Erfordernis anzeigen. (3) Stack-Traces in GitHub-Issues vor Übertragung bereinigen (UUIDs/Nutzerdaten schwärzen).
+      </div>
+    </div>
+
+    <!-- F-011 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-011</span>
+        <span class="finding-title">Audit-Log enthält IP-Adressen ohne definierte Retention-Policy</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 5 Abs. 1 lit. e (Speicherbegrenzung), Art. 17 (Recht auf Löschung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>AuditLogEntry.java</code> Zeile 41: <code>ip_address</code>, <code>TenantConfig.java</code>: <code>dataRetentionDaysAudit</code>, <code>RetentionCleanupService.java</code></span>
+      </div>
+      <div class="finding-desc">
+        Das <code>audit_log</code> speichert IP-Adressen (<code>ip_address VARCHAR(45)</code>). IP-Adressen sind personenbezogene Daten. Die <code>RetentionCleanupService</code> bereinigt nur die <code>data_access_log</code>-Tabelle, nicht aber die <code>audit_log</code>-Tabelle. Der Default-Retention-Wert für Audit-Logs ist 1095 Tage (3 Jahre) in <code>TenantConfig</code>, jedoch wird er in der aktuellen <code>RetentionCleanupService</code>-Implementierung für Audit-Logs nicht angewendet. Die <code>terms_acceptances</code>-Tabelle speichert ebenfalls optionale IP-Adressen ohne Löschlogik.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) <code>RetentionCleanupService</code> um Bereinigung der <code>audit_log</code>-Tabelle (entsprechend <code>dataRetentionDaysAudit</code>) und der <code>terms_acceptances</code>-Tabelle erweitern. (2) IP-Adressen im Audit-Log nach Verarbeitungszweck prüfen: Falls nur für Sicherheitsanalysen benötigt, kürzere Retention (30–90 Tage) wählen. (3) Dokumentieren, warum IP-Adressen gespeichert werden und welche Rechtsgrundlage gilt.
+      </div>
+    </div>
+
+    <!-- F-012 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-012</span>
+        <span class="finding-title">JWT-Tokens im LocalStorage gespeichert (XSS-Risiko)</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 32 Abs. 1 lit. b DSGVO (Sicherheit der Verarbeitung, Vertraulichkeit)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>frontend/src/stores/auth.ts</code> Zeile 144–145: <code>localStorage.setItem('accessToken', ...)</code></span>
+      </div>
+      <div class="finding-desc">
+        Access- und Refresh-Token werden im Browser-<code>localStorage</code> gespeichert. localStorage-Inhalte sind für JavaScript-Code zugänglich und bei Cross-Site-Scripting (XSS)-Angriffen vollständig kompromittierbar. Ein erfolgreicher XSS-Angriff würde Angreifern ermöglichen, Tokens zu stehlen und sich im Namen der betroffenen Person (inkl. SUPERADMIN) dauerhaft einzuloggen (Refresh-Token-Gültigkeit: 7 Tage). Mit kompromittiertem SUPERADMIN-Token wären alle personenbezogenen Daten aller Nutzer zugänglich.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) Kurzfristig: Aktuelles CSP-Regelwerk (in nginx konfiguriert) überprüfen und verschärfen. (2) Mittelfristig: Refresh-Token in HttpOnly-Cookie umstellen (XSS-resistent). Access-Token im Memory (keine Persistenz) halten. Dies erfordert Änderungen am Auth-Flow (Cookie-basiertes Refresh). (3) Alternativ: <code>SameSite=Strict</code>-Cookies für Refresh-Tokens einführen.
+      </div>
+    </div>
+
+    <!-- F-013 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-013</span>
+        <span class="finding-title">Anonymisierung bei Kontolöschung unvollständig (Nachrichten, Posts)</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 17 DSGVO (Recht auf Löschung), Art. 5 Abs. 1 lit. e (Speicherbegrenzung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>UserService.anonymizeAndDelete()</code> Zeile 424–442, <code>UserDeletionExecutedEvent</code></span>
+      </div>
+      <div class="finding-desc">
+        Die Anonymisierungsfunktion (<code>anonymizeAndDelete()</code>) setzt E-Mail, Namen, Telefon, Avatar und Passwort auf anonymisierte Werte zurück und publiziert ein <code>UserDeletionExecutedEvent</code>. Es ist unklar, ob alle Module dieses Event korrekt verarbeiten:
+        <ul class="pl mt8">
+          <li>Nachrichten-Inhalte (DMs, Raum-Chat): Werden persönliche Inhalte gelöscht oder bleibt der Text erhalten?</li>
+          <li>Feed-Posts mit persönlichen Inhalten: Werden Inhalte anonymisiert oder nur der Autor-Link entfernt?</li>
+          <li>Solr-Suchindex: Nach Anonymisierung muss der Index für den Nutzer bereinigt werden (Re-Indexierung)</li>
+          <li>Der <code>UserDeletionExecutedEvent</code>-Handler in den jeweiligen Modulen ist nicht im Prüfumfang verifiziert worden</li>
+        </ul>
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) Alle Module, die <code>UserDeletionExecutedEvent</code> empfangen, auflisten und verifizieren, was konkret gelöscht/anonymisiert wird. (2) Für Messaging: Nachrichteninhalte des gelöschten Nutzers löschen oder durch Platzhalter ersetzen. (3) Solr-Index-Bereinigung für gelöschten Nutzer implementieren. (4) Lösch-Vollständigkeit mit Test automatisiert validieren.
+      </div>
+    </div>
+
+    <!-- F-014 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-014</span>
+        <span class="finding-title">Consent-System ohne Zwangs-Einwilligungserfordernis bei sensiblen Funktionen</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 7 DSGVO (Bedingungen für die Einwilligung), Art. 9 Abs. 2 (Einwilligung für besondere Kategorien)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>ConsentRecord.java</code>, <code>PrivacyController.java</code>, Fotobox-Modul</span>
+      </div>
+      <div class="finding-desc">
+        Das Consent-Management-System (<code>consent_records</code> mit Typen wie <code>PHOTO_CONSENT</code>, <code>CHAT_CONSENT</code>) existiert technisch, wird aber nicht durchgesetzt:
+        <ul class="pl mt8">
+          <li>Die Fotobox erlaubt das Hochladen und Anzeigen von Fotos unabhängig vom <code>PHOTO_CONSENT</code>-Status eines Nutzers</li>
+          <li>Es gibt keine backend-seitige Prüfung, ob ein Nutzer/Kind vor dem Anzeigen in Fotos eingewilligt hat</li>
+          <li>Elterliche Einwilligung (<code>granted_by</code>) ist eine optionale Funktion ohne technisches Enforcement</li>
+          <li>Consent-Widerruf hat keine automatische Folge (Fotos bleiben sichtbar)</li>
+        </ul>
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        (1) Fotobox: Vor dem Anzeigen von Fotos prüfen, ob der abgebildete Nutzer <code>PHOTO_CONSENT</code> erteilt hat (soweit technisch identifizierbar). (2) Beim Widerruf des Foto-Consents: Alle Fotos des Nutzers aus der Fotobox entfernen oder unkenntlich machen. (3) Consent-Prüfung als Middleware/Filter in kritischen Endpunkten verankern.
+      </div>
+    </div>
+
+    <!-- F-015 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id med">F-015</span>
+        <span class="finding-title">Benachrichtigungs-Retention deckt nicht alle Benachrichtigungsarten ab</span>
+        <span class="badge badge-medium">MITTEL</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 5 Abs. 1 lit. e DSGVO (Speicherbegrenzung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>RetentionCleanupService.java</code>, <code>TenantConfig.dataRetentionDaysNotifications</code></span>
+      </div>
+      <div class="finding-desc">
+        Der <code>RetentionCleanupService</code> bereinigt die <code>data_access_log</code>-Tabelle nach dem konfigurierten Audit-Retention-Wert, implementiert aber keine Bereinigung von Benachrichtigungen (<code>notifications</code>-Tabelle), obwohl <code>dataRetentionDaysNotifications</code> (Default: 90 Tage) in der Konfiguration vorhanden ist. Benachrichtigungen können personenbezogene Inhalte enthalten (Nachrichten-Vorschauen, Nutzernamen, Ereignisdetails).
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        <code>RetentionCleanupService</code> um die Bereinigung alter Benachrichtigungen (<code>notifications</code>-Tabelle) entsprechend <code>dataRetentionDaysNotifications</code> erweitern. Außerdem: Bereinigung von <code>audit_log</code>-Tabelle (aktuell nur <code>data_access_log</code>) und veralteten <code>error_reports</code> implementieren.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== HINWEISE ===== -->
+  <div class="section">
+    <div class="section-header low">
+      <h2>Hinweise und Best Practices</h2>
+      <span class="count-bubble">6 Hinweise – Langfristige Verbesserungen</span>
+    </div>
+
+    <!-- F-016 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id low">H-001</span>
+        <span class="finding-title">Prometheus/Grafana ohne Authentifizierung extern erreichbar (Monitoring-Profil)</span>
+        <span class="badge badge-low">HINWEIS</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 32 DSGVO (Sicherheit), Art. 5 Abs. 1 lit. f (Vertraulichkeit)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>docker-compose.yml</code> Zeile 210–236: Prometheus Port 9090, Grafana Port 3000</span>
+      </div>
+      <div class="finding-desc">
+        Das optionale Monitoring-Profil öffnet Prometheus (Port 9090) und Grafana (Port 3000) direkt auf dem Host. Grafana verwendet Default-Credentials (<code>admin</code>/<code>admin</code> als Default, über Env-Var setzbar). Prometheus-Metriken können Nutzungsstatistiken enthalten. Grafana-Zugriff ohne starkes Passwort in Produktionsumgebung ist ein Sicherheitsrisiko.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        Monitoring-Ports nicht direkt exposen; stattdessen über Reverse-Proxy mit Authentifizierung bereitstellen. <code>GRAFANA_PASSWORD</code> als Pflichtfeld in <code>docker-compose.yml</code> erzwingen.
+      </div>
+    </div>
+
+    <!-- H-002 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id low">H-002</span>
+        <span class="finding-title">ONLYOFFICE ohne JWT-Absicherung konfiguriert</span>
+        <span class="badge badge-low">HINWEIS</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 32 DSGVO (Sicherheit der Verarbeitung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>docker-compose.yml</code> Zeile 245: <code>JWT_ENABLED=false</code></span>
+      </div>
+      <div class="finding-desc">
+        Die ONLYOFFICE-Instanz ist mit <code>JWT_ENABLED=false</code> konfiguriert. ONLYOFFICE empfiehlt JWT-Authentifizierung zwischen Backend und Document Server, um unbefugten Zugriff auf Dokumente zu verhindern. Ohne JWT könnte bei Kenntnis des internen Netzwerks ein direkter Zugriff auf den Document Server möglich sein.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        ONLYOFFICE JWT-Integration aktivieren (<code>JWT_ENABLED=true</code>, <code>JWT_SECRET</code> setzen). WOPI-Tokens sind in MonteWeb implementiert, aber der ONLYOFFICE-eigene JWT-Schutz sollte zusätzlich aktiviert werden.
+      </div>
+    </div>
+
+    <!-- H-003 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id low">H-003</span>
+        <span class="finding-title">Fehlende Benachrichtigung bei Datenschutzverletzungen (Art. 33/34 DSGVO)</span>
+        <span class="badge badge-low">HINWEIS</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 33/34 DSGVO (Meldepflicht bei Datenschutzverletzungen)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val">Gesamte Anwendung – kein Incident-Response-Prozess dokumentiert</span>
+      </div>
+      <div class="finding-desc">
+        Es existiert kein dokumentierter Prozess für die Meldung von Datenschutzverletzungen an die Aufsichtsbehörde (72-Stunden-Frist) und betroffene Personen (Art. 33/34 DSGVO). Das Fehlerberichtssystem (ErrorReport) dient der technischen Fehlererfassung, nicht der Datenpannenmeldung.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        Incident-Response-Prozess dokumentieren: (1) Wer ist für die Meldung zuständig? (2) Checkliste für Datenpannen-Bewertung. (3) Vorlage für Meldung an Aufsichtsbehörde (Art. 33). (4) Prozess für Benachrichtigung betroffener Personen (Art. 34). Als Betriebsanleitung in die Installationsdokumentation aufnehmen.
+      </div>
+    </div>
+
+    <!-- H-004 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id low">H-004</span>
+        <span class="finding-title">Widerspruchsrecht (Art. 21) und Einschränkungsrecht (Art. 18) nicht implementiert</span>
+        <span class="badge badge-low">HINWEIS</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 18 DSGVO (Einschränkung der Verarbeitung), Art. 21 (Widerspruchsrecht)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>UserController.java</code> – nur Auskunft, Löschung, Datenexport implementiert</span>
+      </div>
+      <div class="finding-desc">
+        Die Betroffenenrechte Auskunft (Art. 15 – implementiert), Berichtigung (Art. 16 – implementiert), Löschung (Art. 17 – implementiert) und Datenübertragbarkeit (Art. 20 – teilweise implementiert) sind vorhanden. Nicht implementiert sind:
+        <ul class="pl mt8">
+          <li>Recht auf Einschränkung der Verarbeitung (Art. 18): kein Endpunkt vorhanden</li>
+          <li>Widerspruchsrecht (Art. 21): kein Endpunkt vorhanden</li>
+        </ul>
+        Bei Schulanwendungen sind diese Rechte praxisrelevant (z.B. Widerspruch gegen Profilsichtbarkeit).
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        Prozess für Art. 18 und Art. 21-Anfragen beschreiben (können auch manuell über Admin bearbeitet werden). Als Minimum: Datenschutzerkl&#228;rung muss auf Kontaktweg für diese Rechte hinweisen.
+      </div>
+    </div>
+
+    <!-- H-005 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id low">H-005</span>
+        <span class="finding-title">Solr-Suchindex enthält personenbezogene Daten ohne eigenes Löschkonzept</span>
+        <span class="badge badge-low">HINWEIS</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 17 DSGVO (Recht auf Löschung), Art. 5 Abs. 1 lit. e (Speicherbegrenzung)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>search</code>-Modul, Solr-Index mit 8 Dokumenttypen inkl. USER, POST, WIKI, FILE</span>
+      </div>
+      <div class="finding-desc">
+        Der Solr-Volltext-Suchindex enthält personenbezogene Daten (Benutzernamen, Post-Inhalte, Dateiinhalte per Tika-Extraktion). Bei Kontolöschung oder Daten-Update muss der Solr-Index entsprechend bereinigt werden. Es ist nicht dokumentiert, ob die <code>UserDeletionExecutedEvent</code>-Behandlung im Suchmodul den Solr-Index bereinigt.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        Sicherstellen, dass bei <code>UserDeletionExecutedEvent</code> alle Solr-Dokumente des Nutzers gelöscht werden. Bei Bearbeitung von Inhalten (Posts, Dateien) den Solr-Index zeitnah aktualisieren. Solr-Konfiguration auf eventuelle Datenpersistenz prüfen.
+      </div>
+    </div>
+
+    <!-- H-006 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="finding-id low">H-006</span>
+        <span class="finding-title">UserDeletionScheduler loggt E-Mail-Adresse des zu löschenden Nutzers</span>
+        <span class="badge badge-low">HINWEIS</span>
+      </div>
+      <div class="finding-meta">
+        <span class="meta-key">DSGVO-Artikel</span><span class="meta-val">Art. 5 Abs. 1 lit. c (Datensparsamkeit), Art. 32 (Sicherheit)</span>
+        <span class="meta-key">Fundstelle</span><span class="meta-val"><code>UserDeletionScheduler.java</code> Zeile 33: <code>log.info("Deleted user {} ({})", user.getId(), user.getEmail())</code></span>
+      </div>
+      <div class="finding-desc">
+        Der <code>UserDeletionScheduler</code> schreibt die E-Mail-Adresse des zu löschenden Nutzers in den Anwendungslog (<code>log.info("Deleted user {} ({})", user.getId(), user.getEmail())</code>). Da Logs potenziell länger aufbewahrt werden als die Nutzerdaten selbst, kann die E-Mail-Adresse nach der Anonymisierung noch in Logs vorhanden sein.
+      </div>
+      <div class="finding-rec">
+        <strong>Empfehlung:</strong>
+        E-Mail-Adresse aus dem Log-Statement entfernen. Nur die UUID des Nutzers im Log verwenden: <code>log.info("Deleted user {}", user.getId())</code>. Allgemein: Log-Statements in sicherheitsrelevanten Bereichen auf PII prüfen.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== POSITIV-BEFUNDE ===== -->
+  <div class="section">
+    <div class="section-header positive">
+      <h2>Positiv-Befunde</h2>
+      <span class="count-bubble">Bereits gut implementiert</span>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Passwort-Sicherheit: BCrypt-Hashing (Art. 32)</strong>
+        Passwörter werden ausschließlich mit BCrypt gehasht (<code>BCryptPasswordEncoder</code> in <code>SecurityConfig</code>). Passwörter sind nie im Klartext gespeichert. <code>StartupSecurityCheck</code> warnt bei Default-Passwörtern.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>JWT-Revocation via Redis (Art. 32)</strong>
+        Refresh-Tokens werden in Redis gespeichert und können einzeln oder komplett widerrufen werden. Replay-Angriffs-Erkennung implementiert (<code>USED_TOKEN_PREFIX</code>). Token-Rotation bei jedem Refresh.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Zwei-Faktor-Authentifizierung (2FA/TOTP) implementiert (Art. 32)</strong>
+        TOTP-basierte 2FA mit Modi DISABLED/OPTIONAL/MANDATORY, 7-Tage Grace-Period, Recovery-Codes. Adminseite für schulweite Durchsetzung.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Löschkonzept mit 14-Tage-Gnadenfrist (Art. 17)</strong>
+        <code>requestDeletion()</code> setzt 14-tägige Grace-Period. <code>UserDeletionScheduler</code> anonymisiert täglich fällige Accounts. <code>anonymizeAndDelete()</code> überschreibt alle personenbezogenen Felder.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>DSGVO-Datenexport (Art. 15/20)</strong>
+        <code>GET /api/v1/users/me/data-export</code> aggregiert Daten aus allen aktiven Modulen. Aufruf wird im <code>data_access_log</code> protokolliert. Modulare Architektur mit <code>safeExportModule()</code> für optionale Module.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Consent-Management-System (Art. 7)</strong>
+        <code>consent_records</code>-Tabelle mit Widerruf-Zeitstempel (<code>revoked_at</code>), Einwilligungstypen, elterlicher Einwilligung (<code>granted_by</code>). API-Endpoints für Anzeige und Aktualisierung.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Datenschutzerklärung und AGB konfigurierbar (Art. 13)</strong>
+        <code>privacy_policy_text/version</code> und <code>terms_text/version</code> in Datenbank konfigurierbar. Versionsbasierte Zustimmungsverfolgung in <code>terms_acceptances</code>. Öffentliche Endpunkte (<code>/api/v1/privacy/policy</code>) ohne Login erreichbar.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Audit-Log mit IP-Adressen-Tracking (Art. 33)</strong>
+        <code>audit_log</code>-Tabelle zeichnet alle administrativen Aktionen mit User-ID, Aktion, Entity-Typ, Details und IP-Adresse auf. Für Datenpannen-Nachverfolgung verwendbar.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Retention-Policies konfigurierbar (Art. 5 Abs. 1 lit. e)</strong>
+        <code>dataRetentionDaysNotifications</code> (Default: 90 Tage) und <code>dataRetentionDaysAudit</code> (Default: 1095 Tage) in Admin-UI konfigurierbar. <code>RetentionCleanupService</code> läuft täglich.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Sicherheits-Header korrekt konfiguriert (Art. 32)</strong>
+        <code>SecurityConfig</code>: X-Frame-Options DENY, Content-Type-Options, HSTS (1 Jahr + Subdomains), Referrer-Policy STRICT-ORIGIN-WHEN-CROSS-ORIGIN, Permissions-Policy. Stateless JWT-Architektur, kein Session-Fixation-Risiko.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Rollenbasierte Zugriffskontrolle (RBAC) korrekt implementiert (Art. 25)</strong>
+        Rollen SUPERADMIN, TEACHER, PARENT, STUDENT, SECTION_ADMIN mit feingranularen Berechtigungen. Admin-Endpunkte nur für SUPERADMIN. Audience-basierte Sichtbarkeit (ALL/PARENTS_ONLY/STUDENTS_ONLY) für Ordner und Fotobox.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>ClamAV-Virenscanner bei Datei-Uploads (Art. 32)</strong>
+        Optionaler ClamAV-Scanner bei Datei-Uploads verhindert das Einschleusen schädlicher Dateien. Konfigurierbar über Admin-Modul.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>LDAP-Bind-Passwort nicht in API-Antworten exponiert</strong>
+        <code>AdminModuleApi.getLdapBindPassword()</code> ist bewusst vom öffentlichen <code>TenantConfigInfo</code>-Record getrennt. <code>TenantConfigInfo</code> enthält nur <code>ldapConfigured: boolean</code>, nicht das Passwort selbst.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Datensparsamkeit bei öffentlicher Konfiguration (Art. 5 Abs. 1 lit. c)</strong>
+        <code>PublicTenantConfigInfo</code> enthält nur die für unauthentifizierte Nutzer notwendigen Felder. Sensible Felder (githubRepo, LDAP-Details, ClamAV-Konfiguration) werden nicht exponiert.
+      </div>
+    </div>
+
+    <div class="positive-item">
+      <span class="positive-icon">&#10003;</span>
+      <div class="positive-text">
+        <strong>Service-Worker-Cache bei Logout geleert (Art. 32)</strong>
+        <code>auth.ts logout()</code>: <code>caches.keys().then(names => names.forEach(name => caches.delete(name)))</code> – verhindert Datenlecks bei gemeinsam genutzten Geräten (Schulcomputer).
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NÄCHSTE SCHRITTE ===== -->
+  <div class="section">
+    <div class="section-header info">
+      <h2>Empfohlene nächste Schritte (priorisiert)</h2>
+    </div>
+    <div class="steps-list">
+
+      <div class="step-item">
+        <div class="step-num p1">1</div>
+        <div class="step-body">
+          <div class="step-title">JWT-Secret Default-Fallback entfernen [F-002] – sofort</div>
+          <div class="step-desc">In <code>application.yml</code> den Fallback-Wert für <code>JWT_SECRET</code> entfernen. Deployment ohne gesetztes Secret muss fehlschlagen.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p1">2</div>
+        <div class="step-body">
+          <div class="step-title">Verzeichnis der Verarbeitungstätigkeiten (VVT) erstellen [F-003] – sofort</div>
+          <div class="step-desc">Rechtlich verpflichtend (Art. 30 DSGVO). Alle 20+ Verarbeitungskontexte dokumentieren. Externe Rechtsberatung empfohlen.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p1">3</div>
+        <div class="step-body">
+          <div class="step-title">Kinderschutzkonzept entwickeln und implementieren [F-001] – sofort</div>
+          <div class="step-desc">DSFA für Kinderdatenverarbeitung, elterliche Einwilligung für Fotobox technisch durchsetzen, Alterskonzept definieren.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p2">4</div>
+        <div class="step-body">
+          <div class="step-title">DSFA für Kernverarbeitungen durchführen [F-004] – innerhalb 4 Wochen</div>
+          <div class="step-desc">Fotobox mit Minderjährigen, Kommunikationsüberwachung, Solr-Volltextsuche mit persönlichen Daten.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p2">5</div>
+        <div class="step-body">
+          <div class="step-title">LDAP-Bind-Passwort verschlüsselt speichern [F-005] – innerhalb 4 Wochen</div>
+          <div class="step-desc">Verschlüsselung at-rest für LDAP-Credentials implementieren (Spring Vault oder Jasypt).</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p2">6</div>
+        <div class="step-body">
+          <div class="step-title">Jitsi Default-Server ändern und DSGVO-Hinweis in Admin-UI [F-008] – innerhalb 4 Wochen</div>
+          <div class="step-desc">Default-Wert auf leer setzen, Admin zur Eingabe einer DSGVO-konformen URL verpflichten.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p3">7</div>
+        <div class="step-body">
+          <div class="step-title">RetentionCleanupService erweitern (audit_log, notifications, error_reports) [F-011, F-015] – innerhalb 8 Wochen</div>
+          <div class="step-desc">Alle Tabellen mit personenbezogenen Daten in die automatische Bereinigung einbeziehen.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p3">8</div>
+        <div class="step-body">
+          <div class="step-title">Error-Report-URL-Sanitization implementieren [F-007] – innerhalb 8 Wochen</div>
+          <div class="step-desc">UUIDs und Query-Parameter aus gemeldeten URLs entfernen vor der Speicherung.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p3">9</div>
+        <div class="step-body">
+          <div class="step-title">Datenexport als Download-Datei bereitstellen [F-009] – innerhalb 8 Wochen</div>
+          <div class="step-desc">Frontend-Download-Button implementieren. Content-Disposition-Header setzen.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p4">10</div>
+        <div class="step-body">
+          <div class="step-title">JWT-Tokens aus LocalStorage in HttpOnly-Cookie migrieren [F-012] – mittelfristig</div>
+          <div class="step-desc">Erhöhter Aufwand (Auth-Flow-Umstellung), aber signifikante Sicherheitsverbesserung gegen XSS-Angriffe.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p4">11</div>
+        <div class="step-body">
+          <div class="step-title">AVV-Checkliste für Betreiber erstellen [F-010] – mittelfristig</div>
+          <div class="step-desc">Für GitHub-Integration, S3-Backup, SMTP-Anbieter, ONLYOFFICE.</div>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num p4">12</div>
+        <div class="step-body">
+          <div class="step-title">Consent-Durchsetzung in Fotobox implementieren [F-014] – mittelfristig</div>
+          <div class="step-desc">PHOTO_CONSENT backend-seitig prüfen. Bei Widerruf: Fotos automatisch entfernen.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== DSGVO-ARTIKEL-CHECKLISTE ===== -->
+  <div class="section">
+    <div class="section-header info">
+      <h2>Geprüfte DSGVO-Artikel – Statusübersicht</h2>
+    </div>
+    <div class="checklist">
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 5 – Grundsätze (teilw.)</strong><span>Datensparsamkeit, Integrität implementiert; Speicherbegrenzung unvollständig</span></div>
+      </div>
+
+      <div class="check-item partial">
+        <span class="ci-status">&#9888;&#65039;</span>
+        <div class="ci-text"><strong>Art. 6 – Rechtmäßigkeit</strong><span>Rechtsgrundlagen vorhanden, aber nicht vollständig dokumentiert</span></div>
+      </div>
+
+      <div class="check-item partial">
+        <span class="ci-status">&#9888;&#65039;</span>
+        <div class="ci-text"><strong>Art. 7 – Einwilligung</strong><span>Consent-System implementiert; Durchsetzung fehlt (Fotobox)</span></div>
+      </div>
+
+      <div class="check-item nok">
+        <span class="ci-status">&#10060;</span>
+        <div class="ci-text"><strong>Art. 8 – Kinderdaten</strong><span>Kein spezifisches Kinderschutzkonzept, kein Altersverifikationskonzept</span></div>
+      </div>
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 13/14 – Informationspflichten</strong><span>Datenschutzerkl&#228;rung konfigurierbar, öffentlich zugänglich</span></div>
+      </div>
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 15 – Auskunftsrecht</strong><span>Datenexport-Endpoint implementiert, Audit-Log</span></div>
+      </div>
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 16 – Berichtigung</strong><span>Profilbearbeitung für alle Nutzer, Admin-Bearbeitung</span></div>
+      </div>
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 17 – Löschung</strong><span>14-Tage-Grace-Period, automatische Anonymisierung, Scheduler</span></div>
+      </div>
+
+      <div class="check-item nok">
+        <span class="ci-status">&#10060;</span>
+        <div class="ci-text"><strong>Art. 18 – Einschränkung</strong><span>Kein Endpoint implementiert</span></div>
+      </div>
+
+      <div class="check-item partial">
+        <span class="ci-status">&#9888;&#65039;</span>
+        <div class="ci-text"><strong>Art. 20 – Datenportabilität</strong><span>JSON-Export vorhanden; kein Download als Datei, keine Binärdaten</span></div>
+      </div>
+
+      <div class="check-item nok">
+        <span class="ci-status">&#10060;</span>
+        <div class="ci-text"><strong>Art. 21 – Widerspruchsrecht</strong><span>Kein Endpoint implementiert</span></div>
+      </div>
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 25 – Privacy by Design</strong><span>RBAC, Audience-Filter, Datensparsamkeit in öffentlichen Configs</span></div>
+      </div>
+
+      <div class="check-item partial">
+        <span class="ci-status">&#9888;&#65039;</span>
+        <div class="ci-text"><strong>Art. 28 – Auftragsverarbeitung</strong><span>Keine AVV-Dokumentation; GitHub/S3/SMTP-AVV fehlen</span></div>
+      </div>
+
+      <div class="check-item nok">
+        <span class="ci-status">&#10060;</span>
+        <div class="ci-text"><strong>Art. 30 – Verarbeitungsverzeichnis</strong><span>Nicht vorhanden</span></div>
+      </div>
+
+      <div class="check-item ok">
+        <span class="ci-status">&#9989;</span>
+        <div class="ci-text"><strong>Art. 32 – Sicherheit</strong><span>BCrypt, JWT-Revocation, 2FA, TLS, Security-Header, RBAC; LocalStorage-JWT als Risiko</span></div>
+      </div>
+
+      <div class="check-item partial">
+        <span class="ci-status">&#9888;&#65039;</span>
+        <div class="ci-text"><strong>Art. 33/34 – Datenpannen</strong><span>Kein dokumentierter Meldeprozess</span></div>
+      </div>
+
+      <div class="check-item nok">
+        <span class="ci-status">&#10060;</span>
+        <div class="ci-text"><strong>Art. 35 – DSFA</strong><span>Nicht durchgeführt; bei Kinderdaten zwingend erforderlich</span></div>
+      </div>
+
+      <div class="check-item partial">
+        <span class="ci-status">&#9888;&#65039;</span>
+        <div class="ci-text"><strong>Art. 44–49 – Drittlandübermittlung</strong><span>Jitsi-Default = US-Server ohne Schutzmaßnahme; GitHub-Integration</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== ERFORDERLICHE DOKUMENTATION ===== -->
+  <div class="section">
+    <div class="section-header info">
+      <h2>Erforderliche Dokumente und Maßnahmen</h2>
+    </div>
+    <table class="doc-table">
+      <thead>
+        <tr>
+          <th>Dokument / Maßnahme</th>
+          <th>DSGVO-Grundlage</th>
+          <th>Priorität</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Verzeichnis der Verarbeitungstätigkeiten (VVT)</strong><br><span class="text-sm text-gray">Alle 20+ Verarbeitungskontexte, Zwecke, Kategorien, Fristen</span></td>
+          <td>Art. 30 DSGVO</td>
+          <td><span class="badge badge-critical">Sofort</span></td>
+          <td><span class="badge badge-nok">Fehlt</span></td>
+        </tr>
+        <tr>
+          <td><strong>Datenschutz-Folgenabschätzung (DSFA)</strong><br><span class="text-sm text-gray">Für Kinderdaten, Fotobox, Kommunikationsmonitoring, Solr</span></td>
+          <td>Art. 35 DSGVO</td>
+          <td><span class="badge badge-critical">Sofort</span></td>
+          <td><span class="badge badge-nok">Fehlt</span></td>
+        </tr>
+        <tr>
+          <td><strong>Kinderschutzkonzept</strong><br><span class="text-sm text-gray">Altersverifikation, Einwilligungskonzept, elterliche Einwilligung</span></td>
+          <td>Art. 8 DSGVO</td>
+          <td><span class="badge badge-critical">Sofort</span></td>
+          <td><span class="badge badge-nok">Fehlt</span></td>
+        </tr>
+        <tr>
+          <td><strong>Datenschutzerklärung (vollständige Vorlage)</strong><br><span class="text-sm text-gray">Mit Rechtsgrundlagen pro Verarbeitung, Drittlandübermittlungen, Kinderdaten-Hinweis</span></td>
+          <td>Art. 13 DSGVO</td>
+          <td><span class="badge badge-high">Hoch</span></td>
+          <td><span class="badge badge-partial">Teilweise (leeres Template)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Auftragsverarbeitungsverträge (AVV)</strong><br><span class="text-sm text-gray">GitHub, E-Mail-Provider, S3-Backup, ggf. ONLYOFFICE-Cloud</span></td>
+          <td>Art. 28 DSGVO</td>
+          <td><span class="badge badge-high">Hoch</span></td>
+          <td><span class="badge badge-nok">Nicht dokumentiert</span></td>
+        </tr>
+        <tr>
+          <td><strong>Incident-Response-Plan (Datenpannen)</strong><br><span class="text-sm text-gray">72h-Meldeprozess an Aufsichtsbehörde, Betroffenen-Benachrichtigung</span></td>
+          <td>Art. 33/34 DSGVO</td>
+          <td><span class="badge badge-medium">Mittel</span></td>
+          <td><span class="badge badge-nok">Fehlt</span></td>
+        </tr>
+        <tr>
+          <td><strong>Technisch-Organisatorische Maßnahmen (TOM)</strong><br><span class="text-sm text-gray">Dokumentation aller implementierten Sicherheitsmaßnahmen</span></td>
+          <td>Art. 32 DSGVO</td>
+          <td><span class="badge badge-medium">Mittel</span></td>
+          <td><span class="badge badge-partial">Teilweise (in INFRA-CHANGELOG)</span></td>
+        </tr>
+        <tr>
+          <td><strong>AVV-Checkliste für Betreiber</strong><br><span class="text-sm text-gray">Leitfaden welche Verträge bei welcher Konfiguration benötigt werden</span></td>
+          <td>Art. 28 DSGVO</td>
+          <td><span class="badge badge-medium">Mittel</span></td>
+          <td><span class="badge badge-nok">Fehlt</span></td>
+        </tr>
+        <tr>
+          <td><strong>Schulung der Administratoren</strong><br><span class="text-sm text-gray">DSGVO-Grundlagen für Schuladmins, die das System betreiben</span></td>
+          <td>Art. 39 DSGVO</td>
+          <td><span class="badge badge-low">Hinweis</span></td>
+          <td><span class="badge badge-nok">Nicht dokumentiert</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>DSGVO-Prüfbericht MonteWeb &bull; Erstellt am 28. Februar 2026 &bull; Datenschutzbeauftragter (KI-gestützt, Claude Sonnet 4.6)</p>
+    <p class="mt8">Dieser Bericht ersetzt keine Rechtsberatung. Für verbindliche Aussagen zur DSGVO-Konformität wird die Konsultation eines zugelassenen Datenschutzbeauftragten oder Rechtsanwalts empfohlen.</p>
+    <p class="mt8">Geprüfte Dateien: User.java &bull; UserService.java &bull; UserController.java &bull; PrivacyController.java &bull; TenantConfig.java &bull; AdminModuleApi.java &bull; TenantConfigInfo.java &bull; PublicTenantConfigInfo.java &bull; SecurityConfig.java &bull; JwtService.java &bull; RefreshTokenService.java &bull; AuthService.java &bull; ErrorReportService.java &bull; ErrorReport.java &bull; GlobalExceptionHandler.java &bull; ConsentRecord.java &bull; TermsAcceptance.java &bull; DataAccessLog.java &bull; AuditLogEntry.java &bull; Family.java &bull; UserDeletionScheduler.java &bull; RetentionCleanupService.java &bull; StartupSecurityCheck.java &bull; auth.ts &bull; useErrorReporting.ts &bull; AdminPrivacyView.vue &bull; docker-compose.yml &bull; application.yml</p>
+  </div>
+
+</div>
+</body>
+</html>

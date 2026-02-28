@@ -185,7 +185,7 @@ public class TenantConfig {
     // --- Jitsi Video Conferencing (enabled via modules map) ---
 
     @Column(name = "jitsi_server_url", length = 300)
-    private String jitsiServerUrl = "https://meet.jit.si";
+    private String jitsiServerUrl;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

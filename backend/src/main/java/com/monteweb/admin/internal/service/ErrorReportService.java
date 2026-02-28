@@ -68,7 +68,7 @@ public class ErrorReportService {
             report.setLocation(request.location());
             report.setUserId(userId);
             report.setUserAgent(request.userAgent());
-            report.setRequestUrl(request.requestUrl());
+            report.setRequestUrl(sanitizeUrl(request.requestUrl()));
             errorReportRepository.save(report);
         }
     }
@@ -257,6 +257,17 @@ public class ErrorReportService {
         // Replace numbers with placeholder
         normalized = normalized.replaceAll("\\d+", "<NUM>");
         return normalized;
+    }
+
+    /**
+     * DSGVO Fix (Art. 5 Abs. 1 lit. c – Datenminimierung): Entfernt Query-Parameter aus URLs,
+     * da diese sensible Daten (z. B. Token, personenbezogene IDs) enthalten können.
+     * Nur der URL-Pfad wird gespeichert.
+     */
+    static String sanitizeUrl(String url) {
+        if (url == null) return null;
+        int queryStart = url.indexOf('?');
+        return queryStart >= 0 ? url.substring(0, queryStart) : url;
     }
 
     /**

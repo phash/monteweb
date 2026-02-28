@@ -132,6 +132,14 @@ public class AdminService implements AdminModuleApi {
     @Transactional
     public TenantConfigInfo updateModules(Map<String, Boolean> modules) {
         var config = getConfig();
+        // DSGVO Fix (Art. 44): Jitsi darf nur aktiviert werden, wenn ein eigener Server konfiguriert ist.
+        // meet.jit.si (USA) ist ohne Rechtsgrundlage nicht zulässig.
+        if (Boolean.TRUE.equals(modules.get("jitsi"))
+                && (config.getJitsiServerUrl() == null || config.getJitsiServerUrl().isBlank())) {
+            throw new BusinessException(
+                "Jitsi kann nicht aktiviert werden, ohne eine eigene Jitsi-Server-URL zu konfigurieren. " +
+                "Bitte tragen Sie zuerst die URL Ihres selbst-gehosteten Jitsi-Servers ein.");
+        }
         config.setModules(modules);
         return toInfo(configRepository.save(config));
     }

@@ -73,3 +73,6 @@ rezepte/
 
 # Misc
 nul
+
+# PindeX index data
+.pindex/

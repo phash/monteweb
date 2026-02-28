@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DSGVO-Maßnahmenplan – MonteWeb</title>
+  <style>
+    :root {
+      --green:        #16a34a;
+      --green-light:  #dcfce7;
+      --green-mid:    #bbf7d0;
+      --red:          #dc2626;
+      --red-light:    #fee2e2;
+      --orange:       #ea580c;
+      --orange-light: #fff7ed;
+      --yellow:       #ca8a04;
+      --yellow-light: #fefce8;
+      --blue:         #2563eb;
+      --blue-light:   #eff6ff;
+      --purple:       #7c3aed;
+      --purple-light: #f5f3ff;
+      --gray:         #6b7280;
+      --gray-light:   #f9fafb;
+      --gray-mid:     #e5e7eb;
+      --border:       #e5e7eb;
+      --text:         #111827;
+      --text-2:       #374151;
+      --text-3:       #6b7280;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      background: #f3f4f6;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 28px 16px 48px;
+    }
+
+    /* ── HEADER ─────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1d4ed8 60%, #4f46e5 100%);
+      color: white;
+      padding: 44px 48px 40px;
+      border-radius: 14px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    .header-top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .header h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+    .header .subtitle { font-size: 15px; opacity: 0.8; margin-top: 6px; }
+    .verdict-pill {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .header-meta {
+      display: flex; flex-wrap: wrap; gap: 20px;
+      margin-top: 24px;
+      font-size: 12px; opacity: 0.75;
+    }
+    .header-meta span { display: flex; align-items: center; gap: 5px; }
+
+    /* ── PROGRESS BAR ───────────────────────────────────────────── */
+    .progress-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+    .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .progress-header h2 { font-size: 16px; font-weight: 600; }
+    .progress-pct { font-size: 22px; font-weight: 700; color: var(--green); }
+    .progress-track {
+      height: 12px;
+      background: var(--gray-light);
+      border-radius: 9999px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, var(--green) 0%, #22c55e 100%);
+      width: 24%;
+      transition: width 1s ease;
+    }
+    .progress-legend {
+      display: flex; flex-wrap: wrap; gap: 16px;
+      font-size: 12px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ── SUMMARY GRID ───────────────────────────────────────────── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 700px) { .summary-grid { grid-template-columns: 1fr 1fr; } }
+    .sum-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .sum-card::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    }
+    .sum-card.fixed  ::after { background: var(--green); }
+    .sum-card.open   .sum-num { color: var(--red); }
+    .sum-card.open   ::after { background: var(--red); }
+    .sum-card.wip    .sum-num { color: var(--yellow); }
+    .sum-card.wip    ::after { background: var(--yellow); }
+    .sum-card.accept .sum-num { color: var(--blue); }
+    .sum-card.accept ::after { background: var(--blue); }
+    .sum-card.fixed  .sum-num { color: var(--green); }
+    .sum-card::after { border-radius: 12px 12px 0 0; }
+    .sum-icon { font-size: 28px; margin-bottom: 6px; }
+    .sum-num { font-size: 38px; font-weight: 800; line-height: 1; }
+    .sum-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); margin-top: 6px; }
+    .sum-sub { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+    /* ── SECTION WRAPPERS ───────────────────────────────────────── */
+    .section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .sec-head {
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sec-head h2 { font-size: 16px; font-weight: 600; flex: 1; }
+    .sec-head .bubble {
+      background: var(--gray-light); color: var(--gray);
+      border-radius: 9999px; padding: 2px 10px; font-size: 12px;
+    }
+    .sec-head.crit   { background: #fff1f0; border-left: 4px solid var(--red); }
+    .sec-head.high   { background: #fff8f5; border-left: 4px solid var(--orange); }
+    .sec-head.medium { background: #fefce8; border-left: 4px solid var(--yellow); }
+    .sec-head.hint   { background: var(--blue-light); border-left: 4px solid var(--blue); }
+    .sec-head.org    { background: var(--purple-light); border-left: 4px solid var(--purple); }
+    .sec-head.done   { background: #f0fdf4; border-left: 4px solid var(--green); }
+    .sec-head.check  { background: var(--gray-light); border-left: 4px solid var(--gray); }
+
+    /* ── FINDING CARD ───────────────────────────────────────────── */
+    .finding {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .finding:last-child { border-bottom: none; }
+    .finding-top {
+      display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .fid {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 11px; font-weight: 700;
+      color: white;
+      padding: 2px 8px; border-radius: 4px;
+      white-space: nowrap;
+    }
+    .fid.k { background: var(--red); }
+    .fid.h { background: var(--orange); }
+    .fid.m { background: var(--yellow); color: #422006; }
+    .fid.n { background: var(--blue); }
+    .ftitle { font-size: 15px; font-weight: 600; flex: 1; min-width: 200px; }
+
+    /* status badges */
+    .status {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 9999px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+    .s-fixed  { background: var(--green-light); color: var(--green); }
+    .s-open   { background: var(--red-light);   color: var(--red); }
+    .s-wip    { background: var(--yellow-light); color: var(--yellow); }
+    .s-accept { background: var(--blue-light);   color: var(--blue); }
+
+    .fmeta {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 4px 10px;
+      font-size: 12.5px;
+      margin-top: 8px;
+    }
+    .fk { color: var(--gray); font-weight: 500; }
+    .fv { color: var(--text-2); }
+    .fv code {
+      background: var(--gray-light);
+      padding: 1px 6px; border-radius: 3px;
+      font-family: 'SF Mono', monospace; font-size: 11px;
+    }
+
+    .fmeasure {
+      margin-top: 12px;
+      background: var(--blue-light);
+      border-left: 3px solid var(--blue);
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      font-size: 13px;
+      color: #1e40af;
+      line-height: 1.6;
+    }
+    .fmeasure.done {
+      background: var(--green-light);
+      border-color: var(--green);
+      color: #14532d;
+    }
+    .fmeasure strong { display: block; margin-bottom: 3px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── ORG TABLE ──────────────────────────────────────────────── */
+    .org-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .org-table th {
+      background: var(--gray-light); text-align: left;
+      padding: 10px 16px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray);
+      border-bottom: 1px solid var(--border);
+    }
+    .org-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .org-table tr:last-child td { border-bottom: none; }
+    .org-table tr:hover td { background: var(--gray-light); }
+
+    /* ── DONE SUMMARY TABLE ─────────────────────────────────────── */
+    .done-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .done-table th {
+      background: #f0fdf4; text-align: left;
+      padding: 10px 16px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--green);
+      border-bottom: 1px solid var(--green-mid);
+    }
+    .done-table td {
+      padding: 11px 16px; border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .done-table tr:last-child td { border-bottom: none; }
+
+    /* ── CHECKLIST ──────────────────────────────────────────────── */
+    .checklist { padding: 8px 0; }
+    .check-group { padding: 0 24px 16px; }
+    .check-group h3 { font-size: 13px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.06em; padding: 14px 0 8px; }
+    .check-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .check-item:last-child { border-bottom: none; }
+    .check-box {
+      width: 18px; height: 18px; border: 2px solid var(--gray-mid);
+      border-radius: 4px; flex-shrink: 0; margin-top: 1px;
+    }
+    .check-box.done { background: var(--green); border-color: var(--green); }
+    .check-box.done::after {
+      content: '✓'; display: block; color: white;
+      font-size: 11px; font-weight: 700; text-align: center; line-height: 14px;
+    }
+    .check-text { flex: 1; line-height: 1.5; }
+    .check-text .ctag {
+      display: inline-block; font-size: 10px; font-weight: 600;
+      padding: 1px 6px; border-radius: 3px; margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── FOOTER ─────────────────────────────────────────────────── */
+    .footer {
+      text-align: center; color: var(--text-3); font-size: 12px;
+      margin-top: 36px; padding-top: 20px; border-top: 1px solid var(--border);
+    }
+    .footer a { color: var(--blue); text-decoration: none; }
+
+    /* ── MISC ───────────────────────────────────────────────────── */
+    .tag-ref {
+      display: inline-block; background: var(--gray-light); color: var(--gray);
+      font-size: 11px; padding: 1px 7px; border-radius: 4px; margin-left: 4px;
+    }
+    @media print {
+      body { background: white; }
+      .page { padding: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>🛡️ DSGVO-Maßnahmenplan</h1>
+        <div class="subtitle">MonteWeb – Schulintranet &bull; Technische &amp; organisatorische Maßnahmen</div>
+      </div>
+      <div class="verdict-pill">⚠️ Teilweise konform → In Bearbeitung</div>
+    </div>
+    <div class="header-meta">
+      <span>📅 Erstellt: 28. Februar 2026</span>
+      <span>📋 Grundlage: DSGVO-Prüfbericht (<a href="dsgvo-report.html" style="color:rgba(255,255,255,0.9)">dsgvo-report.html</a>)</span>
+      <span>📄 Findings gesamt: 21</span>
+      <span>🔗 VVT-Vorlage: <a href="docs/VVT-VORLAGE.md" style="color:rgba(255,255,255,0.9)">docs/VVT-VORLAGE.md</a></span>
+    </div>
+  </div>
+
+  <!-- ── FORTSCHRITTSANZEIGE ── -->
+  <div class="progress-card">
+    <div class="progress-header">
+      <h2>Umsetzungsfortschritt (technische Fixes)</h2>
+      <div class="progress-pct">5 / 21 behoben</div>
+    </div>
+    <div class="progress-track">
+      <div class="progress-fill" style="width:24%"></div>
+    </div>
+    <div class="progress-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--green)"></div>
+        <span><strong>5 behoben</strong> – Code-Fix deployed</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--yellow)"></div>
+        <span><strong>4 in Bearbeitung</strong> – Konzept oder Prüfung läuft</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--red)"></div>
+        <span><strong>10 offen</strong> – Maßnahme ausstehend</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:var(--blue)"></div>
+        <span><strong>2 akzeptiert</strong> – Risiko dokumentiert &amp; akzeptiert</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STATUS-KARTEN ── -->
+  <div class="summary-grid">
+    <div class="sum-card fixed">
+      <div class="sum-icon">✅</div>
+      <div class="sum-num" style="color:var(--green)">5</div>
+      <div class="sum-label">Behoben</div>
+      <div class="sum-sub">Code-Fixes committed</div>
+    </div>
+    <div class="sum-card open">
+      <div class="sum-icon">🔴</div>
+      <div class="sum-num" style="color:var(--red)">10</div>
+      <div class="sum-label">Offen</div>
+      <div class="sum-sub">Maßnahme ausstehend</div>
+    </div>
+    <div class="sum-card wip">
+      <div class="sum-icon">🟡</div>
+      <div class="sum-num" style="color:var(--yellow)">4</div>
+      <div class="sum-label">In Bearbeitung</div>
+      <div class="sum-sub">Konzept / Prüfung</div>
+    </div>
+    <div class="sum-card accept">
+      <div class="sum-icon">💡</div>
+      <div class="sum-num" style="color:var(--blue)">2</div>
+      <div class="sum-label">Akzeptiert</div>
+      <div class="sum-sub">Risiko dokumentiert</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- KRITISCHE FINDINGS                                             -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head crit">
+      <h2>🔴 Kritische Findings</h2>
+      <span class="bubble">3</span>
+    </div>
+
+    <!-- K-01 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid k">DSGVO-K-01</span>
+        <span class="ftitle">JWT-Secret Klartext-Fallback in application.yml</span>
+        <span class="status s-fixed">✅ Behoben</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32 – Sicherheit der Verarbeitung</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>application.yml</code> Zeile 88</span>
+        <span class="fk">Risiko</span><span class="fv">Bekanntes Default-Secret ermöglicht Token-Fälschung → Vollzugriff auf alle Nutzerdaten</span>
+        <span class="fk">Behoben am</span><span class="fv">28.02.2026</span>
+      </div>
+      <div class="fmeasure done">
+        <strong>Maßnahme (umgesetzt)</strong>
+        Fallback-Wert entfernt. <code>${JWT_SECRET}</code> ohne Default — App startet ohne gesetztes Secret gar nicht mehr.
+        Die <code>.env</code>-Datei muss <code>JWT_SECRET</code> mit mindestens 64 Zeichen setzen.
+      </div>
+    </div>
+
+    <!-- K-02 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid k">DSGVO-K-02</span>
+        <span class="ftitle">Keine Datenschutz-Folgenabschätzung (DSFA) für Kinderdaten</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 35 – Datenschutz-Folgenabschätzung</span>
+        <span class="fk">Fundstelle</span><span class="fv">Gesamtsystem: Schüler-Accounts, Fotobox, Formulare</span>
+        <span class="fk">Risiko</span><span class="fv">Verarbeitung von Kinderdaten (unter 16 Jahren) ohne vorherige DSFA; hohes Risiko bei Datenpannen</span>
+        <span class="fk">Verantwortlich</span><span class="fv">Schulleitung + externer Datenschutzberater</span>
+        <span class="fk">Deadline</span><span class="fv">90 Tage nach Erstbetrieb</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        DSFA-Dokument durch rechtlich begleitete Datenschutzberatung erstellen. Ergebnis vor Produktivbetrieb dokumentieren und ggf. der Aufsichtsbehörde vorlegen. Kann nicht allein im Code gelöst werden.
+      </div>
+    </div>
+
+    <!-- K-03 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid k">DSGVO-K-03</span>
+        <span class="ftitle">Jitsi meet.jit.si als automatischer US-Server (Drittlandübermittlung)</span>
+        <span class="status s-fixed">✅ Code behoben</span>
+        <span class="status s-wip">🟡 Org. läuft</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 44 – Drittlandübermittlung; Art. 49 – Ausnahmen</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>TenantConfig.jitsiServerUrl</code>, Migration V09x</span>
+        <span class="fk">Risiko</span><span class="fv">Standardmäßige Übermittlung von Kommunikationsdaten an US-Server ohne SCCs oder Adequacy Decision</span>
+        <span class="fk">Code-Fix</span><span class="fv">28.02.2026</span>
+      </div>
+      <div class="fmeasure done">
+        <strong>Code-Maßnahmen (umgesetzt)</strong>
+        (3a) Java-Default auf <code>null</code> gesetzt — kein automatischer US-Server mehr.
+        (3b) Migration <code>V102__fix_jitsi_default.sql</code> setzt bestehende <code>meet.jit.si</code>-Einträge auf NULL.
+        (3c) <code>AdminService.updateModules()</code>: Aktivierung von Jitsi ohne eigene Server-URL wirft <code>BusinessException</code>.
+      </div>
+      <div class="fmeasure" style="margin-top:8px">
+        <strong>Organisatorische Maßnahme (ausstehend)</strong>
+        Eigenen Jitsi-Server in der EU aufsetzen oder Jitsi-Modul dauerhaft deaktiviert lassen. Kein Betrieb über meet.jit.si ohne Standardvertragsklauseln.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- HOHE FINDINGS                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head high">
+      <h2>🟠 Hohe Findings</h2>
+      <span class="bubble">5</span>
+    </div>
+
+    <!-- H-01 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid h">DSGVO-H-01</span>
+        <span class="ftitle">E-Mail-Adresse in Deletion-Logs gespeichert</span>
+        <span class="status s-fixed">✅ Behoben</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 5 Abs. 1 lit. f – Integrität &amp; Vertraulichkeit; Datenminimierung in Logs</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>UserDeletionScheduler.java</code> Zeile 34</span>
+        <span class="fk">Risiko</span><span class="fv">E-Mail-Adresse gelöschter Nutzer verbleibt in Logs — widerspricht Löschkonzept</span>
+        <span class="fk">Behoben am</span><span class="fv">28.02.2026</span>
+      </div>
+      <div class="fmeasure done">
+        <strong>Maßnahme (umgesetzt)</strong>
+        <code>log.info("Deleted user {} ({})", id, email)</code> → <code>log.info("Deleted user {}", id)</code>. Nur UUID wird geloggt.
+      </div>
+    </div>
+
+    <!-- H-02 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid h">DSGVO-H-02</span>
+        <span class="ftitle">Kein Auftragsverarbeitungsvertrag (AVV) mit MinIO / Solr / SMTP</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 28 – Auftragsverarbeiter</span>
+        <span class="fk">Fundstelle</span><span class="fv">Docker Compose: minio, solr, smtp-relay</span>
+        <span class="fk">Risiko</span><span class="fv">Fehlender AVV bei externem Hosting; bei Self-Hosting intern dokumentieren</span>
+        <span class="fk">Verantwortlich</span><span class="fv">Schulleitung / IT-Betrieb</span>
+        <span class="fk">Deadline</span><span class="fv">Vor Produktivbetrieb</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        Bei externem Hosting: AVV mit Anbietern abschließen. Bei Self-Hosting auf Schulserver: interne Verarbeitungsanweisung dokumentieren und im VVT erfassen.
+      </div>
+    </div>
+
+    <!-- H-03 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid h">DSGVO-H-03</span>
+        <span class="ftitle">LDAP Bind-Passwort im Klartext in der Datenbank</span>
+        <span class="status s-wip">🟡 In Bearbeitung</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32 – Sicherheit der Verarbeitung</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>tenant_config.ldap_bind_password</code></span>
+        <span class="fk">Risiko</span><span class="fv">LDAP-Credentials für das gesamte Active Directory unverschlüsselt in PostgreSQL</span>
+        <span class="fk">Deadline</span><span class="fv">60 Tage (sofern LDAP-Modul aktiv)</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Konzept ausstehend</strong>
+        Key-Management-Konzept entwickeln (z. B. Verschlüsselung mit App-Secret, HashiCorp Vault, AWS Secrets Manager).
+        Sofortmaßnahme: DB-Zugriff auf <code>monteweb</code>-User beschränken (bereits via Docker Compose isoliert).
+      </div>
+    </div>
+
+    <!-- H-04 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid h">DSGVO-H-04</span>
+        <span class="ftitle">Keine erzwungene Einwilligung für Fotobox-Aufnahmen</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 6 Abs. 1 lit. a; Art. 9; KUG §22</span>
+        <span class="fk">Fundstelle</span><span class="fv">Fotobox-Modul; <code>consent_records</code>-Tabelle vorhanden, aber nicht erzwungen</span>
+        <span class="fk">Risiko</span><span class="fv">Aufnahmen von Personen (insb. Kindern) ohne dokumentierte Einwilligung</span>
+        <span class="fk">Deadline</span><span class="fv">90 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        UX-Flow: Vor Nutzung der Fotobox muss <code>PHOTO_CONSENT</code> vorliegen. Eltern-Einwilligung für Minderjährige erforderlich. Als TODO im Code dokumentiert. Komplexe UX-Änderung; erfordert Sprint-Planung.
+      </div>
+    </div>
+
+    <!-- H-05 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid h">DSGVO-H-05</span>
+        <span class="ftitle">Terms-of-Service nicht beim Login erzwungen</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 7 – Bedingungen für die Einwilligung</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>terms_acceptances</code>-Tabelle; <code>PrivacyController</code>; Login-Flow</span>
+        <span class="fk">Risiko</span><span class="fv">Nutzer können das System verwenden, ohne aktuelle AGB/Datenschutzerklärung akzeptiert zu haben</span>
+        <span class="fk">Deadline</span><span class="fv">60 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        Login-Filter (Interceptor/OncePerRequestFilter) der prüft, ob aktuelle <code>terms_version</code> akzeptiert wurde.
+        Bei fehlender Akzeptanz: Redirect auf Zustimmungsseite. Breaking Change für bestehende User — Migration notwendig.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- MITTLERE FINDINGS                                              -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head medium">
+      <h2>🟡 Mittlere Findings</h2>
+      <span class="bubble">7</span>
+    </div>
+
+    <!-- M-01 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-01</span>
+        <span class="ftitle">requestUrl in Error-Reports enthält Query-Parameter</span>
+        <span class="status s-fixed">✅ Behoben</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 5 Abs. 1 lit. c – Datenminimierung</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>ErrorReportService.submitReport()</code></span>
+        <span class="fk">Risiko</span><span class="fv">Query-Parameter (z. B. <code>?token=…</code>, <code>?userId=…</code>) können personenbezogene Daten enthalten</span>
+        <span class="fk">Behoben am</span><span class="fv">28.02.2026</span>
+      </div>
+      <div class="fmeasure done">
+        <strong>Maßnahme (umgesetzt)</strong>
+        Neue Methode <code>sanitizeUrl()</code> entfernt Query-Parameter vor der Speicherung — nur der URL-Pfad wird gespeichert.
+      </div>
+    </div>
+
+    <!-- M-02 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-02</span>
+        <span class="ftitle">Admin-Profilansichten nicht im DataAccessLog erfasst</span>
+        <span class="status s-fixed">✅ Behoben</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 15 – Auskunftsrecht; Art. 32 – Nachweisbarkeit</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>AdminUserController.java</code></span>
+        <span class="fk">Risiko</span><span class="fv">Admins können Nutzerprofile ohne Audit-Trail einsehen; Exporte/Löschungen wurden bereits geloggt</span>
+        <span class="fk">Behoben am</span><span class="fv">28.02.2026</span>
+      </div>
+      <div class="fmeasure done">
+        <strong>Maßnahme (umgesetzt)</strong>
+        Neuer Endpoint <code>GET /api/v1/admin/users/{id}</code> schreibt <code>DataAccessLog</code>-Eintrag mit Aktion <code>ADMIN_USER_VIEW</code>. Analoges Muster zu bestehenden Export/Deletion-Logs.
+      </div>
+    </div>
+
+    <!-- M-03 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-03</span>
+        <span class="ftitle">Keine automatische Löschung von Error-Reports</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 5 Abs. 1 lit. e – Speicherbegrenzung</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>error_reports</code>-Tabelle; <code>RetentionCleanupService</code></span>
+        <span class="fk">Risiko</span><span class="fv">Error-Reports enthalten UserId und RequestUrl ohne Löschfrist</span>
+        <span class="fk">Deadline</span><span class="fv">30 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        Löschfrist in <code>RetentionCleanupService</code> ergänzen: RESOLVED/IGNORED-Reports nach 90 Tagen löschen. NEW/REPORTED: nach 1 Jahr.
+      </div>
+    </div>
+
+    <!-- M-04 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-04</span>
+        <span class="ftitle">IP-Logging ohne definierte Aufbewahrungsfrist (nginx)</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 5 Abs. 1 lit. c – Datenminimierung</span>
+        <span class="fk">Fundstelle</span><span class="fv">nginx-Konfiguration; Spring Boot Logging</span>
+        <span class="fk">Risiko</span><span class="fv">Access-Logs mit vollständigen IP-Adressen ohne definierte Retentionsfrist</span>
+        <span class="fk">Deadline</span><span class="fv">60 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        nginx-Log-Format auf anonymisierte IPs umstellen (letztes Oktett auf 0); oder explizite Aufbewahrungsdauer dokumentieren und per Log-Rotation durchsetzen (empfohlen: 7–30 Tage).
+      </div>
+    </div>
+
+    <!-- M-05 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-05</span>
+        <span class="ftitle">VAPID-Keys ohne definiertes Rotationsverfahren</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32 – Technische Maßnahmen</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>VAPID_PUBLIC_KEY</code>, <code>VAPID_PRIVATE_KEY</code> in <code>.env</code></span>
+        <span class="fk">Risiko</span><span class="fv">Keine Rotation der Push-Notification-Keys definiert</span>
+        <span class="fk">Deadline</span><span class="fv">Dokumentation: 30 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        VAPID-Key-Rotationsverfahren in Betriebsdokumentation aufnehmen (empfohlen: jährlich). Push-Subscriptions nach Rotation neu einsammeln.
+      </div>
+    </div>
+
+    <!-- M-06 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-06</span>
+        <span class="ftitle">Datenschutzerklärung bei Neuinstallation leer</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 13 – Informationspflichten bei Erhebung</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>tenant_config.privacy_policy_text</code> – leer bei Neuinstallation</span>
+        <span class="fk">Risiko</span><span class="fv">Keine Datenschutzerklärung für Nutzer sichtbar bis Admin manuell befüllt</span>
+        <span class="fk">Deadline</span><span class="fv">60 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Erforderliche Maßnahme</strong>
+        Installations-Wizard oder Pflichtfeld-Hinweis im Admin-Setup. Muster-Datenschutzerklärung als Seed-Text (anpassungspflichtig für jede Schule).
+      </div>
+    </div>
+
+    <!-- M-07 -->
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid m">DSGVO-M-07</span>
+        <span class="ftitle">MinIO-Bucket-Zugriffskontrolle für Chat-/Fundgrube-Bilder prüfen</span>
+        <span class="status s-wip">🟡 Prüfung läuft</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32; Art. 5 Abs. 1 lit. f</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>message_images</code>-Thumbnails; <code>fundgrube_images</code>; MinIO-Bucket</span>
+        <span class="fk">Risiko</span><span class="fv">Thumbnails möglicherweise ohne JWT-Prüfung direkt über MinIO-URL zugänglich</span>
+        <span class="fk">Deadline</span><span class="fv">Vor Produktivbetrieb</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Prüfung ausstehend</strong>
+        Sicherstellen, dass MinIO-Bucket nicht öffentlich erreichbar ist. Alle Bildabrufe laufen über Backend-Proxy mit JWT-Authentifizierung (bereits für Fotobox via <code>?token=</code> implementiert).
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- HINWEISE                                                        -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head hint">
+      <h2>💡 Hinweise</h2>
+      <span class="bubble">6</span>
+    </div>
+
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid n">DSGVO-N-01</span>
+        <span class="ftitle">Dark-Mode-Einstellung in DB (Privacy by Design)</span>
+        <span class="status s-accept">💡 Akzeptiert</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 25 – Privacy by Design</span>
+        <span class="fk">Risiko</span><span class="fv">Gering — reine Präferenz, kein sensibler Datenwert</span>
+      </div>
+      <div class="fmeasure" style="background:var(--blue-light);border-color:var(--blue);color:#1e40af">
+        <strong>Begründung der Akzeptanz</strong>
+        DB-Speicherung ermöglicht geräteübergreifende Synchronisation (Nutzerkomfort). Alternative: LocalStorage — dann kein geräteübergreifendes Sync. Risiko bewusst akzeptiert.
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid n">DSGVO-N-02</span>
+        <span class="ftitle">GitHub PAT im Klartext in der Datenbank</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32 – Secrets Management</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>tenant_config.github_pat</code></span>
+        <span class="fk">Risiko</span><span class="fv">GitHub Token unverschlüsselt; kein Personenbezug, aber Sicherheitsrisiko</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Empfehlung</strong>
+        Fine-grained PAT mit minimalen Rechten (nur Issues-Write auf ein Repo). Analog zu LDAP-Passwort verschlüsseln.
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid n">DSGVO-N-03</span>
+        <span class="ftitle">Refresh-Token-Laufzeit 7 Tage (Shared Devices)</span>
+        <span class="status s-accept">💡 Akzeptiert (mit Hinweis)</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32 – Technische Maßnahmen</span>
+        <span class="fk">Risiko</span><span class="fv">7-Tage Refresh-Token kritisch bei Schulcomputern mit gemeinsamem Zugang</span>
+      </div>
+      <div class="fmeasure" style="background:var(--blue-light);border-color:var(--blue);color:#1e40af">
+        <strong>Betriebshinweis (in Installationsguide aufnehmen)</strong>
+        Nutzer auf Shared Devices müssen sich aktiv abmelden. Konfigurierbare Refresh-Token-Laufzeit als Admin-Setting dokumentieren.
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid n">DSGVO-N-04</span>
+        <span class="ftitle">Kein Consent-Tracking für Neuigkeiten-Digest</span>
+        <span class="status s-accept">💡 Akzeptiert</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 6 Abs. 1 lit. a – Einwilligung</span>
+        <span class="fk">Risiko</span><span class="fv">Digest-E-Mails ohne explizite Opt-in-Einwilligung</span>
+      </div>
+      <div class="fmeasure" style="background:var(--blue-light);border-color:var(--blue);color:#1e40af">
+        <strong>Begründung der Akzeptanz</strong>
+        Standard ist NONE (Digest deaktiviert). Nutzer aktiviert Digest aktiv → implizites Opt-in. In Datenschutzerklärung dokumentieren.
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid n">DSGVO-N-05</span>
+        <span class="ftitle">TOTP-Recovery-Codes im Klartext gespeichert</span>
+        <span class="status s-open">🔴 Offen</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 32 – Technische Maßnahmen</span>
+        <span class="fk">Fundstelle</span><span class="fv"><code>users.totp_recovery_codes</code> (TEXT[])</span>
+        <span class="fk">Deadline</span><span class="fv">60 Tage</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Empfehlung</strong>
+        Recovery-Codes als bcrypt-Hashes speichern (analog zu Passwörtern). Migration erforderlich — bestehende Codes ungültig stellen und Nutzer zur Neu-Generierung auffordern.
+      </div>
+    </div>
+
+    <div class="finding">
+      <div class="finding-top">
+        <span class="fid n">DSGVO-N-06</span>
+        <span class="ftitle">Solr-Suchindex muss bei Nutzerlöschung bereinigt werden</span>
+        <span class="status s-wip">🟡 Prüfung läuft</span>
+      </div>
+      <div class="fmeta">
+        <span class="fk">DSGVO-Artikel</span><span class="fv">Art. 17 – Recht auf Löschung; Art. 5 Abs. 1 lit. e</span>
+        <span class="fk">Fundstelle</span><span class="fv">Solr-Index; <code>SearchService</code></span>
+        <span class="fk">Risiko</span><span class="fv">Gelöschte Nutzerdaten verbleiben ggf. im Volltext-Suchindex</span>
+      </div>
+      <div class="fmeasure">
+        <strong>Prüfung ausstehend</strong>
+        Verifizieren, ob <code>UserDeletionExecutedEvent</code> den Solr-Index bereinigt. Falls nicht: <code>SearchService</code>-Listener für Löschevents ergänzen.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- ORGANISATORISCHE MASSNAHMEN                                    -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head org">
+      <h2>🏛️ Organisatorische Maßnahmen</h2>
+      <span class="bubble">8</span>
+    </div>
+    <table class="org-table">
+      <thead>
+        <tr>
+          <th style="width:36%">Maßnahme</th>
+          <th style="width:20%">Verantwortlich</th>
+          <th style="width:16%">Deadline</th>
+          <th style="width:14%">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>DSFA für Kinderdaten erstellen <span class="tag-ref">Art. 35</span></td>
+          <td>Schulleitung + DSB</td>
+          <td>90 Tage</td>
+          <td><span class="status s-open">🔴 Offen</span></td>
+        </tr>
+        <tr>
+          <td>AVV mit externen Auftragsverarbeitern abschließen <span class="tag-ref">Art. 28</span></td>
+          <td>Schulträger</td>
+          <td>Vor Produktivbetrieb</td>
+          <td><span class="status s-open">🔴 Offen</span></td>
+        </tr>
+        <tr>
+          <td>Datenschutzbeauftragten benennen (Art. 37, falls benötigt)</td>
+          <td>Schulleitung</td>
+          <td>Vor Produktivbetrieb</td>
+          <td><span class="status s-open">🔴 Offen</span></td>
+        </tr>
+        <tr>
+          <td>Verarbeitungsverzeichnis (VVT) ausfüllen <span class="tag-ref">Art. 30</span></td>
+          <td>DSB / IT</td>
+          <td>60 Tage</td>
+          <td><span class="status s-wip">🟡 Vorlage: docs/VVT-VORLAGE.md</span></td>
+        </tr>
+        <tr>
+          <td>Löschkonzept dokumentieren und Fristen festlegen</td>
+          <td>DSB</td>
+          <td>60 Tage</td>
+          <td><span class="status s-wip">🟡 In Bearbeitung</span></td>
+        </tr>
+        <tr>
+          <td>Datenpannenmeldeverfahren definieren <span class="tag-ref">Art. 33</span></td>
+          <td>DSB</td>
+          <td>60 Tage</td>
+          <td><span class="status s-open">🔴 Offen</span></td>
+        </tr>
+        <tr>
+          <td>Betriebsanweisung für Admins (Zugriffsrechte, Log-Pflichten)</td>
+          <td>IT</td>
+          <td>30 Tage</td>
+          <td><span class="status s-open">🔴 Offen</span></td>
+        </tr>
+        <tr>
+          <td>DSGVO-Schulung pädagogisches Personal</td>
+          <td>Schulleitung</td>
+          <td>90 Tage</td>
+          <td><span class="status s-open">🔴 Offen</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- BEHOBENE FINDINGS (ZUSAMMENFASSUNG)                           -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head done">
+      <h2>✅ Behobene Findings</h2>
+      <span class="bubble">5</span>
+    </div>
+    <table class="done-table">
+      <thead>
+        <tr>
+          <th style="width:12%">ID</th>
+          <th style="width:38%">Beschreibung</th>
+          <th style="width:14%">Behoben am</th>
+          <th>Geänderte Datei(en)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="fid k" style="font-size:11px">K-01</span></td>
+          <td>JWT-Secret Default-Fallback entfernt</td>
+          <td>28.02.2026</td>
+          <td><code>application.yml</code></td>
+        </tr>
+        <tr>
+          <td><span class="fid k" style="font-size:11px">K-03</span></td>
+          <td>Jitsi-Default auf null; V102-Migration; Aktivierung ohne URL blockiert</td>
+          <td>28.02.2026</td>
+          <td><code>TenantConfig.java</code> · <code>AdminService.java</code> · <code>V102__fix_jitsi_default.sql</code></td>
+        </tr>
+        <tr>
+          <td><span class="fid h" style="font-size:11px">H-01</span></td>
+          <td>E-Mail aus Deletion-Log entfernt</td>
+          <td>28.02.2026</td>
+          <td><code>UserDeletionScheduler.java</code></td>
+        </tr>
+        <tr>
+          <td><span class="fid m" style="font-size:11px">M-01</span></td>
+          <td>requestUrl-Sanitisierung (Query-Parameter entfernt)</td>
+          <td>28.02.2026</td>
+          <td><code>ErrorReportService.java</code></td>
+        </tr>
+        <tr>
+          <td><span class="fid m" style="font-size:11px">M-02</span></td>
+          <td>Admin-Profilansicht wird im DataAccessLog erfasst</td>
+          <td>28.02.2026</td>
+          <td><code>AdminUserController.java</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <!-- WIEDERHOLUNGSPRÜFUNGS-CHECKLISTE                               -->
+  <!-- ══════════════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="sec-head check">
+      <h2>📋 Checkliste für Wiederholungsprüfung</h2>
+    </div>
+    <div class="check-group">
+      <h3>Technische Fixes</h3>
+      <div class="check-item"><div class="check-box done"></div><div class="check-text">JWT-Secret ohne Fallback — App startet nicht ohne <code>JWT_SECRET</code> Env-Var <span class="ctag" style="background:var(--green-light);color:var(--green)">✅ erledigt</span></div></div>
+      <div class="check-item"><div class="check-box done"></div><div class="check-text">Deletion-Logs enthalten keine E-Mail-Adressen mehr <span class="ctag" style="background:var(--green-light);color:var(--green)">✅ erledigt</span></div></div>
+      <div class="check-item"><div class="check-box done"></div><div class="check-text">Jitsi: kein automatischer US-Server, Aktivierung blockiert ohne eigene URL <span class="ctag" style="background:var(--green-light);color:var(--green)">✅ erledigt</span></div></div>
+      <div class="check-item"><div class="check-box done"></div><div class="check-text">Error-Reports: URL-Pfad ohne Query-Parameter gespeichert <span class="ctag" style="background:var(--green-light);color:var(--green)">✅ erledigt</span></div></div>
+      <div class="check-item"><div class="check-box done"></div><div class="check-text">Admin-Profilansichten werden im DataAccessLog protokolliert <span class="ctag" style="background:var(--green-light);color:var(--green)">✅ erledigt</span></div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Error-Reports Löschfrist implementiert (90 Tage RESOLVED/IGNORED)</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">TOTP-Recovery-Codes als bcrypt-Hash gespeichert</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Terms-of-Service-Erzwingung bei Login implementiert</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Fotobox: PHOTO_CONSENT als Pflichtvoraussetzung für Upload</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">MinIO-Bucket-Zugriffskontrolle verifiziert (kein Public Access)</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Solr-Index bei Nutzerlöschung bereinigt (<code>UserDeletionExecutedEvent</code>)</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">nginx IP-Anonymisierung konfiguriert oder Retention-Policy dokumentiert</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">LDAP Bind-Passwort verschlüsselt (Key-Management-Konzept)</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">GitHub PAT durch Fine-grained Token mit minimalen Rechten ersetzt</div></div>
+    </div>
+    <div class="check-group">
+      <h3>Organisatorische Maßnahmen</h3>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">DSFA erstellt, unterzeichnet und ggf. der Aufsichtsbehörde vorgelegt</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">AVV mit allen externen Dienstleistern vorhanden und dokumentiert</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">VVT vollständig ausgefüllt (<a href="docs/VVT-VORLAGE.md">docs/VVT-VORLAGE.md</a>)</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Datenschutzerklärung im System befüllt, rechtlich geprüft und aktuell</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Datenpannenmeldeverfahren (Art. 33 / 72h-Frist) definiert und getestet</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">Betriebsanweisung für Admins erstellt und kommuniziert</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">DSGVO-Schulung pädagogisches Personal durchgeführt und dokumentiert</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text">VAPID-Key-Rotationsverfahren in Betriebsdokumentation aufgenommen</div></div>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="footer">
+    <p>
+      MonteWeb DSGVO-Maßnahmenplan &bull; Stand: 28. Februar 2026 &bull;
+      Grundlage: <a href="dsgvo-report.html">dsgvo-report.html</a> &bull;
+      VVT-Vorlage: <a href="docs/VVT-VORLAGE.md">docs/VVT-VORLAGE.md</a>
+    </p>
+    <p style="margin-top:6px">
+      Nächste Wiederholungsprüfung empfohlen: <strong>28. Februar 2027</strong> (jährlich) oder anlassbezogen bei wesentlichen Systemänderungen.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

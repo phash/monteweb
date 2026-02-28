@@ -31,7 +31,7 @@ public class UserDeletionScheduler {
         for (var user : users) {
             try {
                 userService.anonymizeAndDelete(user.getId(), "Scheduled deletion after grace period");
-                log.info("Deleted user {} ({})", user.getId(), user.getEmail());
+                log.info("Deleted user {}", user.getId());
             } catch (Exception e) {
                 log.error("Failed to delete user {}: {}", user.getId(), e.getMessage(), e);
             }

@@ -51,6 +51,14 @@ public class AdminUserController {
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserInfo>> getUser(@PathVariable UUID id) {
+        userService.logDataAccess(SecurityUtils.requireCurrentUserId(), id, "ADMIN_USER_VIEW", "Admin viewed user profile");
+        return ResponseEntity.ok(ApiResponse.ok(
+            userService.findById(id).orElseThrow(() ->
+                new com.monteweb.shared.exception.ResourceNotFoundException("User not found"))));
+    }
+
     @PutMapping("/{id}/profile")
     public ResponseEntity<ApiResponse<UserInfo>> updateProfile(
             @PathVariable UUID id,
