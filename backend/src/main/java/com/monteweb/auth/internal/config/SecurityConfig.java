@@ -64,7 +64,6 @@ public class SecurityConfig {
                                 .includeSubDomains(true))
                         .referrerPolicy(r -> r.policy(
                                 ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                        .permissionsPolicy(p -> p.policy("camera=(), microphone=(), geolocation()"))
                         .contentSecurityPolicy(csp -> csp
                                 .policyDirectives(
                                         "default-src 'self'; " +
@@ -77,6 +76,7 @@ public class SecurityConfig {
                                         "form-action 'self';"
                                 )
                         )
+                        .permissionsPolicy(p -> p.policy("camera=(), microphone=(), geolocation()"))
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
