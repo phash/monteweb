@@ -1,8 +1,5 @@
 package com.monteweb.auth.internal.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.monteweb.admin.AdminModuleApi;
-import com.monteweb.user.UserModuleApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -106,13 +103,6 @@ public class SecurityConfig {
         }
 
         return builder.build();
-    }
-
-    @Bean
-    public TermsAcceptanceFilter termsAcceptanceFilter(UserModuleApi userModuleApi,
-                                                        AdminModuleApi adminModuleApi,
-                                                        ObjectMapper objectMapper) {
-        return new TermsAcceptanceFilter(userModuleApi, adminModuleApi, objectMapper);
     }
 
     @Bean

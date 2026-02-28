@@ -1,6 +1,5 @@
 package com.monteweb.auth.internal.config;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.user.UserModuleApi;
 import jakarta.servlet.FilterChain;
@@ -8,24 +7,22 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 
+@Component
 public class TermsAcceptanceFilter extends OncePerRequestFilter {
 
     private final UserModuleApi userModuleApi;
     private final AdminModuleApi adminModuleApi;
-    private final ObjectMapper objectMapper;
 
     public TermsAcceptanceFilter(UserModuleApi userModuleApi,
-                                  AdminModuleApi adminModuleApi,
-                                  ObjectMapper objectMapper) {
+                                  AdminModuleApi adminModuleApi) {
         this.userModuleApi = userModuleApi;
         this.adminModuleApi = adminModuleApi;
-        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -73,8 +70,10 @@ public class TermsAcceptanceFilter extends OncePerRequestFilter {
             if (!accepted) {
                 response.setStatus(451);
                 response.setContentType("application/json");
-                objectMapper.writeValue(response.getWriter(),
-                    Map.of("termsRequired", true, "termsVersion", termsVersion));
+                // Inline JSON to avoid ObjectMapper dependency in filter registration phase
+                response.getWriter().write(
+                    "{\"termsRequired\":true,\"termsVersion\":\"" +
+                    termsVersion.replace("\"", "\\\"") + "\"}");
                 return;
             }
         } catch (IllegalArgumentException e) {
