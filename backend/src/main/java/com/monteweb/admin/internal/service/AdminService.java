@@ -3,9 +3,11 @@ package com.monteweb.admin.internal.service;
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.admin.TenantConfigInfo;
 import com.monteweb.admin.internal.model.TenantConfig;
+import com.monteweb.admin.internal.repository.ErrorReportRepository;
 import com.monteweb.admin.internal.repository.TenantConfigRepository;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.AesEncryptionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -21,9 +24,15 @@ import java.util.Map;
 public class AdminService implements AdminModuleApi {
 
     private final TenantConfigRepository configRepository;
+    private final AesEncryptionService aesEncryptionService;
+    private final ErrorReportRepository errorReportRepository;
 
-    public AdminService(TenantConfigRepository configRepository) {
+    public AdminService(TenantConfigRepository configRepository,
+                        AesEncryptionService aesEncryptionService,
+                        ErrorReportRepository errorReportRepository) {
         this.configRepository = configRepository;
+        this.aesEncryptionService = aesEncryptionService;
+        this.errorReportRepository = errorReportRepository;
     }
 
     @Override
@@ -98,7 +107,7 @@ public class AdminService implements AdminModuleApi {
         if (ldapUrl != null) config.setLdapUrl(ldapUrl);
         if (ldapBaseDn != null) config.setLdapBaseDn(ldapBaseDn);
         if (ldapBindDn != null) config.setLdapBindDn(ldapBindDn);
-        if (ldapBindPassword != null && !ldapBindPassword.isBlank()) config.setLdapBindPassword(ldapBindPassword);
+        if (ldapBindPassword != null && !ldapBindPassword.isBlank()) config.setLdapBindPassword(aesEncryptionService.encrypt(ldapBindPassword));
         if (ldapUserSearchFilter != null) config.setLdapUserSearchFilter(ldapUserSearchFilter);
         if (ldapAttrEmail != null) config.setLdapAttrEmail(ldapAttrEmail);
         if (ldapAttrFirstName != null) config.setLdapAttrFirstName(ldapAttrFirstName);
@@ -176,12 +185,22 @@ public class AdminService implements AdminModuleApi {
 
     @Override
     public String getLdapBindPassword() {
-        return getConfig().getLdapBindPassword();
+        return aesEncryptionService.decrypt(getConfig().getLdapBindPassword());
     }
 
     @Override
     public boolean isMaintenanceEnabled() {
         return isModuleEnabled("maintenance");
+    }
+
+    @Override
+    @Transactional
+    public int cleanupOldErrorReports(Instant cutoff90, Instant cutoff365) {
+        int deleted90 = errorReportRepository.deleteByStatusInAndLastSeenAtBefore(
+            List.of("RESOLVED", "IGNORED"), cutoff90);
+        int deleted365 = errorReportRepository.deleteByStatusInAndLastSeenAtBefore(
+            List.of("NEW", "REPORTED"), cutoff365);
+        return deleted90 + deleted365;
     }
 
     @Transactional

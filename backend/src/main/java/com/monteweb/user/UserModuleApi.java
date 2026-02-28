@@ -128,6 +128,20 @@ public interface UserModuleApi {
      */
     void setTotpRecoveryCodes(UUID userId, String[] codes);
 
+    // --- Consent ---
+
+    /**
+     * Returns whether the user has an active (non-revoked) consent of the given type.
+     * Used by other modules (e.g. fotobox) to enforce consent requirements.
+     */
+    boolean hasActiveConsent(UUID userId, String consentType);
+
+    /**
+     * Returns whether the user has accepted the given terms version.
+     * Used by auth module for ToS enforcement filter.
+     */
+    boolean hasAcceptedTerms(UUID userId, String termsVersion);
+
     // --- Email Digest ---
 
     record DigestUserInfo(UUID id, String email, String firstName, String digestFrequency, Instant digestLastSentAt) {}

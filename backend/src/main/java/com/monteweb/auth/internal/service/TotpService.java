@@ -2,6 +2,7 @@ package com.monteweb.auth.internal.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.Mac;
@@ -36,6 +37,7 @@ public class TotpService {
     private static final String BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
     private final SecureRandom secureRandom = new SecureRandom();
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     /**
      * Generates a random TOTP secret encoded in Base32.
@@ -100,6 +102,24 @@ public class TotpService {
             codes.add(code.toString());
         }
         return codes;
+    }
+
+    /**
+     * Hashes a recovery code using BCrypt for secure storage.
+     */
+    public String hashRecoveryCode(String plainCode) {
+        return passwordEncoder.encode(plainCode.toUpperCase());
+    }
+
+    /**
+     * Verifies a recovery code against a stored value.
+     * Supports both BCrypt-hashed codes and legacy plaintext codes.
+     */
+    public boolean verifyRecoveryCode(String input, String stored) {
+        if (stored != null && (stored.startsWith("$2a$") || stored.startsWith("$2b$"))) {
+            return passwordEncoder.matches(input.toUpperCase(), stored);
+        }
+        return stored != null && stored.equals(input.toUpperCase()); // legacy plaintext
     }
 
     /**

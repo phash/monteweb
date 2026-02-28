@@ -6,7 +6,9 @@ import com.monteweb.fotobox.internal.dto.*;
 import com.monteweb.fotobox.internal.service.FotoboxService;
 import com.monteweb.fotobox.internal.service.FotoboxStorageService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.SecurityUtils;
+import com.monteweb.user.UserModuleApi;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,6 +30,7 @@ public class FotoboxController {
 
     private final FotoboxService fotoboxService;
     private final FotoboxStorageService storageService;
+    private final UserModuleApi userModuleApi;
 
     // --- Settings ---
 
@@ -104,6 +107,9 @@ public class FotoboxController {
             @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "caption", required = false) String caption) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        if (!userModuleApi.hasActiveConsent(userId, "PHOTO_CONSENT")) {
+            throw new ForbiddenException("PHOTO_CONSENT required to upload images to Fotobox");
+        }
         return ApiResponse.ok(fotoboxService.uploadImages(userId, roomId, threadId, files, caption));
     }
 

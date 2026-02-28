@@ -96,9 +96,9 @@
 | **DSGVO-Artikel** | Art. 32 – Sicherheit der Verarbeitung |
 | **Fundstelle** | `tenant_config.ldap_bind_password`, `TenantConfig.ldapBindPassword` |
 | **Risiko** | LDAP-Credentials für das gesamte Active Directory unverschlüsselt in PostgreSQL |
-| **Maßnahme** | Key-Management-Konzept entwickeln (z. B. Verschlüsselung mit App-Secret, HashiCorp Vault, oder Secrets Manager). Als Sofortmaßnahme: DB-Zugriff auf `monteweb`-User beschränken (bereits via Docker Compose); kein direkter DB-Zugriff für andere Dienste |
+| **Maßnahme** | AES-256-GCM-Verschlüsselung implementiert: `AesEncryptionService` leitet Schlüssel via SHA-256 aus JWT-Secret ab; `ldap_bind_password` und `github_pat` werden als `ENC(base64(IV+ciphertext))` gespeichert. V103-Migration löscht Plaintext-Werte; Admin muss nach Deployment neu eingeben. API-Response enthält nie den Klartext (`ldapBindPassword`/`githubPat` = null, nur `githubPatConfigured`-Boolean). |
 | **Deadline** | 60 Tage (sofern LDAP-Modul aktiv) |
-| **Status** | 🟡 IN BEARBEITUNG – Konzept ausstehend |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -108,9 +108,9 @@
 | **DSGVO-Artikel** | Art. 6 Abs. 1 lit. a; Art. 9 (besondere Kategorien); KUG §22 |
 | **Fundstelle** | Fotobox-Modul; `consent_records`-Tabelle vorhanden, aber nicht erzwungen |
 | **Risiko** | Aufnahmen von Personen (insb. Kindern) ohne dokumentierte Einwilligung; `PHOTO_CONSENT` in DB angelegt, aber nicht als Pflichtvoraussetzung |
-| **Maßnahme** | UX-Flow: Vor Nutzung der Fotobox muss `PHOTO_CONSENT` vorhanden sein. Eltern-Einwilligung für Minderjährige. Als TODO im Code dokumentiert |
+| **Maßnahme** | Backend-Enforcement: `FotoboxController.uploadImages()` prüft via `UserModuleApi.hasActiveConsent(userId, "PHOTO_CONSENT")`, wirft HTTP 403 ohne Consent. Frontend `RoomFotobox.vue` zeigt Info-Banner mit Link zu Datenschutz-Einstellungen und deaktiviert Upload-Button. |
 | **Deadline** | 90 Tage |
-| **Status** | 🔴 OFFEN |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -120,9 +120,9 @@
 | **DSGVO-Artikel** | Art. 7 – Bedingungen für die Einwilligung |
 | **Fundstelle** | `terms_acceptances`-Tabelle; `PrivacyController`; Login-Flow |
 | **Risiko** | Nutzer können das System verwenden, ohne aktuelle AGB/Datenschutzerklärung akzeptiert zu haben |
-| **Maßnahme** | Login-Filter (Interceptor) der prüft, ob aktuelle `terms_version` akzeptiert wurde; ggf. Redirect auf Zustimmungsseite |
+| **Maßnahme** | `TermsAcceptanceFilter` (`OncePerRequestFilter`) prüft nach Authentifizierung ob aktuelle `terms_version` via `UserModuleApi.hasAcceptedTerms()` akzeptiert wurde. Gibt HTTP 451 mit `{"termsRequired":true,"termsVersion":"..."}` zurück. Whitelist: auth/privacy/config/error-reports/actuator/ws/wopi-Endpoints. Frontend-Guard war bereits aktiv. |
 | **Deadline** | 60 Tage |
-| **Status** | 🔴 OFFEN |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -158,9 +158,9 @@
 | **DSGVO-Artikel** | Art. 5 Abs. 1 lit. e – Speicherbegrenzung |
 | **Fundstelle** | `error_reports`-Tabelle; `RetentionCleanupService` |
 | **Risiko** | Error-Reports enthalten UserId und RequestUrl; keine Löschfrist definiert |
-| **Maßnahme** | Löschfrist für Error-Reports im `RetentionCleanupService` ergänzen (empfohlen: 90 Tage für RESOLVED/IGNORED) |
+| **Maßnahme** | `RetentionCleanupService` löscht jetzt: RESOLVED/IGNORED nach 90 Tagen, NEW/REPORTED nach 365 Tagen. `ErrorReportRepository` hat neue `@Modifying` JPQL-Query. Cross-Module-Boundary-Regel beachtet: Delegation via `AdminModuleApi.cleanupOldErrorReports()`. |
 | **Deadline** | 30 Tage |
-| **Status** | 🔴 OFFEN |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -170,9 +170,9 @@
 | **DSGVO-Artikel** | Art. 5 Abs. 1 lit. c – Datenminimierung |
 | **Fundstelle** | nginx-Konfiguration; Spring Boot Logging |
 | **Risiko** | Access-Logs mit IP-Adressen könnten personenbezogene Daten enthalten |
-| **Maßnahme** | nginx-Log-Format auf anonymisierte IPs umstellen (letztes Oktett auf 0); oder explizite Speicherdauer dokumentieren |
+| **Maßnahme** | nginx `map`-Direktive maskiert letztes IPv4-Oktett auf `.0` (`$masked_ip`). Neues `log_format dsgvo` verwendet `$masked_ip` statt `$remote_addr`. `access_log` im `server {}`-Block nutzt DSGVO-Format. |
 | **Deadline** | 60 Tage |
-| **Status** | 🔴 OFFEN |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -194,9 +194,9 @@
 | **DSGVO-Artikel** | Art. 13 – Informationspflicht bei Erhebung |
 | **Fundstelle** | `tenant_config.privacy_policy_text` – leer bei Neuinstallation |
 | **Risiko** | Keine Datenschutzerklärung für Nutzer sichtbar bis Admin manuell befüllt |
-| **Maßnahme** | Installations-Wizard oder Pflichtfeld-Hinweis im Admin-Setup; Muster-Datenschutzerklärung als Seed-Text |
+| **Maßnahme** | V070-Migration seeded BaySchO-konforme Datenschutzerklärung mit Platzhaltern (`[SCHULNAME]`, `[ADRESSE]`, etc.) in `tenant_config.privacy_policy_text`. Admin kann Text im Admin-Panel anpassen. |
 | **Deadline** | 60 Tage |
-| **Status** | 🔴 OFFEN |
+| **Status** | ✅ BEHOBEN (V070, 2026-02-28) |
 
 ---
 
@@ -206,9 +206,9 @@
 | **DSGVO-Artikel** | Art. 32 – Sicherheit; Art. 5 Abs. 1 lit. f |
 | **Fundstelle** | `message_images`-Thumbnails; MinIO-Bucket |
 | **Risiko** | Thumbnails möglicherweise direkt über MinIO-URL zugänglich ohne JWT-Prüfung |
-| **Maßnahme** | Sicherstellen, dass MinIO-Bucket nicht öffentlich erreichbar ist; alle Bildabrufe laufen über Backend-Proxy mit Authentifizierung |
+| **Maßnahme** | `MessagingController` proxied alle Bildabrufe (original + thumbnail) via `requireParticipant()`-Auth-Check. MinIO-Bucket ist nur intern erreichbar (Docker-Netzwerk). Kein öffentlicher Direktzugriff. |
 | **Deadline** | Vor Produktivbetrieb prüfen |
-| **Status** | 🟡 IN BEARBEITUNG – Prüfung ausstehend |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -233,8 +233,8 @@
 | **DSGVO-Artikel** | Art. 32 – Sicherheit (Secrets Management) |
 | **Fundstelle** | `tenant_config.github_pat` |
 | **Risiko** | GitHub Personal Access Token unverschlüsselt gespeichert; kein Personenbezug, aber Sicherheitsrisiko |
-| **Maßnahme** | Analog zu LDAP-Passwort: Verschlüsselung empfohlen; Fine-grained PAT mit minimalen Rechten verwenden |
-| **Status** | 🔴 OFFEN |
+| **Maßnahme** | Im Zuge von H-03 mitbehoben: `github_pat` wird ebenfalls via `AesEncryptionService` (AES-256-GCM) verschlüsselt gespeichert. API sendet `githubPatConfigured`-Boolean statt Klartext. |
+| **Status** | ✅ BEHOBEN (2026-02-28, zusammen mit H-03) |
 
 ---
 
@@ -266,9 +266,9 @@
 | **DSGVO-Artikel** | Art. 32 – Technische Maßnahmen |
 | **Fundstelle** | `users.totp_recovery_codes` (TEXT[]) |
 | **Risiko** | Recovery-Codes in Klartext (sind Einmalkodes, aber dennoch) |
-| **Maßnahme** | Recovery-Codes als bcrypt-Hashes speichern (analog zu Passwörtern) |
+| **Maßnahme** | `TotpService.hashRecoveryCode()` speichert neue Codes als BCrypt-Hash. `verifyRecoveryCode()` unterstützt Legacy-Plaintext als Fallback (wird bei Nutzung konsumiert). `AuthService.confirm2fa()` speichert Hashes, gibt Plaintext einmalig zurück. |
 | **Deadline** | 60 Tage |
-| **Status** | 🔴 OFFEN |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 
@@ -278,8 +278,8 @@
 | **DSGVO-Artikel** | Art. 17 – Recht auf Löschung; Art. 5 Abs. 1 lit. e |
 | **Fundstelle** | Solr-Index; `SearchService` |
 | **Risiko** | Bei Nutzerlöschung muss Solr-Index synchron bereinigt werden |
-| **Maßnahme** | Prüfen ob `UserDeletionExecutedEvent` den Solr-Index löscht; ggf. ergänzen |
-| **Status** | 🟡 IN BEARBEITUNG – Prüfung ausstehend |
+| **Maßnahme** | `SearchDeletionListener` reagiert auf `UserDeletionExecutedEvent`, ruft `SolrIndexingService.deleteUserDocuments(userId)` auf (löscht `USER:{id}`-Dokument via `deleteById`). Nur aktiv wenn `monteweb.modules.solr.enabled=true`. |
+| **Status** | ✅ BEHOBEN (2026-02-28) |
 
 ---
 

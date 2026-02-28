@@ -15,7 +15,9 @@ import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.*;
 import com.monteweb.user.internal.model.DataAccessLog;
 import com.monteweb.user.internal.model.User;
+import com.monteweb.user.internal.repository.ConsentRecordRepository;
 import com.monteweb.user.internal.repository.DataAccessLogRepository;
+import com.monteweb.user.internal.repository.TermsAcceptanceRepository;
 import com.monteweb.user.internal.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -36,6 +38,8 @@ public class UserService implements UserModuleApi {
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final DataAccessLogRepository dataAccessLogRepository;
+    private final ConsentRecordRepository consentRecordRepository;
+    private final TermsAcceptanceRepository termsAcceptanceRepository;
 
     // Always-present module APIs
     private final FeedModuleApi feedModuleApi;
@@ -55,6 +59,8 @@ public class UserService implements UserModuleApi {
     public UserService(UserRepository userRepository,
                        ApplicationEventPublisher eventPublisher,
                        DataAccessLogRepository dataAccessLogRepository,
+                       ConsentRecordRepository consentRecordRepository,
+                       TermsAcceptanceRepository termsAcceptanceRepository,
                        @Lazy FeedModuleApi feedModuleApi,
                        @Lazy RoomModuleApi roomModuleApi,
                        @Lazy FamilyModuleApi familyModuleApi,
@@ -69,6 +75,8 @@ public class UserService implements UserModuleApi {
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
         this.dataAccessLogRepository = dataAccessLogRepository;
+        this.consentRecordRepository = consentRecordRepository;
+        this.termsAcceptanceRepository = termsAcceptanceRepository;
         this.feedModuleApi = feedModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.familyModuleApi = familyModuleApi;
@@ -539,6 +547,20 @@ public class UserService implements UserModuleApi {
         var user = findEntityById(userId);
         user.setTotpRecoveryCodes(codes);
         userRepository.save(user);
+    }
+
+    // --- Consent ---
+
+    @Override
+    public boolean hasActiveConsent(UUID userId, String consentType) {
+        return consentRecordRepository
+                .findByUserIdAndConsentTypeAndRevokedAtIsNull(userId, consentType)
+                .isPresent();
+    }
+
+    @Override
+    public boolean hasAcceptedTerms(UUID userId, String termsVersion) {
+        return termsAcceptanceRepository.existsByUserIdAndTermsVersion(userId, termsVersion);
     }
 
     @Override

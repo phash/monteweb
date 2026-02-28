@@ -9,6 +9,7 @@ import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.shared.exception.UnhandledExceptionEvent;
+import com.monteweb.shared.util.AesEncryptionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -34,12 +35,15 @@ public class ErrorReportService {
 
     private final ErrorReportRepository errorReportRepository;
     private final TenantConfigRepository tenantConfigRepository;
+    private final AesEncryptionService aesEncryptionService;
     private final RestTemplate restTemplate;
 
     public ErrorReportService(ErrorReportRepository errorReportRepository,
-                              TenantConfigRepository tenantConfigRepository) {
+                              TenantConfigRepository tenantConfigRepository,
+                              AesEncryptionService aesEncryptionService) {
         this.errorReportRepository = errorReportRepository;
         this.tenantConfigRepository = tenantConfigRepository;
+        this.aesEncryptionService = aesEncryptionService;
         this.restTemplate = new RestTemplate();
     }
 
@@ -136,6 +140,7 @@ public class ErrorReportService {
         if (config.getGithubPat() == null || config.getGithubPat().isBlank()) {
             throw new BusinessException("GitHub PAT not configured");
         }
+        String decryptedGithubPat = aesEncryptionService.decrypt(config.getGithubPat());
 
         String truncatedMessage = report.getMessage().length() > 80
                 ? report.getMessage().substring(0, 80) + "..."
@@ -167,7 +172,7 @@ public class ErrorReportService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + config.getGithubPat());
+        headers.set("Authorization", "Bearer " + decryptedGithubPat);
         headers.set("Accept", "application/vnd.github+json");
         headers.set("X-GitHub-Api-Version", "2022-11-28");
 
@@ -201,7 +206,9 @@ public class ErrorReportService {
         var config = tenantConfigRepository.findAll().stream().findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Tenant configuration not found"));
         config.setGithubRepo(repo);
-        config.setGithubPat(pat);
+        if (pat != null && !pat.isBlank()) {
+            config.setGithubPat(aesEncryptionService.encrypt(pat));
+        }
         tenantConfigRepository.save(config);
     }
 

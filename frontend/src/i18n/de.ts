@@ -1225,6 +1225,8 @@ export default {
     previous: 'Vorheriges Bild',
     next: 'Nächstes Bild',
     of: 'von',
+    photoConsentRequired: 'Foto-Einwilligung erforderlich. Bitte erteile sie unter den Datenschutz-Einstellungen.',
+    privacySettings: 'Datenschutz-Einstellungen',
   },
   sectionAdmin: {
     title: 'Bereichsverwaltung',

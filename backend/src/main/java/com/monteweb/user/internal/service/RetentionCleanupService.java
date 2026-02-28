@@ -46,5 +46,12 @@ public class RetentionCleanupService {
         Instant auditCutoff = Instant.now().minus(auditDays, ChronoUnit.DAYS);
         dataAccessLogRepository.deleteByCreatedAtBefore(auditCutoff);
         log.info("Cleaned data access logs older than {} days", auditDays);
+
+        // Error report retention: RESOLVED/IGNORED after 90d, NEW/REPORTED after 365d
+        Instant now = Instant.now();
+        Instant cutoff90 = now.minus(90, ChronoUnit.DAYS);
+        Instant cutoff365 = now.minus(365, ChronoUnit.DAYS);
+        int deletedReports = adminModuleApi.cleanupOldErrorReports(cutoff90, cutoff365);
+        log.info("Error report retention: deleted {} old error reports", deletedReports);
     }
 }

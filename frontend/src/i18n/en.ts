@@ -1225,6 +1225,8 @@ export default {
     previous: 'Previous image',
     next: 'Next image',
     of: 'of',
+    photoConsentRequired: 'Photo consent required. Please grant it in the privacy settings.',
+    privacySettings: 'Privacy Settings',
   },
   sectionAdmin: {
     title: 'Section Administration',

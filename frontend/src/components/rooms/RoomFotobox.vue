@@ -6,8 +6,10 @@ import { useFotoboxStore } from '@/stores/fotobox'
 import { useAuthStore } from '@/stores/auth'
 import { useRoomsStore } from '@/stores/rooms'
 import { fotoboxApi } from '@/api/fotobox.api'
+import { privacyApi } from '@/api/privacy.api'
 import type { FotoboxPermissionLevel } from '@/types/fotobox'
 import type { FileAudience } from '@/types/files'
+import type { ConsentRecord } from '@/types/user'
 import FotoboxThread from './FotoboxThread.vue'
 import FotoboxSettings from './FotoboxSettings.vue'
 import { audienceSeverity } from '@/utils/audienceSeverity'
@@ -46,12 +48,26 @@ const audienceOptions = [
 
 const permission = ref<FotoboxPermissionLevel>('VIEW_ONLY')
 const fotoboxEnabled = ref(false)
+const photoConsentGranted = ref(false)
+const consentLoaded = ref(false)
 
 const canCreateThread = computed(
   () => permission.value === 'CREATE_THREADS',
 )
 
 onMounted(async () => {
+  try {
+    const res = await privacyApi.getConsents()
+    const consents: ConsentRecord[] = res.data?.data ?? res.data ?? []
+    photoConsentGranted.value = consents.some(
+      (c) => c.consentType === 'PHOTO_CONSENT' && c.granted,
+    )
+  } catch (e) {
+    photoConsentGranted.value = false
+  } finally {
+    consentLoaded.value = true
+  }
+
   await fotobox.fetchSettings(props.roomId)
   if (fotobox.settings) {
     fotoboxEnabled.value = fotobox.settings.enabled
@@ -150,6 +166,13 @@ function audienceLabel(audience: string): string {
       </template>
 
       <template v-else>
+        <!-- Photo consent required banner -->
+        <div v-if="consentLoaded && !photoConsentGranted" class="consent-required-banner">
+          <i class="pi pi-info-circle" style="color: var(--p-yellow-400)" />
+          <span>{{ t('fotobox.photoConsentRequired') }}</span>
+          <router-link to="/privacy">{{ t('fotobox.privacySettings') }}</router-link>
+        </div>
+
         <div class="fotobox-header">
           <div class="header-actions">
             <Button
@@ -157,6 +180,7 @@ function audienceLabel(audience: string): string {
               :label="t('fotobox.newThread')"
               icon="pi pi-plus"
               size="small"
+              :disabled="!photoConsentGranted"
               @click="showCreateDialog = true"
             />
             <Button
@@ -398,5 +422,17 @@ function audienceLabel(audience: string): string {
 .field label {
   font-weight: 600;
   font-size: var(--mw-font-size-sm);
+}
+
+.consent-required-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--p-yellow-50);
+  border: 1px solid var(--p-yellow-200);
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  color: var(--p-yellow-800);
 }
 </style>

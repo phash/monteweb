@@ -4,9 +4,12 @@ import com.monteweb.admin.internal.model.ErrorReport;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +24,10 @@ public interface ErrorReportRepository extends JpaRepository<ErrorReport, UUID> 
     Page<ErrorReport> findFiltered(@Param("status") String status, @Param("source") String source, Pageable pageable);
 
     long countByStatus(String status);
+
+    @Modifying
+    @Query("DELETE FROM ErrorReport e WHERE e.status IN :statuses AND e.lastSeenAt < :cutoff")
+    int deleteByStatusInAndLastSeenAtBefore(
+        @Param("statuses") List<String> statuses,
+        @Param("cutoff") Instant cutoff);
 }

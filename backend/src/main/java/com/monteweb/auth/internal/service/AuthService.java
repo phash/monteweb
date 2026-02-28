@@ -228,9 +228,12 @@ public class AuthService implements AuthModuleApi {
         }
 
         var recoveryCodes = totpService.generateRecoveryCodes();
-        userModuleApi.enableTotp(userId, recoveryCodes.toArray(new String[0]));
+        var hashedCodes = recoveryCodes.stream()
+                .map(totpService::hashRecoveryCode)
+                .toArray(String[]::new);
+        userModuleApi.enableTotp(userId, hashedCodes);
 
-        return new TwoFactorConfirmResponse(recoveryCodes);
+        return new TwoFactorConfirmResponse(recoveryCodes); // return plaintext to user once
     }
 
     /**
@@ -276,9 +279,8 @@ public class AuthService implements AuthModuleApi {
         // Try recovery code
         String[] recoveryCodes = userModuleApi.getTotpRecoveryCodes(userId);
         if (recoveryCodes != null) {
-            String upperCode = code.toUpperCase();
             for (int i = 0; i < recoveryCodes.length; i++) {
-                if (recoveryCodes[i] != null && recoveryCodes[i].equals(upperCode)) {
+                if (recoveryCodes[i] != null && totpService.verifyRecoveryCode(code, recoveryCodes[i])) {
                     // Consume recovery code
                     recoveryCodes[i] = null;
                     // Filter out nulls

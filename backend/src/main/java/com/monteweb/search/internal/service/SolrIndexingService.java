@@ -188,6 +188,17 @@ public class SolrIndexingService {
         }
     }
 
+    public void deleteUserDocuments(UUID userId) {
+        try {
+            // Delete the user's own document
+            solrClient.deleteById("USER:" + userId.toString());
+            solrClient.commit();
+            log.info("Deleted Solr documents for user {}", userId);
+        } catch (Exception e) {
+            log.error("Failed to delete Solr documents for user {}", userId, e);
+        }
+    }
+
     // ---- Full re-index ----
 
     public int reindexAll() {

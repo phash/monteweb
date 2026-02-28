@@ -1,5 +1,8 @@
 package com.monteweb.auth.internal.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.monteweb.admin.AdminModuleApi;
+import com.monteweb.user.UserModuleApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,17 +32,20 @@ public class SecurityConfig {
     private final CorsConfigurationSource corsConfigurationSource;
     private final OidcAuthenticationSuccessHandler oidcSuccessHandler;
     private final MaintenanceModeFilter maintenanceModeFilter;
+    private final TermsAcceptanceFilter termsAcceptanceFilter;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
                           CorsConfigurationSource corsConfigurationSource,
                           @Autowired(required = false) OidcAuthenticationSuccessHandler oidcSuccessHandler,
-                          MaintenanceModeFilter maintenanceModeFilter) {
+                          MaintenanceModeFilter maintenanceModeFilter,
+                          TermsAcceptanceFilter termsAcceptanceFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.corsConfigurationSource = corsConfigurationSource;
         this.oidcSuccessHandler = oidcSuccessHandler;
         this.maintenanceModeFilter = maintenanceModeFilter;
+        this.termsAcceptanceFilter = termsAcceptanceFilter;
     }
 
     @Bean
@@ -77,7 +83,8 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterAfter(maintenanceModeFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(maintenanceModeFilter, JwtAuthenticationFilter.class)
+                .addFilterAfter(termsAcceptanceFilter, MaintenanceModeFilter.class);
 
         // Register OIDC success handler when OIDC is enabled
         if (oidcSuccessHandler != null) {
@@ -87,6 +94,13 @@ public class SecurityConfig {
         }
 
         return builder.build();
+    }
+
+    @Bean
+    public TermsAcceptanceFilter termsAcceptanceFilter(UserModuleApi userModuleApi,
+                                                        AdminModuleApi adminModuleApi,
+                                                        ObjectMapper objectMapper) {
+        return new TermsAcceptanceFilter(userModuleApi, adminModuleApi, objectMapper);
     }
 
     @Bean
