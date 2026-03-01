@@ -308,6 +308,7 @@ class CleaningServiceTest {
 
             when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
             when(registrationRepository.existsBySlotIdAndUserId(SLOT_ID, USER_ID)).thenReturn(false);
+            mockConfigLookup(); // participant circle check happens before capacity check
             when(registrationRepository.countBySlotId(SLOT_ID)).thenReturn(3L); // == maxParticipants
 
             assertThatThrownBy(() -> service.registerForSlot(SLOT_ID, USER_ID, USER_NAME, FAMILY_ID))
