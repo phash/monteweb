@@ -27,7 +27,8 @@
     "vue-router": "^5.0.3"
   },
   "overrides": {
-    "minimatch": ">=10.2.1"
+    "minimatch": ">=10.2.1",
+    "serialize-javascript": ">=7.0.0"
   },
   "devDependencies": {
     "@pinia/testing": "^1.0.3",
