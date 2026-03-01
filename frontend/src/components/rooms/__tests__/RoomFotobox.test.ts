@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import RoomFotobox from '@/components/rooms/RoomFotobox.vue'
+import { privacyApi } from '@/api/privacy.api'
+import { fotoboxApi } from '@/api/fotobox.api'
 
 vi.mock('@/api/fotobox.api', () => ({
   fotoboxApi: {
@@ -18,6 +20,12 @@ vi.mock('@/api/fotobox.api', () => ({
     deleteImage: vi.fn(),
     imageUrl: vi.fn((id: string) => `/api/v1/fotobox/images/${id}`),
     thumbnailUrl: vi.fn((id: string) => `/api/v1/fotobox/images/${id}/thumbnail`),
+  },
+}))
+
+vi.mock('@/api/privacy.api', () => ({
+  privacyApi: {
+    getConsents: vi.fn().mockResolvedValue({ data: { data: [] } }),
   },
 }))
 
@@ -69,6 +77,8 @@ const i18n = createI18n({
         fileTooLarge: 'Zu groß',
         confirmDeleteImage: 'Bild löschen?',
         deleteImage: 'Gelöscht',
+        photoConsentRequired: 'Foto-Einwilligung erforderlich',
+        privacySettings: 'Datenschutz-Einstellungen',
       },
       files: { audience: 'Sichtbarkeit', audienceAll: 'Alle', audienceParents: 'Nur Eltern', audienceStudents: 'Nur Schüler' },
       common: { cancel: 'Abbrechen', create: 'Erstellen', save: 'Speichern', loading: 'Laden...' },
@@ -77,6 +87,7 @@ const i18n = createI18n({
 })
 
 const stubs = {
+  RouterLink: { template: '<a class="router-link-stub"><slot /></a>', props: ['to'] },
   LoadingSpinner: { template: '<div class="loading-stub" />' },
   EmptyState: { template: '<div class="empty-stub">{{ message }}</div>', props: ['icon', 'message'] },
   Button: { template: '<button class="button-stub" @click="$emit(\'click\')">{{ label }}</button>', props: ['label', 'icon', 'text', 'severity', 'size', 'loading', 'disabled', 'ariaLabel'] },
@@ -176,5 +187,40 @@ describe('RoomFotobox', () => {
   it('should not show settings component initially', () => {
     const wrapper = mountRoomFotobox()
     expect(wrapper.find('.fotobox-settings-stub').exists()).toBe(false)
+  })
+})
+
+describe('RoomFotobox – photo consent', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.clearAllMocks()
+    // Enable fotobox so the consent banner section is rendered
+    vi.mocked(fotoboxApi.getSettings).mockResolvedValue({
+      data: { data: { enabled: true, defaultPermission: 'CREATE_THREADS', maxImagesPerThread: null, maxFileSizeMb: 10 } },
+    } as any)
+    vi.mocked(fotoboxApi.getThreads).mockResolvedValue({ data: { data: [] } } as any)
+  })
+
+  it('shows consent banner when PHOTO_CONSENT not granted', async () => {
+    vi.mocked(privacyApi.getConsents).mockResolvedValue({ data: { data: [] } } as any)
+    const wrapper = mountRoomFotobox(true)
+    await flushPromises()
+    expect(wrapper.find('.consent-required-banner').exists()).toBe(true)
+  })
+
+  it('hides consent banner when PHOTO_CONSENT is granted', async () => {
+    vi.mocked(privacyApi.getConsents).mockResolvedValue({
+      data: { data: [{ consentType: 'PHOTO_CONSENT', granted: true }] },
+    } as any)
+    const wrapper = mountRoomFotobox(true)
+    await flushPromises()
+    expect(wrapper.find('.consent-required-banner').exists()).toBe(false)
+  })
+
+  it('shows consent banner when getConsents throws', async () => {
+    vi.mocked(privacyApi.getConsents).mockRejectedValue(new Error('network error'))
+    const wrapper = mountRoomFotobox(true)
+    await flushPromises()
+    expect(wrapper.find('.consent-required-banner').exists()).toBe(true)
   })
 })

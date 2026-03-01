@@ -95,7 +95,9 @@ class JobboardServiceHoursTest {
                 // Jitsi (enabled via modules)
                 null,
                 // WOPI (enabled via modules)
-                null
+                null,
+                // Family settings
+                false, false
         );
     }
 

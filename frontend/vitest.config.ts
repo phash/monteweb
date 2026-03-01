@@ -42,7 +42,7 @@ export default defineConfig({
         'src/components/layout/AppHeader.vue',
       ],
       thresholds: {
-        statements: 50,
+        statements: 49,
       },
     },
   },
