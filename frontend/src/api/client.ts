@@ -4,14 +4,15 @@ import type { ApiResponse } from '@/types/api'
 const client = axios.create({
   baseURL: '/api/v1',
   timeout: 30000, // 30 seconds default timeout
+  withCredentials: true, // send httpOnly auth cookies automatically
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// Request interceptor: attach JWT
+// Request interceptor: attach JWT from sessionStorage as Authorization header (fallback)
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
+  const token = sessionStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -54,31 +55,25 @@ client.interceptors.response.use(
       originalRequest._retry = true
       isRefreshing = true
 
-      const refreshToken = localStorage.getItem('refreshToken')
-      if (!refreshToken) {
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
-        if (!window.location.pathname.startsWith('/login')) {
-          window.location.href = '/login'
-        }
-        return Promise.reject(error)
-      }
-
       try {
+        // Refresh token is sent via httpOnly cookie automatically (withCredentials: true).
+        // Also send body token as fallback for clients without cookie support.
+        const refreshToken = sessionStorage.getItem('refreshToken')
         const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
           '/api/v1/auth/refresh',
-          { refreshToken }
+          refreshToken ? { refreshToken } : {},
+          { withCredentials: true }
         )
         const { accessToken, refreshToken: newRefreshToken } = response.data.data
-        localStorage.setItem('accessToken', accessToken)
-        localStorage.setItem('refreshToken', newRefreshToken)
+        sessionStorage.setItem('accessToken', accessToken)
+        sessionStorage.setItem('refreshToken', newRefreshToken)
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return client(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError, null)
-        localStorage.removeItem('accessToken')
-        localStorage.removeItem('refreshToken')
+        sessionStorage.removeItem('accessToken')
+        sessionStorage.removeItem('refreshToken')
         if (!window.location.pathname.startsWith('/login')) {
           window.location.href = '/login'
         }

@@ -99,7 +99,7 @@ describe('Auth Store - Multi-Role', () => {
   describe('switchRole', () => {
     it('should call API and update tokens', async () => {
       setActivePinia(createPinia())
-      localStorage.setItem('accessToken', 'old-token')
+      sessionStorage.setItem('accessToken', 'old-token')
       const auth = useAuthStore()
 
       vi.mocked(usersApi.switchActiveRole).mockResolvedValue({
@@ -128,13 +128,13 @@ describe('Auth Store - Multi-Role', () => {
       await auth.switchRole('PARENT')
 
       expect(usersApi.switchActiveRole).toHaveBeenCalledWith('PARENT')
-      expect(localStorage.getItem('accessToken')).toBe('new-access-token')
-      expect(localStorage.getItem('refreshToken')).toBe('new-refresh-token')
+      expect(sessionStorage.getItem('accessToken')).toBe('new-access-token')
+      expect(sessionStorage.getItem('refreshToken')).toBe('new-refresh-token')
     })
 
     it('should update user role in state after switch', async () => {
       setActivePinia(createPinia())
-      localStorage.setItem('accessToken', 'old-token')
+      sessionStorage.setItem('accessToken', 'old-token')
       const auth = useAuthStore()
       auth.user = {
         id: 'user-1',
@@ -172,7 +172,7 @@ describe('Auth Store - Multi-Role', () => {
 
     it('should set loading during switch', async () => {
       setActivePinia(createPinia())
-      localStorage.setItem('accessToken', 'token')
+      sessionStorage.setItem('accessToken', 'token')
       const auth = useAuthStore()
 
       let resolveSwitch!: Function

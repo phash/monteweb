@@ -15,7 +15,7 @@ export interface TwoFactorChallenge {
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(null)
-  const accessToken = ref<string | null>(localStorage.getItem('accessToken'))
+  const accessToken = ref<string | null>(sessionStorage.getItem('accessToken'))
   const loading = ref(false)
 
   const isAuthenticated = computed(() => !!accessToken.value)
@@ -97,7 +97,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    const refreshToken = localStorage.getItem('refreshToken')
+    const refreshToken = sessionStorage.getItem('refreshToken')
     try {
       await authApi.logout(refreshToken)
     } finally {
@@ -141,14 +141,14 @@ export const useAuthStore = defineStore('auth', () => {
 
   function setTokens(access: string, refresh: string) {
     accessToken.value = access
-    localStorage.setItem('accessToken', access)
-    localStorage.setItem('refreshToken', refresh)
+    sessionStorage.setItem('accessToken', access)
+    sessionStorage.setItem('refreshToken', refresh)
   }
 
   function clearTokens() {
     accessToken.value = null
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+    sessionStorage.removeItem('accessToken')
+    sessionStorage.removeItem('refreshToken')
   }
 
   return {

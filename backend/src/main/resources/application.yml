@@ -88,6 +88,8 @@ monteweb:
     secret: ${JWT_SECRET}
     access-token-expiration: 15m
     refresh-token-expiration: 7d
+  encryption:
+    secret: ${ENCRYPTION_SECRET:}
   cors:
     allowed-origins: ${FRONTEND_URL:http://localhost:5173}
   storage:

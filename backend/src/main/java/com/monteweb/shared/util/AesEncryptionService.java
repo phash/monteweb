@@ -23,9 +23,23 @@ public class AesEncryptionService {
 
     private final SecretKey secretKey;
 
-    public AesEncryptionService(@Value("${monteweb.jwt.secret}") String jwtSecret) {
+    public AesEncryptionService(
+            @Value("${monteweb.encryption.secret:}") String encryptionSecret,
+            @Value("${monteweb.jwt.secret}") String jwtSecret) {
         try {
-            byte[] keyBytes = MessageDigest.getInstance("SHA-256").digest(jwtSecret.getBytes());
+            // Use dedicated encryption secret; fall back to JWT secret for backward compatibility.
+            // Log a warning when falling back so operators know to set ENCRYPTION_SECRET.
+            String keySource;
+            if (encryptionSecret != null && encryptionSecret.length() >= 32) {
+                keySource = encryptionSecret;
+            } else {
+                org.slf4j.LoggerFactory.getLogger(AesEncryptionService.class)
+                        .warn("SECURITY: monteweb.encryption.secret is not set or too short (<32 chars). " +
+                              "Falling back to JWT secret for AES key derivation. " +
+                              "Set ENCRYPTION_SECRET to a separate 64-char+ secret.");
+                keySource = jwtSecret;
+            }
+            byte[] keyBytes = MessageDigest.getInstance("SHA-256").digest(keySource.getBytes());
             this.secretKey = new SecretKeySpec(keyBytes, "AES");
         } catch (Exception e) {
             throw new IllegalStateException("Failed to initialize AES encryption key", e);

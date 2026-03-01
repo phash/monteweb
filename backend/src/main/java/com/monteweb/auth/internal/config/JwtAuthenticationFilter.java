@@ -3,6 +3,7 @@ package com.monteweb.auth.internal.config;
 import com.monteweb.auth.internal.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -81,11 +82,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String extractToken(HttpServletRequest request) {
+        // 1. Authorization header (preferred for API clients)
         String header = request.getHeader("Authorization");
         if (StringUtils.hasText(header) && header.startsWith("Bearer ")) {
             return header.substring(7);
         }
-        // Allow token via query parameter for image endpoints (img tags can't send headers)
+        // 2. httpOnly access_token cookie (set by login/refresh endpoints)
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("access_token".equals(cookie.getName()) && StringUtils.hasText(cookie.getValue())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        // 3. Query parameter for image endpoints (img tags can't send headers)
         if (isImageEndpoint(request)) {
             String queryToken = request.getParameter("token");
             if (StringUtils.hasText(queryToken)) {

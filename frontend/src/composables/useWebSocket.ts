@@ -26,13 +26,13 @@ export function useWebSocket() {
       heartbeatOutgoing: 10000,
       debug: () => {},
       connectHeaders: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
+        Authorization: `Bearer ${sessionStorage.getItem('accessToken') || ''}`,
       },
       beforeConnect: () => {
         // Update token before each (re)connect attempt
         if (stompClient) {
           stompClient.connectHeaders = {
-            Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`,
+            Authorization: `Bearer ${sessionStorage.getItem('accessToken') || ''}`,
           }
         }
       },

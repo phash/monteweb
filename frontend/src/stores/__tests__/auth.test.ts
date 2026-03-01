@@ -78,24 +78,24 @@ describe('Auth Store', () => {
 
     expect(auth.isAuthenticated).toBe(true)
     expect(auth.user?.email).toBe('test@example.com')
-    expect(localStorage.getItem('accessToken')).toBe('test-access-token')
-    expect(localStorage.getItem('refreshToken')).toBe('test-refresh-token')
+    expect(sessionStorage.getItem('accessToken')).toBe('test-access-token')
+    expect(sessionStorage.getItem('refreshToken')).toBe('test-refresh-token')
   })
 
   it('should clear state on logout', async () => {
     const auth = useAuthStore()
 
     // Set up initial authenticated state
-    localStorage.setItem('accessToken', 'token')
-    localStorage.setItem('refreshToken', 'refresh')
+    sessionStorage.setItem('accessToken', 'token')
+    sessionStorage.setItem('refreshToken', 'refresh')
 
     vi.mocked(authApi.logout).mockResolvedValue({} as any)
 
     await auth.logout()
 
     expect(auth.user).toBeNull()
-    expect(localStorage.getItem('accessToken')).toBeNull()
-    expect(localStorage.getItem('refreshToken')).toBeNull()
+    expect(sessionStorage.getItem('accessToken')).toBeNull()
+    expect(sessionStorage.getItem('refreshToken')).toBeNull()
   })
 
   it('should detect admin role', async () => {

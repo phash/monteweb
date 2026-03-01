@@ -12,4 +12,7 @@ public interface NotificationModuleApi {
                           String link, String referenceType, UUID referenceId);
 
     long getUnreadCount(UUID userId);
+
+    /** DSGVO: Delete notifications older than the given cutoff. Returns deleted count. */
+    int deleteOlderThan(java.time.Instant cutoff);
 }

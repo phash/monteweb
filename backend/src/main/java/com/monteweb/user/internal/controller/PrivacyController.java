@@ -9,6 +9,7 @@ import com.monteweb.user.internal.model.TermsAcceptance;
 import com.monteweb.user.internal.repository.ConsentRecordRepository;
 import com.monteweb.user.internal.repository.TermsAcceptanceRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -129,6 +130,17 @@ public class PrivacyController {
 
         if (consentType == null || granted == null) {
             return ResponseEntity.badRequest().body(ApiResponse.error("consentType and granted are required"));
+        }
+
+        // Block students from setting their own consent — requires parent/guardian
+        if (targetUserId.equals(userId)) {
+            boolean isStudent = SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_STUDENT"));
+            if (isStudent) {
+                return ResponseEntity.status(403).body(ApiResponse.error(
+                        "Students cannot update their own consent. This must be done by a parent or guardian."));
+            }
         }
 
         // Revoke existing active consent of this type if it exists

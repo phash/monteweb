@@ -121,6 +121,19 @@ public class UserController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserInfo>> getUserById(@PathVariable UUID id) {
+        UUID currentUserId = SecurityUtils.requireCurrentUserId();
+        // Self-access always allowed; TEACHER+ always allowed.
+        // Others (PARENT, STUDENT) only when directory is not restricted to admins.
+        if (!id.equals(currentUserId)) {
+            boolean isElevated = SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN")
+                            || a.getAuthority().equals("ROLE_SECTION_ADMIN")
+                            || a.getAuthority().equals("ROLE_TEACHER"));
+            if (!isElevated && adminModuleApi.isModuleEnabled("directoryAdminOnly")) {
+                return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
+            }
+        }
         var user = userService.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User", id));
         return ResponseEntity.ok(ApiResponse.ok(user));

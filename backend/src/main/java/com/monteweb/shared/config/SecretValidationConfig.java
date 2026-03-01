@@ -45,6 +45,9 @@ public class SecretValidationConfig {
     @Value("${monteweb.cleaning.qr-secret:monteweb-cleaning-qr-default-secret}")
     private String qrSecret;
 
+    @Value("${monteweb.encryption.secret:}")
+    private String encryptionSecret;
+
     @EventListener(ApplicationReadyEvent.class)
     public void validateSecrets() {
         int problems = 0;
@@ -74,6 +77,17 @@ public class SecretValidationConfig {
 
         if (qrSecret.isBlank() || "monteweb-cleaning-qr-default-secret".equals(qrSecret)) {
             log.error("SECURITY: monteweb.cleaning.qr-secret is not set or uses the insecure default value!");
+            problems++;
+        }
+
+        if (encryptionSecret.isBlank()) {
+            log.warn("SECURITY: ENCRYPTION_SECRET is not set. AES key falls back to JWT_SECRET — set a separate ENCRYPTION_SECRET (64+ chars).");
+            problems++;
+        } else if (encryptionSecret.length() < 64) {
+            log.warn("SECURITY: ENCRYPTION_SECRET is too short ({} chars). Use at least 64 characters.", encryptionSecret.length());
+            problems++;
+        } else if (encryptionSecret.equals(jwtSecret)) {
+            log.error("SECURITY: ENCRYPTION_SECRET must differ from JWT_SECRET.");
             problems++;
         }
 

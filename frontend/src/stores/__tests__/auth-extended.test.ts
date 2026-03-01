@@ -51,8 +51,8 @@ describe('Auth Store - Extended', () => {
       expect(result).toBe('PENDING_APPROVAL')
       expect(auth.isAuthenticated).toBe(false)
       expect(auth.user).toBeNull()
-      expect(localStorage.getItem('accessToken')).toBeNull()
-      expect(localStorage.getItem('refreshToken')).toBeNull()
+      expect(sessionStorage.getItem('accessToken')).toBeNull()
+      expect(sessionStorage.getItem('refreshToken')).toBeNull()
     })
 
     it('should set loading during registration', async () => {
@@ -84,7 +84,7 @@ describe('Auth Store - Extended', () => {
 
     it('should clear tokens on fetch failure', async () => {
       setActivePinia(createPinia())
-      localStorage.setItem('accessToken', 'expired-token')
+      sessionStorage.setItem('accessToken', 'expired-token')
       const auth = useAuthStore()
 
       vi.mocked(usersApi.getMe).mockRejectedValue(new Error('401'))
@@ -96,7 +96,7 @@ describe('Auth Store - Extended', () => {
 
     it('should set user on successful fetch', async () => {
       setActivePinia(createPinia())
-      localStorage.setItem('accessToken', 'valid-token')
+      sessionStorage.setItem('accessToken', 'valid-token')
       const auth = useAuthStore()
 
       vi.mocked(usersApi.getMe).mockResolvedValue({
@@ -193,8 +193,8 @@ describe('Auth Store - Extended', () => {
   describe('logout error handling', () => {
     it('should clear state even if logout API fails', async () => {
       const auth = useAuthStore()
-      localStorage.setItem('accessToken', 'token')
-      localStorage.setItem('refreshToken', 'refresh')
+      sessionStorage.setItem('accessToken', 'token')
+      sessionStorage.setItem('refreshToken', 'refresh')
 
       vi.mocked(authApi.logout).mockRejectedValue(new Error('Network error'))
 
@@ -205,8 +205,8 @@ describe('Auth Store - Extended', () => {
       }
 
       expect(auth.user).toBeNull()
-      expect(localStorage.getItem('accessToken')).toBeNull()
-      expect(localStorage.getItem('refreshToken')).toBeNull()
+      expect(sessionStorage.getItem('accessToken')).toBeNull()
+      expect(sessionStorage.getItem('refreshToken')).toBeNull()
     })
   })
 

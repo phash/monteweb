@@ -42,13 +42,14 @@ describe('useDarkMode', () => {
   afterEach(() => {
     document.documentElement.classList.remove('dark')
     localStorage.clear()
+    sessionStorage.clear()
   })
 
   function setupAuth(darkMode = 'SYSTEM') {
-    // accessToken must be in localStorage BEFORE creating the store
+    // accessToken must be in sessionStorage BEFORE creating the store
     // because isAuthenticated = computed(() => !!accessToken.value)
-    // and accessToken reads from localStorage on init
-    localStorage.setItem('accessToken', 'test-token')
+    // and accessToken reads from sessionStorage on init
+    sessionStorage.setItem('accessToken', 'test-token')
 
     // Re-create pinia so the store initializes with the token
     const pinia = createPinia()

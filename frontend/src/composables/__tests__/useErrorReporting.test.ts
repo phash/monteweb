@@ -36,15 +36,17 @@ describe('useErrorReporting - reportError', () => {
     }))
   })
 
-  it('should include userAgent and requestUrl', async () => {
+  it('should include requestUrl (pathname only, no userAgent)', async () => {
     const { reportError: freshReportError } = await import('@/composables/useErrorReporting')
 
     freshReportError({ source: 'AnotherView', message: 'Another error' })
 
     await new Promise((r) => setTimeout(r, 0))
     expect(axios.post).toHaveBeenCalledWith('/api/v1/error-reports', expect.objectContaining({
-      userAgent: expect.any(String),
       requestUrl: expect.any(String),
+    }))
+    expect(axios.post).not.toHaveBeenCalledWith('/api/v1/error-reports', expect.objectContaining({
+      userAgent: expect.anything(),
     }))
   })
 

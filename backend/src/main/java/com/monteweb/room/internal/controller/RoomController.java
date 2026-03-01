@@ -381,7 +381,14 @@ public class RoomController {
                             userOpt.map(UserInfo::displayName).orElse("Unknown"),
                             userOpt.map(UserInfo::avatarUrl).orElse(null),
                             roleOpt.orElse(RoomRole.MEMBER),
-                            userOpt.map(u -> u.role() != null ? u.role().name() : null).orElse(null),
+                            userOpt.map(u -> {
+                                if (u.role() == null) return null;
+                                // Only expose roles relevant for room display (teacher/student)
+                                return switch (u.role()) {
+                                    case TEACHER, STUDENT -> u.role().name();
+                                    default -> null;
+                                };
+                            }).orElse(null),
                             null,
                             familyId,
                             familyName

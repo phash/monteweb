@@ -26,10 +26,10 @@ export function reportError(error: {
   setTimeout(() => recentFingerprints.delete(fp), 30000)
 
   // Fire-and-forget, using raw axios to avoid interceptor loops
+  // Only send pathname (no query params/hash) to avoid leaking PD in URLs
   axios.post(ERROR_REPORT_URL, {
     ...error,
-    userAgent: navigator.userAgent,
-    requestUrl: window.location.href,
+    requestUrl: window.location.pathname,
   }).catch(() => {
     // Silently ignore - don't let error reporting cause more errors
   })

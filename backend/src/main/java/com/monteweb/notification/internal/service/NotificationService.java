@@ -65,6 +65,12 @@ public class NotificationService implements NotificationModuleApi {
         return repository.countByUserIdAndReadFalse(userId);
     }
 
+    @Override
+    @Transactional
+    public int deleteOlderThan(java.time.Instant cutoff) {
+        return repository.deleteByCreatedAtBefore(cutoff);
+    }
+
     public Page<NotificationInfo> findByUser(UUID userId, Pageable pageable) {
         return repository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(this::toInfo);
