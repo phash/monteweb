@@ -79,7 +79,7 @@ describe('Auth Store', () => {
     expect(auth.isAuthenticated).toBe(true)
     expect(auth.user?.email).toBe('test@example.com')
     expect(sessionStorage.getItem('accessToken')).toBe('test-access-token')
-    expect(sessionStorage.getItem('refreshToken')).toBe('test-refresh-token')
+    // refreshToken stored only in httpOnly cookie, not sessionStorage
   })
 
   it('should clear state on logout', async () => {
@@ -87,7 +87,6 @@ describe('Auth Store', () => {
 
     // Set up initial authenticated state
     sessionStorage.setItem('accessToken', 'token')
-    sessionStorage.setItem('refreshToken', 'refresh')
 
     vi.mocked(authApi.logout).mockResolvedValue({} as any)
 
@@ -95,7 +94,6 @@ describe('Auth Store', () => {
 
     expect(auth.user).toBeNull()
     expect(sessionStorage.getItem('accessToken')).toBeNull()
-    expect(sessionStorage.getItem('refreshToken')).toBeNull()
   })
 
   it('should detect admin role', async () => {

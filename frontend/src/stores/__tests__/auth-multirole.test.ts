@@ -129,7 +129,7 @@ describe('Auth Store - Multi-Role', () => {
 
       expect(usersApi.switchActiveRole).toHaveBeenCalledWith('PARENT')
       expect(sessionStorage.getItem('accessToken')).toBe('new-access-token')
-      expect(sessionStorage.getItem('refreshToken')).toBe('new-refresh-token')
+      // refreshToken stored only in httpOnly cookie, not sessionStorage
     })
 
     it('should update user role in state after switch', async () => {

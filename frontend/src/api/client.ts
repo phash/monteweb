@@ -56,24 +56,20 @@ client.interceptors.response.use(
       isRefreshing = true
 
       try {
-        // Refresh token is sent via httpOnly cookie automatically (withCredentials: true).
-        // Also send body token as fallback for clients without cookie support.
-        const refreshToken = sessionStorage.getItem('refreshToken')
+        // Refresh token is stored only in httpOnly cookie — sent automatically via withCredentials.
         const response = await axios.post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
           '/api/v1/auth/refresh',
-          refreshToken ? { refreshToken } : {},
+          {},
           { withCredentials: true }
         )
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data
+        const { accessToken } = response.data.data
         sessionStorage.setItem('accessToken', accessToken)
-        sessionStorage.setItem('refreshToken', newRefreshToken)
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return client(originalRequest)
       } catch (refreshError) {
         processQueue(refreshError, null)
         sessionStorage.removeItem('accessToken')
-        sessionStorage.removeItem('refreshToken')
         if (!window.location.pathname.startsWith('/login')) {
           window.location.href = '/login'
         }

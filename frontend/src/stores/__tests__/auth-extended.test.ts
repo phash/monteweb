@@ -52,7 +52,7 @@ describe('Auth Store - Extended', () => {
       expect(auth.isAuthenticated).toBe(false)
       expect(auth.user).toBeNull()
       expect(sessionStorage.getItem('accessToken')).toBeNull()
-      expect(sessionStorage.getItem('refreshToken')).toBeNull()
+      // refreshToken stored only in httpOnly cookie, not sessionStorage
     })
 
     it('should set loading during registration', async () => {
@@ -194,7 +194,7 @@ describe('Auth Store - Extended', () => {
     it('should clear state even if logout API fails', async () => {
       const auth = useAuthStore()
       sessionStorage.setItem('accessToken', 'token')
-      sessionStorage.setItem('refreshToken', 'refresh')
+
 
       vi.mocked(authApi.logout).mockRejectedValue(new Error('Network error'))
 
@@ -206,7 +206,7 @@ describe('Auth Store - Extended', () => {
 
       expect(auth.user).toBeNull()
       expect(sessionStorage.getItem('accessToken')).toBeNull()
-      expect(sessionStorage.getItem('refreshToken')).toBeNull()
+      // refreshToken stored only in httpOnly cookie, not sessionStorage
     })
   })
 

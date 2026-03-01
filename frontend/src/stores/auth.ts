@@ -97,9 +97,9 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function logout() {
-    const refreshToken = sessionStorage.getItem('refreshToken')
+    // refreshToken is in httpOnly cookie — backend reads it automatically via withCredentials
     try {
-      await authApi.logout(refreshToken)
+      await authApi.logout(null)
     } finally {
       const { disconnect } = useWebSocket()
       disconnect()
@@ -142,13 +142,13 @@ export const useAuthStore = defineStore('auth', () => {
   function setTokens(access: string, refresh: string) {
     accessToken.value = access
     sessionStorage.setItem('accessToken', access)
-    sessionStorage.setItem('refreshToken', refresh)
+    // refreshToken is stored only in httpOnly cookie (set by backend) — not in sessionStorage
+    void refresh
   }
 
   function clearTokens() {
     accessToken.value = null
     sessionStorage.removeItem('accessToken')
-    sessionStorage.removeItem('refreshToken')
   }
 
   return {
