@@ -26,6 +26,7 @@ public record RoomDetailResponse(
             String displayName,
             String avatarUrl,
             RoomRole role,
+            String userRole,
             Instant joinedAt,
             UUID familyId,
             String familyName

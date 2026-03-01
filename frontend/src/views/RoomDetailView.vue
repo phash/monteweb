@@ -143,6 +143,17 @@ const otherMembers = computed(() => {
   return rooms.currentRoom.members.filter(m => m.role !== 'LEADER' && !m.familyId)
 })
 
+// KLASSE-specific grouping: teachers (by userRole) and students (by userRole)
+const klasseTeachers = computed(() => {
+  if (!rooms.currentRoom?.members) return []
+  return rooms.currentRoom.members.filter(m => m.userRole === 'TEACHER')
+})
+
+const klasseStudents = computed(() => {
+  if (!rooms.currentRoom?.members) return []
+  return rooms.currentRoom.members.filter(m => m.userRole === 'STUDENT')
+})
+
 async function loadRoom() {
   activeTab.value = '0'
   roomPosts.value = []
@@ -647,49 +658,13 @@ async function toggleMute() {
             </div>
 
             <div v-if="rooms.currentRoom.members?.length" class="members-grouped">
-              <!-- Teachers / Leaders -->
-              <div v-if="leaderMembers.length" class="member-group">
-                <h3 class="member-group-title">{{ t('rooms.teachers') }}</h3>
-                <div class="members-list">
-                  <div v-for="member in leaderMembers" :key="member.userId" class="member-item">
-                    <div class="member-avatar">
-                      <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
-                      <i v-else class="pi pi-user" />
-                    </div>
-                    <span class="member-name">{{ member.displayName }}</span>
-                    <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
-                      <Select
-                        :modelValue="member.role"
-                        :options="roomRoleOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        size="small"
-                        class="role-select"
-                        @update:modelValue="changeMemberRole(member.userId, $event)"
-                      />
-                      <Button
-                        icon="pi pi-times"
-                        text rounded
-                        severity="danger"
-                        size="small"
-                        @click="removeMemberFromRoom(member.userId)"
-                      />
-                    </div>
-                    <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
-                  </div>
-                </div>
-              </div>
 
-              <!-- Families -->
-              <div v-if="familyGroups.length" class="member-group">
-                <h3 class="member-group-title">{{ t('rooms.families') }}</h3>
-                <div v-for="family in familyGroups" :key="family.familyId" class="family-group">
-                  <div class="family-group-header">
-                    <i class="pi pi-users" />
-                    <span class="family-group-name">{{ family.familyName }}</span>
-                  </div>
+              <!-- KLASSE view: Teachers + Students in 2 sections -->
+              <template v-if="isKlasse">
+                <div v-if="klasseTeachers.length" class="member-group">
+                  <h3 class="member-group-title">{{ t('rooms.teachers') }}</h3>
                   <div class="members-list">
-                    <div v-for="member in family.members" :key="member.userId" class="member-item">
+                    <div v-for="member in klasseTeachers" :key="member.userId" class="member-item">
                       <div class="member-avatar">
                         <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
                         <i v-else class="pi pi-user" />
@@ -717,40 +692,134 @@ async function toggleMute() {
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Other members -->
-              <div v-if="otherMembers.length" class="member-group">
-                <h3 class="member-group-title">{{ t('rooms.otherMembers') }}</h3>
-                <div class="members-list">
-                  <div v-for="member in otherMembers" :key="member.userId" class="member-item">
-                    <div class="member-avatar">
-                      <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
-                      <i v-else class="pi pi-user" />
+                <div v-if="klasseStudents.length" class="member-group">
+                  <h3 class="member-group-title">{{ t('rooms.students') }}</h3>
+                  <div class="members-list">
+                    <div v-for="member in klasseStudents" :key="member.userId" class="member-item">
+                      <div class="member-avatar">
+                        <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                        <i v-else class="pi pi-user" />
+                      </div>
+                      <span class="member-name">{{ member.displayName }}</span>
+                      <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                        <Button
+                          icon="pi pi-times"
+                          text rounded
+                          severity="danger"
+                          size="small"
+                          @click="removeMemberFromRoom(member.userId)"
+                        />
+                      </div>
                     </div>
-                    <span class="member-name">{{ member.displayName }}</span>
-                    <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
-                      <Select
-                        :modelValue="member.role"
-                        :options="roomRoleOptions"
-                        optionLabel="label"
-                        optionValue="value"
-                        size="small"
-                        class="role-select"
-                        @update:modelValue="changeMemberRole(member.userId, $event)"
-                      />
-                      <Button
-                        icon="pi pi-times"
-                        text rounded
-                        severity="danger"
-                        size="small"
-                        @click="removeMemberFromRoom(member.userId)"
-                      />
-                    </div>
-                    <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
                   </div>
                 </div>
-              </div>
+              </template>
+
+              <!-- Default view (non-KLASSE): Leaders + Families + Others -->
+              <template v-else>
+                <div v-if="leaderMembers.length" class="member-group">
+                  <h3 class="member-group-title">{{ t('rooms.teachers') }}</h3>
+                  <div class="members-list">
+                    <div v-for="member in leaderMembers" :key="member.userId" class="member-item">
+                      <div class="member-avatar">
+                        <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                        <i v-else class="pi pi-user" />
+                      </div>
+                      <span class="member-name">{{ member.displayName }}</span>
+                      <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                        <Select
+                          :modelValue="member.role"
+                          :options="roomRoleOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          size="small"
+                          class="role-select"
+                          @update:modelValue="changeMemberRole(member.userId, $event)"
+                        />
+                        <Button
+                          icon="pi pi-times"
+                          text rounded
+                          severity="danger"
+                          size="small"
+                          @click="removeMemberFromRoom(member.userId)"
+                        />
+                      </div>
+                      <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="familyGroups.length" class="member-group">
+                  <h3 class="member-group-title">{{ t('rooms.families') }}</h3>
+                  <div v-for="family in familyGroups" :key="family.familyId" class="family-group">
+                    <div class="family-group-header">
+                      <i class="pi pi-users" />
+                      <span class="family-group-name">{{ family.familyName }}</span>
+                    </div>
+                    <div class="members-list">
+                      <div v-for="member in family.members" :key="member.userId" class="member-item">
+                        <div class="member-avatar">
+                          <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                          <i v-else class="pi pi-user" />
+                        </div>
+                        <span class="member-name">{{ member.displayName }}</span>
+                        <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                          <Select
+                            :modelValue="member.role"
+                            :options="roomRoleOptions"
+                            optionLabel="label"
+                            optionValue="value"
+                            size="small"
+                            class="role-select"
+                            @update:modelValue="changeMemberRole(member.userId, $event)"
+                          />
+                          <Button
+                            icon="pi pi-times"
+                            text rounded
+                            severity="danger"
+                            size="small"
+                            @click="removeMemberFromRoom(member.userId)"
+                          />
+                        </div>
+                        <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="otherMembers.length" class="member-group">
+                  <h3 class="member-group-title">{{ t('rooms.otherMembers') }}</h3>
+                  <div class="members-list">
+                    <div v-for="member in otherMembers" :key="member.userId" class="member-item">
+                      <div class="member-avatar">
+                        <img v-if="member.avatarUrl" :src="member.avatarUrl" alt="" class="member-avatar-img" />
+                        <i v-else class="pi pi-user" />
+                      </div>
+                      <span class="member-name">{{ member.displayName }}</span>
+                      <div v-if="canEditRoom && member.userId !== auth.user?.id" class="member-controls">
+                        <Select
+                          :modelValue="member.role"
+                          :options="roomRoleOptions"
+                          optionLabel="label"
+                          optionValue="value"
+                          size="small"
+                          class="role-select"
+                          @update:modelValue="changeMemberRole(member.userId, $event)"
+                        />
+                        <Button
+                          icon="pi pi-times"
+                          text rounded
+                          severity="danger"
+                          size="small"
+                          @click="removeMemberFromRoom(member.userId)"
+                        />
+                      </div>
+                      <Tag v-else :value="t(`rooms.roles.${member.role}`)" severity="secondary" size="small" />
+                    </div>
+                  </div>
+                </div>
+              </template>
             </div>
             <p v-else class="text-muted">{{ t('rooms.noMembers') }}</p>
           </TabPanel>

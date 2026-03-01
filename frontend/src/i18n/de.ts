@@ -136,6 +136,7 @@ export default {
       GUEST: 'Gast',
     },
     teachers: 'Lehrkr\u00e4fte',
+    students: 'Schüler',
     families: 'Familien',
     otherMembers: 'Weitere Mitglieder',
     closedRooms: 'Weitere R\u00e4ume',

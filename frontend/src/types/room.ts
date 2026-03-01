@@ -54,6 +54,7 @@ export interface RoomMember {
   displayName: string
   avatarUrl: string | null
   role: RoomRole
+  userRole?: string
   joinedAt: string
   familyId?: string
   familyName?: string

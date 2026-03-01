@@ -381,6 +381,7 @@ public class RoomController {
                             userOpt.map(UserInfo::displayName).orElse("Unknown"),
                             userOpt.map(UserInfo::avatarUrl).orElse(null),
                             roleOpt.orElse(RoomRole.MEMBER),
+                            userOpt.map(u -> u.role() != null ? u.role().name() : null).orElse(null),
                             null,
                             familyId,
                             familyName
