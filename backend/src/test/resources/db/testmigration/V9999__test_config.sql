@@ -12,6 +12,10 @@ UPDATE tenant_config SET student_to_student_messaging = true;
 UPDATE users SET password_hash = '$2a$10$dQa6248nzH.S5yYnSpGfr.b7BnuGroDZ/G18yp.vzoAx45FQ7hecO'
 WHERE email = 'admin@monteweb.local';
 
+-- Disable terms acceptance enforcement so new test users are not blocked by
+-- TermsAcceptanceFilter (integration tests create fresh users who haven't accepted)
+UPDATE tenant_config SET terms_version = NULL;
+
 -- Create a family for eltern@monteweb.local so jobboard apply tests work
 -- (JobboardService.applyForJob requires user to belong to a family)
 INSERT INTO families (id, name) VALUES ('00000000-0000-0000-0000-ffffffffffff', 'Familie Elterlich');
