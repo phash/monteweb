@@ -22,10 +22,29 @@
         <spring-modulith.version>2.0.3</spring-modulith.version>
         <jjwt.version>0.13.0</jjwt.version>
         <testcontainers.version>2.0.3</testcontainers.version>
+        <!-- Upgrade Jackson 3.x BOM to fix GHSA-72hv-8253-57qq (Number Length Constraint Bypass) -->
+        <jackson-bom.version>3.1.0</jackson-bom.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Pin com.fasterxml.jackson.core 2.x to fix GHSA-72hv-8253-57qq
+                 (transitive dependency from jjwt-jackson; 2.21.1 is the fix version) -->
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>2.21.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.21.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>2.21</version>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.modulith</groupId>
                 <artifactId>spring-modulith-bom</artifactId>
