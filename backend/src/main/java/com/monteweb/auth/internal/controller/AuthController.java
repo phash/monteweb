@@ -58,7 +58,7 @@ public class AuthController {
         String refreshToken = cookieRefreshToken != null ? cookieRefreshToken
                 : (request != null ? request.refreshToken() : null);
         if (refreshToken == null || refreshToken.isBlank()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("No refresh token provided"));
         }
         var response = authService.refresh(new RefreshTokenRequest(refreshToken));
