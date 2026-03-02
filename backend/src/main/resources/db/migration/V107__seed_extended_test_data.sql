@@ -20,154 +20,88 @@ DECLARE
         'schueler@monteweb.local',
         'sectionadmin@monteweb.local'
     ];
+    seed_user_ids UUID[];
 BEGIN
-    -- 1. Delete feed post comments by seed users
-    DELETE FROM feed_post_comments
-    WHERE author_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 2. Delete feed posts by seed users
-    DELETE FROM feed_posts
-    WHERE author_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 3. Delete job assignments for seed users
-    DELETE FROM job_assignments
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 4. Delete jobs created by seed users
-    DELETE FROM jobs
-    WHERE created_by IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 5. Delete calendar event RSVPs for seed users
-    DELETE FROM calendar_event_rsvps
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 6. Delete calendar events created by seed users
-    DELETE FROM calendar_events
-    WHERE created_by IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 7. Delete cleaning registrations for seed users
-    DELETE FROM cleaning_registrations
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 7b. Delete password reset tokens for seed users (no CASCADE on FK)
-    DELETE FROM password_reset_tokens
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 8. Delete room members, subscriptions, and join requests for seed users
-    DELETE FROM room_members
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-    DELETE FROM room_subscriptions
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-    DELETE FROM room_join_requests
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 9. Delete family members and invitations for seed users
-    DELETE FROM family_invitations
-    WHERE inviter_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    ) OR invitee_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-    DELETE FROM family_members
-    WHERE user_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 10. Delete orphan families (no remaining members)
-    DELETE FROM families
-    WHERE id NOT IN (SELECT DISTINCT family_id FROM family_members);
-
-    -- 11. Delete V040 rooms and related data (by known names)
-    -- Room discussion replies/threads have non-cascading FK to users but CASCADE from rooms
-    -- Room folders/files have non-cascading FK to users but CASCADE from rooms
-    DELETE FROM rooms
-    WHERE name IN (
-        'Sonnengruppe', 'Sternengruppe',
-        'Erdkinder 1-3', 'Kosmische Klasse 3-4',
-        'Lernwerkstatt 5-6', 'Forscherklasse 7-8',
-        'Projektklasse 9-10', 'Abiturjahrgang 11-12'
-    );
-
-    -- 12. Delete remaining references with non-cascading FKs to seed users
-    DELETE FROM room_discussion_replies
-    WHERE author_id IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-    DELETE FROM room_discussion_threads
-    WHERE created_by IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-    DELETE FROM room_files
-    WHERE uploaded_by IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-    DELETE FROM room_folders
-    WHERE created_by IN (
-        SELECT id FROM users
-        WHERE email LIKE '%.%@monteweb.local'
-          AND email != ALL(protected_emails)
-    );
-
-    -- 12b. Delete the seed users themselves
-    DELETE FROM users
+    -- Collect all seed user IDs once
+    SELECT array_agg(id) INTO seed_user_ids
+    FROM users
     WHERE email LIKE '%.%@monteweb.local'
       AND email != ALL(protected_emails);
+
+    -- Exit early if no seed users found
+    IF seed_user_ids IS NULL THEN
+        RAISE NOTICE 'No V040 seed users found — skipping cleanup';
+    ELSE
+        -- Delete ALL tables that reference users (comprehensive FK cleanup)
+        DELETE FROM audit_log WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM bookmarks WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM consent_records WHERE user_id = ANY(seed_user_ids) OR granted_by = ANY(seed_user_ids);
+        DELETE FROM data_access_log WHERE accessed_by = ANY(seed_user_ids) OR target_user_id = ANY(seed_user_ids);
+        DELETE FROM error_reports WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM feed_poll_votes WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM feed_reactions WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM feed_post_comments WHERE author_id = ANY(seed_user_ids);
+        DELETE FROM feed_post_attachments WHERE post_id IN (SELECT id FROM feed_posts WHERE author_id = ANY(seed_user_ids));
+        DELETE FROM feed_posts WHERE author_id = ANY(seed_user_ids);
+        DELETE FROM form_response_tracking WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM form_responses WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM forms WHERE created_by = ANY(seed_user_ids);
+        UPDATE billing_periods SET closed_by = NULL WHERE closed_by = ANY(seed_user_ids);
+        DELETE FROM fotobox_images WHERE uploaded_by = ANY(seed_user_ids);
+        DELETE FROM fotobox_threads WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM ical_subscriptions WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM job_assignments WHERE user_id = ANY(seed_user_ids) OR confirmed_by = ANY(seed_user_ids);
+        DELETE FROM job_attachments WHERE uploaded_by = ANY(seed_user_ids);
+        DELETE FROM jobs WHERE created_by = ANY(seed_user_ids) OR approved_by = ANY(seed_user_ids);
+        DELETE FROM calendar_event_rsvps WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM calendar_events WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM cleaning_registrations WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM message_attachments WHERE uploaded_by = ANY(seed_user_ids);
+        DELETE FROM message_images WHERE uploaded_by = ANY(seed_user_ids);
+        DELETE FROM message_poll_votes WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM message_reactions WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM messages WHERE sender_id = ANY(seed_user_ids);
+        DELETE FROM conversation_participants WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM conversations WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM notifications WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM parent_letter_recipients WHERE student_id = ANY(seed_user_ids) OR parent_id = ANY(seed_user_ids) OR confirmed_by = ANY(seed_user_ids);
+        DELETE FROM parent_letter_attachments WHERE uploaded_by = ANY(seed_user_ids);
+        DELETE FROM parent_letters WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM password_reset_tokens WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM profile_field_values WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM push_subscriptions WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM room_discussion_replies WHERE author_id = ANY(seed_user_ids);
+        DELETE FROM room_discussion_threads WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM room_files WHERE uploaded_by = ANY(seed_user_ids);
+        DELETE FROM room_folders WHERE created_by = ANY(seed_user_ids);
+        DELETE FROM room_join_requests WHERE user_id = ANY(seed_user_ids) OR resolved_by = ANY(seed_user_ids);
+        DELETE FROM room_members WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM room_subscriptions WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM tasks WHERE assignee_id = ANY(seed_user_ids) OR created_by = ANY(seed_user_ids);
+        DELETE FROM terms_acceptances WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM wiki_page_versions WHERE edited_by = ANY(seed_user_ids);
+        DELETE FROM wiki_pages WHERE created_by = ANY(seed_user_ids);
+        UPDATE wiki_pages SET last_edited_by = NULL WHERE last_edited_by = ANY(seed_user_ids);
+        DELETE FROM wopi_tokens WHERE user_id = ANY(seed_user_ids);
+        DELETE FROM family_invitations WHERE inviter_id = ANY(seed_user_ids) OR invitee_id = ANY(seed_user_ids);
+        DELETE FROM family_members WHERE user_id = ANY(seed_user_ids);
+
+        -- Delete orphan families (no remaining members)
+        DELETE FROM families WHERE id NOT IN (SELECT DISTINCT family_id FROM family_members);
+
+        -- Delete rooms created by seed users
+        DELETE FROM rooms WHERE created_by = ANY(seed_user_ids);
+        -- Also delete V040 rooms by known names
+        DELETE FROM rooms WHERE name IN (
+            'Sonnengruppe', 'Sternengruppe',
+            'Erdkinder 1-3', 'Kosmische Klasse 3-4',
+            'Lernwerkstatt 5-6', 'Forscherklasse 7-8',
+            'Projektklasse 9-10', 'Abiturjahrgang 11-12'
+        );
+
+        -- Delete the seed users themselves
+        DELETE FROM users WHERE id = ANY(seed_user_ids);
+    END IF;
 
     -- 13. Delete cleaning slots/configs referencing V040 sections (FK no CASCADE)
     DELETE FROM cleaning_registrations
