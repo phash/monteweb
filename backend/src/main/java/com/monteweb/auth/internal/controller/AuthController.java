@@ -4,6 +4,7 @@ import com.monteweb.auth.internal.dto.*;
 import com.monteweb.auth.internal.service.AuthService;
 import com.monteweb.auth.internal.service.PasswordResetService;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,6 +12,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -129,6 +131,34 @@ public class AuthController {
         var userId = SecurityUtils.requireCurrentUserId();
         boolean enabled = authService.is2faEnabled(userId);
         return ResponseEntity.ok(ApiResponse.ok(java.util.Map.of("enabled", enabled)));
+    }
+
+    // --- Impersonation ---
+
+    @PostMapping("/impersonate")
+    @PreAuthorize("hasRole('SUPERADMIN')")
+    public ResponseEntity<ApiResponse<LoginResponse>> impersonate(
+            @Valid @RequestBody ImpersonateRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        java.util.UUID adminId = SecurityUtils.requireCurrentUserId();
+        var response = authService.startImpersonation(adminId, request.targetUserId());
+        setAuthCookies(httpResponse, response.accessToken(), response.refreshToken(), httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PostMapping("/stop-impersonation")
+    public ResponseEntity<ApiResponse<LoginResponse>> stopImpersonation(
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        String impersonatedBy = (String) httpRequest.getAttribute("impersonatedBy");
+        if (impersonatedBy == null) {
+            throw new BadRequestException("Not currently impersonating");
+        }
+        java.util.UUID adminId = java.util.UUID.fromString(impersonatedBy);
+        var response = authService.stopImpersonation(adminId);
+        setAuthCookies(httpResponse, response.accessToken(), response.refreshToken(), httpRequest);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     // --- Cookie helpers ---

@@ -45,6 +45,21 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateImpersonationToken(UUID targetUserId, String targetEmail, String targetRole, UUID adminUserId) {
+        Instant now = Instant.now();
+        return Jwts.builder()
+                .subject(targetUserId.toString())
+                .claims(Map.of(
+                        "email", targetEmail,
+                        "role", targetRole,
+                        "impersonatedBy", adminUserId.toString()
+                ))
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(accessTokenExpiration)))
+                .signWith(key)
+                .compact();
+    }
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser().verifyWith(key).build().parseSignedClaims(token);

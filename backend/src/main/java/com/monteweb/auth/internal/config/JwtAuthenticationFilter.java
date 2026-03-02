@@ -79,6 +79,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         );
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        String impersonatedBy = claims.get("impersonatedBy", String.class);
+        if (impersonatedBy != null) {
+            request.setAttribute("impersonatedBy", impersonatedBy);
+        }
     }
 
     private String extractToken(HttpServletRequest request) {

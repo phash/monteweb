@@ -5,7 +5,10 @@ import com.monteweb.auth.AuthModuleApi;
 import com.monteweb.auth.TokenClaims;
 import com.monteweb.auth.TokenResponse;
 import com.monteweb.auth.internal.dto.*;
+import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.BusinessException;
+import com.monteweb.shared.exception.ForbiddenException;
+import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
@@ -306,6 +309,52 @@ public class AuthService implements AuthModuleApi {
      */
     public boolean is2faEnabled(java.util.UUID userId) {
         return userModuleApi.isTotpEnabled(userId);
+    }
+
+    public LoginResponse startImpersonation(java.util.UUID adminUserId, java.util.UUID targetUserId) {
+        // 1. Verify admin exists and is SUPERADMIN
+        var admin = userModuleApi.findById(adminUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (admin.role() != UserRole.SUPERADMIN) {
+            throw new ForbiddenException("Only SUPERADMIN can impersonate");
+        }
+
+        // 2. Check impersonation module is enabled
+        if (!adminModuleApi.isModuleEnabled("impersonation")) {
+            throw new ForbiddenException("Impersonation module is disabled");
+        }
+
+        // 3. Load target user
+        var target = userModuleApi.findById(targetUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Target user not found"));
+
+        // 4. Cannot impersonate another SUPERADMIN
+        if (target.role() == UserRole.SUPERADMIN) {
+            throw new BadRequestException("Cannot impersonate a SUPERADMIN");
+        }
+
+        // 5. Generate impersonation token (access token with impersonatedBy claim)
+        String accessToken = jwtService.generateImpersonationToken(
+                targetUserId, target.email(), target.role().name(), adminUserId);
+        String refreshToken = refreshTokenService.createRefreshToken(adminUserId);
+
+        // 6. Audit log
+        log.info("IMPERSONATION_START: Admin {} impersonating user {} ({})",
+                adminUserId, target.email(), targetUserId);
+
+        return new LoginResponse(accessToken, refreshToken, target.id(), target.email(), target.role().name());
+    }
+
+    public LoginResponse stopImpersonation(java.util.UUID adminUserId) {
+        var admin = userModuleApi.findById(adminUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin user not found"));
+
+        log.info("IMPERSONATION_STOP: Admin {} returning to own session", adminUserId);
+
+        return new LoginResponse(
+                jwtService.generateAccessToken(adminUserId, admin.email(), admin.role().name()),
+                refreshTokenService.createRefreshToken(adminUserId),
+                admin.id(), admin.email(), admin.role().name());
     }
 
     private LoginResponse generateTokenResponse(UserInfo user) {
