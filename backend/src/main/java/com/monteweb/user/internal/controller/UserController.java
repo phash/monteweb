@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -107,7 +108,7 @@ public class UserController {
                 .getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"))) {
             return ResponseEntity.status(403).body(ApiResponse.error("Directory access restricted to admins"));
         }
-        var page = userService.findDirectory(UserRole.fromStringOrNull(role), sectionId, roomId, q, pageable);
+        var page = userService.findDirectory(UserRole.fromStringOrNull(role), sectionId, roomId, q, pageable, getCallerRole());
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
@@ -115,7 +116,7 @@ public class UserController {
     public ResponseEntity<ApiResponse<PageResponse<UserInfo>>> searchUsers(
             @RequestParam(defaultValue = "") String q,
             @PageableDefault(size = 20) Pageable pageable) {
-        var page = userService.searchUsers(q, pageable);
+        var page = userService.searchUsers(q, pageable, getCallerRole());
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(page)));
     }
 
@@ -134,8 +135,9 @@ public class UserController {
                 return ResponseEntity.status(403).body(ApiResponse.error("Access denied"));
             }
         }
-        var user = userService.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User", id));
+        var user = id.equals(currentUserId)
+                ? userService.findById(id).orElseThrow(() -> new ResourceNotFoundException("User", id))
+                : userService.findById(id, getCallerRole()).orElseThrow(() -> new ResourceNotFoundException("User", id));
         return ResponseEntity.ok(ApiResponse.ok(user));
     }
 
@@ -196,5 +198,16 @@ public class UserController {
         status.put("deletionRequestedAt", user.getDeletionRequestedAt());
         status.put("scheduledDeletionAt", user.getScheduledDeletionAt());
         return ResponseEntity.ok(ApiResponse.ok(status));
+    }
+
+    private UserRole getCallerRole() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) return null;
+        return auth.getAuthorities().stream()
+                .map(a -> a.getAuthority().replace("ROLE_", ""))
+                .map(r -> { try { return UserRole.valueOf(r); } catch (Exception e) { return null; } })
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 }

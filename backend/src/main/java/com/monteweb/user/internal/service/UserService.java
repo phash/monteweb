@@ -95,6 +95,10 @@ public class UserService implements UserModuleApi {
         return userRepository.findById(id).map(this::toUserInfo);
     }
 
+    public Optional<UserInfo> findById(UUID id, UserRole callerRole) {
+        return userRepository.findById(id).map(u -> toUserInfoFiltered(u, callerRole));
+    }
+
     @Override
     public Optional<UserInfo> findByEmail(String email) {
         return userRepository.findByEmail(email).map(this::toUserInfo);
@@ -148,7 +152,14 @@ public class UserService implements UserModuleApi {
         return userRepository.searchByDisplayNameOrEmail(query.trim(), pageable).map(this::toUserInfo);
     }
 
-    public Page<UserInfo> findDirectory(UserRole role, UUID sectionId, UUID roomId, String search, Pageable pageable) {
+    public Page<UserInfo> searchUsers(String query, Pageable pageable, UserRole callerRole) {
+        if (query == null || query.isBlank()) {
+            return userRepository.findByActiveTrue(pageable).map(u -> toUserInfoFiltered(u, callerRole));
+        }
+        return userRepository.searchByDisplayNameOrEmail(query.trim(), pageable).map(u -> toUserInfoFiltered(u, callerRole));
+    }
+
+    public Page<UserInfo> findDirectory(UserRole role, UUID sectionId, UUID roomId, String search, Pageable pageable, UserRole callerRole) {
         List<UUID> userIds = null;
 
         if (roomId != null) {
@@ -169,7 +180,7 @@ public class UserService implements UserModuleApi {
         }
 
         String searchTerm = (search == null || search.isBlank()) ? null : search.trim();
-        return userRepository.findForDirectory(role, userIds, searchTerm, pageable).map(this::toUserInfo);
+        return userRepository.findForDirectory(role, userIds, searchTerm, pageable).map(u -> toUserInfoFiltered(u, callerRole));
     }
 
     public Page<UserInfo> findAll(Pageable pageable) {
@@ -615,6 +626,26 @@ public class UserService implements UserModuleApi {
                 user.getLastName(),
                 user.getDisplayName(),
                 user.getPhone(),
+                user.getAvatarUrl(),
+                user.getRole(),
+                user.getSpecialRolesAsSet(),
+                user.getAssignedRolesAsSet(),
+                user.isActive(),
+                user.getDarkMode()
+        );
+    }
+
+    private UserInfo toUserInfoFiltered(User user, UserRole callerRole) {
+        boolean showContact = callerRole == UserRole.SUPERADMIN
+                || callerRole == UserRole.SECTION_ADMIN
+                || callerRole == UserRole.TEACHER;
+        return new UserInfo(
+                user.getId(),
+                showContact ? user.getEmail() : null,
+                user.getFirstName(),
+                user.getLastName(),
+                user.getDisplayName(),
+                showContact ? user.getPhone() : null,
                 user.getAvatarUrl(),
                 user.getRole(),
                 user.getSpecialRolesAsSet(),
