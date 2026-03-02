@@ -10,6 +10,8 @@ export const useCalendarStore = defineStore('calendar', () => {
   const loading = ref(false)
   const totalEvents = ref(0)
   const hasMore = ref(true)
+  const totalRoomEvents = ref(0)
+  const hasMoreRoom = ref(true)
 
   async function fetchEvents(from: string, to: string, reset = true, page = 0) {
     loading.value = true
@@ -73,12 +75,12 @@ export const useCalendarStore = defineStore('calendar', () => {
     try {
       const res = await calendarApi.getRoomEvents(roomId, from, to, page)
       events.value = res.data.data.content
-      totalEvents.value = res.data.data.totalElements
-      hasMore.value = !res.data.data.last
+      totalRoomEvents.value = res.data.data.totalElements
+      hasMoreRoom.value = !res.data.data.last
     } catch {
       events.value = []
-      totalEvents.value = 0
-      hasMore.value = false
+      totalRoomEvents.value = 0
+      hasMoreRoom.value = false
     } finally {
       loading.value = false
     }
@@ -100,6 +102,8 @@ export const useCalendarStore = defineStore('calendar', () => {
     loading,
     totalEvents,
     hasMore,
+    totalRoomEvents,
+    hasMoreRoom,
     fetchEvents,
     fetchEvent,
     createEvent,

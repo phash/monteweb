@@ -69,7 +69,7 @@ class JobboardServiceHoursTest {
     // ── Helpers ──────────────────────────────────────────────────────
 
     private FamilyInfo makeFamily(boolean hoursExempt) {
-        return new FamilyInfo(FAMILY_ID, "Familie Müller", null, hoursExempt, true, List.of());
+        return new FamilyInfo(FAMILY_ID, "Familie Müller", null, hoursExempt, true, false, false, List.of());
     }
 
     private TenantConfigInfo makeTenantConfig(BigDecimal targetHours, BigDecimal targetCleaningHours) {

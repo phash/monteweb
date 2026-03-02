@@ -30,8 +30,16 @@ export interface RoomSettings {
   childDiscussionEnabled: boolean
 }
 
-export interface RoomDetail extends RoomInfo {
+export interface RoomDetail {
+  id: string
+  name: string
+  description: string | null
+  publicDescription: string | null
+  avatarUrl: string | null
+  type: RoomType
+  sectionId: string | null
   settings: RoomSettings
+  archived: boolean
   createdBy: string | null
   createdAt: string | null
   members: RoomMember[]

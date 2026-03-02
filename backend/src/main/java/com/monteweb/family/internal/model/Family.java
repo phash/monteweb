@@ -39,6 +39,12 @@ public class Family {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
+    @Column(name = "sole_custody")
+    private boolean soleCustody;
+
+    @Column(name = "sole_custody_approved")
+    private boolean soleCustodyApproved;
+
     @OneToMany(mappedBy = "family", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<FamilyMember> members = new ArrayList<>();
 

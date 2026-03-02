@@ -157,10 +157,6 @@ describe('Room Types – Role Concept', () => {
         type: 'KLASSE',
         sectionId: 'sec-1',
         archived: false,
-        memberCount: 20,
-        joinPolicy: 'INVITE_ONLY',
-        expiresAt: null,
-        tags: [],
         settings: {
           chatEnabled: true,
           filesEnabled: true,
@@ -175,7 +171,6 @@ describe('Room Types – Role Concept', () => {
         members: [],
       }
 
-      expect(room.joinPolicy).toBe('INVITE_ONLY')
       expect(room.settings.discussionMode).toBe('FULL')
       expect(room.settings.allowMemberThreadCreation).toBe(true)
       expect(room.settings.childDiscussionEnabled).toBe(true)

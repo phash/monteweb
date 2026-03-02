@@ -13,6 +13,14 @@ export type NotificationType =
   | 'EVENT_CANCELLED'
   | 'FORM_PUBLISHED'
   | 'CONSENT_REQUIRED'
+  | 'ROOM_JOIN_REQUEST'
+  | 'ROOM_JOIN_APPROVED'
+  | 'ROOM_JOIN_DENIED'
+  | 'FAMILY_INVITATION'
+  | 'FAMILY_INVITATION_ACCEPTED'
+  | 'MENTION'
+  | 'PARENT_LETTER'
+  | 'PARENT_LETTER_REMINDER'
 
 export interface NotificationInfo {
   id: string

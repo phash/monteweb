@@ -46,7 +46,7 @@ describe('SystemBanner', () => {
 
   it('should render banners when provided', () => {
     const banners = [
-      { id: 'banner-1', type: 'CLEANING', title: 'Putztermin', message: 'Naechster Putztermin am Freitag', link: null, priority: 1 },
+      { id: 'banner-1', bannerType: 'CLEANING', title: 'Putztermin', content: 'Naechster Putztermin am Freitag', link: null, expiresAt: null },
     ]
     const wrapper = mountComponent({ banners })
 
@@ -58,8 +58,8 @@ describe('SystemBanner', () => {
 
   it('should render multiple banners', () => {
     const banners = [
-      { id: 'banner-1', type: 'CLEANING', title: 'Putztermin', message: 'Freitag putzen', link: null, priority: 1 },
-      { id: 'banner-2', type: 'INFO', title: 'Schulinfo', message: 'Elternabend naechste Woche', link: '/calendar', priority: 2 },
+      { id: 'banner-1', bannerType: 'CLEANING', title: 'Putztermin', content: 'Freitag putzen', link: null, expiresAt: null },
+      { id: 'banner-2', bannerType: 'INFO', title: 'Schulinfo', content: 'Elternabend naechste Woche', link: '/calendar', expiresAt: null },
     ]
     const wrapper = mountComponent({ banners })
 
@@ -70,7 +70,7 @@ describe('SystemBanner', () => {
 
   it('should navigate when a banner with link is clicked', async () => {
     const banners = [
-      { id: 'banner-1', type: 'INFO', title: 'Link Banner', message: 'Klicke hier', link: '/calendar', priority: 1 },
+      { id: 'banner-1', bannerType: 'INFO', title: 'Link Banner', content: 'Klicke hier', link: '/calendar', expiresAt: null },
     ]
     const wrapper = mountComponent({ banners })
 
@@ -80,7 +80,7 @@ describe('SystemBanner', () => {
 
   it('should not navigate when a banner without link is clicked', async () => {
     const banners = [
-      { id: 'banner-1', type: 'INFO', title: 'No Link', message: 'No navigation', link: null, priority: 1 },
+      { id: 'banner-1', bannerType: 'INFO', title: 'No Link', content: 'No navigation', link: null, expiresAt: null },
     ]
     const wrapper = mountComponent({ banners })
 
@@ -88,9 +88,9 @@ describe('SystemBanner', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('should display banner title in bold and message in paragraph', () => {
+  it('should display banner title in bold and content in paragraph', () => {
     const banners = [
-      { id: 'banner-1', type: 'WARNING', title: 'Bold Title', message: 'Description text', link: null, priority: 1 },
+      { id: 'banner-1', bannerType: 'WARNING', title: 'Bold Title', content: 'Description text', link: null, expiresAt: null },
     ]
     const wrapper = mountComponent({ banners })
 

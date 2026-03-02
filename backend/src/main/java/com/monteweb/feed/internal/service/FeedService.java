@@ -351,6 +351,51 @@ public class FeedService implements FeedModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPostAttachment", attachmentId));
     }
 
+    /**
+     * Verifies that the given user has access to the post that contains this attachment.
+     * Checks targetUserIds, parentOnly, and room membership.
+     */
+    public void verifyPostAccess(FeedPostAttachment attachment, UUID userId) {
+        var post = attachment.getPost();
+
+        // Check targetUserIds — if set, only listed users can access
+        if (post.getTargetUserIds() != null && post.getTargetUserIds().length > 0) {
+            boolean isTarget = false;
+            for (UUID targetId : post.getTargetUserIds()) {
+                if (targetId.equals(userId)) {
+                    isTarget = true;
+                    break;
+                }
+            }
+            if (!isTarget) {
+                // Allow author and SUPERADMIN
+                var user = userModuleApi.findById(userId).orElse(null);
+                if (!post.getAuthorId().equals(userId) && (user == null || user.role() != UserRole.SUPERADMIN)) {
+                    throw new ForbiddenException("You do not have access to this attachment");
+                }
+            }
+        }
+
+        // Check parentOnly — students cannot access parent-only posts
+        if (post.isParentOnly()) {
+            var user = userModuleApi.findById(userId).orElse(null);
+            if (user != null && user.role() == UserRole.STUDENT) {
+                throw new ForbiddenException("You do not have access to this attachment");
+            }
+        }
+
+        // Check room membership if post is room-scoped
+        if (post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
+            if (!roomModuleApi.isUserInRoom(userId, post.getSourceId())) {
+                // Allow SUPERADMIN
+                var user = userModuleApi.findById(userId).orElse(null);
+                if (user == null || user.role() != UserRole.SUPERADMIN) {
+                    throw new ForbiddenException("You do not have access to this attachment");
+                }
+            }
+        }
+    }
+
     public InputStream downloadAttachment(String storagePath) {
         return storageService.download(storagePath);
     }

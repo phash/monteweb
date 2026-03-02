@@ -140,7 +140,7 @@ public class JobboardController {
         var user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new ForbiddenException("User not found"));
         if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN
-                && !user.specialRoles().contains("JOBBOARD_ADMIN")) {
+                && (user.specialRoles() == null || !user.specialRoles().contains("JOBBOARD_ADMIN"))) {
             throw new ForbiddenException("Only JOBBOARD_ADMIN or administrators can approve jobs");
         }
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.approveJob(id, userId)));
@@ -153,7 +153,7 @@ public class JobboardController {
         var user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new ForbiddenException("User not found"));
         if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN
-                && !user.specialRoles().contains("JOBBOARD_ADMIN")) {
+                && (user.specialRoles() == null || !user.specialRoles().contains("JOBBOARD_ADMIN"))) {
             throw new ForbiddenException("Not authorized to view draft jobs");
         }
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(jobboardService.getDraftJobs(pageable))));

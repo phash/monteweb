@@ -187,7 +187,9 @@ describe('Messaging Store', () => {
 
     expect(store.messages).toHaveLength(1)
     expect(store.messages[0].content).toBe('Incoming!')
-    expect(store.unreadCount).toBe(1)
+    // M-03: Active conversation should NOT increment unread count
+    expect(store.unreadCount).toBe(0)
+    expect(store.conversations[0].unreadCount).toBe(0)
     expect(store.conversations[0].lastMessage).toBe('Incoming!')
   })
 

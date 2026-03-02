@@ -52,7 +52,7 @@ describe('Forms Store', () => {
 
     expect(store.availableForms).toHaveLength(2)
     expect(store.totalAvailable).toBe(2)
-    expect(store.hasMore).toBe(false)
+    expect(store.hasMoreAvailable).toBe(false)
   })
 
   it('should fetch my forms', async () => {

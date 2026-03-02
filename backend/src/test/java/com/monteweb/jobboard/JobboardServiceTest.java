@@ -104,7 +104,7 @@ class JobboardServiceTest {
     }
 
     private FamilyInfo makeFamily(UUID id) {
-        return new FamilyInfo(id, "Familie Mustermann", null, false, true, List.of());
+        return new FamilyInfo(id, "Familie Mustermann", null, false, true, false, false, List.of());
     }
 
     private TenantConfigInfo makeTenantConfig(boolean requireConfirmation) {

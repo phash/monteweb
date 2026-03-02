@@ -166,8 +166,9 @@ public class FeedController {
 
     @GetMapping("/attachments/{id}/download")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable UUID id) {
-        SecurityUtils.requireCurrentUserId();
+        UUID userId = SecurityUtils.requireCurrentUserId();
         var attachment = feedService.getAttachment(id);
+        feedService.verifyPostAccess(attachment, userId);
         var stream = feedService.downloadAttachment(attachment.getFileUrl());
         String contentType = attachment.getFileType() != null ? attachment.getFileType() : "application/octet-stream";
         String safeFilename = FileValidationUtils.sanitizeContentDispositionFilename(attachment.getFileName());

@@ -149,7 +149,7 @@ describe('Calendar Store', () => {
 
     expect(store.events).toHaveLength(1)
     expect(store.events[0].title).toBe('Room Event')
-    expect(store.totalEvents).toBe(1)
-    expect(store.hasMore).toBe(false)
+    expect(store.totalRoomEvents).toBe(1)
+    expect(store.hasMoreRoom).toBe(false)
   })
 })

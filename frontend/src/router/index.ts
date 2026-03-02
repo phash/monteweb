@@ -16,7 +16,6 @@ const router = createRouter({
       path: '/maintenance',
       name: 'maintenance',
       component: () => import('@/views/MaintenanceView.vue'),
-      meta: { guest: true },
     },
     {
       path: '/privacy',

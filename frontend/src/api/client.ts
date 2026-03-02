@@ -64,6 +64,7 @@ client.interceptors.response.use(
         )
         const { accessToken } = response.data.data
         sessionStorage.setItem('accessToken', accessToken)
+        window.dispatchEvent(new CustomEvent('monteweb:token-refreshed'))
         processQueue(null, accessToken)
         originalRequest.headers.Authorization = `Bearer ${accessToken}`
         return client(originalRequest)

@@ -413,7 +413,7 @@ public class FamilyService implements FamilyModuleApi {
                     return new FamilyInfo.FamilyMemberInfo(m.getUserId(), displayName, m.getRole().name());
                 })
                 .toList();
-        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), family.isHoursExempt(), family.isActive(), members);
+        return new FamilyInfo(family.getId(), family.getName(), family.getAvatarUrl(), family.isHoursExempt(), family.isActive(), family.isSoleCustody(), family.isSoleCustodyApproved(), members);
     }
 
     /**

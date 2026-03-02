@@ -7,6 +7,7 @@ import com.monteweb.messaging.MessageInfo;
 import com.monteweb.messaging.internal.service.MessagingService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
+import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -195,7 +196,11 @@ public class MessagingController {
             @PathVariable UUID messageId,
             @RequestBody Map<String, List<UUID>> request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var poll = messagingService.voteMessagePoll(messageId, userId, request.get("optionIds"));
+        List<UUID> optionIds = request.get("optionIds");
+        if (optionIds == null) {
+            throw new BadRequestException("optionIds is required");
+        }
+        var poll = messagingService.voteMessagePoll(messageId, userId, optionIds);
         return ResponseEntity.ok(ApiResponse.ok(poll));
     }
 
@@ -212,6 +217,9 @@ public class MessagingController {
             @RequestBody Map<String, String> request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         String emoji = request.get("emoji");
+        if (emoji == null || emoji.isBlank()) {
+            throw new BadRequestException("emoji is required");
+        }
         messagingService.toggleMessageReaction(messageId, userId, emoji);
         var reactions = messagingService.getMessageReactions(messageId, userId);
         return ResponseEntity.ok(ApiResponse.ok(reactions));

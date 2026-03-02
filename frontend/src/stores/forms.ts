@@ -22,7 +22,8 @@ export const useFormsStore = defineStore('forms', () => {
   const loading = ref(false)
   const totalAvailable = ref(0)
   const totalMine = ref(0)
-  const hasMore = ref(true)
+  const hasMoreAvailable = ref(true)
+  const hasMoreMy = ref(true)
 
   async function fetchAvailableForms(page = 0, reset = true) {
     loading.value = true
@@ -34,7 +35,7 @@ export const useFormsStore = defineStore('forms', () => {
         availableForms.value = [...availableForms.value, ...res.data.data.content]
       }
       totalAvailable.value = res.data.data.totalElements
-      hasMore.value = !res.data.data.last
+      hasMoreAvailable.value = !res.data.data.last
     } finally {
       loading.value = false
     }
@@ -50,7 +51,7 @@ export const useFormsStore = defineStore('forms', () => {
         myForms.value = [...myForms.value, ...res.data.data.content]
       }
       totalMine.value = res.data.data.totalElements
-      hasMore.value = !res.data.data.last
+      hasMoreMy.value = !res.data.data.last
     } finally {
       loading.value = false
     }
@@ -197,7 +198,8 @@ export const useFormsStore = defineStore('forms', () => {
     loading,
     totalAvailable,
     totalMine,
-    hasMore,
+    hasMoreAvailable,
+    hasMoreMy,
     fetchAvailableForms,
     fetchMyForms,
     fetchForm,

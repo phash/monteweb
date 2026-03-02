@@ -32,6 +32,13 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value ? decodeJwtClaim(accessToken.value, 'impersonatedBy') : null
   )
 
+  // H-08: Sync accessToken ref when the axios interceptor refreshes the token silently
+  if (typeof window !== 'undefined') {
+    window.addEventListener('monteweb:token-refreshed', () => {
+      accessToken.value = sessionStorage.getItem('accessToken')
+    })
+  }
+
   const isAuthenticated = computed(() => !!accessToken.value)
   const isImpersonating = computed(() => !!impersonatedBy.value)
   const isAdmin = computed(() => user.value?.role === 'SUPERADMIN')
@@ -72,6 +79,8 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken: token, refreshToken } = responseData
       setTokens(token, refreshToken)
       await fetchUser()
+      // H-09: If fetchUser failed, it clears tokens — abort to prevent half-authenticated state
+      if (!accessToken.value) throw new Error('Failed to fetch user profile after login')
       const admin = useAdminStore()
       await admin.fetchConfig()
       const { fetchImageToken } = useImageToken()
@@ -92,6 +101,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken: token, refreshToken } = res.data.data
       setTokens(token, refreshToken)
       await fetchUser()
+      if (!accessToken.value) throw new Error('Failed to fetch user profile after 2FA verification')
       const admin = useAdminStore()
       await admin.fetchConfig()
       const { fetchImageToken } = useImageToken()
@@ -138,6 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
       const { accessToken: token, refreshToken } = res.data.data
       setTokens(token, refreshToken)
       await fetchUser()
+      if (!accessToken.value) throw new Error('Failed to fetch user profile after role switch')
     } finally {
       loading.value = false
     }
@@ -175,6 +186,7 @@ export const useAuthStore = defineStore('auth', () => {
       setTokens(token, refreshToken)
       impersonatedBy.value = decodeJwtClaim(token, 'impersonatedBy')
       await fetchUser()
+      if (!accessToken.value) throw new Error('Failed to fetch user profile after impersonation')
     } finally {
       loading.value = false
     }
@@ -188,6 +200,7 @@ export const useAuthStore = defineStore('auth', () => {
       setTokens(token, refreshToken)
       impersonatedBy.value = null
       await fetchUser()
+      if (!accessToken.value) throw new Error('Failed to fetch user profile after stopping impersonation')
     } finally {
       loading.value = false
     }

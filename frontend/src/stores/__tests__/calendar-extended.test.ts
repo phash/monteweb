@@ -72,16 +72,16 @@ describe('Calendar Store - Extended', () => {
     it('should clear state on error', async () => {
       const store = useCalendarStore()
       store.events = [{ id: 'old' }] as any
-      store.totalEvents = 5
-      store.hasMore = true
+      store.totalRoomEvents = 5
+      store.hasMoreRoom = true
 
       vi.mocked(calendarApi.getRoomEvents).mockRejectedValue(new Error('Network'))
 
       await store.fetchRoomEvents('room-1')
 
       expect(store.events).toEqual([])
-      expect(store.totalEvents).toBe(0)
-      expect(store.hasMore).toBe(false)
+      expect(store.totalRoomEvents).toBe(0)
+      expect(store.hasMoreRoom).toBe(false)
       expect(store.loading).toBe(false)
     })
   })

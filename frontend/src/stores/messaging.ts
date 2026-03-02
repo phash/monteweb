@@ -155,8 +155,11 @@ export const useMessagingStore = defineStore('messaging', () => {
     if (conv) {
       conv.lastMessage = message.content ?? (message.images?.length ? '\uD83D\uDDBC Bild' : (message.attachments?.length ? '\uD83D\uDCCE Datei' : null))
       conv.lastMessageAt = message.createdAt
-      conv.unreadCount++
-      unreadCount.value++
+      // M-03: Only increment unread if this is NOT the currently active conversation
+      if (message.conversationId !== activeConversationId.value) {
+        conv.unreadCount++
+        unreadCount.value++
+      }
     }
   }
 

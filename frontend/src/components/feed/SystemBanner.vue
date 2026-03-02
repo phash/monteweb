@@ -23,7 +23,7 @@ function navigate(link: string | null) {
     >
       <div class="banner-content">
         <strong>{{ banner.title }}</strong>
-        <p>{{ banner.message }}</p>
+        <p>{{ banner.content }}</p>
       </div>
     </Message>
   </div>

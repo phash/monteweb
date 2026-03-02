@@ -34,16 +34,16 @@ describe('authApi', () => {
   })
 
   describe('refresh', () => {
-    it('should POST to /auth/refresh with refresh token', async () => {
-      await authApi.refresh('my-refresh-token')
-      expect(client.post).toHaveBeenCalledWith('/auth/refresh', { refreshToken: 'my-refresh-token' })
+    it('should POST to /auth/refresh with empty body', async () => {
+      await authApi.refresh()
+      expect(client.post).toHaveBeenCalledWith('/auth/refresh', {})
     })
   })
 
   describe('logout', () => {
-    it('should POST to /auth/logout with refresh token', async () => {
-      await authApi.logout('my-refresh-token')
-      expect(client.post).toHaveBeenCalledWith('/auth/logout', { refreshToken: 'my-refresh-token' })
+    it('should POST to /auth/logout with empty body', async () => {
+      await authApi.logout()
+      expect(client.post).toHaveBeenCalledWith('/auth/logout', {})
     })
 
     it('should POST to /auth/logout with empty body when token is null', async () => {

@@ -2,7 +2,9 @@ package com.monteweb.user.internal.controller;
 
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.admin.TenantConfigInfo;
+import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.internal.model.ConsentRecord;
 import com.monteweb.user.internal.model.TermsAcceptance;
@@ -10,6 +12,7 @@ import com.monteweb.user.internal.repository.ConsentRecordRepository;
 import com.monteweb.user.internal.repository.TermsAcceptanceRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -20,13 +23,16 @@ import java.util.*;
 public class PrivacyController {
 
     private final AdminModuleApi adminModuleApi;
+    private final FamilyModuleApi familyModuleApi;
     private final ConsentRecordRepository consentRepository;
     private final TermsAcceptanceRepository termsRepository;
 
     public PrivacyController(AdminModuleApi adminModuleApi,
+                              FamilyModuleApi familyModuleApi,
                               ConsentRecordRepository consentRepository,
                               TermsAcceptanceRepository termsRepository) {
         this.adminModuleApi = adminModuleApi;
+        this.familyModuleApi = familyModuleApi;
         this.consentRepository = consentRepository;
         this.termsRepository = termsRepository;
     }
@@ -77,6 +83,7 @@ public class PrivacyController {
      * Authenticated: Accept current terms version.
      */
     @PostMapping("/terms/accept")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> acceptTerms(@RequestBody(required = false) Map<String, String> body) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var config = adminModuleApi.getTenantConfig();
@@ -120,6 +127,7 @@ public class PrivacyController {
      * Authenticated: Update consent (grant or revoke).
      */
     @PutMapping("/consents")
+    @Transactional
     public ResponseEntity<ApiResponse<Void>> updateConsent(@RequestBody Map<String, Object> body) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         String consentType = (String) body.get("consentType");
@@ -130,6 +138,22 @@ public class PrivacyController {
 
         if (consentType == null || granted == null) {
             return ResponseEntity.badRequest().body(ApiResponse.error("consentType and granted are required"));
+        }
+
+        // C-02: IDOR check — if setting consent for another user, verify family relationship or SUPERADMIN
+        if (!targetUserId.equals(userId)) {
+            boolean isSuperAdmin = SecurityContextHolder.getContext().getAuthentication()
+                    .getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"));
+            if (!isSuperAdmin) {
+                var callerFamilies = familyModuleApi.findByUserId(userId);
+                var targetFamilies = familyModuleApi.findByUserId(targetUserId);
+                boolean inSameFamily = callerFamilies.stream()
+                        .anyMatch(cf -> targetFamilies.stream().anyMatch(tf -> tf.id().equals(cf.id())));
+                if (!inSameFamily) {
+                    throw new ForbiddenException("You can only update consent for members of your own family");
+                }
+            }
         }
 
         // Block students from setting their own consent — requires parent/guardian

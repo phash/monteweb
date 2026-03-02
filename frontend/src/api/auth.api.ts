@@ -24,12 +24,12 @@ export const authApi = {
     return client.post<ApiResponse<LoginResponse>>('/auth/register', data)
   },
 
-  refresh(refreshToken: string) {
-    return client.post<ApiResponse<LoginResponse>>('/auth/refresh', { refreshToken })
+  refresh() {
+    return client.post<ApiResponse<LoginResponse>>('/auth/refresh', {})
   },
 
-  logout(refreshToken: string | null) {
-    return client.post<ApiResponse<void>>('/auth/logout', refreshToken ? { refreshToken } : {})
+  logout(_refreshToken?: string | null) {
+    return client.post<ApiResponse<void>>('/auth/logout', {})
   },
 
   // 2FA endpoints

@@ -38,7 +38,8 @@ export interface FeedPost {
   poll: PollInfo | null
   commentCount: number
   createdAt: string
-  updatedAt: string | null
+  publishedAt: string
+  parentOnly: boolean
 }
 
 export interface FeedAttachment {
@@ -61,11 +62,11 @@ export interface FeedComment {
 
 export interface SystemBanner {
   id: string
-  type: string
   title: string
-  message: string
+  content: string
+  bannerType: string
   link: string | null
-  priority: number
+  expiresAt: string | null
 }
 
 export interface CreatePollRequest {

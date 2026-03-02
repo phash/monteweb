@@ -5,13 +5,13 @@ import com.monteweb.cleaning.internal.service.CleaningService;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
+import com.monteweb.shared.dto.PageResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
@@ -31,9 +31,9 @@ public class CleaningController {
     private final FamilyModuleApi familyModuleApi;
 
     @GetMapping("/slots")
-    public ResponseEntity<ApiResponse<Page<CleaningSlotInfo>>> getUpcomingSlots(
+    public ResponseEntity<ApiResponse<PageResponse<CleaningSlotInfo>>> getUpcomingSlots(
             @PageableDefault(size = 20) Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.ok(cleaningService.getUpcomingSlots(pageable)));
+        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(cleaningService.getUpcomingSlots(pageable))));
     }
 
     @GetMapping("/slots/mine")
