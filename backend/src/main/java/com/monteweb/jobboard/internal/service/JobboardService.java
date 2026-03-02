@@ -249,7 +249,7 @@ public class JobboardService implements JobboardModuleApi {
     public Page<JobInfo> listJobs(String category, List<JobStatus> statuses, UUID eventId, UUID roomId,
                                   LocalDate fromDate, LocalDate toDate, Pageable pageable) {
         if (statuses == null || statuses.isEmpty()) {
-            statuses = List.of(JobStatus.OPEN, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS);
+            statuses = List.of(JobStatus.OPEN, JobStatus.PARTIALLY_ASSIGNED, JobStatus.ASSIGNED, JobStatus.IN_PROGRESS);
         }
         String cat = (category != null && !category.isBlank()) ? category : null;
         return jobRepository.findWithFilters(statuses, cat, eventId, roomId, fromDate, toDate, pageable)
@@ -337,7 +337,7 @@ public class JobboardService implements JobboardModuleApi {
             throw new ForbiddenException("This role does not perform parent hours");
         }
 
-        if (job.getStatus() != JobStatus.OPEN) {
+        if (job.getStatus() != JobStatus.OPEN && job.getStatus() != JobStatus.PARTIALLY_ASSIGNED) {
             throw new BusinessException("This job is no longer open for applications");
         }
 
@@ -373,11 +373,14 @@ public class JobboardService implements JobboardModuleApi {
             assignment = assignmentRepository.save(assignment);
         }
 
-        // Update job status if fully assigned
-        if (currentAssignees + 1 >= job.getMaxAssignees()) {
+        // Update job status based on how many slots are filled
+        long newCount = currentAssignees + 1;
+        if (newCount >= job.getMaxAssignees()) {
             job.setStatus(JobStatus.ASSIGNED);
-            jobRepository.save(job);
+        } else {
+            job.setStatus(JobStatus.PARTIALLY_ASSIGNED);
         }
+        jobRepository.save(job);
 
         return toAssignmentInfo(assignment);
     }
@@ -506,7 +509,7 @@ public class JobboardService implements JobboardModuleApi {
         var job = jobRepository.findById(assignment.getJobId()).orElseThrow();
         long activeAssignees = assignmentRepository.countByJobIdAndStatusNot(job.getId(), AssignmentStatus.CANCELLED);
         if (activeAssignees < job.getMaxAssignees() && job.getStatus() != JobStatus.COMPLETED && job.getStatus() != JobStatus.CANCELLED) {
-            job.setStatus(JobStatus.OPEN);
+            job.setStatus(activeAssignees > 0 ? JobStatus.PARTIALLY_ASSIGNED : JobStatus.OPEN);
             jobRepository.save(job);
         }
     }
@@ -529,7 +532,7 @@ public class JobboardService implements JobboardModuleApi {
         var job = jobRepository.findById(assignment.getJobId()).orElseThrow();
         long activeAssignees = assignmentRepository.countByJobIdAndStatusNot(job.getId(), AssignmentStatus.CANCELLED);
         if (activeAssignees < job.getMaxAssignees() && job.getStatus() != JobStatus.COMPLETED && job.getStatus() != JobStatus.CANCELLED) {
-            job.setStatus(JobStatus.OPEN);
+            job.setStatus(activeAssignees > 0 ? JobStatus.PARTIALLY_ASSIGNED : JobStatus.OPEN);
             jobRepository.save(job);
         }
     }
