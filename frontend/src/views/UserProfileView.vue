@@ -48,6 +48,10 @@ function userInitials(u: UserInfo): string {
   return (first + last).toUpperCase() || '?'
 }
 
+const canImpersonate = computed(() =>
+  auth.isAdmin && !isOwnProfile.value && user.value?.role !== 'SUPERADMIN' && admin.isModuleEnabled('impersonation')
+)
+
 async function startConversation() {
   if (!user.value || isOwnProfile.value) return
   startingChat.value = true
@@ -59,6 +63,13 @@ async function startConversation() {
   } finally {
     startingChat.value = false
   }
+}
+
+async function handleImpersonate() {
+  if (!user.value) return
+  await auth.impersonate(user.value.id)
+  router.push('/')
+  window.location.reload()
 }
 
 onMounted(async () => {
@@ -126,12 +137,20 @@ onMounted(async () => {
           <span>{{ user.phone }}</span>
         </div>
 
-        <div v-if="messagingEnabled && !isOwnProfile" class="profile-actions">
+        <div v-if="(messagingEnabled && !isOwnProfile) || canImpersonate" class="profile-actions">
           <Button
+            v-if="messagingEnabled && !isOwnProfile"
             :label="t('directory.sendMessage')"
             icon="pi pi-comment"
             :loading="startingChat"
             @click="startConversation"
+          />
+          <Button
+            v-if="canImpersonate"
+            :label="t('auth.impersonation.loginAs')"
+            icon="pi pi-user"
+            severity="danger"
+            @click="handleImpersonate"
           />
         </div>
       </div>
@@ -235,6 +254,9 @@ onMounted(async () => {
 }
 
 .profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--mw-border-light);
 }
