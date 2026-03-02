@@ -3,6 +3,8 @@ package com.monteweb.room.internal.service;
 import com.monteweb.messaging.ConversationInfo;
 import com.monteweb.messaging.MessagingModuleApi;
 import com.monteweb.room.RoomRole;
+import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import com.monteweb.room.internal.model.Room;
 import com.monteweb.room.internal.model.RoomChatChannel;
 import com.monteweb.room.internal.model.RoomChatChannel.ChannelType;
@@ -33,22 +35,34 @@ public class RoomChatService {
     private final RoomChatChannelRepository channelRepository;
     private final RoomService roomService;
     private final MessagingModuleApi messagingModuleApi;
+    private final UserModuleApi userModuleApi;
+
+    private boolean isSuperAdmin(UUID userId) {
+        return userModuleApi.findById(userId)
+                .map(u -> u.role() == UserRole.SUPERADMIN)
+                .orElse(false);
+    }
 
     /**
      * Returns all chat channels for a room.
      */
     @Transactional(readOnly = true)
     public List<RoomChatChannelInfo> getChannels(UUID roomId, UUID userId) {
-        // Verify user is a member
-        if (!roomService.isUserInRoom(userId, roomId)) {
+        boolean superAdmin = isSuperAdmin(userId);
+
+        if (!superAdmin && !roomService.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
 
         List<RoomChatChannel> channels = channelRepository.findByRoomId(roomId);
 
-        // Filter channels based on user's role
-        RoomRole userRole = roomService.getUserRoleInRoom(userId, roomId).orElse(null);
+        if (superAdmin) {
+            return channels.stream()
+                    .map(ch -> toChannelInfo(ch, userId))
+                    .toList();
+        }
 
+        RoomRole userRole = roomService.getUserRoleInRoom(userId, roomId).orElse(null);
         return channels.stream()
                 .filter(ch -> canAccessChannel(ch.getChannelType(), userRole))
                 .map(ch -> toChannelInfo(ch, userId))
@@ -68,7 +82,9 @@ public class RoomChatService {
      */
     @Transactional
     public RoomChatChannelInfo getOrCreateChannel(UUID roomId, UUID userId, ChannelType type) {
-        if (!roomService.isUserInRoom(userId, roomId)) {
+        boolean superAdmin = isSuperAdmin(userId);
+
+        if (!superAdmin && !roomService.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
 
@@ -78,7 +94,7 @@ public class RoomChatService {
         }
 
         RoomRole userRole = roomService.getUserRoleInRoom(userId, roomId).orElse(null);
-        if (!canAccessChannel(type, userRole)) {
+        if (!superAdmin && !canAccessChannel(type, userRole)) {
             throw new ForbiddenException("You don't have access to this channel");
         }
 
@@ -88,8 +104,8 @@ public class RoomChatService {
             return toChannelInfo(existing.get(), userId);
         }
 
-        // Only leaders can create parent/student channels
-        if (type != ChannelType.MAIN && userRole != RoomRole.LEADER) {
+        // Only leaders (or superadmins) can create parent/student channels
+        if (type != ChannelType.MAIN && !superAdmin && userRole != RoomRole.LEADER) {
             throw new ForbiddenException("Only room leaders can create specialized channels");
         }
 

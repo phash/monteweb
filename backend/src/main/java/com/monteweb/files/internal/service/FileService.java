@@ -282,8 +282,14 @@ public class FileService implements FilesModuleApi {
 
     // ---- Helpers ----
 
+    private boolean isSuperAdmin(UUID userId) {
+        return userModuleApi.findById(userId)
+                .map(u -> u.role() == UserRole.SUPERADMIN)
+                .orElse(false);
+    }
+
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!roomModuleApi.isUserInRoom(userId, roomId)) {
+        if (!isSuperAdmin(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("You are not a member of this room");
         }
     }

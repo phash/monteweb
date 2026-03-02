@@ -73,7 +73,7 @@ public class CalendarService implements CalendarModuleApi {
     }
 
     public Page<EventInfo> getRoomEvents(UUID roomId, UUID userId, LocalDate from, LocalDate to, Pageable pageable) {
-        if (!roomModule.isUserInRoom(userId, roomId)) {
+        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new IllegalArgumentException("User is not a member of this room");
         }
         return eventRepository.findByRoomId(roomId, from, to, pageable)
@@ -296,6 +296,12 @@ public class CalendarService implements CalendarModuleApi {
         }
         return eventRepository.findByIdsAndDateRange(eventIds, from, to)
                 .stream().map(e -> toEventInfo(e, null)).toList();
+    }
+
+    private boolean isSuperAdmin(UUID userId) {
+        return userModule.findById(userId)
+                .map(u -> u.role() == UserRole.SUPERADMIN)
+                .orElse(false);
     }
 
     private void checkCreatePermission(EventScope scope, UUID scopeId, UUID userId) {
