@@ -8,7 +8,7 @@ import { useMarkdown } from '@/composables/useMarkdown'
 import { useParentLetterStore } from '@/stores/parentletter'
 import { useAuthStore } from '@/stores/auth'
 import { parentLetterApi } from '@/api/parentletter.api'
-import type { ParentLetterStatus } from '@/types/parentletter'
+import type { ParentLetterStatus, ParentLetterAttachmentInfo } from '@/types/parentletter'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import RecipientStatusTable from '@/components/parentletter/RecipientStatusTable.vue'
@@ -16,6 +16,7 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import ProgressBar from 'primevue/progressbar'
 import Divider from 'primevue/divider'
+import FileUpload from 'primevue/fileupload'
 
 const { t } = useI18n()
 const { formatShortDate, formatCompactDateTime } = useLocaleDate()
@@ -31,6 +32,8 @@ const letterId = computed(() => route.params.id as string)
 const confirmingStudentId = ref<string | null>(null)
 const sendingLetter = ref(false)
 const closingLetter = ref(false)
+const attachments = ref<ParentLetterAttachmentInfo[]>([])
+const uploadingFiles = ref(false)
 
 const letter = computed(() => store.currentLetter)
 
@@ -66,8 +69,19 @@ function statusSeverity(status: ParentLetterStatus): 'secondary' | 'info' | 'suc
   }
 }
 
+async function fetchAttachments() {
+  try {
+    const res = await parentLetterApi.getAttachments(letterId.value)
+    attachments.value = res.data.data
+  } catch {
+    attachments.value = []
+  }
+}
+
 onMounted(async () => {
   await store.fetchLetter(letterId.value)
+  // Fetch attachments
+  await fetchAttachments()
   // Mark as read if parent view and letter was loaded
   if (isParentView.value && letter.value?.status === 'SENT') {
     try {
@@ -138,6 +152,54 @@ async function downloadTracking() {
     downloadBlob(res.data, `Ruecklauf-${letter.value?.title ?? 'Brief'}.pdf`)
   } catch {
     toast.add({ severity: 'error', summary: t('common.error'), life: 5000 })
+  }
+}
+
+function getAttachmentIcon(contentType: string): string {
+  if (contentType.startsWith('image/')) return 'pi pi-image'
+  if (contentType === 'application/pdf') return 'pi pi-file-pdf'
+  if (contentType.startsWith('video/')) return 'pi pi-video'
+  if (contentType.startsWith('audio/')) return 'pi pi-volume-up'
+  return 'pi pi-file'
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+function downloadAttachment(att: ParentLetterAttachmentInfo) {
+  const url = parentLetterApi.getAttachmentDownloadUrl(letterId.value, att.id)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = att.originalFilename
+  a.click()
+}
+
+async function handleUpload(event: any) {
+  const files: File[] = event.files
+  if (!files?.length) return
+  uploadingFiles.value = true
+  try {
+    await parentLetterApi.uploadAttachments(letterId.value, files)
+    toast.add({ severity: 'success', summary: t('parentLetters.attachments.uploaded'), life: 3000 })
+    await fetchAttachments()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || t('common.error'), life: 5000 })
+  } finally {
+    uploadingFiles.value = false
+  }
+}
+
+async function handleDeleteAttachment(att: ParentLetterAttachmentInfo) {
+  try {
+    await parentLetterApi.deleteAttachment(letterId.value, att.id)
+    toast.add({ severity: 'success', summary: t('parentLetters.attachments.deleted'), life: 3000 })
+    await fetchAttachments()
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || t('common.error'), life: 5000 })
   }
 }
 </script>
@@ -241,6 +303,56 @@ async function downloadTracking() {
       <!-- Letter content -->
       <div class="letter-content card">
         <div class="content-text" v-html="renderedContent" />
+      </div>
+
+      <!-- Attachments display -->
+      <div v-if="attachments.length > 0" class="attachments-section card">
+        <h3 class="attachments-title">
+          <i class="pi pi-paperclip" />
+          {{ t('parentLetters.attachments.title') }}
+          <span class="attachments-count">({{ attachments.length }})</span>
+        </h3>
+        <div class="attachments-list">
+          <div
+            v-for="att in attachments"
+            :key="att.id"
+            class="attachment-item"
+          >
+            <div class="attachment-info" @click="downloadAttachment(att)">
+              <i :class="getAttachmentIcon(att.contentType)" />
+              <span class="attachment-name">{{ att.originalFilename }}</span>
+              <span class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
+              <i class="pi pi-download attachment-download" />
+            </div>
+            <Button
+              v-if="isCreatorOrAdmin && letter.status === 'DRAFT'"
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              @click="handleDeleteAttachment(att)"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Attachment upload (DRAFT only, creator/admin) -->
+      <div v-if="isCreatorOrAdmin && letter.status === 'DRAFT'" class="upload-section card">
+        <h3 class="attachments-title">
+          <i class="pi pi-upload" />
+          {{ t('parentLetters.attachments.upload') }}
+        </h3>
+        <p class="upload-hint">{{ t('parentLetters.attachments.uploadHint') }}</p>
+        <FileUpload
+          mode="basic"
+          :multiple="true"
+          :auto="true"
+          :maxFileSize="10485760"
+          :chooseLabel="t('parentLetters.attachments.upload')"
+          :disabled="uploadingFiles || attachments.length >= 5"
+          @uploader="handleUpload"
+          customUpload
+        />
       </div>
 
       <!-- Parent confirmation section -->
@@ -443,5 +555,89 @@ async function downloadTracking() {
   text-align: center;
   color: var(--mw-text-muted);
   padding: 3rem;
+}
+
+.attachments-section {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.attachments-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.attachments-count {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  font-weight: 400;
+}
+
+.attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.attachment-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  padding: 0.5rem 0.625rem;
+  background: var(--mw-bg, #f8f9fa);
+  border: 1px solid var(--mw-border-light, #dee2e6);
+  border-radius: var(--mw-border-radius-sm, 4px);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  font-size: var(--mw-font-size-sm, 0.875rem);
+}
+
+.attachment-info:hover {
+  background: var(--mw-bg-highlight, #e9ecef);
+}
+
+.attachment-info > i:first-child {
+  color: var(--mw-primary, #3b82f6);
+  flex-shrink: 0;
+}
+
+.attachment-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-size {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  flex-shrink: 0;
+}
+
+.attachment-download {
+  color: var(--mw-text-muted);
+  flex-shrink: 0;
+  font-size: var(--mw-font-size-sm, 0.875rem);
+}
+
+.upload-section {
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.upload-hint {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  margin-bottom: 0.75rem;
 }
 </style>

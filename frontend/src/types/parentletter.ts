@@ -47,6 +47,7 @@ export interface ParentLetterDetailInfo {
   totalRecipients: number
   confirmedCount: number
   recipients: ParentLetterRecipientInfo[]
+  attachments?: ParentLetterAttachmentInfo[]
   createdAt: string
   updatedAt: string
 }
@@ -82,4 +83,14 @@ export interface UpdateParentLetterRequest {
 export interface UpdateParentLetterConfigRequest {
   signatureTemplate?: string | null
   reminderDays?: number | null
+}
+
+export interface ParentLetterAttachmentInfo {
+  id: string
+  originalFilename: string
+  storagePath: string
+  fileSize: number
+  contentType: string
+  sortOrder: number
+  createdAt: string
 }

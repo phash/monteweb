@@ -6,9 +6,10 @@ import { useToast } from 'primevue/usetoast'
 import { useParentLetterStore } from '@/stores/parentletter'
 import { useRoomsStore } from '@/stores/rooms'
 import { useAuthStore } from '@/stores/auth'
-import type { CreateParentLetterRequest, UpdateParentLetterRequest } from '@/types/parentletter'
+import type { CreateParentLetterRequest, UpdateParentLetterRequest, ParentLetterAttachmentInfo } from '@/types/parentletter'
 import type { RoomMember } from '@/types/room'
 import { roomsApi } from '@/api/rooms.api'
+import { parentLetterApi } from '@/api/parentletter.api'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import MarkdownLetterEditor from '@/components/parentletter/MarkdownLetterEditor.vue'
@@ -20,6 +21,7 @@ import Select from 'primevue/select'
 import MultiSelect from 'primevue/multiselect'
 import Checkbox from 'primevue/checkbox'
 import InputNumber from 'primevue/inputnumber'
+import FileUpload from 'primevue/fileupload'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -52,6 +54,10 @@ const initialLoading = ref(false)
 
 // Reference to the markdown editor for cursor-position variable insertion
 const editorRef = ref<InstanceType<typeof MarkdownLetterEditor> | null>(null)
+
+// Attachments (edit mode only)
+const attachments = ref<ParentLetterAttachmentInfo[]>([])
+const uploadingFiles = ref(false)
 
 const klasseRooms = computed(() =>
   rooms.myRooms.filter(r => r.type === 'KLASSE')
@@ -114,6 +120,13 @@ onMounted(async () => {
         } else {
           sendToAll.value = true
         }
+      }
+      // Fetch attachments
+      try {
+        const attRes = await parentLetterApi.getAttachments(letterId.value)
+        attachments.value = attRes.data.data
+      } catch {
+        attachments.value = []
       }
     } finally {
       initialLoading.value = false
@@ -201,6 +214,50 @@ async function handleSaveAndSend() {
 
 function insertVariable(variable: string) {
   editorRef.value?.insertAtCursor(variable)
+}
+
+function getAttachmentIcon(contentType: string): string {
+  if (contentType.startsWith('image/')) return 'pi pi-image'
+  if (contentType === 'application/pdf') return 'pi pi-file-pdf'
+  if (contentType.startsWith('video/')) return 'pi pi-video'
+  if (contentType.startsWith('audio/')) return 'pi pi-volume-up'
+  return 'pi pi-file'
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return ''
+  if (bytes < 1024) return bytes + ' B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+}
+
+async function handleUpload(event: any) {
+  if (!letterId.value) return
+  const files: File[] = event.files
+  if (!files?.length) return
+  uploadingFiles.value = true
+  try {
+    await parentLetterApi.uploadAttachments(letterId.value, files)
+    toast.add({ severity: 'success', summary: t('parentLetters.attachments.uploaded'), life: 3000 })
+    const attRes = await parentLetterApi.getAttachments(letterId.value)
+    attachments.value = attRes.data.data
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || t('common.error'), life: 5000 })
+  } finally {
+    uploadingFiles.value = false
+  }
+}
+
+async function handleDeleteAttachment(att: ParentLetterAttachmentInfo) {
+  if (!letterId.value) return
+  try {
+    await parentLetterApi.deleteAttachment(letterId.value, att.id)
+    toast.add({ severity: 'success', summary: t('parentLetters.attachments.deleted'), life: 3000 })
+    const attRes = await parentLetterApi.getAttachments(letterId.value)
+    attachments.value = attRes.data.data
+  } catch (e: any) {
+    toast.add({ severity: 'error', summary: e.response?.data?.message || t('common.error'), life: 5000 })
+  }
 }
 </script>
 
@@ -333,6 +390,48 @@ function insertVariable(variable: string) {
 
       </div>
 
+      <!-- Attachments (edit mode only) -->
+      <div v-if="isEdit && letterId" class="attachments-section">
+        <h3 class="attachments-title">
+          <i class="pi pi-paperclip" />
+          {{ t('parentLetters.attachments.title') }}
+          <span v-if="attachments.length" class="attachments-count">({{ attachments.length }})</span>
+        </h3>
+
+        <div v-if="attachments.length" class="attachments-list">
+          <div
+            v-for="att in attachments"
+            :key="att.id"
+            class="attachment-row"
+          >
+            <i :class="getAttachmentIcon(att.contentType)" class="att-icon" />
+            <span class="att-name">{{ att.originalFilename }}</span>
+            <span class="att-size">{{ formatFileSize(att.fileSize) }}</span>
+            <Button
+              icon="pi pi-trash"
+              severity="danger"
+              text
+              size="small"
+              @click="handleDeleteAttachment(att)"
+            />
+          </div>
+        </div>
+
+        <div class="upload-area">
+          <p class="upload-hint">{{ t('parentLetters.attachments.uploadHint') }}</p>
+          <FileUpload
+            mode="basic"
+            :multiple="true"
+            :auto="true"
+            :maxFileSize="10485760"
+            :chooseLabel="t('parentLetters.attachments.upload')"
+            :disabled="uploadingFiles || attachments.length >= 5"
+            @uploader="handleUpload"
+            customUpload
+          />
+        </div>
+      </div>
+
       <div class="form-actions">
         <Button
           :label="t('common.cancel')"
@@ -439,6 +538,72 @@ function insertVariable(variable: string) {
   margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--mw-border);
+}
+
+.attachments-section {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--mw-border);
+}
+
+.attachments-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+
+.attachments-count {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  font-weight: 400;
+}
+
+.attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+
+.attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  background: var(--mw-bg, #f8f9fa);
+  border: 1px solid var(--mw-border-light, #dee2e6);
+  border-radius: var(--mw-border-radius-sm, 4px);
+  font-size: var(--mw-font-size-sm, 0.875rem);
+}
+
+.att-icon {
+  color: var(--mw-primary, #3b82f6);
+  flex-shrink: 0;
+}
+
+.att-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-size {
+  color: var(--mw-text-muted);
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  flex-shrink: 0;
+}
+
+.upload-area {
+  margin-top: 0.5rem;
+}
+
+.upload-hint {
+  font-size: var(--mw-font-size-sm);
+  color: var(--mw-text-muted);
+  margin-bottom: 0.5rem;
 }
 
 @media (max-width: 767px) {
