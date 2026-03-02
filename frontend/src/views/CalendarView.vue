@@ -17,7 +17,10 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Checkbox from 'primevue/checkbox'
+import MultiSelect from 'primevue/multiselect'
 import SelectButton from 'primevue/selectbutton'
+import { sectionsApi } from '@/api/sections.api'
+import { useRoomsStore } from '@/stores/rooms'
 // Tooltip directive is registered globally in main.ts
 
 type ViewMode = 'agenda' | 'month' | 'quarter' | 'year'
@@ -28,6 +31,8 @@ const router = useRouter()
 const calendar = useCalendarStore()
 const auth = useAuthStore()
 const admin = useAdminStore()
+const rooms = useRoomsStore()
+const sections = ref<{ id: string; name: string }[]>([])
 
 const viewMode = ref<ViewMode>('agenda')
 const currentMonth = ref(new Date())
@@ -37,10 +42,42 @@ const showImported = ref(true)
 const showJobs = ref(false)
 const openJobs = ref<JobInfo[]>([])
 
+interface FilterOption {
+  key: string
+  label: string
+}
+interface FilterGroup {
+  label: string
+  items: FilterOption[]
+}
+
+const selectedFilters = ref<string[]>([])
+
 const currentYear = computed(() => currentMonth.value.getFullYear())
 const { holidays, vacations, isVacation } = useHolidays(currentYear)
 
 const jobboardEnabled = computed(() => admin.isModuleEnabled('jobboard'))
+
+const filterGroups = computed<FilterGroup[]>(() => {
+  const groups: FilterGroup[] = [
+    { label: t('calendar.scopeSchool'), items: [{ key: 'SCHOOL', label: t('calendar.scopeSchool') }] },
+  ]
+  if (sections.value.length > 0) {
+    groups.push({
+      label: t('calendar.scopeSections'),
+      items: sections.value.map(s => ({ key: `SECTION:${s.id}`, label: s.name })),
+    })
+  }
+  if (rooms.myRooms.length > 0) {
+    groups.push({
+      label: t('calendar.scopeRooms'),
+      items: rooms.myRooms.map(r => ({ key: `ROOM:${r.id}`, label: r.name })),
+    })
+  }
+  return groups
+})
+
+const allFilterKeys = computed(() => filterGroups.value.flatMap(g => g.items.map(i => i.key)))
 
 const viewOptions = computed(() => [
   { label: t('calendar.agenda'), value: 'agenda' },
@@ -81,10 +118,19 @@ const dateRange = computed(() => {
   }
 })
 
-// Filtered events (hide cleaning events when toggle is off)
+// Filtered events (hide cleaning events when toggle is off, apply scope filter)
 const filteredEvents = computed(() => {
-  if (showCleaning.value) return calendar.events
-  return calendar.events.filter(e => e.eventType !== 'CLEANING')
+  let result = calendar.events
+  if (!showCleaning.value) {
+    result = result.filter(e => e.eventType !== 'CLEANING')
+  }
+  if (selectedFilters.value.length > 0 && selectedFilters.value.length < allFilterKeys.value.length) {
+    result = result.filter(e => {
+      const key = e.scope === 'SCHOOL' ? 'SCHOOL' : `${e.scope}:${e.scopeId}`
+      return selectedFilters.value.includes(key)
+    })
+  }
+  return result
 })
 
 // Convert iCal events to CalendarEvent-like shape for unified display
@@ -313,7 +359,12 @@ function formatDateToISO(d: Date): string {
   return `${year}-${month}-${day}`
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await rooms.fetchMyRooms()
+  try {
+    const secRes = await sectionsApi.getAll()
+    sections.value = secRes.data.data
+  } catch { /* ignore */ }
   loadEvents()
 })
 
@@ -327,6 +378,12 @@ watch(showJobs, (val) => {
     loadJobs()
   }
 })
+
+watch(allFilterKeys, (keys) => {
+  if (selectedFilters.value.length === 0 && keys.length > 0) {
+    selectedFilters.value = [...keys]
+  }
+}, { immediate: true })
 
 async function loadEvents() {
   const promises: Promise<unknown>[] = [
@@ -524,6 +581,20 @@ function formatSelectedDay(date: string): string {
         <Checkbox v-model="showJobs" :binary="true" inputId="showJobs" />
         <label for="showJobs">{{ t('calendar.showJobs') }}</label>
       </template>
+      <span class="filter-separator" />
+      <MultiSelect
+        v-model="selectedFilters"
+        :options="filterGroups"
+        optionLabel="label"
+        optionValue="key"
+        optionGroupLabel="label"
+        optionGroupChildren="items"
+        :placeholder="t('calendar.filterPlaceholder')"
+        display="chip"
+        :maxSelectedLabels="2"
+        :selectedItemsLabel="'{0}'"
+        class="scope-filter"
+      />
     </div>
 
     <div class="month-nav card">
@@ -873,6 +944,18 @@ function formatSelectedDay(date: string): string {
   height: 16px;
   background: var(--mw-border-light);
   margin: 0 0.25rem;
+}
+
+.scope-filter {
+  min-width: 200px;
+  max-width: 350px;
+}
+
+@media (max-width: 600px) {
+  .scope-filter {
+    min-width: unset;
+    width: 100%;
+  }
 }
 
 .event-item.ical-event {
