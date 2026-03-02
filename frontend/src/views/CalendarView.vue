@@ -404,6 +404,10 @@ function isDateVacation(date: string): boolean {
   return vacationDates.value.has(date)
 }
 
+function getDateVacationName(date: string): string | null {
+  return isVacation(new Date(date + 'T00:00:00'))
+}
+
 function isDateHoliday(date: string): string | null {
   return holidayDates.value.get(date) || null
 }
@@ -566,6 +570,20 @@ function formatSelectedDay(date: string): string {
                 :severity="rsvpSeverity(event.currentUserRsvp)"
                 size="small"
                 :icon="rsvpIcon(event.currentUserRsvp)"
+              />
+              <Tag
+                v-if="getDateVacationName(event.startDate)"
+                :value="getDateVacationName(event.startDate)!"
+                severity="secondary"
+                size="small"
+                icon="pi pi-sun"
+              />
+              <Tag
+                v-if="isDateHoliday(event.startDate)"
+                :value="isDateHoliday(event.startDate)!"
+                severity="danger"
+                size="small"
+                icon="pi pi-flag"
               />
             </div>
             <div class="event-meta">
@@ -754,6 +772,7 @@ function formatSelectedDay(date: string): string {
             <div
               v-for="day in m.grid"
               :key="day.date"
+              v-tooltip.top="getDateTooltipText(day.date)"
               class="day-cell mini year-cell"
               :class="{
                 'other-month': !day.currentMonth,
