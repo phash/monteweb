@@ -385,6 +385,13 @@ export default {
     },
     settings: {
       title: 'Settings',
+      groups: {
+        general: 'General',
+        communication: 'Communication',
+        integration: 'Integrations',
+        security: 'Security',
+        hours: 'Hours',
+      },
       language: 'Language',
       multilanguageEnabled: 'Enable multilanguage',
       multilanguageHint: 'When disabled, only the default language is used and the language switcher is hidden.',

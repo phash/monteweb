@@ -13,6 +13,10 @@ import Column from 'primevue/column'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
+import Accordion from 'primevue/accordion'
+import AccordionPanel from 'primevue/accordionpanel'
+import AccordionHeader from 'primevue/accordionheader'
+import AccordionContent from 'primevue/accordioncontent'
 import { useToast } from 'primevue/usetoast'
 import { predefinedVacations } from '@/data/schoolVacations'
 
@@ -64,7 +68,7 @@ const ldapAttrLastName = ref('sn')
 const ldapDefaultRole = ref('PARENT')
 const ldapUseSsl = ref(false)
 const ldapPasswordStored = ref(false)
-const ldapExpanded = ref(false)
+const openPanels = ref(['general', 'communication'])
 
 // Maintenance mode (enabled via modules map)
 const maintenanceEnabled = ref(false)
@@ -147,9 +151,6 @@ onMounted(async () => {
     ldapDefaultRole.value = adminStore.config.ldapDefaultRole ?? 'PARENT'
     ldapUseSsl.value = adminStore.config.ldapUseSsl ?? false
     ldapPasswordStored.value = adminStore.config.ldapConfigured ?? false
-    if (ldapEnabled.value) {
-      ldapExpanded.value = true
-    }
     // Maintenance (enabled via modules map)
     maintenanceEnabled.value = adminStore.isModuleEnabled('maintenance')
     maintenanceMessage.value = adminStore.config.maintenanceMessage ?? ''
@@ -365,364 +366,392 @@ async function testLdapConnection() {
   <div class="p-4">
     <h1 class="text-2xl font-bold mb-6">{{ t('admin.settings.title') }}</h1>
 
-    <!-- Maintenance Mode Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.maintenance.title') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="maintenanceEnabled" />
-        <label>{{ t('admin.maintenance.enabled') }}</label>
-      </div>
-      <Message v-if="maintenanceEnabled" severity="warn" :closable="false">
-        {{ t('admin.maintenance.warning') }}
-      </Message>
-      <div v-if="maintenanceEnabled" class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('admin.maintenance.message') }}</label>
-        <InputText v-model="maintenanceMessage" class="w-full" :placeholder="t('admin.maintenance.messagePlaceholder')" />
-      </div>
-      <Button :label="t('common.save')" :loading="savingMaintenance" @click="saveMaintenance" />
-    </div>
+    <Accordion multiple :value="openPanels">
 
-    <!-- ClamAV Virus Scanner Section (enable/disable via Modules page) -->
-    <div v-if="adminStore.isModuleEnabled('clamav')" class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.clamav.title') }}</h2>
-      <Message severity="info" :closable="false">
-        {{ t('admin.clamav.hint') }}
-      </Message>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.host') }}</label>
-          <InputText v-model="clamavHost" class="w-full" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.port') }}</label>
-          <InputNumber v-model="clamavPort" :min="1" :max="65535" class="w-full" />
-        </div>
-      </div>
-      <Button :label="t('common.save')" :loading="savingClamav" @click="saveClamavConfig" />
-    </div>
-
-    <!-- Jitsi Video Conferencing Section (enable/disable via Modules page) -->
-    <div v-if="adminStore.isModuleEnabled('jitsi')" class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.jitsi.title') }}</h2>
-      <Message severity="info" :closable="false">
-        {{ t('admin.jitsi.hint') }}
-      </Message>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('admin.jitsi.serverUrl') }}</label>
-        <InputText v-model="jitsiServerUrl" class="w-full" placeholder="https://meet.jit.si" />
-      </div>
-      <Button :label="t('common.save')" :loading="savingJitsi" @click="saveJitsiConfig" />
-    </div>
-
-    <!-- WOPI / ONLYOFFICE Section (enable/disable via Modules page) -->
-    <div v-if="adminStore.isModuleEnabled('wopi')" class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('wopi.title') }}</h2>
-      <Message severity="info" :closable="false">
-        {{ t('wopi.hint') }}
-      </Message>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('wopi.officeUrl') }}</label>
-        <InputText v-model="wopiOfficeUrl" class="w-full" placeholder="https://office.example.com" />
-        <small class="text-gray-500">{{ t('wopi.officeUrlHint') }}</small>
-      </div>
-      <Button :label="t('common.save')" :loading="savingWopi" @click="saveWopiConfig" />
-    </div>
-
-    <!-- Language Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.language') }}</h2>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('admin.settings.defaultLanguage') }}</label>
-        <Select
-          v-model="defaultLanguage"
-          :options="languageOptions"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full md:w-1/3"
-        />
-      </div>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('admin.settings.availableLanguages') }}</label>
-        <MultiSelect
-          v-model="availableLanguages"
-          :options="languageOptions"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full md:w-1/3"
-        />
-        <small class="text-gray-500">{{ t('admin.settings.availableLanguagesHint') }}</small>
-      </div>
-    </div>
-
-    <!-- Registration Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.registration') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="requireUserApproval" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.requireUserApproval') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.requireUserApprovalHint') }}</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Directory Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.directory') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="directoryAdminOnly" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.directoryAdminOnly') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.directoryAdminOnlyHint') }}</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Communication Section -->
-    <div v-if="adminStore.isModuleEnabled('messaging')" class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.communication') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="parentToParentMessaging" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.parentToParentMessaging') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.parentToParentMessagingHint') }}</small>
-        </div>
-      </div>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="studentToStudentMessaging" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.studentToStudentMessaging') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.studentToStudentMessagingHint') }}</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Jobboard Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.jobboard') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="requireAssignmentConfirmation" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
-          <small class="text-gray-500">{{ t('admin.requireConfirmationHint') }}</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Family Settings Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.settings.family') }}</h2>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="soleCustodyEnabled" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.soleCustodyEnabled') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.soleCustodyEnabledHint') }}</small>
-        </div>
-      </div>
-      <div class="mb-4 flex items-center gap-3">
-        <ToggleSwitch v-model="requireFamilySwitchApproval" />
-        <div>
-          <label class="block text-sm font-medium">{{ t('admin.settings.requireFamilySwitchApproval') }}</label>
-          <small class="text-gray-500">{{ t('admin.settings.requireFamilySwitchApprovalHint') }}</small>
-        </div>
-      </div>
-    </div>
-
-    <!-- Two-Factor Authentication Section -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('twoFactor.title') }}</h2>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('twoFactor.adminMode') }}</label>
-        <Select
-          v-model="twoFactorMode"
-          :options="twoFactorModeOptions"
-          optionLabel="label"
-          optionValue="value"
-          class="w-full md:w-1/3"
-        />
-        <small class="text-gray-500">{{ t('twoFactor.adminModeHint') }}</small>
-      </div>
-      <div v-if="twoFactorMode === 'MANDATORY' && twoFactorGraceDeadline" class="mb-4">
-        <Message severity="info" :closable="false">
-          {{ t('twoFactor.graceDeadline', { date: new Date(twoFactorGraceDeadline).toLocaleDateString() }) }}
-        </Message>
-      </div>
-    </div>
-
-    <Button :label="t('common.save')" icon="pi pi-check" :loading="saving" @click="saveSettings" class="mb-6" />
-
-    <!-- LDAP/AD Section -->
-    <div class="settings-section">
-      <div class="flex items-center gap-2 cursor-pointer mb-3" @click="ldapExpanded = !ldapExpanded">
-        <i :class="ldapExpanded ? 'pi pi-chevron-down' : 'pi pi-chevron-right'" />
-        <h2 class="text-lg font-semibold">{{ t('admin.settings.ldap.title') }}</h2>
-        <span v-if="ldapEnabled" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{{ t('common.active') }}</span>
-      </div>
-
-      <div v-if="ldapExpanded">
-        <div class="mb-4 flex items-center gap-3">
-          <ToggleSwitch v-model="ldapEnabled" />
-          <div>
-            <label class="block text-sm font-medium">{{ t('admin.settings.ldap.enabled') }}</label>
-            <small class="text-gray-500">{{ t('admin.settings.ldap.enabledHint') }}</small>
-          </div>
-        </div>
-
-        <div v-if="ldapEnabled">
-          <!-- Server Settings -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.url') }}</label>
-              <InputText v-model="ldapUrl" :placeholder="t('admin.settings.ldap.urlPlaceholder')" class="w-full" />
-              <small class="text-gray-500">{{ t('admin.settings.ldap.urlHint') }}</small>
+      <!-- 1. Allgemein -->
+      <AccordionPanel value="general">
+        <AccordionHeader>
+          <span class="flex items-center gap-2">
+            <i class="pi pi-cog" />
+            {{ t('admin.settings.groups.general') }}
+          </span>
+        </AccordionHeader>
+        <AccordionContent>
+          <!-- Language subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.settings.language') }}</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.defaultLanguage') }}</label>
+              <Select v-model="defaultLanguage" :options="languageOptions" optionLabel="label" optionValue="value" class="w-full md:w-1/3" />
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.baseDn') }}</label>
-              <InputText v-model="ldapBaseDn" :placeholder="t('admin.settings.ldap.baseDnPlaceholder')" class="w-full" />
-              <small class="text-gray-500">{{ t('admin.settings.ldap.baseDnHint') }}</small>
+            <div class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.availableLanguages') }}</label>
+              <MultiSelect v-model="availableLanguages" :options="languageOptions" optionLabel="label" optionValue="value" class="w-full md:w-1/3" />
+              <small class="text-gray-500">{{ t('admin.settings.availableLanguagesHint') }}</small>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.bindDn') }}</label>
-              <InputText v-model="ldapBindDn" :placeholder="t('admin.settings.ldap.bindDnPlaceholder')" class="w-full" />
-              <small class="text-gray-500">{{ t('admin.settings.ldap.bindDnHint') }}</small>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.bindPassword') }}</label>
-              <Password v-model="ldapBindPassword" :placeholder="ldapPasswordStored ? t('admin.settings.ldap.passwordNotShown') : t('admin.settings.ldap.bindPasswordPlaceholder')" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
-              <small class="text-gray-500">{{ t('admin.settings.ldap.bindPasswordHint') }}</small>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.userSearchFilter') }}</label>
-              <InputText v-model="ldapUserSearchFilter" class="w-full" />
-              <small class="text-gray-500">{{ t('admin.settings.ldap.userSearchFilterHint') }}</small>
-            </div>
-            <div class="flex items-center gap-3 pt-5">
-              <ToggleSwitch v-model="ldapUseSsl" />
+          <!-- Registration subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.settings.registration') }}</h3>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="requireUserApproval" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.ldap.useSsl') }}</label>
-                <small class="text-gray-500">{{ t('admin.settings.ldap.useSslHint') }}</small>
+                <label class="block text-sm font-medium">{{ t('admin.settings.requireUserApproval') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.requireUserApprovalHint') }}</small>
               </div>
             </div>
           </div>
 
-          <!-- Attribute Mapping -->
-          <h3 class="text-md font-medium mb-2">{{ t('admin.settings.ldap.attrMapping') }}</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.attrEmail') }}</label>
-              <InputText v-model="ldapAttrEmail" placeholder="mail" class="w-full" />
+          <!-- Bundesland & Vacations subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.holidaysAndVacations') }}</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('admin.bundesland') }}</label>
+              <Select v-model="bundesland" :options="bundeslandOptions" optionLabel="label" optionValue="value" class="w-full md:w-1/2" />
+              <small class="text-gray-500">{{ t('admin.bundeslandHint') }}</small>
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.attrFirstName') }}</label>
-              <InputText v-model="ldapAttrFirstName" placeholder="givenName" class="w-full" />
+            <h3 class="text-md font-medium mb-2">{{ t('admin.schoolVacations') }}</h3>
+            <div class="mb-3">
+              <Button :label="t('admin.loadVacations')" icon="pi pi-download" severity="secondary" size="small" @click="loadVacationsForBundesland" />
+              <small class="text-gray-500 ml-2">{{ t('admin.loadVacationsHint') }}</small>
             </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.attrLastName') }}</label>
-              <InputText v-model="ldapAttrLastName" placeholder="sn" class="w-full" />
+            <DataTable :value="schoolVacations" stripedRows class="mb-3">
+              <template #empty>
+                <span class="text-gray-400">{{ t('common.noData') }}</span>
+              </template>
+              <Column :header="t('admin.vacationName')">
+                <template #body="{ data }">
+                  <InputText v-model="data.name" class="w-full" />
+                </template>
+              </Column>
+              <Column :header="t('admin.vacationFrom')">
+                <template #body="{ data }">
+                  <InputText v-model="data.from" placeholder="YYYY-MM-DD" class="w-full" />
+                </template>
+              </Column>
+              <Column :header="t('admin.vacationTo')">
+                <template #body="{ data }">
+                  <InputText v-model="data.to" placeholder="YYYY-MM-DD" class="w-full" />
+                </template>
+              </Column>
+              <Column :header="t('common.actions')" style="width: 80px">
+                <template #body="{ index }">
+                  <Button icon="pi pi-trash" severity="danger" text rounded size="small" :aria-label="t('common.delete')" @click="removeVacation(index)" />
+                </template>
+              </Column>
+            </DataTable>
+            <div class="flex gap-2">
+              <Button :label="t('admin.addVacation')" icon="pi pi-plus" severity="secondary" size="small" @click="addVacation" />
+              <Button :label="t('common.save')" icon="pi pi-check" size="small" :loading="savingVacations" @click="saveVacationsConfig" />
             </div>
           </div>
 
-          <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.defaultRole') }}</label>
-            <Select v-model="ldapDefaultRole" :options="ldapRoleOptions" optionLabel="label" optionValue="value" class="w-full md:w-1/3" />
-            <small class="text-gray-500">{{ t('admin.settings.ldap.defaultRoleHint') }}</small>
+          <Button :label="t('common.save')" icon="pi pi-check" :loading="saving" @click="saveSettings" class="mt-2" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- 2. Kommunikation -->
+      <AccordionPanel value="communication">
+        <AccordionHeader>
+          <span class="flex items-center gap-2">
+            <i class="pi pi-comments" />
+            {{ t('admin.settings.groups.communication') }}
+          </span>
+        </AccordionHeader>
+        <AccordionContent>
+          <!-- Directory subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.settings.directory') }}</h3>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="directoryAdminOnly" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.settings.directoryAdminOnly') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.directoryAdminOnlyHint') }}</small>
+              </div>
+            </div>
           </div>
 
-          <div class="flex gap-2">
-            <Button :label="t('admin.settings.ldap.testConnection')" icon="pi pi-bolt" severity="secondary" :loading="testingLdap" @click="testLdapConnection" />
-            <Button :label="t('common.save')" icon="pi pi-check" :loading="savingLdap" @click="saveLdapConfig" />
+          <!-- Communication rules subsection (conditional on messaging module) -->
+          <div v-if="adminStore.isModuleEnabled('messaging')" class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.settings.communication') }}</h3>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="parentToParentMessaging" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.settings.parentToParentMessaging') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.parentToParentMessagingHint') }}</small>
+              </div>
+            </div>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="studentToStudentMessaging" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.settings.studentToStudentMessaging') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.studentToStudentMessagingHint') }}</small>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Hours Configuration -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.hoursConfig') }}</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label class="block text-sm font-medium mb-1">{{ t('admin.totalHoursTarget') }}</label>
-          <InputNumber v-model="targetHoursPerFamily" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">{{ t('admin.cleaningHoursTarget') }}</label>
-          <InputNumber v-model="targetCleaningHours" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
-        </div>
-      </div>
-      <Button :label="t('admin.saveHoursConfig')" icon="pi pi-check" :loading="savingHours"
-              @click="saveHoursConfig" />
-    </div>
+          <!-- Jobboard subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.settings.jobboard') }}</h3>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="requireAssignmentConfirmation" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
+                <small class="text-gray-500">{{ t('admin.requireConfirmationHint') }}</small>
+              </div>
+            </div>
+          </div>
 
-    <!-- Bundesland & School Vacations -->
-    <div class="settings-section">
-      <h2 class="text-lg font-semibold mb-3">{{ t('admin.holidaysAndVacations') }}</h2>
-      <div class="mb-4">
-        <label class="block text-sm font-medium mb-1">{{ t('admin.bundesland') }}</label>
-        <Select v-model="bundesland" :options="bundeslandOptions" optionLabel="label" optionValue="value"
-                class="w-full md:w-1/2" />
-        <small class="text-gray-500">{{ t('admin.bundeslandHint') }}</small>
-      </div>
+          <!-- Family subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.settings.family') }}</h3>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="soleCustodyEnabled" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.settings.soleCustodyEnabled') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.soleCustodyEnabledHint') }}</small>
+              </div>
+            </div>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="requireFamilySwitchApproval" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.settings.requireFamilySwitchApproval') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.requireFamilySwitchApprovalHint') }}</small>
+              </div>
+            </div>
+          </div>
 
-      <h3 class="text-md font-medium mb-2">{{ t('admin.schoolVacations') }}</h3>
-      <div class="mb-3">
-        <Button :label="t('admin.loadVacations')" icon="pi pi-download" severity="secondary" size="small"
-                @click="loadVacationsForBundesland" />
-        <small class="text-gray-500 ml-2">{{ t('admin.loadVacationsHint') }}</small>
-      </div>
-      <DataTable :value="schoolVacations" stripedRows class="mb-3">
-        <template #empty>
-          <span class="text-gray-400">{{ t('common.noData') }}</span>
-        </template>
-        <Column :header="t('admin.vacationName')">
-          <template #body="{ data }">
-            <InputText v-model="data.name" class="w-full" />
-          </template>
-        </Column>
-        <Column :header="t('admin.vacationFrom')">
-          <template #body="{ data }">
-            <InputText v-model="data.from" placeholder="YYYY-MM-DD" class="w-full" />
-          </template>
-        </Column>
-        <Column :header="t('admin.vacationTo')">
-          <template #body="{ data }">
-            <InputText v-model="data.to" placeholder="YYYY-MM-DD" class="w-full" />
-          </template>
-        </Column>
-        <Column :header="t('common.actions')" style="width: 80px">
-          <template #body="{ index }">
-            <Button icon="pi pi-trash" severity="danger" text rounded size="small" :aria-label="t('common.delete')" @click="removeVacation(index)" />
-          </template>
-        </Column>
-      </DataTable>
-      <div class="flex gap-2">
-        <Button :label="t('admin.addVacation')" icon="pi pi-plus" severity="secondary" size="small"
-                @click="addVacation" />
-        <Button :label="t('common.save')" icon="pi pi-check" size="small" :loading="savingVacations"
-                @click="saveVacationsConfig" />
-      </div>
-    </div>
+          <Button :label="t('common.save')" icon="pi pi-check" :loading="saving" @click="saveSettings" class="mt-2" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- 3. Integrationen -->
+      <AccordionPanel value="integration">
+        <AccordionHeader>
+          <span class="flex items-center gap-2">
+            <i class="pi pi-link" />
+            {{ t('admin.settings.groups.integration') }}
+          </span>
+        </AccordionHeader>
+        <AccordionContent>
+          <!-- Jitsi subsection -->
+          <div v-if="adminStore.isModuleEnabled('jitsi')" class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.jitsi.title') }}</h3>
+            <Message severity="info" :closable="false">{{ t('admin.jitsi.hint') }}</Message>
+            <div class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('admin.jitsi.serverUrl') }}</label>
+              <InputText v-model="jitsiServerUrl" class="w-full" placeholder="https://meet.jit.si" />
+            </div>
+            <Button :label="t('common.save')" :loading="savingJitsi" @click="saveJitsiConfig" />
+          </div>
+
+          <!-- WOPI / ONLYOFFICE subsection -->
+          <div v-if="adminStore.isModuleEnabled('wopi')" class="settings-subsection">
+            <h3 class="subsection-title">{{ t('wopi.title') }}</h3>
+            <Message severity="info" :closable="false">{{ t('wopi.hint') }}</Message>
+            <div class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('wopi.officeUrl') }}</label>
+              <InputText v-model="wopiOfficeUrl" class="w-full" placeholder="https://office.example.com" />
+              <small class="text-gray-500">{{ t('wopi.officeUrlHint') }}</small>
+            </div>
+            <Button :label="t('common.save')" :loading="savingWopi" @click="saveWopiConfig" />
+          </div>
+
+          <!-- ClamAV subsection -->
+          <div v-if="adminStore.isModuleEnabled('clamav')" class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.clamav.title') }}</h3>
+            <Message severity="info" :closable="false">{{ t('admin.clamav.hint') }}</Message>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.host') }}</label>
+                <InputText v-model="clamavHost" class="w-full" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">{{ t('admin.clamav.port') }}</label>
+                <InputNumber v-model="clamavPort" :min="1" :max="65535" class="w-full" />
+              </div>
+            </div>
+            <Button :label="t('common.save')" :loading="savingClamav" @click="saveClamavConfig" />
+          </div>
+
+          <!-- LDAP subsection -->
+          <div class="settings-subsection">
+            <div class="flex items-center gap-2 mb-3">
+              <h3 class="subsection-title mb-0">{{ t('admin.settings.ldap.title') }}</h3>
+              <span v-if="ldapEnabled" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{{ t('common.active') }}</span>
+            </div>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="ldapEnabled" />
+              <div>
+                <label class="block text-sm font-medium">{{ t('admin.settings.ldap.enabled') }}</label>
+                <small class="text-gray-500">{{ t('admin.settings.ldap.enabledHint') }}</small>
+              </div>
+            </div>
+            <div v-if="ldapEnabled">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.url') }}</label>
+                  <InputText v-model="ldapUrl" :placeholder="t('admin.settings.ldap.urlPlaceholder')" class="w-full" />
+                  <small class="text-gray-500">{{ t('admin.settings.ldap.urlHint') }}</small>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.baseDn') }}</label>
+                  <InputText v-model="ldapBaseDn" :placeholder="t('admin.settings.ldap.baseDnPlaceholder')" class="w-full" />
+                  <small class="text-gray-500">{{ t('admin.settings.ldap.baseDnHint') }}</small>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.bindDn') }}</label>
+                  <InputText v-model="ldapBindDn" :placeholder="t('admin.settings.ldap.bindDnPlaceholder')" class="w-full" />
+                  <small class="text-gray-500">{{ t('admin.settings.ldap.bindDnHint') }}</small>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.bindPassword') }}</label>
+                  <Password v-model="ldapBindPassword" :placeholder="ldapPasswordStored ? t('admin.settings.ldap.passwordNotShown') : t('admin.settings.ldap.bindPasswordPlaceholder')" :feedback="false" toggleMask class="w-full" inputClass="w-full" />
+                  <small class="text-gray-500">{{ t('admin.settings.ldap.bindPasswordHint') }}</small>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.userSearchFilter') }}</label>
+                  <InputText v-model="ldapUserSearchFilter" class="w-full" />
+                  <small class="text-gray-500">{{ t('admin.settings.ldap.userSearchFilterHint') }}</small>
+                </div>
+                <div class="flex items-center gap-3 pt-5">
+                  <ToggleSwitch v-model="ldapUseSsl" />
+                  <div>
+                    <label class="block text-sm font-medium">{{ t('admin.settings.ldap.useSsl') }}</label>
+                    <small class="text-gray-500">{{ t('admin.settings.ldap.useSslHint') }}</small>
+                  </div>
+                </div>
+              </div>
+              <h3 class="text-md font-medium mb-2">{{ t('admin.settings.ldap.attrMapping') }}</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.attrEmail') }}</label>
+                  <InputText v-model="ldapAttrEmail" placeholder="mail" class="w-full" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.attrFirstName') }}</label>
+                  <InputText v-model="ldapAttrFirstName" placeholder="givenName" class="w-full" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.attrLastName') }}</label>
+                  <InputText v-model="ldapAttrLastName" placeholder="sn" class="w-full" />
+                </div>
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium mb-1">{{ t('admin.settings.ldap.defaultRole') }}</label>
+                <Select v-model="ldapDefaultRole" :options="ldapRoleOptions" optionLabel="label" optionValue="value" class="w-full md:w-1/3" />
+                <small class="text-gray-500">{{ t('admin.settings.ldap.defaultRoleHint') }}</small>
+              </div>
+              <div class="flex gap-2">
+                <Button :label="t('admin.settings.ldap.testConnection')" icon="pi pi-bolt" severity="secondary" :loading="testingLdap" @click="testLdapConnection" />
+                <Button :label="t('common.save')" icon="pi pi-check" :loading="savingLdap" @click="saveLdapConfig" />
+              </div>
+            </div>
+          </div>
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- 4. Sicherheit -->
+      <AccordionPanel value="security">
+        <AccordionHeader>
+          <span class="flex items-center gap-2">
+            <i class="pi pi-shield" />
+            {{ t('admin.settings.groups.security') }}
+          </span>
+        </AccordionHeader>
+        <AccordionContent>
+          <!-- Maintenance subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('admin.maintenance.title') }}</h3>
+            <div class="mb-4 flex items-center gap-3">
+              <ToggleSwitch v-model="maintenanceEnabled" />
+              <label>{{ t('admin.maintenance.enabled') }}</label>
+            </div>
+            <Message v-if="maintenanceEnabled" severity="warn" :closable="false">{{ t('admin.maintenance.warning') }}</Message>
+            <div v-if="maintenanceEnabled" class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('admin.maintenance.message') }}</label>
+              <InputText v-model="maintenanceMessage" class="w-full" :placeholder="t('admin.maintenance.messagePlaceholder')" />
+            </div>
+            <Button :label="t('common.save')" :loading="savingMaintenance" @click="saveMaintenance" />
+          </div>
+
+          <!-- 2FA subsection -->
+          <div class="settings-subsection">
+            <h3 class="subsection-title">{{ t('twoFactor.title') }}</h3>
+            <div class="mb-4">
+              <label class="block text-sm font-medium mb-1">{{ t('twoFactor.adminMode') }}</label>
+              <Select v-model="twoFactorMode" :options="twoFactorModeOptions" optionLabel="label" optionValue="value" class="w-full md:w-1/3" />
+              <small class="text-gray-500">{{ t('twoFactor.adminModeHint') }}</small>
+            </div>
+            <div v-if="twoFactorMode === 'MANDATORY' && twoFactorGraceDeadline" class="mb-4">
+              <Message severity="info" :closable="false">{{ t('twoFactor.graceDeadline', { date: new Date(twoFactorGraceDeadline).toLocaleDateString() }) }}</Message>
+            </div>
+          </div>
+
+          <Button :label="t('common.save')" icon="pi pi-check" :loading="saving" @click="saveSettings" class="mt-2" />
+        </AccordionContent>
+      </AccordionPanel>
+
+      <!-- 5. Stunden -->
+      <AccordionPanel value="hours">
+        <AccordionHeader>
+          <span class="flex items-center gap-2">
+            <i class="pi pi-clock" />
+            {{ t('admin.settings.groups.hours') }}
+          </span>
+        </AccordionHeader>
+        <AccordionContent>
+          <div class="settings-subsection">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">{{ t('admin.totalHoursTarget') }}</label>
+                <InputNumber v-model="targetHoursPerFamily" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">{{ t('admin.cleaningHoursTarget') }}</label>
+                <InputNumber v-model="targetCleaningHours" :min="0" :max="999" :minFractionDigits="0" :maxFractionDigits="1" class="w-full" />
+              </div>
+            </div>
+            <Button :label="t('admin.saveHoursConfig')" icon="pi pi-check" :loading="savingHours" @click="saveHoursConfig" />
+          </div>
+        </AccordionContent>
+      </AccordionPanel>
+
+    </Accordion>
   </div>
 </template>
 
 <style scoped>
-.settings-section {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
+.settings-subsection {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
   border-bottom: 1px solid var(--mw-border-light);
 }
 
-.settings-section label {
+.settings-subsection:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-subsection label {
   margin-bottom: 0.125rem;
 }
 
-.settings-section small {
+.settings-subsection small {
   display: block;
   line-height: 1.4;
+}
+
+.subsection-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--mw-text-secondary);
 }
 </style>

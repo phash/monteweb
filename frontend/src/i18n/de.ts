@@ -385,6 +385,13 @@ export default {
     },
     settings: {
       title: 'Einstellungen',
+      groups: {
+        general: 'Allgemein',
+        communication: 'Kommunikation',
+        integration: 'Integrationen',
+        security: 'Sicherheit',
+        hours: 'Stunden',
+      },
       language: 'Sprache',
       multilanguageEnabled: 'Mehrsprachigkeit aktivieren',
       multilanguageHint: 'Wenn deaktiviert, wird nur die Standardsprache verwendet und der Sprachwechsler ausgeblendet.',
