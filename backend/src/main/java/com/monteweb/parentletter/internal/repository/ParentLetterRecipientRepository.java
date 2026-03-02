@@ -17,6 +17,8 @@ public interface ParentLetterRecipientRepository extends JpaRepository<ParentLet
 
     List<ParentLetterRecipient> findByLetterIdAndStatus(UUID letterId, RecipientStatus status);
 
+    List<ParentLetterRecipient> findByLetterIdAndStudentId(UUID letterId, UUID studentId);
+
     Optional<ParentLetterRecipient> findByLetterIdAndParentIdAndStudentId(
             UUID letterId, UUID parentId, UUID studentId);
 

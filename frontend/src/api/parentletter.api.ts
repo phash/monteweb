@@ -56,6 +56,16 @@ export const parentLetterApi = {
     return client.post<ApiResponse<void>>(`/parent-letters/${id}/read`)
   },
 
+  // PDF
+  downloadLetterPdf(id: string, studentId?: string) {
+    const params = studentId ? { studentId } : {}
+    return client.get(`/parent-letters/${id}/pdf`, { responseType: 'blob', params })
+  },
+
+  downloadTrackingPdf(id: string) {
+    return client.get(`/parent-letters/${id}/tracking-pdf`, { responseType: 'blob' })
+  },
+
   // Config
   getConfig(sectionId?: string) {
     return client.get<ApiResponse<ParentLetterConfigInfo>>('/parent-letter-config', {

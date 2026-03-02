@@ -2519,6 +2519,8 @@ export default {
     },
     progress: '{confirmed} von {total} bestätigt',
     deadline_info: 'Frist: {date}',
+    downloadPdf: 'Brief als PDF',
+    downloadTracking: 'Rücklauf-Liste als PDF',
   },
   footer: {
     deployed: 'Deployed',

@@ -7,6 +7,7 @@ import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useMarkdown } from '@/composables/useMarkdown'
 import { useParentLetterStore } from '@/stores/parentletter'
 import { useAuthStore } from '@/stores/auth'
+import { parentLetterApi } from '@/api/parentletter.api'
 import type { ParentLetterStatus } from '@/types/parentletter'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
@@ -112,6 +113,33 @@ async function handleConfirm(studentId: string) {
     confirmingStudentId.value = null
   }
 }
+
+function downloadBlob(data: Blob, filename: string) {
+  const url = URL.createObjectURL(data)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function downloadPdf() {
+  try {
+    const res = await parentLetterApi.downloadLetterPdf(letterId.value)
+    downloadBlob(res.data, `Elternbrief-${letter.value?.title ?? 'Brief'}.pdf`)
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), life: 5000 })
+  }
+}
+
+async function downloadTracking() {
+  try {
+    const res = await parentLetterApi.downloadTrackingPdf(letterId.value)
+    downloadBlob(res.data, `Ruecklauf-${letter.value?.title ?? 'Brief'}.pdf`)
+  } catch {
+    toast.add({ severity: 'error', summary: t('common.error'), life: 5000 })
+  }
+}
 </script>
 
 <template>
@@ -180,6 +208,21 @@ async function handleConfirm(studentId: string) {
           size="small"
           :loading="closingLetter"
           @click="handleClose"
+        />
+        <Button
+          :label="t('parentLetters.downloadPdf')"
+          icon="pi pi-file-pdf"
+          severity="secondary"
+          size="small"
+          @click="downloadPdf"
+        />
+        <Button
+          v-if="letter.status !== 'DRAFT'"
+          :label="t('parentLetters.downloadTracking')"
+          icon="pi pi-list"
+          severity="secondary"
+          size="small"
+          @click="downloadTracking"
         />
       </div>
 

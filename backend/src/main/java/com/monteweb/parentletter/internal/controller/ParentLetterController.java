@@ -5,6 +5,7 @@ import com.monteweb.parentletter.ParentLetterDetailInfo;
 import com.monteweb.parentletter.ParentLetterInfo;
 import com.monteweb.parentletter.ParentLetterRecipientInfo;
 import com.monteweb.parentletter.UpdateParentLetterRequest;
+import com.monteweb.parentletter.internal.service.ParentLetterPdfService;
 import com.monteweb.parentletter.internal.service.ParentLetterService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
@@ -24,9 +25,12 @@ import java.util.UUID;
 public class ParentLetterController {
 
     private final ParentLetterService parentLetterService;
+    private final ParentLetterPdfService pdfService;
 
-    public ParentLetterController(ParentLetterService parentLetterService) {
+    public ParentLetterController(ParentLetterService parentLetterService,
+                                  ParentLetterPdfService pdfService) {
         this.parentLetterService = parentLetterService;
+        this.pdfService = pdfService;
     }
 
     /**
@@ -143,5 +147,37 @@ public class ParentLetterController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         parentLetterService.markAsRead(id, userId);
         return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    /**
+     * Download letter as PDF. If studentId is provided, variables are resolved for that student.
+     */
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadLetterPdf(@PathVariable UUID id,
+            @RequestParam(required = false) UUID studentId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var detail = parentLetterService.getLetterDetail(id, userId);
+        String resolved = parentLetterService.getResolvedContent(id, studentId, userId);
+        byte[] pdf = pdfService.generateLetterPdf(detail, resolved);
+        String safeName = detail.title().replaceAll("[^a-zA-Z0-9\\-]", "_");
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"Elternbrief-" + safeName + ".pdf\"")
+                .body(pdf);
+    }
+
+    /**
+     * Download tracking/status list as PDF.
+     */
+    @GetMapping("/{id}/tracking-pdf")
+    public ResponseEntity<byte[]> downloadTrackingPdf(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var detail = parentLetterService.getLetterDetail(id, userId);
+        byte[] pdf = pdfService.generateTrackingPdf(detail);
+        String safeName = detail.title().replaceAll("[^a-zA-Z0-9\\-]", "_");
+        return ResponseEntity.ok()
+                .header("Content-Type", "application/pdf")
+                .header("Content-Disposition", "attachment; filename=\"Ruecklauf-" + safeName + ".pdf\"")
+                .body(pdf);
     }
 }

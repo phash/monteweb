@@ -348,6 +348,27 @@ public class ParentLetterService implements ParentLetterModuleApi {
         }
     }
 
+    // ---- PDF helpers ----
+
+    @Transactional(readOnly = true)
+    public String getResolvedContent(UUID letterId, UUID studentId, UUID userId) {
+        var letter = letterRepository.findById(letterId)
+                .orElseThrow(() -> new ResourceNotFoundException("ParentLetter", letterId));
+        if (studentId != null) {
+            var recipient = recipientRepository.findByLetterIdAndStudentId(letterId, studentId)
+                    .stream().findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException("Recipient not found for student " + studentId));
+            var student = userModuleApi.findById(recipient.getStudentId()).orElse(null);
+            var parent = userModuleApi.findById(recipient.getParentId()).orElse(null);
+            var family = familyModuleApi.findByUserId(recipient.getStudentId()).stream()
+                    .filter(f -> f.id().equals(recipient.getFamilyId()))
+                    .findFirst().orElse(null);
+            var teacher = userModuleApi.findById(userId).orElse(null);
+            return resolveVariables(letter.getContent(), student, family, parent, teacher);
+        }
+        return letter.getContent();
+    }
+
     // ---- Config ----
 
     @Transactional(readOnly = true)

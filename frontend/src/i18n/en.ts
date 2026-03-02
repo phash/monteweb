@@ -2519,6 +2519,8 @@ export default {
     },
     progress: '{confirmed} of {total} confirmed',
     deadline_info: 'Deadline: {date}',
+    downloadPdf: 'Letter as PDF',
+    downloadTracking: 'Tracking List as PDF',
   },
   footer: {
     deployed: 'Deployed',
