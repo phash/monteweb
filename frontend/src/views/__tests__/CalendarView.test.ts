@@ -104,3 +104,73 @@ describe('CalendarView', () => {
     expect(buttons.length).toBeGreaterThanOrEqual(3)
   })
 })
+
+describe('CalendarView scope filter logic', () => {
+  // Helper: simulate the filter function from CalendarView
+  function filterEvents(
+    events: Array<{ scope: string; scopeId: string | null; eventType: string }>,
+    selectedFilters: string[],
+    allFilterKeys: string[],
+    showCleaning: boolean
+  ) {
+    let result = events
+    if (!showCleaning) {
+      result = result.filter(e => e.eventType !== 'CLEANING')
+    }
+    if (selectedFilters.length > 0 && selectedFilters.length < allFilterKeys.length) {
+      result = result.filter(e => {
+        const key = e.scope === 'SCHOOL' ? 'SCHOOL' : `${e.scope}:${e.scopeId}`
+        return selectedFilters.includes(key)
+      })
+    }
+    return result
+  }
+
+  const events = [
+    { scope: 'SCHOOL', scopeId: null, eventType: 'GENERAL' },
+    { scope: 'SECTION', scopeId: 'sec-1', eventType: 'GENERAL' },
+    { scope: 'SECTION', scopeId: 'sec-2', eventType: 'GENERAL' },
+    { scope: 'ROOM', scopeId: 'room-1', eventType: 'GENERAL' },
+    { scope: 'ROOM', scopeId: 'room-2', eventType: 'CLEANING' },
+  ]
+
+  const allKeys = ['SCHOOL', 'SECTION:sec-1', 'SECTION:sec-2', 'ROOM:room-1', 'ROOM:room-2']
+
+  it('shows all events when all filters selected', () => {
+    const result = filterEvents(events, allKeys, allKeys, true)
+    expect(result).toHaveLength(5)
+  })
+
+  it('filters to school-only events', () => {
+    const result = filterEvents(events, ['SCHOOL'], allKeys, true)
+    expect(result).toHaveLength(1)
+    expect(result[0].scope).toBe('SCHOOL')
+  })
+
+  it('filters to specific section', () => {
+    const result = filterEvents(events, ['SECTION:sec-1'], allKeys, true)
+    expect(result).toHaveLength(1)
+    expect(result[0].scopeId).toBe('sec-1')
+  })
+
+  it('filters to specific room', () => {
+    const result = filterEvents(events, ['ROOM:room-1'], allKeys, true)
+    expect(result).toHaveLength(1)
+    expect(result[0].scopeId).toBe('room-1')
+  })
+
+  it('combines scope filter with cleaning toggle', () => {
+    const result = filterEvents(events, ['ROOM:room-2'], allKeys, false)
+    expect(result).toHaveLength(0) // room-2 event is CLEANING type, hidden by toggle
+  })
+
+  it('combines multiple filters', () => {
+    const result = filterEvents(events, ['SCHOOL', 'ROOM:room-1'], allKeys, true)
+    expect(result).toHaveLength(2)
+  })
+
+  it('shows all when selectedFilters is empty (no filter active yet)', () => {
+    const result = filterEvents(events, [], allKeys, true)
+    expect(result).toHaveLength(5)
+  })
+})
