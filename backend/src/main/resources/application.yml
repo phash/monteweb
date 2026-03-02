@@ -145,3 +145,5 @@ monteweb:
       enabled: true
     profilefields:
       enabled: true
+    parentletter:
+      enabled: true

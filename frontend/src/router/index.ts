@@ -152,6 +152,28 @@ const router = createRouter({
           props: true,
         },
         {
+          path: 'parent-letters',
+          name: 'parent-letters',
+          component: () => import('@/views/ParentLettersView.vue'),
+        },
+        {
+          path: 'parent-letters/create',
+          name: 'parent-letter-create',
+          component: () => import('@/views/ParentLetterCreateView.vue'),
+        },
+        {
+          path: 'parent-letters/:id',
+          name: 'parent-letter-detail',
+          component: () => import('@/views/ParentLetterDetailView.vue'),
+          props: true,
+        },
+        {
+          path: 'parent-letters/:id/edit',
+          name: 'parent-letter-edit',
+          component: () => import('@/views/ParentLetterCreateView.vue'),
+          props: true,
+        },
+        {
           path: 'fundgrube',
           name: 'fundgrube',
           component: () => import('@/views/FundgrubeView.vue'),

@@ -41,6 +41,9 @@ const navItems = computed(() => {
   if (admin.isModuleEnabled('forms')) {
     items.push({ to: '/forms', icon: 'pi pi-list-check', label: t('nav.forms'), name: 'forms' })
   }
+  if (admin.isModuleEnabled('parentletter') && (auth.isAdmin || auth.isTeacher || auth.isSectionAdmin || auth.user?.role === 'PARENT')) {
+    items.push({ to: '/parent-letters', icon: 'pi pi-envelope', label: t('nav.parentLetters'), name: 'parent-letters' })
+  }
   if (admin.isModuleEnabled('fundgrube')) {
     items.push({ to: '/fundgrube', icon: 'pi pi-box', label: t('nav.fundgrube'), name: 'fundgrube' })
   }

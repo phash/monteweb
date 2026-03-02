@@ -85,6 +85,8 @@ public class NotificationEmailService {
             case FAMILY_INVITATION -> "Sie haben eine neue Familieneinladung erhalten.";
             case FAMILY_INVITATION_ACCEPTED -> "Ihre Familieneinladung wurde angenommen.";
             case MENTION -> "Sie wurden in einem Beitrag erwaehnt.";
+            case PARENT_LETTER -> title;
+            case PARENT_LETTER_REMINDER -> title;
         };
     }
 }
