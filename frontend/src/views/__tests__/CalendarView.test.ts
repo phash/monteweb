@@ -18,6 +18,22 @@ vi.mock('@/api/calendar.api', () => ({
 
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
 vi.mock('@/api/users.api', () => ({ usersApi: {} }))
+vi.mock('@/api/sections.api', () => ({
+  sectionsApi: {
+    getAll: vi.fn().mockResolvedValue({ data: { data: [] } }),
+  },
+}))
+vi.mock('@/api/jobboard.api', () => ({
+  jobboardApi: {
+    getJobs: vi.fn().mockResolvedValue({ data: { data: { content: [] } } }),
+  },
+}))
+vi.mock('@/api/rooms.api', () => ({
+  roomsApi: {
+    getMine: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getAll: vi.fn().mockResolvedValue({ data: { data: { content: [] } } }),
+  },
+}))
 
 const i18n = createI18n({
   legacy: false,
@@ -35,6 +51,12 @@ const i18n = createI18n({
         showCleaning: 'Putzaktionen anzeigen',
         cleaning: 'Putzaktion',
         exportCalendar: 'Exportieren',
+        filterPlaceholder: 'Bereiche & Räume filtern',
+        scopeSchool: 'Schulweit',
+        scopeSections: 'Bereiche',
+        scopeRooms: 'Räume',
+        ical: { showImported: 'Importierte Termine' },
+        showJobs: 'Jobs anzeigen',
         agenda: 'Agenda',
         month: 'Monat',
         threeMonth: '3 Monate',
@@ -57,6 +79,8 @@ const stubs = {
   },
   Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity', 'size', 'icon'] },
   Checkbox: { template: '<input type="checkbox" class="checkbox-stub" />', props: ['modelValue', 'binary', 'inputId'] },
+  MultiSelect: { template: '<div class="multiselect-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'optionGroupLabel', 'optionGroupChildren', 'placeholder', 'display', 'maxSelectedLabels', 'selectedItemsLabel'] },
+  SelectButton: { template: '<div class="selectbutton-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'allowEmpty'] },
   'router-link': {
     template: '<a class="router-link-stub"><slot /></a>',
     props: ['to'],
