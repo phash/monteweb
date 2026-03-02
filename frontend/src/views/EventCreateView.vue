@@ -44,14 +44,19 @@ const customColor = ref('')
 const addJitsi = ref(false)
 const saving = ref(false)
 
-const pastelColors = [
-  '#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF',
-  '#E8BAFF', '#FFB3E6', '#B3FFE6', '#FFE6B3', '#B3D9FF',
-  '#D9B3FF', '#FFB3B3', '#B3FFB3', '#B3FFFF', '#FFB3FF',
-  '#FFDAB3', '#C9FFB3', '#B3C9FF', '#FFB3D9', '#D9FFB3',
-  '#B3FFD9', '#FFD9B3', '#B3DAFF', '#E6B3FF', '#FFE6E6',
-  '#E6FFE6', '#E6E6FF', '#FFF0E6', '#E6FFF0', '#F0E6FF',
-  '#FFE6F0', '#F0FFE6',
+const eventColors = [
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#F97316', // Orange
+  '#14B8A6', // Teal
+  '#6366F1', // Indigo
+  '#84CC16', // Lime
+  '#A855F7', // Purple
 ]
 
 // Auto-adjust end date when start date moves past it
@@ -111,7 +116,7 @@ onMounted(async () => {
       recurrence.value = e.recurrence
       recurrenceEnd.value = e.recurrenceEnd ? new Date(e.recurrenceEnd) : null
       eventColor.value = e.color || null
-      if (e.color && !pastelColors.includes(e.color)) {
+      if (e.color && !eventColors.includes(e.color)) {
         customColor.value = e.color
       }
     }
@@ -303,7 +308,7 @@ async function handleSubmit() {
               <i class="pi pi-ban" />
             </button>
             <button
-              v-for="c in pastelColors"
+              v-for="c in eventColors"
               :key="c"
               type="button"
               class="color-swatch"
