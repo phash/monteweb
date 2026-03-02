@@ -15,7 +15,9 @@ export interface TwoFactorChallenge {
 
 function decodeJwtClaim(token: string, claim: string): string | null {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
+    const parts = token.split('.')
+    if (parts.length < 2) return null
+    const payload = JSON.parse(atob(parts[1]!))
     return payload[claim] ?? null
   } catch {
     return null
