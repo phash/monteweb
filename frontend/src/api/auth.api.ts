@@ -52,4 +52,12 @@ export const authApi = {
   get2faStatus() {
     return client.get<ApiResponse<TwoFactorStatusResponse>>('/auth/2fa/status')
   },
+
+  impersonate(targetUserId: string) {
+    return client.post<ApiResponse<LoginResponse>>('/auth/impersonate', { targetUserId })
+  },
+
+  stopImpersonation() {
+    return client.post<ApiResponse<LoginResponse>>('/auth/stop-impersonation')
+  },
 }

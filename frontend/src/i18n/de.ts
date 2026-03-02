@@ -78,6 +78,13 @@ export default {
     acceptTermsLabel: 'Ich akzeptiere die',
     termsLink: 'Nutzungsbedingungen',
     termsRequired: 'Sie muessen den Nutzungsbedingungen zustimmen.',
+    impersonation: {
+      banner: 'Angemeldet als {name} (Impersonation)',
+      stop: 'Zurück zum Admin',
+      toggle: 'Benutzerwechsel (Impersonation)',
+      toggleDescription: 'Ermöglicht dem SuperAdmin, sich als anderer Benutzer anzumelden. Nur für Test- und Supportzwecke.',
+      dangerWarning: 'Sicherheitsrelevante Funktion — nur aktivieren wenn benötigt',
+    },
   },
   dashboard: {
     welcome: 'Willkommen, {name}!',

@@ -13,12 +13,25 @@ export interface TwoFactorChallenge {
   type: '2fa_verify' | '2fa_setup_required'
 }
 
+function decodeJwtClaim(token: string, claim: string): string | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload[claim] ?? null
+  } catch {
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(null)
   const accessToken = ref<string | null>(sessionStorage.getItem('accessToken'))
   const loading = ref(false)
+  const impersonatedBy = ref<string | null>(
+    accessToken.value ? decodeJwtClaim(accessToken.value, 'impersonatedBy') : null
+  )
 
   const isAuthenticated = computed(() => !!accessToken.value)
+  const isImpersonating = computed(() => !!impersonatedBy.value)
   const isAdmin = computed(() => user.value?.role === 'SUPERADMIN')
   const isTeacher = computed(() =>
     user.value?.role === 'TEACHER' || user.value?.role === 'SUPERADMIN' || user.value?.role === 'SECTION_ADMIN'
@@ -148,7 +161,34 @@ export const useAuthStore = defineStore('auth', () => {
 
   function clearTokens() {
     accessToken.value = null
+    impersonatedBy.value = null
     sessionStorage.removeItem('accessToken')
+  }
+
+  async function impersonate(targetUserId: string) {
+    loading.value = true
+    try {
+      const res = await authApi.impersonate(targetUserId)
+      const { accessToken: token, refreshToken } = res.data.data
+      setTokens(token, refreshToken)
+      impersonatedBy.value = decodeJwtClaim(token, 'impersonatedBy')
+      await fetchUser()
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function stopImpersonation() {
+    loading.value = true
+    try {
+      const res = await authApi.stopImpersonation()
+      const { accessToken: token, refreshToken } = res.data.data
+      setTokens(token, refreshToken)
+      impersonatedBy.value = null
+      await fetchUser()
+    } finally {
+      loading.value = false
+    }
   }
 
   return {
@@ -163,11 +203,15 @@ export const useAuthStore = defineStore('auth', () => {
     canHaveFamily,
     assignedRoles,
     canSwitchRole,
+    impersonatedBy,
+    isImpersonating,
     login,
     verify2fa,
     register,
     logout,
     fetchUser,
     switchRole,
+    impersonate,
+    stopImpersonation,
   }
 })

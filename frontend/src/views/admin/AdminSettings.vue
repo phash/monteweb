@@ -70,6 +70,9 @@ const ldapUseSsl = ref(false)
 const ldapPasswordStored = ref(false)
 const openPanels = ref(['general', 'communication'])
 
+// Impersonation (enabled via modules map)
+const impersonationEnabled = ref(false)
+
 // Maintenance mode (enabled via modules map)
 const maintenanceEnabled = ref(false)
 const maintenanceMessage = ref('')
@@ -151,6 +154,8 @@ onMounted(async () => {
     ldapDefaultRole.value = adminStore.config.ldapDefaultRole ?? 'PARENT'
     ldapUseSsl.value = adminStore.config.ldapUseSsl ?? false
     ldapPasswordStored.value = adminStore.config.ldapConfigured ?? false
+    // Impersonation (enabled via modules map)
+    impersonationEnabled.value = adminStore.isModuleEnabled('impersonation')
     // Maintenance (enabled via modules map)
     maintenanceEnabled.value = adminStore.isModuleEnabled('maintenance')
     maintenanceMessage.value = adminStore.config.maintenanceMessage ?? ''
@@ -208,6 +213,20 @@ async function saveMaintenance() {
     toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   } finally {
     savingMaintenance.value = false
+  }
+}
+
+async function saveImpersonationToggle(enabled: boolean) {
+  try {
+    const currentModules = adminStore.config?.modules ? { ...adminStore.config.modules } : {}
+    currentModules.impersonation = enabled
+    const res = await adminApi.updateModules(currentModules)
+    adminStore.config = res.data.data
+    impersonationEnabled.value = enabled
+    toast.add({ severity: 'success', summary: t('admin.settings.saved'), life: 3000 })
+  } catch (e: any) {
+    impersonationEnabled.value = !enabled
+    toast.add({ severity: 'error', summary: e.response?.data?.message || 'Error', life: 5000 })
   }
 }
 
@@ -693,6 +712,23 @@ async function testLdapConnection() {
             </div>
           </div>
 
+          <!-- Impersonation Toggle -->
+          <div class="settings-subsection danger-section">
+            <h3 class="subsection-title">
+              <i class="pi pi-user-edit" /> {{ t('auth.impersonation.toggle') }}
+            </h3>
+            <p class="danger-hint">
+              <i class="pi pi-exclamation-triangle" /> {{ t('auth.impersonation.dangerWarning') }}
+            </p>
+            <div class="toggle-row">
+              <ToggleSwitch
+                v-model="impersonationEnabled"
+                @update:modelValue="saveImpersonationToggle"
+              />
+              <span>{{ t('auth.impersonation.toggleDescription') }}</span>
+            </div>
+          </div>
+
           <Button :label="t('common.save')" icon="pi pi-check" :loading="saving" @click="saveSettings" class="mt-2" />
         </AccordionContent>
       </AccordionPanel>
@@ -753,5 +789,24 @@ async function testLdapConnection() {
   font-weight: 600;
   margin-bottom: 0.75rem;
   color: var(--mw-text-secondary);
+}
+
+.danger-section {
+  border: 1px solid var(--p-red-200, #fecaca);
+  border-radius: var(--mw-border-radius, 8px);
+  padding: 1rem;
+  background: color-mix(in srgb, var(--p-red-50, #fef2f2) 50%, transparent);
+}
+
+.danger-hint {
+  color: var(--p-red-600, #dc2626);
+  font-size: var(--mw-font-size-sm);
+  margin-bottom: 0.75rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 </style>

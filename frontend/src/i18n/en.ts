@@ -78,6 +78,13 @@ export default {
     acceptTermsLabel: 'I accept the',
     termsLink: 'Terms of Service',
     termsRequired: 'You must accept the terms of service.',
+    impersonation: {
+      banner: 'Logged in as {name} (Impersonation)',
+      stop: 'Back to Admin',
+      toggle: 'User Impersonation',
+      toggleDescription: 'Allows the SuperAdmin to log in as another user. For testing and support only.',
+      dangerWarning: 'Security-sensitive feature — only enable when needed',
+    },
   },
   dashboard: {
     welcome: 'Welcome, {name}!',

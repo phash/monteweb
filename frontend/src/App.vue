@@ -8,6 +8,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useImageToken } from '@/composables/useImageToken'
 import { useDarkMode } from '@/composables/useDarkMode'
 import Toast from 'primevue/toast'
+import ImpersonationBanner from '@/components/common/ImpersonationBanner.vue'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -64,5 +65,6 @@ onUnmounted(() => {
 
 <template>
   <Toast />
+  <ImpersonationBanner />
   <router-view />
 </template>
