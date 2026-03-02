@@ -6,7 +6,7 @@ import { useToast } from 'primevue/usetoast'
 import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useParentLetterStore } from '@/stores/parentletter'
 import { useAuthStore } from '@/stores/auth'
-import type { ParentLetterStatus, RecipientStatus } from '@/types/parentletter'
+import type { ParentLetterStatus } from '@/types/parentletter'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -78,14 +78,6 @@ function statusSeverity(status: ParentLetterStatus): 'secondary' | 'info' | 'suc
     case 'SCHEDULED': return 'info'
     case 'SENT': return 'success'
     case 'CLOSED': return 'warn'
-  }
-}
-
-function inboxStatusSeverity(status: RecipientStatus): 'danger' | 'info' | 'success' {
-  switch (status) {
-    case 'OPEN': return 'danger'
-    case 'READ': return 'info'
-    case 'CONFIRMED': return 'success'
   }
 }
 
