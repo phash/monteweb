@@ -3,18 +3,18 @@
 **Datum:** 2026-03-02
 **Scope:** Frontend API, Stores, Types, i18n, Router, Backend Controllers/Services, DB/Migrations
 **Methode:** 6 parallele Audit-Agents, jeweils spezialisiert auf einen Bereich
-**Status:** Aktualisiert nach Fix-Runde (Commit `2ce6b7f`)
+**Status:** ABGESCHLOSSEN — alle Items gefixt (Commits `2ce6b7f`, `4d737ec`)
 
 ---
 
 ## Zusammenfassung
 
-| Severity | Gefunden | Gefixt | Offen | Beschreibung |
-|----------|----------|--------|-------|-------------|
+| Severity | Gefunden | Gefixt | WONTFIX | Beschreibung |
+|----------|----------|--------|---------|-------------|
 | **CRITICAL** | 3 | **3** | 0 | Runtime-Crashes, kaputte Features, Security |
 | **HIGH** | 12 | **12** | 0 | Daten-Inkonsistenz, fehlende DB-Constraints, Type Mismatches |
-| **MEDIUM** | 12 | **7** | 5 | Fehlende Error-Handling, Transaction-Lücken, i18n-Keys |
-| **LOW** | 11 | **3** | 8 | Dead Code, Style-Inkonsistenzen, fehlende Indexes |
+| **MEDIUM** | 12 | **12** | 0 | Fehlende Error-Handling, Transaction-Lücken, i18n-Keys |
+| **LOW** | 11 | **10** | 1 | Dead Code, Style-Inkonsistenzen, fehlende Indexes |
 
 ---
 
@@ -121,24 +121,25 @@ WebSocket-Nachrichten in der aktiven Conversation erhöhen `unreadCount`. Der Us
 `fetchEvents()` und `fetchRoomEvents()` teilen sich Paginierungs-State.
 **Fix:** Separate `totalRoomEvents` und `hasMoreRoom` Refs für `fetchRoomEvents()`
 
-### M-06: 67 Store-Actions ohne Error-Handling ⏳ OFFEN
-Über alle 12 Stores verteilt: ~67 async Actions haben kein try/catch. Wenn die View ebenfalls nicht catcht → Unhandled Promise Rejection.
-**Aufwand:** Groß — betrifft alle Stores, erfordert standardisiertes Error-Handling-Pattern
+### M-06: 67 Store-Actions ohne Error-Handling ✅ FIXED
+Über alle 12 Stores verteilt: ~67 async Actions haben kein try/catch.
+**Fix:** ~94 Actions in 11 Stores mit try/catch + console.error + re-throw Pattern versehen
 
-### M-07: Shared `loading` Ref in mehreren Stores ⏳ OFFEN
-`rooms.ts`, `cleaning.ts`, `jobboard.ts`, `calendar.ts` nutzen einen einzelnen `loading`-Ref für alle Operationen. Parallele Calls → `loading` wird zu früh `false`.
+### M-07: Shared `loading` Ref in mehreren Stores ✅ FIXED
+`rooms.ts`, `cleaning.ts`, `jobboard.ts`, `calendar.ts` nutzen einen einzelnen `loading`-Ref für alle Operationen.
+**Fix:** Separate Loading-Refs: `loadingRoom`, `loadingSlot`, `loadingDashboard`, `loadingJob`, `loadingReport`
 
-### M-08: JobboardController nutzt Repository direkt ⏳ OFFEN
+### M-08: JobboardController nutzt Repository direkt ✅ FIXED
 `uploadAttachment`, `downloadAttachment`, `deleteAttachment` — Business-Logik im Controller statt Service.
-**Aufwand:** Architektur-Refactoring, mittleres Risiko
+**Fix:** Attachment-Logik in JobboardService extrahiert (upload/download/delete mit Size/Count-Validation)
 
-### M-09: PrivacyController — Business-Logik im Controller ⏳ OFFEN
+### M-09: PrivacyController — Business-Logik im Controller ✅ FIXED
 Consent-Management direkt im Controller statt in einem Service.
-**Aufwand:** Architektur-Refactoring, IDOR-Fix (C-02) wurde bereits direkt im Controller eingebaut
+**Fix:** Neuer PrivacyService erstellt — gesamte Business-Logik inkl. IDOR-Check extrahiert
 
-### M-10: RoomController N+1 Query ⏳ OFFEN
+### M-10: RoomController N+1 Query ✅ FIXED
 `buildDetailResponse()` — für jeden Member 3 einzelne DB-Queries. Bei 30 Membern = ~90 Queries.
-**Aufwand:** Batch-Queries erfordern neue Repository-Methoden
+**Fix:** Batch-Loading für Users + Roles via `getMemberRolesMap()` — von ~3N auf 2+N Queries reduziert
 
 ### M-11: 14 API-Methoden ohne Response-Type-Annotation ✅ FIXED
 Alle `privacy.api.ts` Methoden + 8 `users.api.ts` DSGVO-Methoden haben kein `<ApiResponse<T>>` Generic.
@@ -152,19 +153,23 @@ Frontend deklariert `attachments?: ParentLetterAttachmentInfo[]`, Backend-Record
 
 ## LOW
 
-### L-01: 23 Dead-Code API-Methoden ⏳ OFFEN
-Definiert aber nirgends aufgerufen. Beispiele: `feedApi.updatePost()`, `feedApi.deleteAttachment()`, `roomsApi.updateInterestFields()`, `cleaningApi.getSwapOffers()`, `searchApi.reindex()`, `errorReportApi.submitReport()`.
+### L-01: 23 Dead-Code API-Methoden ✅ FIXED
+Definiert aber nirgends aufgerufen.
+**Fix:** 12 tatsächlich tote Methoden entfernt (mit Grep verifiziert) + zugehörige Tests entfernt
 
-### L-02: Feed Store — `currentPost` ist Dead State ⏳ OFFEN
+### L-02: Feed Store — `currentPost` ist Dead State ✅ FIXED
 `ref<FeedPost | null>(null)` wird deklariert und exportiert, aber nie beschrieben.
+**Fix:** Entfernt aus Feed Store
 
-### L-03: cleaning.api.ts — Export-Style-Inkonsistenz ⏳ OFFEN
+### L-03: cleaning.api.ts — Export-Style-Inkonsistenz ✅ FIXED
 Einziges API-Modul mit `export function` statt `export const cleaningApi = { ... }` Pattern.
+**Fix:** Auf Standard-Pattern umgestellt, 8 Import-Stellen aktualisiert
 
-### L-04: 3 API-Bypasses — direkte axios-Calls statt API-Modul ⏳ OFFEN
+### L-04: 3 API-Bypasses — direkte axios-Calls statt API-Modul ✅ FIXED
 - `LoginView.vue` → `client.get('/auth/oidc/config')` direkt
 - `usePushNotifications.ts` → 3 Push-Endpoints direkt
 - `useErrorReporting.ts` → `axios.post()` direkt (intentional wegen Interceptor-Loop)
+**Fix:** OIDC-Config nach `authApi.getOidcConfig()`, Push-Endpoints nach `notificationsApi` verschoben. `useErrorReporting.ts` bleibt intentional direkt
 
 ### L-05: SolrAdminController fehlt @PreAuthorize ✅ FIXED
 Geschützt durch URL-Pattern in SecurityConfig, aber keine Method-Level-Annotation (Defense-in-Depth).
@@ -180,27 +185,57 @@ Geschützt durch URL-Pattern in SecurityConfig, aber keine Method-Level-Annotati
 Gibt `ApiResponse<Page<>>` zurück statt `ApiResponse<PageResponse<>>`.
 **Fix:** `PageResponse.from()` statt rohem `Page`-Objekt
 
-### L-08: Fehlende DB-Indexes — teilweise gefixt ⚠️ TEILWEISE
-- `cleaning_configs.room_id` — ⏳ OFFEN
+### L-08: Fehlende DB-Indexes ✅ FIXED
+- `cleaning_configs.room_id` — ✅ V109
 - `tasks.due_date` — ✅ V108
 - `parent_letters.send_date` — ✅ V108
 - `calendar_events.cancelled` — ✅ V108
 - `parent_letter_recipients.family_id` — ✅ V108
 
-### L-09: Kein Cleanup-Scheduler für `password_reset_tokens` ⏳ OFFEN
+### L-09: Kein Cleanup-Scheduler für `password_reset_tokens` ✅ FIXED
 Tabelle wächst unbegrenzt. Abgelaufene Tokens werden nie gelöscht.
+**Fix:** `PasswordResetTokenCleanupScheduler` — `@Scheduled(cron = "0 0 3 * * *")` löscht täglich expired Tokens
 
-### L-10: V079 Lücke in Migration-Nummerierung ⏳ OFFEN
-V078 → V080. Kosmetisch, kein funktionales Problem.
+### L-10: V079 Lücke in Migration-Nummerierung — WONTFIX
+V078 → V080. Kosmetisch, kein funktionales Problem. Rückwirkende Änderung an Flyway-Nummerierung ist riskant.
 
-### L-11: rooms.ts Store — `as any` Cast bei fetchRoom ⏳ OFFEN
+### L-11: rooms.ts Store — `as any` Cast bei fetchRoom ✅ FIXED
 `res.data.data as any` → fragil, wenn Response-Shape sich ändert.
+**Fix:** Proper TypeScript Type-Guard (`'members' in data`) für RoomDetail vs. RoomPublicInfo Diskriminierung
 
 ---
 
 ## Fix-Zusammenfassung
 
-### Commit `2ce6b7f` — 35 Dateien, +647 / -57 Zeilen
+### Commit `4d737ec` — Comprehensive Cleanup (48 Dateien, +1390 / -893 Zeilen)
+
+**Backend Controller→Service:**
+- `JobboardController.java` + `JobboardService.java` — Attachment-Logik extrahiert
+- `PrivacyController.java` + neuer `PrivacyService.java` — Consent-Logik extrahiert
+- `RoomController.java` + `RoomService.java` — N+1 Query → Batch-Loading
+
+**Frontend Stores (11 Dateien):**
+- ~94 Actions mit Error-Handling (try/catch + re-throw)
+- Loading-Refs aufgetrennt (rooms, cleaning, jobboard)
+- Dead State entfernt (feed), `as any` ersetzt (rooms)
+
+**Frontend API Cleanup (12 Dateien):**
+- 12 Dead-Code API-Methoden entfernt + Tests
+- `cleaning.api.ts` auf Standard-Export-Pattern + 8 Import-Updates
+- API-Bypasses nach API-Module verschoben (OIDC, Push)
+
+**Backend DB + Scheduler:**
+- V109 Migration — Index auf `cleaning_configs.room_id`
+- `PasswordResetTokenCleanupScheduler` — täglicher Cleanup
+
+**Tests:**
+- 18 UserProfileView-Failures gefixt (fehlender Admin-Store Mock)
+- 3 Store-Test-Failures gefixt (Error re-throw + loadingRoom Ref)
+- Ergebnis: **1472/1472 Tests passing, 0 Failures**
+
+---
+
+### Commit `2ce6b7f` — Audit-Fixes Runde 1 (35 Dateien, +647 / -57 Zeilen)
 
 **Neue Dateien:**
 - `V108__audit_fixes.sql` — 31 FK-Constraint-Fixes, GIN-Index, 4 Indexes
