@@ -68,6 +68,16 @@ public class ParentLetterController {
     }
 
     /**
+     * Stats for the current user's sent letters (teacher/admin).
+     */
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<ParentLetterStatsInfo>> getStats() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var stats = parentLetterService.getStats(userId);
+        return ResponseEntity.ok(ApiResponse.ok(stats));
+    }
+
+    /**
      * Get letter details.
      * - If the caller is the creator, LEADER, or SUPERADMIN: returns full detail with recipient list.
      * - If the caller is a parent recipient: returns detail with resolved content and marks as READ.

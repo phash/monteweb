@@ -5,6 +5,7 @@ import type {
   ParentLetterInfo,
   ParentLetterDetailInfo,
   ParentLetterConfigInfo,
+  ParentLetterStatsInfo,
   CreateParentLetterRequest,
   UpdateParentLetterRequest,
   UpdateParentLetterConfigRequest,
@@ -15,6 +16,7 @@ export const useParentLetterStore = defineStore('parentletter', () => {
   const inbox = ref<ParentLetterInfo[]>([])
   const currentLetter = ref<ParentLetterDetailInfo | null>(null)
   const config = ref<ParentLetterConfigInfo | null>(null)
+  const stats = ref<ParentLetterStatsInfo | null>(null)
   const loading = ref(false)
   const total = ref(0)
   const inboxTotal = ref(0)
@@ -38,6 +40,15 @@ export const useParentLetterStore = defineStore('parentletter', () => {
       inboxTotal.value = res.data.data.totalElements
     } finally {
       loading.value = false
+    }
+  }
+
+  async function fetchStats() {
+    try {
+      const res = await parentLetterApi.getStats()
+      stats.value = res.data.data
+    } catch {
+      stats.value = null
     }
   }
 
@@ -163,11 +174,13 @@ export const useParentLetterStore = defineStore('parentletter', () => {
     inbox,
     currentLetter,
     config,
+    stats,
     loading,
     total,
     inboxTotal,
     fetchMyLetters,
     fetchInbox,
+    fetchStats,
     fetchLetter,
     createLetter,
     updateLetter,

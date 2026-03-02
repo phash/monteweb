@@ -466,6 +466,39 @@ public class ParentLetterService implements ParentLetterModuleApi {
         return letter.getContent();
     }
 
+    // ---- Stats ----
+
+    @Transactional(readOnly = true)
+    public ParentLetterStatsInfo getStats(UUID userId) {
+        // Get all SENT letters created by this user
+        var sentLetters = letterRepository.findByCreatedByOrderByCreatedAtDesc(userId, Pageable.unpaged())
+                .filter(l -> l.getStatus() == ParentLetterStatus.SENT)
+                .toList();
+
+        int activeCount = sentLetters.size();
+        int totalRecipients = 0;
+        int totalConfirmed = 0;
+        int totalRead = 0;
+        int overdueCount = 0;
+        Instant now = Instant.now();
+
+        for (var letter : sentLetters) {
+            long count = recipientRepository.countByLetterId(letter.getId());
+            long confirmed = recipientRepository.countByLetterIdAndStatus(letter.getId(), RecipientStatus.CONFIRMED);
+            long read = recipientRepository.countByLetterIdAndStatus(letter.getId(), RecipientStatus.READ);
+            totalRecipients += (int) count;
+            totalConfirmed += (int) confirmed;
+            totalRead += (int) read;
+
+            // Check if overdue (deadline passed and not all confirmed)
+            if (letter.getDeadline() != null && letter.getDeadline().isBefore(now) && confirmed < count) {
+                overdueCount++;
+            }
+        }
+
+        return new ParentLetterStatsInfo(activeCount, totalRecipients, totalConfirmed, totalRead, overdueCount);
+    }
+
     // ---- Config ----
 
     @Transactional(readOnly = true)

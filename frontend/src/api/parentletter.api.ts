@@ -4,6 +4,8 @@ import type {
   ParentLetterInfo,
   ParentLetterDetailInfo,
   ParentLetterConfigInfo,
+  ParentLetterAttachmentInfo,
+  ParentLetterStatsInfo,
   CreateParentLetterRequest,
   UpdateParentLetterRequest,
   UpdateParentLetterConfigRequest,
@@ -54,6 +56,37 @@ export const parentLetterApi = {
 
   markAsRead(id: string) {
     return client.post<ApiResponse<void>>(`/parent-letters/${id}/read`)
+  },
+
+  // Stats
+  getStats() {
+    return client.get<ApiResponse<ParentLetterStatsInfo>>('/parent-letters/stats')
+  },
+
+  // Attachments
+  uploadAttachments(letterId: string, files: File[]) {
+    const formData = new FormData()
+    files.forEach(f => formData.append('files', f))
+    return client.post<ApiResponse<ParentLetterAttachmentInfo[]>>(
+      `/parent-letters/${letterId}/attachments`, formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+  },
+
+  getAttachments(letterId: string) {
+    return client.get<ApiResponse<ParentLetterAttachmentInfo[]>>(
+      `/parent-letters/${letterId}/attachments`,
+    )
+  },
+
+  deleteAttachment(letterId: string, attachmentId: string) {
+    return client.delete<ApiResponse<void>>(
+      `/parent-letters/${letterId}/attachments/${attachmentId}`,
+    )
+  },
+
+  getAttachmentDownloadUrl(letterId: string, attachmentId: string) {
+    return `/api/v1/parent-letters/${letterId}/attachments/${attachmentId}`
   },
 
   // PDF

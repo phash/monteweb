@@ -35,9 +35,33 @@ const canCreate = computed(() => auth.isTeacher || auth.isAdmin)
 const showMyLettersTab = computed(() => auth.isTeacher || auth.isAdmin)
 const showInboxTab = computed(() => auth.user?.role === 'PARENT' || auth.user?.role === 'STUDENT')
 
+const confirmRate = computed(() => {
+  if (!store.stats || store.stats.totalRecipients === 0) return 0
+  return Math.round((store.stats.totalConfirmed / store.stats.totalRecipients) * 100)
+})
+
+const rateClass = computed(() => {
+  const rate = confirmRate.value
+  if (rate >= 80) return 'rate-good'
+  if (rate >= 50) return 'rate-medium'
+  return 'rate-low'
+})
+
+function isOverdue(letter: { deadline: string | null; confirmedCount: number; totalRecipients: number }): boolean {
+  if (!letter.deadline) return false
+  if (letter.confirmedCount >= letter.totalRecipients) return false
+  return new Date(letter.deadline) < new Date()
+}
+
+function daysUntilDeadline(deadline: string): number {
+  const diff = new Date(deadline).getTime() - Date.now()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
 onMounted(async () => {
   if (showMyLettersTab.value) {
     await store.fetchMyLetters()
+    store.fetchStats() // fire-and-forget
   }
   if (showInboxTab.value) {
     await store.fetchInbox()
@@ -119,6 +143,22 @@ async function handleDelete(id: string) {
       />
     </div>
 
+    <!-- Stats bar (teacher/admin) -->
+    <div v-if="canCreate && store.stats" class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-value">{{ store.stats.activeCount }}</span>
+        <span class="stat-label">{{ t('parentLetters.stats.active') }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" :class="rateClass">{{ confirmRate }}%</span>
+        <span class="stat-label">{{ t('parentLetters.stats.confirmRate') }}</span>
+      </div>
+      <div class="stat-card" v-if="store.stats.overdueCount > 0">
+        <span class="stat-value overdue">{{ store.stats.overdueCount }}</span>
+        <span class="stat-label">{{ t('parentLetters.stats.overdue') }}</span>
+      </div>
+    </div>
+
     <Tabs v-model:value="activeTab">
       <TabList>
         <Tab v-if="showMyLettersTab" value="0">{{ t('parentLetters.tabs.mine') }}</Tab>
@@ -163,6 +203,20 @@ async function handleDelete(id: string) {
                   <span>
                     <i class="pi pi-users" /> {{ letter.confirmedCount }}/{{ letter.totalRecipients }} {{ t('parentLetters.confirmed') }}
                   </span>
+                  <Tag
+                    v-if="letter.status === 'SENT' && isOverdue(letter)"
+                    :value="t('parentLetters.stats.overdue')"
+                    severity="danger"
+                    size="small"
+                    class="deadline-badge"
+                  />
+                  <Tag
+                    v-else-if="letter.status === 'SENT' && letter.deadline && daysUntilDeadline(letter.deadline) <= 3 && daysUntilDeadline(letter.deadline) >= 0"
+                    :value="daysUntilDeadline(letter.deadline) + ' ' + t('parentLetters.stats.daysLeft')"
+                    severity="warn"
+                    size="small"
+                    class="deadline-badge"
+                  />
                 </div>
                 <ProgressBar
                   v-if="letter.totalRecipients > 0"
@@ -362,9 +416,74 @@ async function handleDelete(id: string) {
   flex-shrink: 0;
 }
 
+.stats-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--mw-bg-card, #ffffff);
+  border: 1px solid var(--mw-border, #dee2e6);
+  border-radius: var(--mw-border-radius, 8px);
+  min-width: 100px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--mw-primary, #3b82f6);
+}
+
+.stat-value.rate-good {
+  color: var(--p-green-600, #16a34a);
+}
+
+.stat-value.rate-medium {
+  color: var(--p-orange-500, #f97316);
+}
+
+.stat-value.rate-low {
+  color: var(--p-red-500, #ef4444);
+}
+
+.stat-value.overdue {
+  color: var(--p-red-500, #ef4444);
+}
+
+.stat-label {
+  font-size: var(--mw-font-size-xs, 0.75rem);
+  color: var(--mw-text-muted);
+  text-align: center;
+}
+
+.deadline-badge {
+  margin-left: 0.25rem;
+}
+
 @media (max-width: 600px) {
   .letter-actions {
     flex-direction: column;
+  }
+
+  .stats-bar {
+    gap: 0.5rem;
+  }
+
+  .stat-card {
+    flex: 1;
+    min-width: 80px;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .stat-value {
+    font-size: 1.25rem;
   }
 }
 </style>

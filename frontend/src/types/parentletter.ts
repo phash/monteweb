@@ -85,6 +85,14 @@ export interface UpdateParentLetterConfigRequest {
   reminderDays?: number | null
 }
 
+export interface ParentLetterStatsInfo {
+  activeCount: number
+  totalRecipients: number
+  totalConfirmed: number
+  totalRead: number
+  overdueCount: number
+}
+
 export interface ParentLetterAttachmentInfo {
   id: string
   originalFilename: string

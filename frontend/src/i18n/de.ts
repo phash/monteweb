@@ -2547,6 +2547,12 @@ export default {
       reminderDaysHint: 'Automatische Erinnerung X Tage vor Frist',
       optional: 'Optional',
     },
+    stats: {
+      active: 'Aktive Briefe',
+      confirmRate: 'Rücklaufquote',
+      overdue: 'Überfällig',
+      daysLeft: 'Tage',
+    },
     attachments: {
       title: 'Anhänge',
       upload: 'Dateien anhängen',

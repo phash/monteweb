@@ -2547,6 +2547,12 @@ export default {
       reminderDaysHint: 'Automatic reminder X days before deadline',
       optional: 'Optional',
     },
+    stats: {
+      active: 'Active Letters',
+      confirmRate: 'Confirmation Rate',
+      overdue: 'Overdue',
+      daysLeft: 'days',
+    },
     attachments: {
       title: 'Attachments',
       upload: 'Attach files',
