@@ -1,0 +1,1309 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MonteWeb vs HumHub — Systemvergleich</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --monte: #2d6a4f;
+    --monte-light: #95d5b2;
+    --monte-bg: #f0faf4;
+    --hum: #1a5276;
+    --hum-light: #85c1e9;
+    --hum-bg: #eaf2f8;
+    --shared: #e67e22;
+    --shared-light: #f5cba7;
+    --deficit: #c0392b;
+    --deficit-light: #f5b7b1;
+    --bg: #fafaf7;
+    --surface: #ffffff;
+    --text: #1a1a1a;
+    --text-secondary: #5a5a5a;
+    --border: #e0ddd5;
+    --accent-gold: #d4a843;
+    --low: #27ae60;
+    --mid: #f39c12;
+    --high: #e74c3c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    font-size: 15px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── NAV ─── */
+  .nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(250, 250, 247, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+  }
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    height: 52px;
+    overflow-x: auto;
+  }
+  .nav a {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    transition: color 0.2s;
+  }
+  .nav a:hover { color: var(--monte); }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 5rem 2rem 4rem;
+    background: linear-gradient(168deg, #1a1a1a 0%, #2d3436 48%, #2d6a4f 100%);
+    color: #fff;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 600px 400px at 15% 80%, rgba(45,106,79,0.35), transparent),
+      radial-gradient(ellipse 500px 350px at 85% 20%, rgba(26,82,118,0.3), transparent);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60L60 0' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .hero-inner {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .hero-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--monte-light);
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', Georgia, serif;
+    font-size: clamp(2.5rem, 5vw, 4.5rem);
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--monte-light);
+  }
+  .hero-subtitle {
+    font-size: 1.1rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.7);
+    max-width: 640px;
+    line-height: 1.7;
+  }
+  .hero-badges {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2.5rem;
+    flex-wrap: wrap;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .hero-badge.monte-badge {
+    background: rgba(45,106,79,0.3);
+    border: 1px solid rgba(149,213,178,0.3);
+    color: var(--monte-light);
+  }
+  .hero-badge.hum-badge {
+    background: rgba(26,82,118,0.3);
+    border: 1px solid rgba(133,193,233,0.3);
+    color: var(--hum-light);
+  }
+  .hero-badge .badge-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .hero-badge.monte-badge .badge-dot { background: var(--monte-light); }
+  .hero-badge.hum-badge .badge-dot { background: var(--hum-light); }
+
+  /* ─── SCORE STRIP ─── */
+  .score-strip {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+  }
+  .score-strip-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+  }
+  .score-item {
+    text-align: center;
+  }
+  .score-number {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2.2rem;
+    line-height: 1;
+  }
+  .score-number.monte-num { color: var(--monte); }
+  .score-number.hum-num { color: var(--hum); }
+  .score-number.shared-num { color: var(--shared); }
+  .score-number.school-num { color: var(--accent-gold); }
+  .score-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    margin-top: 0.35rem;
+  }
+
+  /* ─── SECTIONS ─── */
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+  }
+  .section + .section { padding-top: 0; }
+
+  .section-header {
+    margin-bottom: 2.5rem;
+  }
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--monte);
+    margin-bottom: 0.5rem;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 400;
+    line-height: 1.2;
+  }
+  .section-desc {
+    margin-top: 0.75rem;
+    color: var(--text-secondary);
+    max-width: 640px;
+    font-weight: 300;
+  }
+
+  /* ─── COMPARISON CARDS ─── */
+  .category-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    transition: box-shadow 0.3s;
+  }
+  .category-card:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+  }
+  .category-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(45,106,79,0.03), rgba(26,82,118,0.03));
+  }
+  .category-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+  .category-icon.comm { background: #e8f5e9; }
+  .category-icon.spaces { background: #e3f2fd; }
+  .category-icon.feed { background: #fff3e0; }
+  .category-icon.files { background: #f3e5f5; }
+  .category-icon.cal { background: #e0f2f1; }
+  .category-icon.school { background: #fce4ec; }
+  .category-icon.users { background: #e8eaf6; }
+  .category-icon.theme { background: #fff8e1; }
+  .category-icon.infra { background: #efebe9; }
+
+  .category-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.25rem;
+  }
+  .category-verdict {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .verdict-monte { background: var(--monte-bg); color: var(--monte); }
+  .verdict-hum { background: var(--hum-bg); color: var(--hum); }
+  .verdict-equal { background: #fef9e7; color: var(--shared); }
+  .verdict-exclusive { background: #fdebd0; color: #a04000; }
+
+  .category-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 768px) {
+    .category-body { grid-template-columns: 1fr; }
+  }
+
+  .platform-col {
+    padding: 1.25rem 1.5rem;
+  }
+  .platform-col + .platform-col {
+    border-left: 1px solid var(--border);
+  }
+  @media (max-width: 768px) {
+    .platform-col + .platform-col {
+      border-left: none;
+      border-top: 1px solid var(--border);
+    }
+  }
+
+  .platform-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .platform-label .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .platform-label.monte-label .dot { background: var(--monte); }
+  .platform-label.monte-label { color: var(--monte); }
+  .platform-label.hum-label .dot { background: var(--hum); }
+  .platform-label.hum-label { color: var(--hum); }
+
+  .feature-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .feature-list .icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    margin-top: 1px;
+  }
+  .icon.yes { background: #d5f5e3; color: #1e8449; }
+  .icon.no { background: #fadbd8; color: #c0392b; }
+  .icon.partial { background: #fdebd0; color: #b9770e; }
+
+  .advantage-row {
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(90deg, var(--monte-bg), var(--hum-bg));
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .advantage-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .advantage-item .adv-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .advantage-item.monte-adv .adv-dot { background: var(--monte); }
+  .advantage-item.hum-adv .adv-dot { background: var(--hum); }
+  .advantage-item strong {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .advantage-item.monte-adv strong { color: var(--monte); }
+  .advantage-item.hum-adv strong { color: var(--hum); }
+
+  /* ─── SCHOOL-EXCLUSIVE SECTION ─── */
+  .exclusive-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .exclusive-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .exclusive-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+  }
+  .exclusive-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--monte);
+  }
+  .exclusive-card h4 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    margin-bottom: 0.4rem;
+    padding-left: 0.75rem;
+  }
+  .exclusive-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding-left: 0.75rem;
+  }
+  .exclusive-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--monte);
+    background: var(--monte-bg);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-left: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  /* ─── DEFICIT / ROADMAP ─── */
+  .deficit-section {
+    background: linear-gradient(180deg, var(--bg) 0%, #f5f0e8 100%);
+    padding: 4rem 2rem;
+  }
+  .deficit-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .deficit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+    margin-top: 2.5rem;
+  }
+  .deficit-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .deficit-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+  }
+  .deficit-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .deficit-card h4 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.05rem;
+    flex: 1;
+  }
+  .deficit-card .number {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+  }
+  .deficit-card p {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .deficit-meta {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: auto;
+  }
+  .meta-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+  }
+  .effort-low { background: #d5f5e3; color: #1e8449; }
+  .effort-mid { background: #fdebd0; color: #b9770e; }
+  .effort-high { background: #fadbd8; color: #c0392b; }
+  .priority-tag {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: #eee;
+    color: #555;
+  }
+  .priority-high { background: #fdebd0; color: #a04000; }
+  .priority-mid { background: #d6eaf8; color: #1a5276; }
+  .priority-low { background: #f2f3f4; color: #717171; }
+
+  /* ─── SUMMARY ─── */
+  .summary {
+    background: linear-gradient(168deg, #1a1a1a 0%, #2d3436 48%, #1a5276 100%);
+    color: #fff;
+    padding: 4rem 2rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .summary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 60L60 0' stroke='rgba(255,255,255,0.03)' stroke-width='1'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+  .summary-inner {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 2rem;
+  }
+  @media (max-width: 768px) {
+    .summary-grid { grid-template-columns: 1fr; gap: 2rem; }
+  }
+  .summary-col h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .summary-col h3 .s-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .summary-col.monte-sum h3 .s-dot { background: var(--monte-light); }
+  .summary-col.hum-sum h3 .s-dot { background: var(--hum-light); }
+
+  .summary-col ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .summary-col li {
+    font-size: 14px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.8);
+    padding-left: 1.25rem;
+    position: relative;
+  }
+  .summary-col li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: rgba(255,255,255,0.4);
+  }
+
+  .conclusion-box {
+    margin-top: 3rem;
+    padding: 1.5rem 2rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.05);
+  }
+  .conclusion-box p {
+    font-size: 15px;
+    font-weight: 300;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.7;
+  }
+  .conclusion-box strong {
+    color: #fff;
+    font-weight: 500;
+  }
+
+  /* ─── FOOTER ─── */
+  .foot {
+    text-align: center;
+    padding: 2rem;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  /* ─── PRINT ─── */
+  @media print {
+    .nav { display: none; }
+    .hero { padding: 2rem; background: #1a1a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .category-card, .exclusive-card, .deficit-card { break-inside: avoid; }
+    .section { padding: 2rem 1rem; }
+    body { font-size: 12px; }
+  }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .category-card, .exclusive-card, .deficit-card {
+    animation: fadeUp 0.5s ease both;
+  }
+  .category-card:nth-child(1) { animation-delay: 0.05s; }
+  .category-card:nth-child(2) { animation-delay: 0.1s; }
+  .category-card:nth-child(3) { animation-delay: 0.15s; }
+  .category-card:nth-child(4) { animation-delay: 0.2s; }
+  .category-card:nth-child(5) { animation-delay: 0.25s; }
+  .exclusive-card:nth-child(1) { animation-delay: 0.05s; }
+  .exclusive-card:nth-child(2) { animation-delay: 0.1s; }
+  .exclusive-card:nth-child(3) { animation-delay: 0.15s; }
+  .exclusive-card:nth-child(4) { animation-delay: 0.2s; }
+  .exclusive-card:nth-child(5) { animation-delay: 0.25s; }
+  .exclusive-card:nth-child(6) { animation-delay: 0.3s; }
+  .exclusive-card:nth-child(7) { animation-delay: 0.35s; }
+  .exclusive-card:nth-child(8) { animation-delay: 0.4s; }
+  .exclusive-card:nth-child(9) { animation-delay: 0.45s; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="#vergleich">Vergleich</a>
+    <a href="#schule">Schulfeatures</a>
+    <a href="#defizite">Roadmap</a>
+    <a href="#fazit">Fazit</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-inner">
+    <div class="hero-label">Systemvergleich &middot; Februar 2026</div>
+    <h1>MonteWeb <em>vs</em> HumHub</h1>
+    <p class="hero-subtitle">
+      Detaillierter Funktionsvergleich zweier Plattformen &mdash; ein spezialisiertes Schul-Intranet
+      gegen ein universelles Social-Intranet. Wo liegen die St&auml;rken, wo die Potenziale?
+    </p>
+    <div class="hero-badges">
+      <span class="hero-badge monte-badge">
+        <span class="badge-dot"></span>
+        MonteWeb &middot; Schul-Intranet
+      </span>
+      <span class="hero-badge hum-badge">
+        <span class="badge-dot"></span>
+        HumHub &middot; Social Network
+      </span>
+    </div>
+  </div>
+</header>
+
+<!-- SCORE STRIP -->
+<div class="score-strip">
+  <div class="score-strip-inner">
+    <div class="score-item">
+      <div class="score-number monte-num">47</div>
+      <div class="score-label">MonteWeb Features</div>
+    </div>
+    <div class="score-item">
+      <div class="score-number hum-num">35</div>
+      <div class="score-label">HumHub Features</div>
+    </div>
+    <div class="score-item">
+      <div class="score-number shared-num">22</div>
+      <div class="score-label">Gemeinsame Basis</div>
+    </div>
+    <div class="score-item">
+      <div class="score-number school-num">9</div>
+      <div class="score-label">Schul-Exklusiv</div>
+    </div>
+  </div>
+</div>
+
+<!-- COMPARISON SECTION -->
+<div class="section" id="vergleich">
+  <div class="section-header">
+    <div class="section-label">01 &mdash; Funktionsvergleich</div>
+    <h2 class="section-title">Feature-f&uuml;r-Feature Gegen&uuml;berstellung</h2>
+    <p class="section-desc">
+      Jede Kategorie zeigt die verf&uuml;gbaren Funktionen beider Systeme
+      mit einer Einsch&auml;tzung, welche Plattform in dem Bereich die Nase vorn hat.
+    </p>
+  </div>
+
+  <!-- Kommunikation -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon comm">&#128172;</div>
+      <div class="category-name">Kommunikation &amp; Messaging</div>
+      <span class="category-verdict verdict-monte">MonteWeb vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Direktnachrichten (1:1 &amp; Gruppen)</li>
+          <li><span class="icon yes">&#10003;</span> Chat-Bilder mit Thumbnails</li>
+          <li><span class="icon yes">&#10003;</span> Reply-Threading (Antworten)</li>
+          <li><span class="icon yes">&#10003;</span> Chat-Stummschaltung</li>
+          <li><span class="icon yes">&#10003;</span> WebSocket-Echtzeit</li>
+          <li><span class="icon yes">&#10003;</span> Push-Benachrichtigungen (VAPID)</li>
+          <li><span class="icon yes">&#10003;</span> Kommunikationsregeln (Rolle&rarr;Rolle)</li>
+          <li><span class="icon no">&#10007;</span> E-Mail-Benachrichtigungen</li>
+          <li><span class="icon no">&#10007;</span> @Mentions / Tagging</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Mail-Modul (interne Nachrichten)</li>
+          <li><span class="icon yes">&#10003;</span> Echtzeit-Chat (Marketplace)</li>
+          <li><span class="icon yes">&#10003;</span> E-Mail-Benachrichtigungen</li>
+          <li><span class="icon yes">&#10003;</span> @Mentions in Posts &amp; Kommentaren</li>
+          <li><span class="icon yes">&#10003;</span> Konfigurierbare Notifications</li>
+          <li><span class="icon no">&#10007;</span> Chat-Bilder</li>
+          <li><span class="icon no">&#10007;</span> Reply-Threading</li>
+          <li><span class="icon no">&#10007;</span> Push-Notifications (nativ)</li>
+          <li><span class="icon no">&#10007;</span> Kommunikationsregeln</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Chat-Bilder, Reply-Threading, Push, Kommunikationsregeln</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> E-Mail-Integration, @Mentions</div>
+    </div>
+  </div>
+
+  <!-- Räume -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon spaces">&#127970;</div>
+      <div class="category-name">R&auml;ume / Spaces</div>
+      <span class="category-verdict verdict-equal">Gleichauf</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> 5 Raumtypen (Klasse, Gruppe, Projekt, Interesse, Custom)</li>
+          <li><span class="icon yes">&#10003;</span> Beitrittsrichtlinien (Offen / Anfrage / Einladung)</li>
+          <li><span class="icon yes">&#10003;</span> Raum-Avatare &amp; Beschreibungen</li>
+          <li><span class="icon yes">&#10003;</span> Archivierung</li>
+          <li><span class="icon yes">&#10003;</span> Schulbereiche als &Uuml;berstruktur</li>
+          <li><span class="icon yes">&#10003;</span> Raum-Stummschaltung</li>
+          <li><span class="icon no">&#10007;</span> Verschachtelung (Sub-Spaces)</li>
+          <li><span class="icon no">&#10007;</span> Gast-Zugang</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Spaces mit Kategorien</li>
+          <li><span class="icon yes">&#10003;</span> Beitrittsmodi (Offen / Anfrage / Einladung)</li>
+          <li><span class="icon yes">&#10003;</span> Space-Rollen &amp; Berechtigungen</li>
+          <li><span class="icon yes">&#10003;</span> Verschachtelte Sub-Spaces</li>
+          <li><span class="icon yes">&#10003;</span> Gast-Zugang (extern)</li>
+          <li><span class="icon yes">&#10003;</span> Space-Templates</li>
+          <li><span class="icon no">&#10007;</span> Schulbereichs-Zuordnung</li>
+          <li><span class="icon no">&#10007;</span> Raumtypen mit Schulbezug</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Schulbereichs-Struktur, schulbezogene Raumtypen</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> Verschachtelung, Gast-Zugang, Templates</div>
+    </div>
+  </div>
+
+  <!-- Feed -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon feed">&#128240;</div>
+      <div class="category-name">Feed &amp; Content</div>
+      <span class="category-verdict verdict-hum">HumHub vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Unified Personal Feed</li>
+          <li><span class="icon yes">&#10003;</span> Posts mit Kommentaren</li>
+          <li><span class="icon yes">&#10003;</span> System-Banner (kontextabh&auml;ngig)</li>
+          <li><span class="icon yes">&#10003;</span> Pinning von Posts</li>
+          <li><span class="icon yes">&#10003;</span> Targeted Posts (Nutzergruppen)</li>
+          <li><span class="icon yes">&#10003;</span> Raum-News</li>
+          <li><span class="icon no">&#10007;</span> Likes / Reactions</li>
+          <li><span class="icon no">&#10007;</span> Wiki / Wissensbasis</li>
+          <li><span class="icon no">&#10007;</span> Rich Embeds (Video, etc.)</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Activity Stream / Dashboard</li>
+          <li><span class="icon yes">&#10003;</span> Posts mit Kommentaren</li>
+          <li><span class="icon yes">&#10003;</span> Likes &amp; Reactions</li>
+          <li><span class="icon yes">&#10003;</span> Wiki-Modul (Markdown)</li>
+          <li><span class="icon yes">&#10003;</span> Umfragen-Widget</li>
+          <li><span class="icon yes">&#10003;</span> Rich-Content Embeds</li>
+          <li><span class="icon yes">&#10003;</span> Bookmarks</li>
+          <li><span class="icon no">&#10007;</span> Targeted Posts</li>
+          <li><span class="icon no">&#10007;</span> System-Banner</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Targeted Posts, System-Banner, Pinning</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> Likes/Reactions, Wiki, Embeds, Bookmarks</div>
+    </div>
+  </div>
+
+  <!-- Dateien -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon files">&#128193;</div>
+      <div class="category-name">Dateien &amp; Medien</div>
+      <span class="category-verdict verdict-hum">HumHub vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> MinIO Object Storage</li>
+          <li><span class="icon yes">&#10003;</span> Ordner mit Audience-Sichtbarkeit</li>
+          <li><span class="icon yes">&#10003;</span> Fotobox mit Threads &amp; Audience</li>
+          <li><span class="icon yes">&#10003;</span> Auto-Thumbnails</li>
+          <li><span class="icon yes">&#10003;</span> Lightbox-Galerie</li>
+          <li><span class="icon yes">&#10003;</span> Auto-Ordner f&uuml;r Klassen</li>
+          <li><span class="icon no">&#10007;</span> Datei-Versionierung</li>
+          <li><span class="icon no">&#10007;</span> Dokument-Kollaboration</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Dateimanager pro Space</li>
+          <li><span class="icon yes">&#10003;</span> Datei-Versionierung</li>
+          <li><span class="icon yes">&#10003;</span> CIFS/SMB-Mount</li>
+          <li><span class="icon yes">&#10003;</span> Etherpad / OnlyOffice Integration</li>
+          <li><span class="icon yes">&#10003;</span> Vorschau vieler Dateitypen</li>
+          <li><span class="icon no">&#10007;</span> Fotobox / Galerie-Threads</li>
+          <li><span class="icon no">&#10007;</span> Audience-Sichtbarkeit</li>
+          <li><span class="icon no">&#10007;</span> Auto-Thumbnails</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Fotobox, Audience-Filter, Auto-Thumbnails</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> Versionierung, Dokument-Kollaboration, CIFS</div>
+    </div>
+  </div>
+
+  <!-- Kalender -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon cal">&#128197;</div>
+      <div class="category-name">Kalender</div>
+      <span class="category-verdict verdict-monte">MonteWeb vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Events (Raum / Bereich / Schule)</li>
+          <li><span class="icon yes">&#10003;</span> RSVP (Zu-/Absage)</li>
+          <li><span class="icon yes">&#10003;</span> Absage &rarr; automatische Feed-Nachricht</li>
+          <li><span class="icon yes">&#10003;</span> iCal-Export</li>
+          <li><span class="icon yes">&#10003;</span> Schulferien &amp; Feiertage (16 Bundesl&auml;nder)</li>
+          <li><span class="icon yes">&#10003;</span> Eventtyp-Filter (Allgemein, Putz, etc.)</li>
+          <li><span class="icon yes">&#10003;</span> Kalender-Integration mit Putzaktionen</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Kalender-Modul pro Space</li>
+          <li><span class="icon yes">&#10003;</span> RSVP / Teilnahme</li>
+          <li><span class="icon yes">&#10003;</span> iCal Sync</li>
+          <li><span class="icon yes">&#10003;</span> Farbkodierung</li>
+          <li><span class="icon yes">&#10003;</span> Wiederkehrende Events</li>
+          <li><span class="icon no">&#10007;</span> Schulferien nach Bundesland</li>
+          <li><span class="icon no">&#10007;</span> Eventtyp-Filter</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Schulferien, Feiertage, Eventtyp-Filter, Putz-Integration</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> Farbkodierung, wiederkehrende Events</div>
+    </div>
+  </div>
+
+  <!-- Benutzerverwaltung -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon users">&#128101;</div>
+      <div class="category-name">Benutzerverwaltung</div>
+      <span class="category-verdict verdict-hum">HumHub vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> 5 Rollen (Superadmin, Section-Admin, Teacher, Parent, Student)</li>
+          <li><span class="icon yes">&#10003;</span> JWT-Authentifizierung</li>
+          <li><span class="icon yes">&#10003;</span> OIDC / SSO</li>
+          <li><span class="icon yes">&#10003;</span> Passwort-Reset</li>
+          <li><span class="icon yes">&#10003;</span> Profil mit Avatar</li>
+          <li><span class="icon yes">&#10003;</span> DSGVO-Datenexport &amp; L&ouml;schung</li>
+          <li><span class="icon no">&#10007;</span> LDAP / Active Directory</li>
+          <li><span class="icon no">&#10007;</span> Zwei-Faktor-Auth (2FA)</li>
+          <li><span class="icon no">&#10007;</span> CSV-Import</li>
+          <li><span class="icon no">&#10007;</span> Durchsuchbares Nutzerverzeichnis</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Flexibles Rollensystem &amp; Gruppen</li>
+          <li><span class="icon yes">&#10003;</span> LDAP / Active Directory</li>
+          <li><span class="icon yes">&#10003;</span> SAML / SSO</li>
+          <li><span class="icon yes">&#10003;</span> Zwei-Faktor-Auth (2FA)</li>
+          <li><span class="icon yes">&#10003;</span> CSV-Import / Export</li>
+          <li><span class="icon yes">&#10003;</span> Benutzerverzeichnis mit Filtern</li>
+          <li><span class="icon yes">&#10003;</span> Profil-Felder (konfigurierbar)</li>
+          <li><span class="icon no">&#10007;</span> Schulspezifische Rollen</li>
+          <li><span class="icon no">&#10007;</span> Section-Admin Konzept</li>
+          <li><span class="icon no">&#10007;</span> DSGVO-Automatisierung</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Schulrollen, Section-Admin, DSGVO-Compliance</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> LDAP, 2FA, CSV-Import, Nutzerverzeichnis</div>
+    </div>
+  </div>
+
+  <!-- Anpassbarkeit -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon theme">&#127912;</div>
+      <div class="category-name">Anpassbarkeit &amp; Themes</div>
+      <span class="category-verdict verdict-hum">HumHub vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> CSS Custom Properties (Farben)</li>
+          <li><span class="icon yes">&#10003;</span> Backend-Theme-Konfiguration</li>
+          <li><span class="icon yes">&#10003;</span> Mandantenf&auml;hig (Tenant-Config)</li>
+          <li><span class="icon yes">&#10003;</span> Logo-Upload</li>
+          <li><span class="icon yes">&#10003;</span> Modul-Ein/Aus-Schalter</li>
+          <li><span class="icon no">&#10007;</span> Marketplace / Plugin-Store</li>
+          <li><span class="icon no">&#10007;</span> Widget-Framework</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Theme-Engine (vollst&auml;ndig)</li>
+          <li><span class="icon yes">&#10003;</span> Marketplace (100+ Module)</li>
+          <li><span class="icon yes">&#10003;</span> Custom CSS / JS</li>
+          <li><span class="icon yes">&#10003;</span> Widget-Framework</li>
+          <li><span class="icon yes">&#10003;</span> Custom Content Types</li>
+          <li><span class="icon yes">&#10003;</span> REST API f&uuml;r Erweiterungen</li>
+          <li><span class="icon no">&#10007;</span> Schulspezifische Modul-Steuerung</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> Mandantenf&auml;higkeit, schulspezifische Module</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> Marketplace, Widget-Framework, volle Theme-Engine</div>
+    </div>
+  </div>
+
+  <!-- Infrastruktur -->
+  <div class="category-card">
+    <div class="category-header">
+      <div class="category-icon infra">&#9881;</div>
+      <div class="category-name">Infrastruktur &amp; Deployment</div>
+      <span class="category-verdict verdict-monte">MonteWeb vorn</span>
+    </div>
+    <div class="category-body">
+      <div class="platform-col">
+        <div class="platform-label monte-label"><span class="dot"></span> MonteWeb</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> Docker Compose (One-Command Deploy)</li>
+          <li><span class="icon yes">&#10003;</span> Caddy Auto-SSL</li>
+          <li><span class="icon yes">&#10003;</span> nginx Security Headers</li>
+          <li><span class="icon yes">&#10003;</span> PostgreSQL + Redis + MinIO</li>
+          <li><span class="icon yes">&#10003;</span> PWA (installierbar)</li>
+          <li><span class="icon yes">&#10003;</span> GitHub Actions CI/CD</li>
+          <li><span class="icon yes">&#10003;</span> Trivy Security Scanning</li>
+          <li><span class="icon yes">&#10003;</span> Non-Root Container</li>
+        </ul>
+      </div>
+      <div class="platform-col">
+        <div class="platform-label hum-label"><span class="dot"></span> HumHub</div>
+        <ul class="feature-list">
+          <li><span class="icon yes">&#10003;</span> LAMP-Stack / Docker</li>
+          <li><span class="icon yes">&#10003;</span> MySQL / MariaDB</li>
+          <li><span class="icon yes">&#10003;</span> Queue-Workers (async)</li>
+          <li><span class="icon yes">&#10003;</span> REST API</li>
+          <li><span class="icon yes">&#10003;</span> Caching (File/Redis)</li>
+          <li><span class="icon no">&#10007;</span> PWA (nativ)</li>
+          <li><span class="icon no">&#10007;</span> Auto-SSL</li>
+          <li><span class="icon no">&#10007;</span> Security Scanning in CI</li>
+        </ul>
+      </div>
+    </div>
+    <div class="advantage-row">
+      <div class="advantage-item monte-adv"><span class="adv-dot"></span><strong>MonteWeb:</strong> PWA, Auto-SSL, Container-Security, CI/CD</div>
+      <div class="advantage-item hum-adv"><span class="adv-dot"></span><strong>HumHub:</strong> Breitere Hosting-Optionen (Shared Hosting)</div>
+    </div>
+  </div>
+</div>
+
+<!-- SCHOOL-EXCLUSIVE -->
+<div class="section" id="schule">
+  <div class="section-header">
+    <div class="section-label">02 &mdash; Alleinstellungsmerkmale</div>
+    <h2 class="section-title">Schulspezifische Features &mdash; nur MonteWeb</h2>
+    <p class="section-desc">
+      Diese Funktionen existieren ausschlie&szlig;lich in MonteWeb und haben kein &Auml;quivalent in HumHub.
+      Sie machen MonteWeb zum spezialisierten Werkzeug f&uuml;r Montessori-Schulen.
+    </p>
+  </div>
+
+  <div class="exclusive-grid">
+    <div class="exclusive-card">
+      <h4>Familienverbund</h4>
+      <p>Eltern und Kinder digital verkn&uuml;pft. Unterst&uuml;tzt getrennte Eltern mit mehreren Familienzuordnungen. Einladungssystem mit Rollen (PARENT/CHILD).</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Stundenkonto</h4>
+      <p>Automatisches Tracking von Elternstunden &amp; Putzstunden pro Familie. Traffic-Light-Anzeige, Jahresabrechnung, Befreiungsm&ouml;glichkeit.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Jobb&ouml;rse</h4>
+      <p>Aufgaben ausschreiben, Bewerbungen verwalten, Stunden zuweisen und best&auml;tigen. PDF-Export, Raum-Zuordnung, Datei-Anh&auml;nge.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Putz-Organisation</h4>
+      <p>Putzaktionen mit QR-Check-in/Checkout. Automatische Kalender- und Joberstellung. Einmalig oder wiederkehrend. Dashboard mit Statistiken.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Formulare &amp; Umfragen</h4>
+      <p>Multi-Section Scoping, Auto-Close, Antwort-Bearbeitung, Pie Charts, CSV/PDF-Export. Dashboard-Widget f&uuml;r offene Formulare.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Fundgrube</h4>
+      <p>Schulweite Fundgrube mit Fotos, Bereichsfilter und Claim-Workflow. Automatische Ablauf nach 24h. MinIO-basierte Bildspeicherung.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>DSGVO-Compliance</h4>
+      <p>14-Tage L&ouml;schfrist, vollst&auml;ndiger Datenexport, Consent-Tracking, Audit-Trail. Automatische Kaskaden-L&ouml;schung &uuml;ber alle Module.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Jahresabrechnung</h4>
+      <p>Billing Periods pro Schuljahr. Stundenbericht f&uuml;r alle Familien mit Status (OPEN/CLOSED). PDF-Export f&uuml;r die Schulverwaltung.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+    <div class="exclusive-card">
+      <h4>Schulbereiche</h4>
+      <p>Krippe bis Oberstufe als strukturierende Einheit. Bereichs-Admins, bereichsspezifische Formulare, R&auml;ume und Kalender-Events.</p>
+      <span class="exclusive-tag">Einzigartig</span>
+    </div>
+  </div>
+</div>
+
+<!-- DEFICIT ANALYSIS -->
+<div class="deficit-section" id="defizite">
+  <div class="deficit-inner">
+    <div class="section-header">
+      <div class="section-label">03 &mdash; Defizitanalyse &amp; Roadmap</div>
+      <h2 class="section-title">Verbesserungsvorschl&auml;ge</h2>
+      <p class="section-desc">
+        Funktionen, die HumHub bietet und in MonteWeb fehlen oder die das System
+        deutlich aufwerten w&uuml;rden. Sortiert nach Aufwand-Nutzen-Verh&auml;ltnis.
+      </p>
+    </div>
+
+    <div class="deficit-grid">
+      <!-- 1 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>CSV-Import f&uuml;r Nutzer &amp; Familien</h4>
+          <span class="number">#01</span>
+        </div>
+        <p>Bulk-Import von Nutzern und Familien per CSV-Datei. Essentiell f&uuml;r den Schuljahresstart, wenn hunderte Accounts angelegt werden m&uuml;ssen.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-low">Aufwand: Niedrig</span>
+          <span class="meta-tag priority-high">Priorit&auml;t: Hoch</span>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Benutzerverzeichnis</h4>
+          <span class="number">#02</span>
+        </div>
+        <p>Durchsuchbares Verzeichnis aller Nutzer mit Filtern nach Rolle, Schulbereich und Raum. Schnelles Finden von Kontaktpersonen.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-low">Aufwand: Niedrig</span>
+          <span class="meta-tag priority-high">Priorit&auml;t: Hoch</span>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Likes / Reactions</h4>
+          <span class="number">#03</span>
+        </div>
+        <p>Emoji-Reaktionen f&uuml;r Feed-Posts und Kommentare. F&ouml;rdert Engagement und gibt Autoren schnelles Feedback ohne Kommentar-Flut.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-mid">Aufwand: Mittel</span>
+          <span class="meta-tag priority-high">Priorit&auml;t: Hoch</span>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Globale Suche</h4>
+          <span class="number">#04</span>
+        </div>
+        <p>&Uuml;bergreifende Suche &uuml;ber Posts, Dateien, Nutzer, R&auml;ume und Events. Zentrale Anlaufstelle statt domainspezifischer Einzelsuchen.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-mid">Aufwand: Mittel</span>
+          <span class="meta-tag priority-high">Priorit&auml;t: Hoch</span>
+        </div>
+      </div>
+
+      <!-- 5 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Zwei-Faktor-Authentifizierung</h4>
+          <span class="number">#05</span>
+        </div>
+        <p>TOTP (Google Authenticator) oder WebAuthn f&uuml;r Admin-Accounts und sensible Rollen. Erh&ouml;ht die Sicherheit deutlich.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-mid">Aufwand: Mittel</span>
+          <span class="meta-tag priority-mid">Priorit&auml;t: Mittel</span>
+        </div>
+      </div>
+
+      <!-- 6 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>LDAP / Active Directory</h4>
+          <span class="number">#06</span>
+        </div>
+        <p>F&uuml;r Schulen mit bestehender IT-Infrastruktur. Automatischer Nutzer-Sync, zentrale Passwortverwaltung, Single Sign-On.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-mid">Aufwand: Mittel</span>
+          <span class="meta-tag priority-mid">Priorit&auml;t: Mittel</span>
+        </div>
+      </div>
+
+      <!-- 7 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Follow-System</h4>
+          <span class="number">#07</span>
+        </div>
+        <p>Nutzern und R&auml;umen folgen f&uuml;r einen personalisierten Feed. Erh&ouml;ht Relevanz der angezeigten Inhalte.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-mid">Aufwand: Mittel</span>
+          <span class="meta-tag priority-low">Priorit&auml;t: Niedrig</span>
+        </div>
+      </div>
+
+      <!-- 8 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Aufgaben-System</h4>
+          <span class="number">#08</span>
+        </div>
+        <p>Einfaches Kanban- oder Todo-Board pro Raum. F&uuml;r Projektgruppen, Lehrerteams und Elternaktionen.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-mid">Aufwand: Mittel</span>
+          <span class="meta-tag priority-low">Priorit&auml;t: Niedrig</span>
+        </div>
+      </div>
+
+      <!-- 9 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Wiki / Wissensbasis</h4>
+          <span class="number">#09</span>
+        </div>
+        <p>Kollaborative Dokumentation pro Raum. Markdown-basiert, versioniert, durchsuchbar. F&uuml;r Anleitungen, Regelwerke und Schulwissen.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-high">Aufwand: Hoch</span>
+          <span class="meta-tag priority-mid">Priorit&auml;t: Mittel</span>
+        </div>
+      </div>
+
+      <!-- 10 -->
+      <div class="deficit-card">
+        <div class="deficit-card-header">
+          <h4>Dokumenten-Kollaboration</h4>
+          <span class="number">#10</span>
+        </div>
+        <p>Integration mit OnlyOffice, Etherpad oder eigenem Markdown-Editor. Gemeinsames Bearbeiten von Dokumenten in Echtzeit.</p>
+        <div class="deficit-meta">
+          <span class="meta-tag effort-high">Aufwand: Hoch</span>
+          <span class="meta-tag priority-low">Priorit&auml;t: Niedrig</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUMMARY -->
+<section class="summary" id="fazit">
+  <div class="summary-inner">
+    <div class="section-header">
+      <div class="section-label" style="color: var(--monte-light);">04 &mdash; Fazit</div>
+      <h2 class="section-title" style="font-family: 'DM Serif Display', serif; font-size: clamp(1.8rem, 3vw, 2.4rem); color: #fff;">Gesamtbewertung</h2>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-col monte-sum">
+        <h3><span class="s-dot"></span> MonteWeb &mdash; St&auml;rken</h3>
+        <ul>
+          <li>Spezialisiert auf Montessori-Schulkomplexe (Krippe bis Oberstufe)</li>
+          <li>9 exklusive schulspezifische Module ohne &Auml;quivalent</li>
+          <li>DSGVO-Compliance mit automatischer Datenl&ouml;schung</li>
+          <li>Moderne Container-Architektur &amp; installierbare PWA</li>
+          <li>Familienverbund als zentrale Organisationseinheit</li>
+          <li>Integriertes Stundenkonto &amp; Jahresabrechnung</li>
+          <li>Audience-basierte Sichtbarkeit (Eltern/Sch&uuml;ler)</li>
+          <li>Push-Benachrichtigungen &amp; Chat-Bilder</li>
+        </ul>
+      </div>
+      <div class="summary-col hum-sum">
+        <h3><span class="s-dot"></span> HumHub &mdash; St&auml;rken</h3>
+        <ul>
+          <li>Ausgereiftes &Ouml;kosystem mit 100+ Marketplace-Modulen</li>
+          <li>Breite Enterprise-Funktionen (LDAP, 2FA, CSV-Import)</li>
+          <li>Wiki und Dokumenten-Kollaboration</li>
+          <li>Likes, Reactions, Bookmarks f&uuml;r Engagement</li>
+          <li>Verschachtelte Spaces &amp; Gast-Zugang</li>
+          <li>Flexible Theme-Engine &amp; Widget-Framework</li>
+          <li>Gro&szlig;e Community &amp; langes Track Record</li>
+          <li>Breitere Hosting-Optionen (auch Shared Hosting)</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="conclusion-box">
+      <p>
+        <strong>MonteWeb ist kein HumHub-Klon, sondern ein zweckgebautes Werkzeug f&uuml;r Montessori-Schulen.</strong>
+        Die 9 exklusiven Schulmodule (Familienverbund, Stundenkonto, Putz-Orga, Jobb&ouml;rse, Fundgrube, etc.) haben in
+        HumHub kein Gegenst&uuml;ck &mdash; diese m&uuml;ssten dort von Grund auf als Custom-Module entwickelt werden.
+        <br><br>
+        HumHub punktet bei generischen Social-Intranet-Funktionen: Marketplace, Wiki, Reactions und Enterprise-Auth.
+        Die <strong>10 identifizierten Verbesserungsvorschl&auml;ge</strong> k&ouml;nnen diese L&uuml;cken schrittweise schlie&szlig;en,
+        wobei <strong>CSV-Import, Benutzerverzeichnis, Likes und Globale Suche</strong> als Quick-Wins mit hohem Nutzen priorisiert werden sollten.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="foot">
+  MonteWeb Systemvergleich &middot; Stand: Februar 2026 &middot; Generiert f&uuml;r interne Evaluierung
+</footer>
+
+</body>
+</html>
