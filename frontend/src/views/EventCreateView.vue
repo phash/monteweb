@@ -7,6 +7,7 @@ import { useRoomsStore } from '@/stores/rooms'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { calendarApi } from '@/api/calendar.api'
+import { sectionsApi } from '@/api/sections.api'
 import type { CreateEventRequest, EventScope, EventRecurrence } from '@/types/calendar'
 import PageTitle from '@/components/common/PageTitle.vue'
 import Button from 'primevue/button'
@@ -43,6 +44,7 @@ const eventColor = ref<string | null>(null)
 const customColor = ref('')
 const addJitsi = ref(false)
 const saving = ref(false)
+const sections = ref<{ id: string; name: string }[]>([])
 
 const eventColors = [
   '#3B82F6', // Blue
@@ -91,6 +93,10 @@ const roomOptions = computed(() =>
   rooms.myRooms.map(r => ({ label: r.name, value: r.id }))
 )
 
+const sectionOptions = computed(() =>
+  sections.value.map(s => ({ label: s.name, value: s.id }))
+)
+
 const canSubmit = computed(() =>
   title.value.trim() && startDate.value && endDate.value &&
   (scope.value === 'SCHOOL' || scopeId.value)
@@ -98,6 +104,11 @@ const canSubmit = computed(() =>
 
 onMounted(async () => {
   await rooms.fetchMyRooms()
+
+  try {
+    const secRes = await sectionsApi.getAll()
+    sections.value = secRes.data.data
+  } catch { /* ignore */ }
 
   if (isEdit.value && eventId.value) {
     await calendar.fetchEvent(eventId.value)
@@ -263,6 +274,18 @@ async function handleSubmit() {
               optionLabel="label"
               optionValue="value"
               :placeholder="t('calendar.selectRoom')"
+              class="w-full"
+            />
+          </div>
+          <div v-if="scope === 'SECTION'" class="field">
+            <label for="event-section">{{ t('calendar.selectSection') }}</label>
+            <Select
+              id="event-section"
+              v-model="scopeId"
+              :options="sectionOptions"
+              optionLabel="label"
+              optionValue="value"
+              :placeholder="t('calendar.selectSection')"
               class="w-full"
             />
           </div>
