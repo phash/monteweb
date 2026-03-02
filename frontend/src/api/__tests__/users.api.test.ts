@@ -109,13 +109,6 @@ describe('usersApi', () => {
     })
   })
 
-  describe('getDarkMode', () => {
-    it('should GET /users/me/dark-mode', async () => {
-      await usersApi.getDarkMode()
-      expect(client.get).toHaveBeenCalledWith('/users/me/dark-mode')
-    })
-  })
-
   describe('updateDarkMode', () => {
     it('should PUT /users/me/dark-mode with preference', async () => {
       await usersApi.updateDarkMode('DARK')

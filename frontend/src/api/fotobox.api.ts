@@ -32,12 +32,6 @@ export const fotoboxApi = {
   createThread(roomId: string, data: CreateFotoboxThreadRequest) {
     return client.post<ApiResponse<FotoboxThreadInfo>>(`/rooms/${roomId}/fotobox/threads`, data)
   },
-  updateThread(roomId: string, threadId: string, data: Partial<CreateFotoboxThreadRequest>) {
-    return client.put<ApiResponse<FotoboxThreadInfo>>(
-      `/rooms/${roomId}/fotobox/threads/${threadId}`,
-      data,
-    )
-  },
   deleteThread(roomId: string, threadId: string) {
     return client.delete<ApiResponse<void>>(`/rooms/${roomId}/fotobox/threads/${threadId}`)
   },
@@ -52,9 +46,6 @@ export const fotoboxApi = {
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     )
-  },
-  updateImage(imageId: string, data: { caption?: string; sortOrder?: number }) {
-    return client.put<ApiResponse<FotoboxImageInfo>>(`/fotobox/images/${imageId}`, data)
   },
   deleteImage(imageId: string) {
     return client.delete<ApiResponse<void>>(`/fotobox/images/${imageId}`)

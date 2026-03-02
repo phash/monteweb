@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-vi.mock('@/api/client', () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
+vi.mock('@/api/notifications.api', () => ({
+  notificationsApi: {
+    getPushPublicKey: vi.fn(),
+    pushSubscribe: vi.fn(),
+    pushUnsubscribe: vi.fn(),
   },
 }))
 

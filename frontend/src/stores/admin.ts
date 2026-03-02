@@ -33,18 +33,33 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   async function updateConfig(data: Parameters<typeof adminApi.updateConfig>[0]) {
-    const res = await adminApi.updateConfig(data)
-    config.value = res.data.data
+    try {
+      const res = await adminApi.updateConfig(data)
+      config.value = res.data.data
+    } catch (e) {
+      console.error('Failed to update config:', e)
+      throw e
+    }
   }
 
   async function updateModules(modules: Record<string, boolean>) {
-    const res = await adminApi.updateModules(modules)
-    config.value = res.data.data
+    try {
+      const res = await adminApi.updateModules(modules)
+      config.value = res.data.data
+    } catch (e) {
+      console.error('Failed to update modules:', e)
+      throw e
+    }
   }
 
   async function updateTheme(theme: Record<string, string>) {
-    const res = await adminApi.updateTheme(theme)
-    config.value = res.data.data
+    try {
+      const res = await adminApi.updateTheme(theme)
+      config.value = res.data.data
+    } catch (e) {
+      console.error('Failed to update theme:', e)
+      throw e
+    }
   }
 
   function isModuleEnabled(name: string): boolean {

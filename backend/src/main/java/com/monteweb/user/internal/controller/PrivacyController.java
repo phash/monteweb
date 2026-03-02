@@ -1,40 +1,21 @@
 package com.monteweb.user.internal.controller;
 
-import com.monteweb.admin.AdminModuleApi;
-import com.monteweb.admin.TenantConfigInfo;
-import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.shared.dto.ApiResponse;
-import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.SecurityUtils;
-import com.monteweb.user.internal.model.ConsentRecord;
-import com.monteweb.user.internal.model.TermsAcceptance;
-import com.monteweb.user.internal.repository.ConsentRecordRepository;
-import com.monteweb.user.internal.repository.TermsAcceptanceRepository;
+import com.monteweb.user.internal.service.PrivacyService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.Instant;
 import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/privacy")
 public class PrivacyController {
 
-    private final AdminModuleApi adminModuleApi;
-    private final FamilyModuleApi familyModuleApi;
-    private final ConsentRecordRepository consentRepository;
-    private final TermsAcceptanceRepository termsRepository;
+    private final PrivacyService privacyService;
 
-    public PrivacyController(AdminModuleApi adminModuleApi,
-                              FamilyModuleApi familyModuleApi,
-                              ConsentRecordRepository consentRepository,
-                              TermsAcceptanceRepository termsRepository) {
-        this.adminModuleApi = adminModuleApi;
-        this.familyModuleApi = familyModuleApi;
-        this.consentRepository = consentRepository;
-        this.termsRepository = termsRepository;
+    public PrivacyController(PrivacyService privacyService) {
+        this.privacyService = privacyService;
     }
 
     /**
@@ -42,12 +23,7 @@ public class PrivacyController {
      */
     @GetMapping("/policy")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getPrivacyPolicy() {
-        var config = adminModuleApi.getTenantConfig();
-        String text = replacePlaceholders(config.privacyPolicyText(), config);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("text", text);
-        result.put("version", config.privacyPolicyVersion());
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(privacyService.getPrivacyPolicy()));
     }
 
     /**
@@ -55,12 +31,7 @@ public class PrivacyController {
      */
     @GetMapping("/terms")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTerms() {
-        var config = adminModuleApi.getTenantConfig();
-        String text = replacePlaceholders(config.termsText(), config);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("text", text);
-        result.put("version", config.termsVersion());
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(privacyService.getTerms()));
     }
 
     /**
@@ -69,39 +40,18 @@ public class PrivacyController {
     @GetMapping("/terms/status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getTermsStatus() {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var config = adminModuleApi.getTenantConfig();
-        String currentVersion = config.termsVersion();
-        boolean accepted = currentVersion != null &&
-                termsRepository.existsByUserIdAndTermsVersion(userId, currentVersion);
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("currentVersion", currentVersion);
-        result.put("accepted", accepted);
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(privacyService.getTermsStatus(userId)));
     }
 
     /**
      * Authenticated: Accept current terms version.
      */
     @PostMapping("/terms/accept")
-    @Transactional
     public ResponseEntity<ApiResponse<Void>> acceptTerms(@RequestBody(required = false) Map<String, String> body) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var config = adminModuleApi.getTenantConfig();
-        String currentVersion = config.termsVersion();
-        if (currentVersion == null) {
-            return ResponseEntity.ok(ApiResponse.ok(null, "No terms configured"));
-        }
-        if (!termsRepository.existsByUserIdAndTermsVersion(userId, currentVersion)) {
-            var acceptance = new TermsAcceptance();
-            acceptance.setUserId(userId);
-            acceptance.setTermsVersion(currentVersion);
-            acceptance.setAcceptedAt(Instant.now());
-            if (body != null && body.containsKey("ipAddress")) {
-                acceptance.setIpAddress(body.get("ipAddress"));
-            }
-            termsRepository.save(acceptance);
-        }
-        return ResponseEntity.ok(ApiResponse.ok(null, "Terms accepted"));
+        String ipAddress = body != null ? body.get("ipAddress") : null;
+        String message = privacyService.acceptTerms(userId, ipAddress);
+        return ResponseEntity.ok(ApiResponse.ok(null, message));
     }
 
     /**
@@ -110,24 +60,13 @@ public class PrivacyController {
     @GetMapping("/consents")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getConsents() {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var consents = consentRepository.findByUserIdAndRevokedAtIsNull(userId);
-        var result = consents.stream().map(c -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", c.getId());
-            m.put("consentType", c.getConsentType());
-            m.put("granted", c.isGranted());
-            m.put("grantedAt", c.getGrantedAt());
-            m.put("notes", c.getNotes());
-            return m;
-        }).toList();
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        return ResponseEntity.ok(ApiResponse.ok(privacyService.getConsents(userId)));
     }
 
     /**
      * Authenticated: Update consent (grant or revoke).
      */
     @PutMapping("/consents")
-    @Transactional
     public ResponseEntity<ApiResponse<Void>> updateConsent(@RequestBody Map<String, Object> body) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         String consentType = (String) body.get("consentType");
@@ -140,65 +79,7 @@ public class PrivacyController {
             return ResponseEntity.badRequest().body(ApiResponse.error("consentType and granted are required"));
         }
 
-        // C-02: IDOR check — if setting consent for another user, verify family relationship or SUPERADMIN
-        if (!targetUserId.equals(userId)) {
-            boolean isSuperAdmin = SecurityContextHolder.getContext().getAuthentication()
-                    .getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_SUPERADMIN"));
-            if (!isSuperAdmin) {
-                var callerFamilies = familyModuleApi.findByUserId(userId);
-                var targetFamilies = familyModuleApi.findByUserId(targetUserId);
-                boolean inSameFamily = callerFamilies.stream()
-                        .anyMatch(cf -> targetFamilies.stream().anyMatch(tf -> tf.id().equals(cf.id())));
-                if (!inSameFamily) {
-                    throw new ForbiddenException("You can only update consent for members of your own family");
-                }
-            }
-        }
-
-        // Block students from setting their own consent — requires parent/guardian
-        if (targetUserId.equals(userId)) {
-            boolean isStudent = SecurityContextHolder.getContext().getAuthentication()
-                    .getAuthorities().stream()
-                    .anyMatch(a -> a.getAuthority().equals("ROLE_STUDENT"));
-            if (isStudent) {
-                return ResponseEntity.status(403).body(ApiResponse.error(
-                        "Students cannot update their own consent. This must be done by a parent or guardian."));
-            }
-        }
-
-        // Revoke existing active consent of this type if it exists
-        var existing = consentRepository.findByUserIdAndConsentTypeAndRevokedAtIsNull(targetUserId, consentType);
-        existing.ifPresent(c -> {
-            c.setRevokedAt(Instant.now());
-            consentRepository.save(c);
-        });
-
-        // Create new consent record
-        var record = new ConsentRecord();
-        record.setUserId(targetUserId);
-        record.setGrantedBy(userId);
-        record.setConsentType(consentType);
-        record.setGranted(granted);
-        record.setGrantedAt(Instant.now());
-        record.setNotes(notes);
-        consentRepository.save(record);
-
+        privacyService.updateConsent(userId, consentType, granted, targetUserId, notes);
         return ResponseEntity.ok(ApiResponse.ok(null, "Consent updated"));
-    }
-
-    private String replacePlaceholders(String text, TenantConfigInfo config) {
-        if (text == null) return null;
-        String schoolName = config.schoolFullName() != null ? config.schoolFullName() : config.schoolName();
-        String address = config.schoolAddress() != null ? config.schoolAddress() : "";
-        String principal = config.schoolPrincipal() != null ? config.schoolPrincipal() : "";
-        String techName = config.techContactName() != null ? config.techContactName() : "";
-        String techEmail = config.techContactEmail() != null ? config.techContactEmail() : "";
-        return text
-                .replace("{{SCHOOL_NAME}}", schoolName)
-                .replace("{{SCHOOL_ADDRESS}}", address)
-                .replace("{{SCHOOL_PRINCIPAL}}", principal)
-                .replace("{{TECH_CONTACT_NAME}}", techName)
-                .replace("{{TECH_CONTACT_EMAIL}}", techEmail);
     }
 }

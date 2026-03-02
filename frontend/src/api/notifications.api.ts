@@ -22,4 +22,17 @@ export const notificationsApi = {
   deleteNotification(id: string) {
     return client.delete<ApiResponse<void>>(`/notifications/${id}`)
   },
+
+  // Push notifications
+  getPushPublicKey() {
+    return client.get<ApiResponse<{ publicKey: string }>>('/notifications/push/public-key')
+  },
+
+  pushSubscribe(data: { endpoint: string; p256dh?: string; auth?: string }) {
+    return client.post<ApiResponse<void>>('/notifications/push/subscribe', data)
+  },
+
+  pushUnsubscribe(data: { endpoint: string }) {
+    return client.post<ApiResponse<void>>('/notifications/push/unsubscribe', data)
+  },
 }

@@ -39,15 +39,6 @@ describe('bookmarksApi', () => {
     })
   })
 
-  describe('check', () => {
-    it('should GET /bookmarks/check with contentType and contentId', async () => {
-      await bookmarksApi.check('JOB', 'job-123')
-      expect(client.get).toHaveBeenCalledWith('/bookmarks/check', {
-        params: { contentType: 'JOB', contentId: 'job-123' },
-      })
-    })
-  })
-
   describe('getBookmarkedIds', () => {
     it('should GET /bookmarks/ids with contentType', async () => {
       await bookmarksApi.getBookmarkedIds('WIKI_PAGE')

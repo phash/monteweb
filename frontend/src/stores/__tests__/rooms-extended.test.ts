@@ -53,11 +53,11 @@ describe('Rooms Store - Extended', () => {
 
       vi.mocked(roomsApi.getById).mockRejectedValue(new Error('404'))
 
-      await store.fetchRoom('bad-id')
+      await store.fetchRoom('bad-id').catch(() => {})
 
       expect(store.currentRoom).toBeNull()
       expect(store.currentPublicRoom).toBeNull()
-      expect(store.loading).toBe(false)
+      expect(store.loadingRoom).toBe(false)
     })
 
     it('should reset loading even on error in fetchMyRooms', async () => {
@@ -81,7 +81,7 @@ describe('Rooms Store - Extended', () => {
 
       vi.mocked(roomsApi.discover).mockRejectedValue(new Error('Error'))
 
-      await store.discoverRooms('fail')
+      await store.discoverRooms('fail').catch(() => {})
 
       expect(store.discoverableRooms).toEqual([])
       expect(store.loading).toBe(false)

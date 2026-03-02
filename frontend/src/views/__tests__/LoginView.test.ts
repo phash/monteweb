@@ -21,6 +21,7 @@ vi.mock('@/api/auth.api', () => ({
   authApi: {
     login: vi.fn(),
     register: vi.fn(),
+    getOidcConfig: vi.fn().mockRejectedValue(new Error('not available')),
   },
 }))
 

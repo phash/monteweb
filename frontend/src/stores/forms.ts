@@ -36,6 +36,9 @@ export const useFormsStore = defineStore('forms', () => {
       }
       totalAvailable.value = res.data.data.totalElements
       hasMoreAvailable.value = !res.data.data.last
+    } catch (e) {
+      console.error('Failed to fetch available forms:', e)
+      throw e
     } finally {
       loading.value = false
     }
@@ -52,140 +55,213 @@ export const useFormsStore = defineStore('forms', () => {
       }
       totalMine.value = res.data.data.totalElements
       hasMoreMy.value = !res.data.data.last
+    } catch (e) {
+      console.error('Failed to fetch my forms:', e)
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function fetchForm(id: string) {
-    const res = await formsApi.getForm(id)
-    currentForm.value = res.data.data
+    try {
+      const res = await formsApi.getForm(id)
+      currentForm.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch form:', e)
+      throw e
+    }
   }
 
   async function createForm(data: CreateFormRequest) {
-    const res = await formsApi.createForm(data)
-    myForms.value.unshift(res.data.data.form)
-    return res.data.data
+    try {
+      const res = await formsApi.createForm(data)
+      myForms.value.unshift(res.data.data.form)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to create form:', e)
+      throw e
+    }
   }
 
   async function updateForm(id: string, data: UpdateFormRequest) {
-    const res = await formsApi.updateForm(id, data)
-    currentForm.value = res.data.data
-    const idx = myForms.value.findIndex(f => f.id === id)
-    if (idx !== -1) myForms.value[idx] = res.data.data.form
-    return res.data.data
+    try {
+      const res = await formsApi.updateForm(id, data)
+      currentForm.value = res.data.data
+      const idx = myForms.value.findIndex(f => f.id === id)
+      if (idx !== -1) myForms.value[idx] = res.data.data.form
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to update form:', e)
+      throw e
+    }
   }
 
   async function deleteForm(id: string) {
-    await formsApi.deleteForm(id)
-    myForms.value = myForms.value.filter(f => f.id !== id)
-    if (currentForm.value?.form.id === id) currentForm.value = null
+    try {
+      await formsApi.deleteForm(id)
+      myForms.value = myForms.value.filter(f => f.id !== id)
+      if (currentForm.value?.form.id === id) currentForm.value = null
+    } catch (e) {
+      console.error('Failed to delete form:', e)
+      throw e
+    }
   }
 
   async function publishForm(id: string) {
-    const res = await formsApi.publishForm(id)
-    const updated = res.data.data
-    const idx = myForms.value.findIndex(f => f.id === id)
-    if (idx !== -1) myForms.value[idx] = updated
-    if (currentForm.value?.form.id === id) {
-      currentForm.value = { ...currentForm.value, form: updated }
+    try {
+      const res = await formsApi.publishForm(id)
+      const updated = res.data.data
+      const idx = myForms.value.findIndex(f => f.id === id)
+      if (idx !== -1) myForms.value[idx] = updated
+      if (currentForm.value?.form.id === id) {
+        currentForm.value = { ...currentForm.value, form: updated }
+      }
+      return updated
+    } catch (e) {
+      console.error('Failed to publish form:', e)
+      throw e
     }
-    return updated
   }
 
   async function closeForm(id: string) {
-    const res = await formsApi.closeForm(id)
-    const updated = res.data.data
-    const idx = myForms.value.findIndex(f => f.id === id)
-    if (idx !== -1) myForms.value[idx] = updated
-    if (currentForm.value?.form.id === id) {
-      currentForm.value = { ...currentForm.value, form: updated }
+    try {
+      const res = await formsApi.closeForm(id)
+      const updated = res.data.data
+      const idx = myForms.value.findIndex(f => f.id === id)
+      if (idx !== -1) myForms.value[idx] = updated
+      if (currentForm.value?.form.id === id) {
+        currentForm.value = { ...currentForm.value, form: updated }
+      }
+      return updated
+    } catch (e) {
+      console.error('Failed to close form:', e)
+      throw e
     }
-    return updated
   }
 
   async function submitResponse(id: string, data: SubmitResponseRequest) {
-    await formsApi.submitResponse(id, data)
-    // Update the responded flag in available list
-    const idx = availableForms.value.findIndex(f => f.id === id)
-    if (idx !== -1) {
-      const existing = availableForms.value[idx]!
-      availableForms.value[idx] = {
-        ...existing,
-        hasUserResponded: true,
-        responseCount: existing.responseCount + 1,
-      }
-    }
-    if (currentForm.value?.form.id === id) {
-      currentForm.value = {
-        ...currentForm.value,
-        form: {
-          ...currentForm.value.form,
+    try {
+      await formsApi.submitResponse(id, data)
+      // Update the responded flag in available list
+      const idx = availableForms.value.findIndex(f => f.id === id)
+      if (idx !== -1) {
+        const existing = availableForms.value[idx]!
+        availableForms.value[idx] = {
+          ...existing,
           hasUserResponded: true,
-          responseCount: currentForm.value.form.responseCount + 1,
-        },
+          responseCount: existing.responseCount + 1,
+        }
       }
+      if (currentForm.value?.form.id === id) {
+        currentForm.value = {
+          ...currentForm.value,
+          form: {
+            ...currentForm.value.form,
+            hasUserResponded: true,
+            responseCount: currentForm.value.form.responseCount + 1,
+          },
+        }
+      }
+    } catch (e) {
+      console.error('Failed to submit response:', e)
+      throw e
     }
   }
 
   async function fetchMyResponse(id: string) {
-    const res = await formsApi.getMyResponse(id)
-    myResponse.value = res.data.data
+    try {
+      const res = await formsApi.getMyResponse(id)
+      myResponse.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch my response:', e)
+      throw e
+    }
   }
 
   async function updateResponse(id: string, data: SubmitResponseRequest) {
-    await formsApi.updateResponse(id, data)
-    if (currentForm.value?.form.id === id) {
-      currentForm.value = {
-        ...currentForm.value,
-        form: {
-          ...currentForm.value.form,
-          hasUserResponded: true,
-        },
+    try {
+      await formsApi.updateResponse(id, data)
+      if (currentForm.value?.form.id === id) {
+        currentForm.value = {
+          ...currentForm.value,
+          form: {
+            ...currentForm.value.form,
+            hasUserResponded: true,
+          },
+        }
       }
+      myResponse.value = null
+    } catch (e) {
+      console.error('Failed to update response:', e)
+      throw e
     }
-    myResponse.value = null
   }
 
   async function archiveForm(id: string) {
-    const res = await formsApi.archiveForm(id)
-    const updated = res.data.data
-    const idx = myForms.value.findIndex(f => f.id === id)
-    if (idx !== -1) myForms.value[idx] = updated
-    if (currentForm.value?.form.id === id) {
-      currentForm.value = { ...currentForm.value, form: updated }
+    try {
+      const res = await formsApi.archiveForm(id)
+      const updated = res.data.data
+      const idx = myForms.value.findIndex(f => f.id === id)
+      if (idx !== -1) myForms.value[idx] = updated
+      if (currentForm.value?.form.id === id) {
+        currentForm.value = { ...currentForm.value, form: updated }
+      }
+      return updated
+    } catch (e) {
+      console.error('Failed to archive form:', e)
+      throw e
     }
-    return updated
   }
 
   async function fetchResults(id: string) {
-    const res = await formsApi.getResults(id)
-    currentResults.value = res.data.data
+    try {
+      const res = await formsApi.getResults(id)
+      currentResults.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch results:', e)
+      throw e
+    }
   }
 
   async function fetchIndividualResponses(id: string) {
-    const res = await formsApi.getIndividualResponses(id)
-    individualResponses.value = res.data.data
+    try {
+      const res = await formsApi.getIndividualResponses(id)
+      individualResponses.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch individual responses:', e)
+      throw e
+    }
   }
 
   async function downloadCsv(id: string) {
-    const res = await formsApi.exportCsv(id)
-    const url = window.URL.createObjectURL(new Blob([res.data]))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'form-results.csv'
-    a.click()
-    window.URL.revokeObjectURL(url)
+    try {
+      const res = await formsApi.exportCsv(id)
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'form-results.csv'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Failed to download CSV:', e)
+      throw e
+    }
   }
 
   async function downloadPdf(id: string) {
-    const res = await formsApi.exportPdf(id)
-    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'form-results.pdf'
-    a.click()
-    window.URL.revokeObjectURL(url)
+    try {
+      const res = await formsApi.exportPdf(id)
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'form-results.pdf'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Failed to download PDF:', e)
+      throw e
+    }
   }
 
   return {

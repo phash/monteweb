@@ -19,10 +19,6 @@ export const feedApi = {
     return client.post<ApiResponse<FeedPost>>('/feed/posts', data)
   },
 
-  updatePost(id: string, data: { title?: string; content: string }) {
-    return client.put<ApiResponse<FeedPost>>(`/feed/posts/${id}`, data)
-  },
-
   deletePost(id: string) {
     return client.delete<ApiResponse<void>>(`/feed/posts/${id}`)
   },
@@ -79,7 +75,4 @@ export const feedApi = {
     return `/api/v1/feed/attachments/${attachmentId}/download`
   },
 
-  deleteAttachment(attachmentId: string) {
-    return client.delete<ApiResponse<void>>(`/feed/attachments/${attachmentId}`)
-  },
 }

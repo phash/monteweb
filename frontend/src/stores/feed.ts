@@ -6,7 +6,6 @@ import type { FeedPost, FeedComment, SystemBanner, CreatePostRequest } from '@/t
 export const useFeedStore = defineStore('feed', () => {
   const posts = ref<FeedPost[]>([])
   const banners = ref<SystemBanner[]>([])
-  const currentPost = ref<FeedPost | null>(null)
   const commentsByPost = ref<Record<string, FeedComment[]>>({})
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -70,14 +69,24 @@ export const useFeedStore = defineStore('feed', () => {
   }
 
   async function pinPost(id: string) {
-    await feedApi.pinPost(id)
-    const post = posts.value.find(p => p.id === id)
-    if (post) post.pinned = !post.pinned
+    try {
+      await feedApi.pinPost(id)
+      const post = posts.value.find(p => p.id === id)
+      if (post) post.pinned = !post.pinned
+    } catch (e) {
+      console.error('Failed to pin/unpin post:', e)
+      throw e
+    }
   }
 
   async function fetchComments(postId: string) {
-    const res = await feedApi.getComments(postId)
-    commentsByPost.value[postId] = res.data.data.content
+    try {
+      const res = await feedApi.getComments(postId)
+      commentsByPost.value[postId] = res.data.data.content
+    } catch (e) {
+      console.error('Failed to fetch comments:', e)
+      throw e
+    }
   }
 
   async function addComment(postId: string, content: string) {
@@ -99,7 +108,6 @@ export const useFeedStore = defineStore('feed', () => {
   return {
     posts,
     banners,
-    currentPost,
     commentsByPost,
     loading,
     error,

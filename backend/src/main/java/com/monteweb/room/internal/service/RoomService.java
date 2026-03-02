@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -93,6 +94,18 @@ public class RoomService implements RoomModuleApi {
         return memberRepository.findByIdRoomId(roomId).stream()
                 .map(RoomMember::getUserId)
                 .toList();
+    }
+
+    /**
+     * Returns a map of userId -> RoomRole for all members in a room (batch query).
+     */
+    public Map<UUID, RoomRole> getMemberRolesMap(UUID roomId) {
+        var members = memberRepository.findByIdRoomId(roomId);
+        Map<UUID, RoomRole> map = new HashMap<>();
+        for (var m : members) {
+            map.put(m.getUserId(), m.getRole());
+        }
+        return map;
     }
 
     @Override

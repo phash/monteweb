@@ -5,33 +5,35 @@ import { createI18n } from 'vue-i18n'
 import AdminCleaning from '@/views/admin/AdminCleaning.vue'
 
 vi.mock('@/api/cleaning.api', () => ({
-  getConfigs: vi.fn().mockResolvedValue({
-    data: {
-      data: [
-        {
-          id: 'cfg-1', sectionId: 'sec-1', sectionName: 'Grundschule', title: 'Montag Putzen',
-          description: null, dayOfWeek: 1, startTime: '14:00', endTime: '16:00',
-          minParticipants: 3, maxParticipants: 6, hoursCredit: 2.0, active: true,
-        },
-        {
-          id: 'cfg-2', sectionId: 'sec-2', sectionName: 'Mittelschule', title: 'Mittwoch Putzen',
-          description: 'Midweek', dayOfWeek: 3, startTime: '15:00', endTime: '17:00',
-          minParticipants: 2, maxParticipants: 4, hoursCredit: 2.0, active: false,
-        },
-      ],
-    },
-  }),
-  createConfig: vi.fn().mockResolvedValue({
-    data: { data: { id: 'cfg-3', title: 'New Config', active: true } },
-  }),
-  updateConfig: vi.fn().mockResolvedValue({
-    data: { data: { id: 'cfg-1', active: false } },
-  }),
-  generateSlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
-  exportQrCodesPdf: vi.fn().mockResolvedValue({ data: new Blob() }),
-  getUpcomingSlots: vi.fn().mockResolvedValue({ data: { data: { content: [], totalPages: 0 } } }),
-  getMySlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
-  getDashboard: vi.fn().mockResolvedValue({ data: { data: {} } }),
+  cleaningApi: {
+    getConfigs: vi.fn().mockResolvedValue({
+      data: {
+        data: [
+          {
+            id: 'cfg-1', sectionId: 'sec-1', sectionName: 'Grundschule', title: 'Montag Putzen',
+            description: null, dayOfWeek: 1, startTime: '14:00', endTime: '16:00',
+            minParticipants: 3, maxParticipants: 6, hoursCredit: 2.0, active: true,
+          },
+          {
+            id: 'cfg-2', sectionId: 'sec-2', sectionName: 'Mittelschule', title: 'Mittwoch Putzen',
+            description: 'Midweek', dayOfWeek: 3, startTime: '15:00', endTime: '17:00',
+            minParticipants: 2, maxParticipants: 4, hoursCredit: 2.0, active: false,
+          },
+        ],
+      },
+    }),
+    createConfig: vi.fn().mockResolvedValue({
+      data: { data: { id: 'cfg-3', title: 'New Config', active: true } },
+    }),
+    updateConfig: vi.fn().mockResolvedValue({
+      data: { data: { id: 'cfg-1', active: false } },
+    }),
+    generateSlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    exportQrCodesPdf: vi.fn().mockResolvedValue({ data: new Blob() }),
+    getUpcomingSlots: vi.fn().mockResolvedValue({ data: { data: { content: [], totalPages: 0 } } }),
+    getMySlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getDashboard: vi.fn().mockResolvedValue({ data: { data: {} } }),
+  },
 }))
 
 vi.mock('@/api/sections.api', () => ({
@@ -72,7 +74,7 @@ vi.mock('@/api/admin.api', () => ({
   },
 }))
 
-import * as cleaningApi from '@/api/cleaning.api'
+import { cleaningApi } from '@/api/cleaning.api'
 import { sectionsApi } from '@/api/sections.api'
 
 const i18n = createI18n({

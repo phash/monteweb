@@ -51,14 +51,6 @@ describe('feedApi', () => {
     })
   })
 
-  describe('updatePost', () => {
-    it('should PUT /feed/posts/{id}', async () => {
-      const data = { content: 'Updated content' }
-      await feedApi.updatePost('post-1', data)
-      expect(client.put).toHaveBeenCalledWith('/feed/posts/post-1', data)
-    })
-  })
-
   describe('deletePost', () => {
     it('should DELETE /feed/posts/{id}', async () => {
       await feedApi.deletePost('post-1')

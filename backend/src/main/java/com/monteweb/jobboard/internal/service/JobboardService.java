@@ -18,6 +18,7 @@ import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import com.monteweb.jobboard.internal.model.JobAttachment;
 import com.monteweb.jobboard.internal.repository.JobAttachmentRepository;
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,6 +27,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.monteweb.shared.util.FileValidationUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -830,6 +834,93 @@ public class JobboardService implements JobboardModuleApi {
                 "status", a.getStatus().name()
         )).toList());
         return data;
+    }
+
+    // ---- Attachment operations ----
+
+    /**
+     * Upload an attachment for a job. Validates size, count, detects content type via magic bytes.
+     */
+    public JobAttachmentInfo uploadAttachment(UUID jobId, UUID userId, MultipartFile file) {
+        getJob(jobId); // verify job exists
+
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new BusinessException("File too large. Maximum size is 10 MB.");
+        }
+
+        int count = attachmentRepository.countByJobId(jobId);
+        if (count >= 5) {
+            throw new BusinessException("Maximum 5 attachments per job.");
+        }
+
+        // Detect actual content type via magic bytes instead of trusting client header
+        String contentType = FileValidationUtils.detectContentType(file);
+        String ext = JobStorageService.extensionFromContentType(contentType);
+        if (file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")) {
+            ext = FileValidationUtils.getExtensionFromFilename(file.getOriginalFilename());
+        }
+
+        var attachment = new JobAttachment();
+        attachment.setJobId(jobId);
+        attachment.setOriginalFilename(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
+        attachment.setFileSize(file.getSize());
+        attachment.setContentType(contentType);
+        attachment.setUploadedBy(userId);
+
+        attachment = attachmentRepository.save(attachment);
+
+        String storagePath = storageService.upload(jobId, attachment.getId(), ext, file, contentType);
+        attachment.setStoragePath(storagePath);
+        attachment = attachmentRepository.save(attachment);
+
+        return new JobAttachmentInfo(
+                attachment.getId(), attachment.getJobId(), attachment.getOriginalFilename(),
+                attachment.getFileSize(), attachment.getContentType(), attachment.getUploadedBy(),
+                attachment.getCreatedAt());
+    }
+
+    /**
+     * Retrieves an attachment's metadata and file stream for download.
+     */
+    public DownloadableAttachment getDownloadableAttachment(UUID jobId, UUID attachmentId) {
+        var attachment = attachmentRepository.findById(attachmentId)
+                .filter(a -> a.getJobId().equals(jobId))
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+        var stream = storageService.download(attachment.getStoragePath());
+        return new DownloadableAttachment(
+                attachment.getOriginalFilename(),
+                attachment.getContentType(),
+                attachment.getFileSize(),
+                stream
+        );
+    }
+
+    public record DownloadableAttachment(
+            String originalFilename,
+            String contentType,
+            long fileSize,
+            java.io.InputStream stream
+    ) {
+    }
+
+    /**
+     * Delete an attachment. Checks authorization (owner, or SUPERADMIN/TEACHER/SECTION_ADMIN).
+     */
+    public void deleteAttachment(UUID jobId, UUID attachmentId, UUID userId) {
+        var attachment = attachmentRepository.findById(attachmentId)
+                .filter(a -> a.getJobId().equals(jobId))
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+
+        var user = userModuleApi.findById(userId).orElseThrow(() -> new ForbiddenException("User not found"));
+        if (!attachment.getUploadedBy().equals(userId)
+                && user.role() != UserRole.SUPERADMIN
+                && user.role() != UserRole.TEACHER
+                && user.role() != UserRole.SECTION_ADMIN) {
+            throw new ForbiddenException("Not authorized to delete this attachment");
+        }
+
+        storageService.delete(attachment.getStoragePath());
+        attachmentRepository.delete(attachment);
     }
 
     // ---- Request DTOs ----

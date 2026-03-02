@@ -3,22 +3,24 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useCleaningStore } from '@/stores/cleaning'
 
 vi.mock('@/api/cleaning.api', () => ({
-  getUpcomingSlots: vi.fn(),
-  getMySlots: vi.fn(),
-  getSlotById: vi.fn(),
-  registerForSlot: vi.fn(),
-  unregisterFromSlot: vi.fn(),
-  checkIn: vi.fn(),
-  checkOut: vi.fn(),
-  getConfigs: vi.fn(),
-  createConfig: vi.fn(),
-  generateSlots: vi.fn(),
-  cancelSlot: vi.fn(),
-  getDashboard: vi.fn(),
-  offerSwap: vi.fn(),
+  cleaningApi: {
+    getUpcomingSlots: vi.fn(),
+    getMySlots: vi.fn(),
+    getSlotById: vi.fn(),
+    registerForSlot: vi.fn(),
+    unregisterFromSlot: vi.fn(),
+    checkIn: vi.fn(),
+    checkOut: vi.fn(),
+    getConfigs: vi.fn(),
+    createConfig: vi.fn(),
+    generateSlots: vi.fn(),
+    cancelSlot: vi.fn(),
+    getDashboard: vi.fn(),
+    offerSwap: vi.fn(),
+  },
 }))
 
-import * as cleaningApi from '@/api/cleaning.api'
+import { cleaningApi } from '@/api/cleaning.api'
 
 describe('Cleaning Store', () => {
   beforeEach(() => {

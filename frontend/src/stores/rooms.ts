@@ -12,49 +12,65 @@ export const useRoomsStore = defineStore('rooms', () => {
   const discoverPage = ref(0)
   const chatChannels = ref<RoomChatChannelInfo[]>([])
   const loading = ref(false)
+  const loadingRoom = ref(false)
 
   async function fetchMyRooms() {
     loading.value = true
     try {
       const res = await roomsApi.getMine()
       myRooms.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch rooms:', e)
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function fetchRoom(id: string) {
-    loading.value = true
+    loadingRoom.value = true
     currentRoom.value = null
     currentPublicRoom.value = null
     try {
       const res = await roomsApi.getById(id)
-      const data = res.data.data as any
-      if (data.members) {
-        currentRoom.value = data as RoomDetail
+      const data = res.data.data
+      if ('members' in data) {
+        currentRoom.value = data
         currentPublicRoom.value = null
       } else {
         currentRoom.value = null
-        currentPublicRoom.value = data as RoomPublicInfo
+        currentPublicRoom.value = data
       }
-    } catch {
+    } catch (e) {
       currentRoom.value = null
       currentPublicRoom.value = null
+      console.error('Failed to fetch room:', e)
+      throw e
     } finally {
-      loading.value = false
+      loadingRoom.value = false
     }
   }
 
   async function createRoom(data: CreateRoomRequest) {
-    const res = await roomsApi.create(data)
-    myRooms.value.push(res.data.data)
-    return res.data.data
+    try {
+      const res = await roomsApi.create(data)
+      myRooms.value.push(res.data.data)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to create room:', e)
+      throw e
+    }
   }
 
   async function createInterestRoom(data: CreateInterestRoomRequest) {
-    const res = await roomsApi.createInterestRoom(data)
-    myRooms.value.push(res.data.data)
-    return res.data.data
+    try {
+      const res = await roomsApi.createInterestRoom(data)
+      myRooms.value.push(res.data.data)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to create interest room:', e)
+      throw e
+    }
   }
 
   async function discoverRooms(query?: string, page = 0) {
@@ -64,42 +80,74 @@ export const useRoomsStore = defineStore('rooms', () => {
       discoverableRooms.value = res.data.data.content
       discoverTotalPages.value = res.data.data.totalPages
       discoverPage.value = page
-    } catch {
+    } catch (e) {
       discoverableRooms.value = []
+      console.error('Failed to discover rooms:', e)
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function joinRoom(roomId: string) {
-    await roomsApi.joinRoom(roomId)
+    try {
+      await roomsApi.joinRoom(roomId)
+    } catch (e) {
+      console.error('Failed to join room:', e)
+      throw e
+    }
   }
 
   async function leaveRoom(roomId: string) {
-    await roomsApi.leaveRoom(roomId)
+    try {
+      await roomsApi.leaveRoom(roomId)
+    } catch (e) {
+      console.error('Failed to leave room:', e)
+      throw e
+    }
   }
 
   async function muteRoom(roomId: string) {
-    await roomsApi.muteRoom(roomId)
+    try {
+      await roomsApi.muteRoom(roomId)
+    } catch (e) {
+      console.error('Failed to mute room:', e)
+      throw e
+    }
   }
 
   async function unmuteRoom(roomId: string) {
-    await roomsApi.unmuteRoom(roomId)
+    try {
+      await roomsApi.unmuteRoom(roomId)
+    } catch (e) {
+      console.error('Failed to unmute room:', e)
+      throw e
+    }
   }
 
   async function fetchChatChannels(roomId: string) {
-    const res = await roomsApi.getChatChannels(roomId)
-    chatChannels.value = res.data.data
+    try {
+      const res = await roomsApi.getChatChannels(roomId)
+      chatChannels.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch chat channels:', e)
+      throw e
+    }
   }
 
   async function getOrCreateChatChannel(roomId: string, channelType = 'MAIN') {
-    const res = await roomsApi.getOrCreateChatChannel(roomId, channelType)
-    return res.data.data
+    try {
+      const res = await roomsApi.getOrCreateChatChannel(roomId, channelType)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to get/create chat channel:', e)
+      throw e
+    }
   }
 
   return {
     myRooms, currentRoom, currentPublicRoom, discoverableRooms, discoverTotalPages, discoverPage,
-    chatChannels, loading,
+    chatChannels, loading, loadingRoom,
     fetchMyRooms, fetchRoom, createRoom, createInterestRoom,
     discoverRooms, joinRoom, leaveRoom, muteRoom, unmuteRoom,
     fetchChatChannels, getOrCreateChatChannel,

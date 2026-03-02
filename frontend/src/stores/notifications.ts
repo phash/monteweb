@@ -13,6 +13,9 @@ export const useNotificationsStore = defineStore('notifications', () => {
     try {
       const res = await notificationsApi.getNotifications()
       notifications.value = res.data.data.content
+    } catch (e) {
+      console.error('Failed to fetch notifications:', e)
+      throw e
     } finally {
       loading.value = false
     }
@@ -28,29 +31,44 @@ export const useNotificationsStore = defineStore('notifications', () => {
   }
 
   async function markAsRead(id: string) {
-    await notificationsApi.markAsRead(id)
-    const n = notifications.value.find(n => n.id === id)
-    if (n && !n.read) {
-      n.read = true
-      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    try {
+      await notificationsApi.markAsRead(id)
+      const n = notifications.value.find(n => n.id === id)
+      if (n && !n.read) {
+        n.read = true
+        unreadCount.value = Math.max(0, unreadCount.value - 1)
+      }
+    } catch (e) {
+      console.error('Failed to mark notification as read:', e)
+      throw e
     }
   }
 
   async function markAllAsRead() {
-    await notificationsApi.markAllAsRead()
-    notifications.value.forEach(n => { n.read = true })
-    unreadCount.value = 0
+    try {
+      await notificationsApi.markAllAsRead()
+      notifications.value.forEach(n => { n.read = true })
+      unreadCount.value = 0
+    } catch (e) {
+      console.error('Failed to mark all notifications as read:', e)
+      throw e
+    }
   }
 
   async function deleteNotification(id: string) {
-    await notificationsApi.deleteNotification(id)
-    const idx = notifications.value.findIndex(n => n.id === id)
-    if (idx !== -1) {
-      const notification = notifications.value[idx]
-      if (notification && !notification.read) {
-        unreadCount.value = Math.max(0, unreadCount.value - 1)
+    try {
+      await notificationsApi.deleteNotification(id)
+      const idx = notifications.value.findIndex(n => n.id === id)
+      if (idx !== -1) {
+        const notification = notifications.value[idx]
+        if (notification && !notification.read) {
+          unreadCount.value = Math.max(0, unreadCount.value - 1)
+        }
+        notifications.value.splice(idx, 1)
       }
-      notifications.value.splice(idx, 1)
+    } catch (e) {
+      console.error('Failed to delete notification:', e)
+      throw e
     }
   }
 

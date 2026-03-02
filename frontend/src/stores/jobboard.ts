@@ -21,6 +21,8 @@ export const useJobboardStore = defineStore('jobboard', () => {
   const report = ref<FamilyHoursInfo[]>([])
   const reportSummary = ref<ReportSummary | null>(null)
   const loading = ref(false)
+  const loadingJob = ref(false)
+  const loadingReport = ref(false)
   const hasMore = ref(true)
   const page = ref(0)
 
@@ -40,8 +42,9 @@ export const useJobboardStore = defineStore('jobboard', () => {
       jobs.value = reset ? data.content : [...jobs.value, ...data.content]
       hasMore.value = !data.last
       page.value++
-    } catch {
-      // Jobs not available
+    } catch (e) {
+      console.error('Failed to fetch jobs:', e)
+      throw e
     } finally {
       loading.value = false
     }
@@ -57,33 +60,51 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function fetchJob(id: string) {
-    loading.value = true
+    loadingJob.value = true
     try {
       const res = await jobboardApi.getJob(id)
       currentJob.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch job:', e)
+      throw e
     } finally {
-      loading.value = false
+      loadingJob.value = false
     }
   }
 
   async function createJob(data: CreateJobRequest) {
-    const res = await jobboardApi.createJob(data)
-    jobs.value.unshift(res.data.data)
-    return res.data.data
+    try {
+      const res = await jobboardApi.createJob(data)
+      jobs.value.unshift(res.data.data)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to create job:', e)
+      throw e
+    }
   }
 
   async function applyForJob(jobId: string) {
-    const res = await jobboardApi.applyForJob(jobId)
-    myAssignments.value.push(res.data.data)
-    // Update job in list
-    const job = jobs.value.find(j => j.id === jobId)
-    if (job) job.currentAssignees++
-    return res.data.data
+    try {
+      const res = await jobboardApi.applyForJob(jobId)
+      myAssignments.value.push(res.data.data)
+      // Update job in list
+      const job = jobs.value.find(j => j.id === jobId)
+      if (job) job.currentAssignees++
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to apply for job:', e)
+      throw e
+    }
   }
 
   async function fetchAssignments(jobId: string) {
-    const res = await jobboardApi.getAssignments(jobId)
-    assignments.value = res.data.data
+    try {
+      const res = await jobboardApi.getAssignments(jobId)
+      assignments.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch assignments:', e)
+      throw e
+    }
   }
 
   async function fetchMyAssignments() {
@@ -96,29 +117,54 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function startAssignment(assignmentId: string) {
-    const res = await jobboardApi.startAssignment(assignmentId)
-    updateAssignmentInList(res.data.data)
+    try {
+      const res = await jobboardApi.startAssignment(assignmentId)
+      updateAssignmentInList(res.data.data)
+    } catch (e) {
+      console.error('Failed to start assignment:', e)
+      throw e
+    }
   }
 
   async function cancelAssignment(assignmentId: string) {
-    await jobboardApi.cancelAssignment(assignmentId)
-    myAssignments.value = myAssignments.value.filter(a => a.id !== assignmentId)
+    try {
+      await jobboardApi.cancelAssignment(assignmentId)
+      myAssignments.value = myAssignments.value.filter(a => a.id !== assignmentId)
+    } catch (e) {
+      console.error('Failed to cancel assignment:', e)
+      throw e
+    }
   }
 
   async function completeAssignment(assignmentId: string, hours: number, notes?: string) {
-    const res = await jobboardApi.completeAssignment(assignmentId, hours, notes)
-    updateAssignmentInList(res.data.data)
+    try {
+      const res = await jobboardApi.completeAssignment(assignmentId, hours, notes)
+      updateAssignmentInList(res.data.data)
+    } catch (e) {
+      console.error('Failed to complete assignment:', e)
+      throw e
+    }
   }
 
   async function confirmAssignment(assignmentId: string) {
-    const res = await jobboardApi.confirmAssignment(assignmentId)
-    updateAssignmentInList(res.data.data)
-    pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
+    try {
+      const res = await jobboardApi.confirmAssignment(assignmentId)
+      updateAssignmentInList(res.data.data)
+      pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
+    } catch (e) {
+      console.error('Failed to confirm assignment:', e)
+      throw e
+    }
   }
 
   async function rejectAssignment(assignmentId: string) {
-    await jobboardApi.rejectAssignment(assignmentId)
-    pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
+    try {
+      await jobboardApi.rejectAssignment(assignmentId)
+      pendingConfirmations.value = pendingConfirmations.value.filter(a => a.id !== assignmentId)
+    } catch (e) {
+      console.error('Failed to reject assignment:', e)
+      throw e
+    }
   }
 
   async function fetchPendingConfirmations() {
@@ -140,7 +186,7 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function fetchReport() {
-    loading.value = true
+    loadingReport.value = true
     try {
       const [reportRes, summaryRes] = await Promise.all([
         jobboardApi.getReport(),
@@ -148,29 +194,42 @@ export const useJobboardStore = defineStore('jobboard', () => {
       ])
       report.value = reportRes.data.data
       reportSummary.value = summaryRes.data.data
+    } catch (e) {
+      console.error('Failed to fetch report:', e)
+      throw e
     } finally {
-      loading.value = false
+      loadingReport.value = false
     }
   }
 
   async function exportCsv() {
-    const res = await jobboardApi.exportCsv()
-    const url = window.URL.createObjectURL(new Blob([res.data]))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'familien-stundenbericht.csv'
-    a.click()
-    window.URL.revokeObjectURL(url)
+    try {
+      const res = await jobboardApi.exportCsv()
+      const url = window.URL.createObjectURL(new Blob([res.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'familien-stundenbericht.csv'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Failed to export CSV:', e)
+      throw e
+    }
   }
 
   async function exportPdf() {
-    const res = await jobboardApi.exportPdf()
-    const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'familien-stundenbericht.pdf'
-    a.click()
-    window.URL.revokeObjectURL(url)
+    try {
+      const res = await jobboardApi.exportPdf()
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'familien-stundenbericht.pdf'
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error('Failed to export PDF:', e)
+      throw e
+    }
   }
 
   const draftJobs = ref<JobInfo[]>([])
@@ -185,9 +244,14 @@ export const useJobboardStore = defineStore('jobboard', () => {
   }
 
   async function approveJob(jobId: string) {
-    const res = await jobboardApi.approveJob(jobId)
-    draftJobs.value = draftJobs.value.filter(j => j.id !== jobId)
-    return res.data.data
+    try {
+      const res = await jobboardApi.approveJob(jobId)
+      draftJobs.value = draftJobs.value.filter(j => j.id !== jobId)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to approve job:', e)
+      throw e
+    }
   }
 
   function updateAssignmentInList(updated: JobAssignmentInfo) {
@@ -208,6 +272,8 @@ export const useJobboardStore = defineStore('jobboard', () => {
     report,
     reportSummary,
     loading,
+    loadingJob,
+    loadingReport,
     hasMore,
     fetchJobs,
     fetchCategories,

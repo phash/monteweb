@@ -5,19 +5,21 @@ import { createI18n } from 'vue-i18n'
 import CleaningView from '@/views/CleaningView.vue'
 
 vi.mock('@/api/cleaning.api', () => ({
-  getUpcomingSlots: vi.fn().mockResolvedValue({ data: { data: { content: [], totalPages: 0 } } }),
-  getMySlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
-  getSlotById: vi.fn(),
-  registerForSlot: vi.fn(),
-  unregisterFromSlot: vi.fn(),
-  offerSwap: vi.fn(),
-  checkIn: vi.fn(),
-  checkOut: vi.fn(),
-  getConfigs: vi.fn(),
-  createConfig: vi.fn(),
-  generateSlots: vi.fn(),
-  cancelSlot: vi.fn(),
-  getDashboard: vi.fn(),
+  cleaningApi: {
+    getUpcomingSlots: vi.fn().mockResolvedValue({ data: { data: { content: [], totalPages: 0 } } }),
+    getMySlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getSlotById: vi.fn(),
+    registerForSlot: vi.fn(),
+    unregisterFromSlot: vi.fn(),
+    offerSwap: vi.fn(),
+    checkIn: vi.fn(),
+    checkOut: vi.fn(),
+    getConfigs: vi.fn(),
+    createConfig: vi.fn(),
+    generateSlots: vi.fn(),
+    cancelSlot: vi.fn(),
+    getDashboard: vi.fn(),
+  },
 }))
 
 const i18n = createI18n({

@@ -358,37 +358,47 @@ public class RoomController {
                 .orElseThrow(() -> new ResourceNotFoundException("Room", roomId));
         var settings = roomService.getSettings(roomId);
 
-        var memberUserIds = roomService.getMemberUserIds(roomId);
+        // Batch 1: Load all member user IDs and their room roles in one query
+        var memberRolesMap = roomService.getMemberRolesMap(roomId);
+        var memberUserIds = new java.util.ArrayList<>(memberRolesMap.keySet());
+
+        // Batch 2: Load all user info in one query
+        var users = userModuleApi.findByIds(memberUserIds);
+        Map<UUID, UserInfo> userMap = new java.util.HashMap<>();
+        for (var u : users) {
+            userMap.put(u.id(), u);
+        }
+
+        // Batch 3: Load family info for all members (one query per user, but collected upfront)
+        Map<UUID, FamilyInfo> familyMap = new java.util.HashMap<>();
+        if (familyModuleApi != null) {
+            for (var uid : memberUserIds) {
+                var families = familyModuleApi.findByUserId(uid);
+                if (families != null && !families.isEmpty()) {
+                    familyMap.put(uid, families.get(0));
+                }
+            }
+        }
+
+        // Assemble responses from batch results (no additional DB queries)
         var memberResponses = memberUserIds.stream()
                 .map(uid -> {
-                    var userOpt = userModuleApi.findById(uid);
-                    var roleOpt = roomService.getUserRoleInRoom(uid, roomId);
+                    var user = userMap.get(uid);
+                    var role = memberRolesMap.getOrDefault(uid, RoomRole.MEMBER);
 
-                    // Look up the first family for this user (if family module is available)
-                    UUID familyId = null;
-                    String familyName = null;
-                    if (familyModuleApi != null) {
-                        var families = familyModuleApi.findByUserId(uid);
-                        if (families != null && !families.isEmpty()) {
-                            FamilyInfo family = families.get(0);
-                            familyId = family.id();
-                            familyName = family.name();
-                        }
-                    }
+                    FamilyInfo family = familyMap.get(uid);
+                    UUID familyId = family != null ? family.id() : null;
+                    String familyName = family != null ? family.name() : null;
 
                     return new RoomDetailResponse.MemberResponse(
                             uid,
-                            userOpt.map(UserInfo::displayName).orElse("Unknown"),
-                            userOpt.map(UserInfo::avatarUrl).orElse(null),
-                            roleOpt.orElse(RoomRole.MEMBER),
-                            userOpt.map(u -> {
-                                if (u.role() == null) return null;
-                                // Only expose roles relevant for room display (teacher/student)
-                                return switch (u.role()) {
-                                    case TEACHER, STUDENT -> u.role().name();
-                                    default -> null;
-                                };
-                            }).orElse(null),
+                            user != null ? user.displayName() : "Unknown",
+                            user != null ? user.avatarUrl() : null,
+                            role,
+                            user != null && user.role() != null ? switch (user.role()) {
+                                case TEACHER, STUDENT -> user.role().name();
+                                default -> null;
+                            } : null,
                             null,
                             familyId,
                             familyName

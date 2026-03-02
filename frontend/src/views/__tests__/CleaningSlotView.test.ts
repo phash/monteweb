@@ -10,64 +10,66 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('@/api/cleaning.api', () => ({
-  getUpcomingSlots: vi.fn().mockResolvedValue({ data: { data: { content: [], totalPages: 0 } } }),
-  getMySlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
-  getSlotById: vi.fn().mockResolvedValue({
-    data: {
+  cleaningApi: {
+    getUpcomingSlots: vi.fn().mockResolvedValue({ data: { data: { content: [], totalPages: 0 } } }),
+    getMySlots: vi.fn().mockResolvedValue({ data: { data: [] } }),
+    getSlotById: vi.fn().mockResolvedValue({
       data: {
-        id: 'slot-1',
-        configTitle: 'Putzplan Grundschule',
-        sectionName: 'Grundschule',
-        slotDate: '2025-06-20',
-        startTime: '14:00',
-        endTime: '16:00',
-        status: 'OPEN',
-        cancelled: false,
-        maxParticipants: 5,
-        minParticipants: 2,
-        currentRegistrations: 1,
-        registrations: [
-          {
-            id: 'reg-1',
-            userId: 'user-2',
-            userName: 'Jane Doe',
-            checkedIn: false,
-            checkedOut: false,
-            actualMinutes: null,
-            swapOffered: false,
-            noShow: false,
-          },
-        ],
+        data: {
+          id: 'slot-1',
+          configTitle: 'Putzplan Grundschule',
+          sectionName: 'Grundschule',
+          slotDate: '2025-06-20',
+          startTime: '14:00',
+          endTime: '16:00',
+          status: 'OPEN',
+          cancelled: false,
+          maxParticipants: 5,
+          minParticipants: 2,
+          currentRegistrations: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              userId: 'user-2',
+              userName: 'Jane Doe',
+              checkedIn: false,
+              checkedOut: false,
+              actualMinutes: null,
+              swapOffered: false,
+              noShow: false,
+            },
+          ],
+        },
       },
-    },
-  }),
-  registerForSlot: vi.fn().mockResolvedValue({
-    data: {
+    }),
+    registerForSlot: vi.fn().mockResolvedValue({
       data: {
-        id: 'slot-1',
-        configTitle: 'Putzplan Grundschule',
-        sectionName: 'Grundschule',
-        slotDate: '2025-06-20',
-        startTime: '14:00',
-        endTime: '16:00',
-        status: 'OPEN',
-        cancelled: false,
-        maxParticipants: 5,
-        minParticipants: 2,
-        currentRegistrations: 2,
-        registrations: [],
+        data: {
+          id: 'slot-1',
+          configTitle: 'Putzplan Grundschule',
+          sectionName: 'Grundschule',
+          slotDate: '2025-06-20',
+          startTime: '14:00',
+          endTime: '16:00',
+          status: 'OPEN',
+          cancelled: false,
+          maxParticipants: 5,
+          minParticipants: 2,
+          currentRegistrations: 2,
+          registrations: [],
+        },
       },
-    },
-  }),
-  unregisterFromSlot: vi.fn().mockResolvedValue({}),
-  offerSwap: vi.fn().mockResolvedValue({}),
-  checkIn: vi.fn().mockResolvedValue({ data: { data: {} } }),
-  checkOut: vi.fn().mockResolvedValue({ data: { data: {} } }),
-  getConfigs: vi.fn(),
-  createConfig: vi.fn(),
-  generateSlots: vi.fn(),
-  cancelSlot: vi.fn(),
-  getDashboard: vi.fn(),
+    }),
+    unregisterFromSlot: vi.fn().mockResolvedValue({}),
+    offerSwap: vi.fn().mockResolvedValue({}),
+    checkIn: vi.fn().mockResolvedValue({ data: { data: {} } }),
+    checkOut: vi.fn().mockResolvedValue({ data: { data: {} } }),
+    getConfigs: vi.fn(),
+    createConfig: vi.fn(),
+    generateSlots: vi.fn(),
+    cancelSlot: vi.fn(),
+    getDashboard: vi.fn(),
+  },
 }))
 
 vi.mock('@/api/auth.api', () => ({ authApi: {} }))
@@ -174,7 +176,7 @@ describe('CleaningSlotView', () => {
   })
 
   it('should call loadSlot on mount', async () => {
-    const cleaningApi = await import('@/api/cleaning.api')
+    const { cleaningApi } = await import('@/api/cleaning.api')
     mountCleaningSlot()
     await vi.waitFor(() => {
       expect(cleaningApi.getSlotById).toHaveBeenCalledWith('slot-1')

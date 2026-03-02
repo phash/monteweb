@@ -33,13 +33,6 @@ describe('authApi', () => {
     })
   })
 
-  describe('refresh', () => {
-    it('should POST to /auth/refresh with empty body', async () => {
-      await authApi.refresh()
-      expect(client.post).toHaveBeenCalledWith('/auth/refresh', {})
-    })
-  })
-
   describe('logout', () => {
     it('should POST to /auth/logout with empty body', async () => {
       await authApi.logout()

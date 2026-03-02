@@ -69,13 +69,6 @@ describe('fotoboxApi', () => {
     })
   })
 
-  describe('updateThread', () => {
-    it('should call PUT /rooms/{roomId}/fotobox/threads/{threadId}', async () => {
-      await fotoboxApi.updateThread('room-1', 'thread-1', { title: 'Updated' })
-      expect(client.put).toHaveBeenCalledWith('/rooms/room-1/fotobox/threads/thread-1', { title: 'Updated' })
-    })
-  })
-
   describe('deleteThread', () => {
     it('should call DELETE /rooms/{roomId}/fotobox/threads/{threadId}', async () => {
       await fotoboxApi.deleteThread('room-1', 'thread-1')
@@ -120,13 +113,6 @@ describe('fotoboxApi', () => {
 
       const formData = vi.mocked(client.post).mock.calls[0][1] as FormData
       expect(formData.get('caption')).toBeNull()
-    })
-  })
-
-  describe('updateImage', () => {
-    it('should call PUT /fotobox/images/{imageId}', async () => {
-      await fotoboxApi.updateImage('img-1', { caption: 'Updated', sortOrder: 3 })
-      expect(client.put).toHaveBeenCalledWith('/fotobox/images/img-1', { caption: 'Updated', sortOrder: 3 })
     })
   })
 

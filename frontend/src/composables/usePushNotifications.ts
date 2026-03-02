@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import client from '@/api/client'
+import { notificationsApi } from '@/api/notifications.api'
 
 const isSupported = ref(false)
 const isSubscribed = ref(false)
@@ -27,9 +27,7 @@ export function usePushNotifications() {
       if (perm !== 'granted') return false
 
       // Get VAPID public key from backend
-      const keyRes = await client.get<{ data: { publicKey: string } }>(
-        '/notifications/push/public-key'
-      )
+      const keyRes = await notificationsApi.getPushPublicKey()
       const vapidPublicKey = keyRes.data.data.publicKey
 
       const registration = await navigator.serviceWorker.ready
@@ -39,8 +37,8 @@ export function usePushNotifications() {
       })
 
       const json = subscription.toJSON()
-      await client.post('/notifications/push/subscribe', {
-        endpoint: json.endpoint,
+      await notificationsApi.pushSubscribe({
+        endpoint: json.endpoint!,
         p256dh: json.keys?.p256dh,
         auth: json.keys?.auth,
       })
@@ -60,7 +58,7 @@ export function usePushNotifications() {
       const registration = await navigator.serviceWorker.ready
       const subscription = await registration.pushManager.getSubscription()
       if (subscription) {
-        await client.post('/notifications/push/unsubscribe', {
+        await notificationsApi.pushUnsubscribe({
           endpoint: subscription.endpoint,
         })
         await subscription.unsubscribe()

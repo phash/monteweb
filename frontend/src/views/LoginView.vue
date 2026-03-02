@@ -4,7 +4,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useAdminStore } from '@/stores/admin'
 import { useI18n } from 'vue-i18n'
-import client from '@/api/client'
+import { authApi } from '@/api/auth.api'
 import InputText from 'primevue/inputtext'
 import Password from 'primevue/password'
 import Button from 'primevue/button'
@@ -46,7 +46,7 @@ onMounted(async () => {
     adminStore.fetchConfig()
   }
   try {
-    const res = await client.get('/auth/oidc/config')
+    const res = await authApi.getOidcConfig()
     if (res.data?.data?.enabled) {
       oidcEnabled.value = true
       oidcAuthUri.value = res.data.data.authorizationUri

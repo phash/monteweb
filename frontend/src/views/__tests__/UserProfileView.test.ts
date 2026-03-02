@@ -18,6 +18,7 @@ const mockAdmin = {
   config: {
     modules: { messaging: true },
   },
+  isModuleEnabled: vi.fn((name: string) => false),
 }
 
 vi.mock('@/stores/admin', () => ({
@@ -127,6 +128,7 @@ describe('UserProfileView', () => {
     mockAuth.isAdmin = true
     mockRoute.params = { userId: 'user-42' }
     mockAdmin.config = { modules: { messaging: true } }
+    mockAdmin.isModuleEnabled = vi.fn((_name: string) => false)
 
     mockGetById.mockResolvedValue({
       data: {

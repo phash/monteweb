@@ -19,47 +19,80 @@ export const useFundgrubeStore = defineStore('fundgrube', () => {
       const res = await fundgrubeApi.listItems(sectionId)
       items.value = res.data.data
       activeSectionId.value = sectionId ?? null
+    } catch (e) {
+      console.error('Failed to fetch fundgrube items:', e)
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function createItem(data: CreateFundgrubeItemRequest) {
-    const res = await fundgrubeApi.createItem(data)
-    items.value.unshift(res.data.data)
-    return res.data.data
+    try {
+      const res = await fundgrubeApi.createItem(data)
+      items.value.unshift(res.data.data)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to create fundgrube item:', e)
+      throw e
+    }
   }
 
   async function updateItem(itemId: string, data: UpdateFundgrubeItemRequest) {
-    const res = await fundgrubeApi.updateItem(itemId, data)
-    const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx] = res.data.data
-    return res.data.data
+    try {
+      const res = await fundgrubeApi.updateItem(itemId, data)
+      const idx = items.value.findIndex((i) => i.id === itemId)
+      if (idx !== -1) items.value[idx] = res.data.data
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to update fundgrube item:', e)
+      throw e
+    }
   }
 
   async function deleteItem(itemId: string) {
-    await fundgrubeApi.deleteItem(itemId)
-    items.value = items.value.filter((i) => i.id !== itemId)
+    try {
+      await fundgrubeApi.deleteItem(itemId)
+      items.value = items.value.filter((i) => i.id !== itemId)
+    } catch (e) {
+      console.error('Failed to delete fundgrube item:', e)
+      throw e
+    }
   }
 
   async function claimItem(itemId: string, data: ClaimItemRequest = {}) {
-    const res = await fundgrubeApi.claimItem(itemId, data)
-    const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx] = res.data.data
-    return res.data.data
+    try {
+      const res = await fundgrubeApi.claimItem(itemId, data)
+      const idx = items.value.findIndex((i) => i.id === itemId)
+      if (idx !== -1) items.value[idx] = res.data.data
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to claim fundgrube item:', e)
+      throw e
+    }
   }
 
   async function uploadImages(itemId: string, files: File[]) {
-    const res = await fundgrubeApi.uploadImages(itemId, files)
-    const idx = items.value.findIndex((i) => i.id === itemId)
-    if (idx !== -1) items.value[idx]!.images.push(...res.data.data)
-    return res.data.data
+    try {
+      const res = await fundgrubeApi.uploadImages(itemId, files)
+      const idx = items.value.findIndex((i) => i.id === itemId)
+      if (idx !== -1) items.value[idx]!.images.push(...res.data.data)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to upload fundgrube images:', e)
+      throw e
+    }
   }
 
   async function deleteImage(itemId: string, imageId: string) {
-    await fundgrubeApi.deleteImage(imageId)
-    const item = items.value.find((i) => i.id === itemId)
-    if (item) item.images = item.images.filter((img) => img.id !== imageId)
+    try {
+      await fundgrubeApi.deleteImage(imageId)
+      const item = items.value.find((i) => i.id === itemId)
+      if (item) item.images = item.images.filter((img) => img.id !== imageId)
+    } catch (e) {
+      console.error('Failed to delete fundgrube image:', e)
+      throw e
+    }
   }
 
   return {

@@ -1,7 +1,7 @@
 import client from './client'
 import type { ApiResponse, PageResponse } from '@/types/api'
 import type {
-  RoomInfo, RoomDetail, CreateRoomRequest, CreateInterestRoomRequest,
+  RoomInfo, RoomDetail, RoomPublicInfo, CreateRoomRequest, CreateInterestRoomRequest,
   RoomSettings, RoomRole, RoomChatChannelInfo, JoinRequestInfo
 } from '@/types/room'
 
@@ -20,7 +20,7 @@ export const roomsApi = {
   },
 
   getById(id: string) {
-    return client.get<ApiResponse<RoomDetail>>(`/rooms/${id}`)
+    return client.get<ApiResponse<RoomDetail | RoomPublicInfo>>(`/rooms/${id}`)
   },
 
   create(data: CreateRoomRequest) {
@@ -45,10 +45,6 @@ export const roomsApi = {
 
   updateSettings(id: string, settings: RoomSettings) {
     return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}/settings`, settings)
-  },
-
-  updateInterestFields(id: string, data: { tags?: string[]; joinPolicy?: string; expiresAt?: string }) {
-    return client.put<ApiResponse<RoomInfo>>(`/rooms/${id}/interest`, data)
   },
 
   muteRoom(id: string) {

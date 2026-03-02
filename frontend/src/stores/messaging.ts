@@ -73,28 +73,38 @@ export const useMessagingStore = defineStore('messaging', () => {
   }
 
   async function startDirectConversation(userId: string) {
-    const res = await messagingApi.startConversation({
-      isGroup: false,
-      participantIds: [userId],
-    })
-    const conv = res.data.data
-    if (!conversations.value.find(c => c.id === conv.id)) {
-      conversations.value.unshift(conv)
+    try {
+      const res = await messagingApi.startConversation({
+        isGroup: false,
+        participantIds: [userId],
+      })
+      const conv = res.data.data
+      if (!conversations.value.find(c => c.id === conv.id)) {
+        conversations.value.unshift(conv)
+      }
+      return conv
+    } catch (e) {
+      console.error('Failed to start direct conversation:', e)
+      throw e
     }
-    return conv
   }
 
   async function startGroupConversation(title: string, participantIds: string[]) {
-    const res = await messagingApi.startConversation({
-      isGroup: true,
-      title,
-      participantIds,
-    })
-    const conv = res.data.data
-    if (!conversations.value.find(c => c.id === conv.id)) {
-      conversations.value.unshift(conv)
+    try {
+      const res = await messagingApi.startConversation({
+        isGroup: true,
+        title,
+        participantIds,
+      })
+      const conv = res.data.data
+      if (!conversations.value.find(c => c.id === conv.id)) {
+        conversations.value.unshift(conv)
+      }
+      return conv
+    } catch (e) {
+      console.error('Failed to start group conversation:', e)
+      throw e
     }
-    return conv
   }
 
   async function fetchUnreadCount() {
@@ -107,39 +117,59 @@ export const useMessagingStore = defineStore('messaging', () => {
   }
 
   async function markAsRead(conversationId: string) {
-    await messagingApi.markAsRead(conversationId)
-    const conv = conversations.value.find(c => c.id === conversationId)
-    if (conv) {
-      unreadCount.value = Math.max(0, unreadCount.value - conv.unreadCount)
-      conv.unreadCount = 0
+    try {
+      await messagingApi.markAsRead(conversationId)
+      const conv = conversations.value.find(c => c.id === conversationId)
+      if (conv) {
+        unreadCount.value = Math.max(0, unreadCount.value - conv.unreadCount)
+        conv.unreadCount = 0
+      }
+    } catch (e) {
+      console.error('Failed to mark as read:', e)
+      throw e
     }
   }
 
   async function muteConversation(conversationId: string) {
-    await messagingApi.muteConversation(conversationId)
-    const conv = conversations.value.find(c => c.id === conversationId)
-    if (conv) conv.muted = true
-    if (currentConversation.value?.id === conversationId) {
-      currentConversation.value = { ...currentConversation.value, muted: true }
+    try {
+      await messagingApi.muteConversation(conversationId)
+      const conv = conversations.value.find(c => c.id === conversationId)
+      if (conv) conv.muted = true
+      if (currentConversation.value?.id === conversationId) {
+        currentConversation.value = { ...currentConversation.value, muted: true }
+      }
+    } catch (e) {
+      console.error('Failed to mute conversation:', e)
+      throw e
     }
   }
 
   async function unmuteConversation(conversationId: string) {
-    await messagingApi.unmuteConversation(conversationId)
-    const conv = conversations.value.find(c => c.id === conversationId)
-    if (conv) conv.muted = false
-    if (currentConversation.value?.id === conversationId) {
-      currentConversation.value = { ...currentConversation.value, muted: false }
+    try {
+      await messagingApi.unmuteConversation(conversationId)
+      const conv = conversations.value.find(c => c.id === conversationId)
+      if (conv) conv.muted = false
+      if (currentConversation.value?.id === conversationId) {
+        currentConversation.value = { ...currentConversation.value, muted: false }
+      }
+    } catch (e) {
+      console.error('Failed to unmute conversation:', e)
+      throw e
     }
   }
 
   async function deleteConversation(conversationId: string) {
-    await messagingApi.deleteConversation(conversationId)
-    conversations.value = conversations.value.filter(c => c.id !== conversationId)
-    if (currentConversation.value?.id === conversationId) {
-      currentConversation.value = null
-      activeConversationId.value = null
-      messages.value = []
+    try {
+      await messagingApi.deleteConversation(conversationId)
+      conversations.value = conversations.value.filter(c => c.id !== conversationId)
+      if (currentConversation.value?.id === conversationId) {
+        currentConversation.value = null
+        activeConversationId.value = null
+        messages.value = []
+      }
+    } catch (e) {
+      console.error('Failed to delete conversation:', e)
+      throw e
     }
   }
 

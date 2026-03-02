@@ -2,14 +2,10 @@ package com.monteweb.jobboard.internal.controller;
 
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.*;
-import com.monteweb.jobboard.internal.model.JobAttachment;
-import com.monteweb.jobboard.internal.repository.JobAttachmentRepository;
-import com.monteweb.jobboard.internal.service.JobStorageService;
 import com.monteweb.jobboard.internal.service.JobboardService;
 import com.monteweb.jobboard.internal.service.JobboardService.*;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
-import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.shared.util.FileValidationUtils;
@@ -39,17 +35,11 @@ public class JobboardController {
     private final JobboardService jobboardService;
     private final UserModuleApi userModuleApi;
     private final FamilyModuleApi familyModuleApi;
-    private final JobAttachmentRepository attachmentRepository;
-    private final JobStorageService storageService;
-
     public JobboardController(JobboardService jobboardService, UserModuleApi userModuleApi,
-                              FamilyModuleApi familyModuleApi,
-                              JobAttachmentRepository attachmentRepository, JobStorageService storageService) {
+                              FamilyModuleApi familyModuleApi) {
         this.jobboardService = jobboardService;
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
-        this.attachmentRepository = attachmentRepository;
-        this.storageService = storageService;
     }
 
     // ---- Jobs ----
@@ -296,41 +286,7 @@ public class JobboardController {
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        jobboardService.getJob(id); // verify job exists
-
-        if (file.getSize() > 10 * 1024 * 1024) {
-            throw new BusinessException("File too large. Maximum size is 10 MB.");
-        }
-
-        int count = attachmentRepository.countByJobId(id);
-        if (count >= 5) {
-            throw new BusinessException("Maximum 5 attachments per job.");
-        }
-
-        // Detect actual content type via magic bytes instead of trusting client header
-        String contentType = FileValidationUtils.detectContentType(file);
-        String ext = JobStorageService.extensionFromContentType(contentType);
-        if (file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")) {
-            ext = FileValidationUtils.getExtensionFromFilename(file.getOriginalFilename());
-        }
-
-        var attachment = new JobAttachment();
-        attachment.setJobId(id);
-        attachment.setOriginalFilename(file.getOriginalFilename() != null ? file.getOriginalFilename() : "file");
-        attachment.setFileSize(file.getSize());
-        attachment.setContentType(contentType);
-        attachment.setUploadedBy(userId);
-
-        attachment = attachmentRepository.save(attachment);
-
-        String storagePath = storageService.upload(id, attachment.getId(), ext, file, contentType);
-        attachment.setStoragePath(storagePath);
-        attachment = attachmentRepository.save(attachment);
-
-        var info = new JobAttachmentInfo(
-                attachment.getId(), attachment.getJobId(), attachment.getOriginalFilename(),
-                attachment.getFileSize(), attachment.getContentType(), attachment.getUploadedBy(),
-                attachment.getCreatedAt());
+        var info = jobboardService.uploadAttachment(id, userId, file);
         return ResponseEntity.ok(ApiResponse.ok(info));
     }
 
@@ -339,19 +295,15 @@ public class JobboardController {
             @PathVariable UUID id,
             @PathVariable UUID attachmentId) {
         SecurityUtils.requireCurrentUserId();
-        var attachment = attachmentRepository.findById(attachmentId)
-                .filter(a -> a.getJobId().equals(id))
-                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
-
-        var stream = storageService.download(attachment.getStoragePath());
-        String safeFilename = FileValidationUtils.sanitizeContentDispositionFilename(attachment.getOriginalFilename());
-        String safeContentType = FileValidationUtils.isSafeContentType(attachment.getContentType())
-                ? attachment.getContentType() : "application/octet-stream";
+        var download = jobboardService.getDownloadableAttachment(id, attachmentId);
+        String safeFilename = FileValidationUtils.sanitizeContentDispositionFilename(download.originalFilename());
+        String safeContentType = FileValidationUtils.isSafeContentType(download.contentType())
+                ? download.contentType() : "application/octet-stream";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + safeFilename + "\"")
                 .contentType(MediaType.parseMediaType(safeContentType))
-                .contentLength(attachment.getFileSize())
-                .body(new InputStreamResource(stream));
+                .contentLength(download.fileSize())
+                .body(new InputStreamResource(download.stream()));
     }
 
     @DeleteMapping("/{id}/attachments/{attachmentId}")
@@ -359,20 +311,7 @@ public class JobboardController {
             @PathVariable UUID id,
             @PathVariable UUID attachmentId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var attachment = attachmentRepository.findById(attachmentId)
-                .filter(a -> a.getJobId().equals(id))
-                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
-
-        var user = userModuleApi.findById(userId).orElseThrow(() -> new ForbiddenException("User not found"));
-        if (!attachment.getUploadedBy().equals(userId)
-                && user.role() != UserRole.SUPERADMIN
-                && user.role() != UserRole.TEACHER
-                && user.role() != UserRole.SECTION_ADMIN) {
-            throw new ForbiddenException("Not authorized to delete this attachment");
-        }
-
-        storageService.delete(attachment.getStoragePath());
-        attachmentRepository.delete(attachment);
+        jobboardService.deleteAttachment(id, attachmentId, userId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

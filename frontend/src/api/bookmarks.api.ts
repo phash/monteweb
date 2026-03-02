@@ -11,12 +11,6 @@ export const bookmarksApi = {
     return client.get<ApiResponse<PageResponse<BookmarkInfo>>>('/bookmarks', { params })
   },
 
-  check(contentType: BookmarkContentType, contentId: string) {
-    return client.get<ApiResponse<{ bookmarked: boolean }>>('/bookmarks/check', {
-      params: { contentType, contentId },
-    })
-  },
-
   getBookmarkedIds(contentType: BookmarkContentType) {
     return client.get<ApiResponse<string[]>>('/bookmarks/ids', {
       params: { contentType },

@@ -24,10 +24,6 @@ export const authApi = {
     return client.post<ApiResponse<LoginResponse>>('/auth/register', data)
   },
 
-  refresh() {
-    return client.post<ApiResponse<LoginResponse>>('/auth/refresh', {})
-  },
-
   logout(_refreshToken?: string | null) {
     return client.post<ApiResponse<void>>('/auth/logout', {})
   },
@@ -59,5 +55,9 @@ export const authApi = {
 
   stopImpersonation() {
     return client.post<ApiResponse<LoginResponse>>('/auth/stop-impersonation')
+  },
+
+  getOidcConfig() {
+    return client.get<ApiResponse<{ enabled: boolean; authorizationUri: string }>>('/auth/oidc/config')
   },
 }

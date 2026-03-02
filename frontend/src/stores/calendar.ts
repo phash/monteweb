@@ -24,50 +24,83 @@ export const useCalendarStore = defineStore('calendar', () => {
       }
       totalEvents.value = res.data.data.totalElements
       hasMore.value = !res.data.data.last
+    } catch (e) {
+      console.error('Failed to fetch events:', e)
+      throw e
     } finally {
       loading.value = false
     }
   }
 
   async function fetchEvent(id: string) {
-    const res = await calendarApi.getEvent(id)
-    currentEvent.value = res.data.data
+    try {
+      const res = await calendarApi.getEvent(id)
+      currentEvent.value = res.data.data
+    } catch (e) {
+      console.error('Failed to fetch event:', e)
+      throw e
+    }
   }
 
   async function createEvent(data: CreateEventRequest) {
-    const res = await calendarApi.createEvent(data)
-    events.value.unshift(res.data.data)
-    return res.data.data
+    try {
+      const res = await calendarApi.createEvent(data)
+      events.value.unshift(res.data.data)
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to create event:', e)
+      throw e
+    }
   }
 
   async function updateEvent(id: string, data: UpdateEventRequest) {
-    const res = await calendarApi.updateEvent(id, data)
-    const idx = events.value.findIndex(e => e.id === id)
-    if (idx !== -1) events.value[idx] = res.data.data
-    if (currentEvent.value?.id === id) currentEvent.value = res.data.data
-    return res.data.data
+    try {
+      const res = await calendarApi.updateEvent(id, data)
+      const idx = events.value.findIndex(e => e.id === id)
+      if (idx !== -1) events.value[idx] = res.data.data
+      if (currentEvent.value?.id === id) currentEvent.value = res.data.data
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to update event:', e)
+      throw e
+    }
   }
 
   async function cancelEvent(id: string) {
-    const res = await calendarApi.cancelEvent(id)
-    const idx = events.value.findIndex(e => e.id === id)
-    if (idx !== -1) events.value[idx] = res.data.data
-    if (currentEvent.value?.id === id) currentEvent.value = res.data.data
-    return res.data.data
+    try {
+      const res = await calendarApi.cancelEvent(id)
+      const idx = events.value.findIndex(e => e.id === id)
+      if (idx !== -1) events.value[idx] = res.data.data
+      if (currentEvent.value?.id === id) currentEvent.value = res.data.data
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to cancel event:', e)
+      throw e
+    }
   }
 
   async function deleteEvent(id: string) {
-    await calendarApi.deleteEvent(id)
-    events.value = events.value.filter(e => e.id !== id)
-    if (currentEvent.value?.id === id) currentEvent.value = null
+    try {
+      await calendarApi.deleteEvent(id)
+      events.value = events.value.filter(e => e.id !== id)
+      if (currentEvent.value?.id === id) currentEvent.value = null
+    } catch (e) {
+      console.error('Failed to delete event:', e)
+      throw e
+    }
   }
 
   async function rsvp(id: string, status: RsvpStatus) {
-    const res = await calendarApi.rsvp(id, status)
-    const idx = events.value.findIndex(e => e.id === id)
-    if (idx !== -1) events.value[idx] = res.data.data
-    if (currentEvent.value?.id === id) currentEvent.value = res.data.data
-    return res.data.data
+    try {
+      const res = await calendarApi.rsvp(id, status)
+      const idx = events.value.findIndex(e => e.id === id)
+      if (idx !== -1) events.value[idx] = res.data.data
+      if (currentEvent.value?.id === id) currentEvent.value = res.data.data
+      return res.data.data
+    } catch (e) {
+      console.error('Failed to RSVP:', e)
+      throw e
+    }
   }
 
   async function fetchRoomEvents(roomId: string, from?: string, to?: string, page = 0) {
@@ -77,10 +110,12 @@ export const useCalendarStore = defineStore('calendar', () => {
       events.value = res.data.data.content
       totalRoomEvents.value = res.data.data.totalElements
       hasMoreRoom.value = !res.data.data.last
-    } catch {
+    } catch (e) {
       events.value = []
       totalRoomEvents.value = 0
       hasMoreRoom.value = false
+      console.error('Failed to fetch room events:', e)
+      throw e
     } finally {
       loading.value = false
     }

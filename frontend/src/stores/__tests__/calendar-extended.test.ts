@@ -77,7 +77,7 @@ describe('Calendar Store - Extended', () => {
 
       vi.mocked(calendarApi.getRoomEvents).mockRejectedValue(new Error('Network'))
 
-      await store.fetchRoomEvents('room-1')
+      await store.fetchRoomEvents('room-1').catch(() => {})
 
       expect(store.events).toEqual([])
       expect(store.totalRoomEvents).toBe(0)

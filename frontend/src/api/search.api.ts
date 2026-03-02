@@ -19,8 +19,4 @@ export const searchApi = {
       params: { q, type, limit },
     })
   },
-
-  reindex() {
-    return client.post<ApiResponse<{ indexed: number; message: string }>>('/admin/search/reindex')
-  },
 }
