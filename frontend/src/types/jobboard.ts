@@ -1,4 +1,4 @@
-export type JobStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
+export type JobStatus = 'OPEN' | 'PARTIALLY_ASSIGNED' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type AssignmentStatus = 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 export type JobVisibility = 'PRIVATE' | 'DRAFT' | 'PUBLIC'
 

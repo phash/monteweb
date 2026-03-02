@@ -723,6 +723,7 @@ export default {
     clearDateFilter: 'Clear date filter',
     statuses: {
       OPEN: 'Open',
+      PARTIALLY_ASSIGNED: 'Partially Assigned',
       ASSIGNED: 'Assigned',
       IN_PROGRESS: 'In progress',
       COMPLETED: 'Completed',

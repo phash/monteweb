@@ -723,6 +723,7 @@ export default {
     clearDateFilter: 'Datumsfilter zurücksetzen',
     statuses: {
       OPEN: 'Offen',
+      PARTIALLY_ASSIGNED: 'Teilweise vergeben',
       ASSIGNED: 'Vergeben',
       IN_PROGRESS: 'In Arbeit',
       COMPLETED: 'Abgeschlossen',

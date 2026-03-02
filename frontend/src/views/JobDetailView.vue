@@ -201,6 +201,7 @@ function formatFileSize(bytes: number): string {
 function statusSeverity(status: string) {
   switch (status) {
     case 'OPEN': return 'success'
+    case 'PARTIALLY_ASSIGNED': return 'warn'
     case 'ASSIGNED': return 'info'
     case 'IN_PROGRESS': return 'warn'
     case 'COMPLETED': return 'secondary'
