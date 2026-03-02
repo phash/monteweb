@@ -30,9 +30,15 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import AutoComplete from 'primevue/autocomplete'
 import Checkbox from 'primevue/checkbox'
+import { useAuthStore } from '@/stores/auth'
+import { useAdminStore } from '@/stores/admin'
+import { useRouter } from 'vue-router'
 
 const { t } = useI18n()
 const toast = useToast()
+const auth = useAuthStore()
+const admin = useAdminStore()
+const router = useRouter()
 
 const users = ref<UserInfo[]>([])
 const totalRecords = ref(0)
@@ -534,6 +540,16 @@ async function approveUser(userId: string) {
 }
 
 
+async function handleImpersonate(user: UserInfo) {
+  try {
+    await auth.impersonate(user.id)
+    router.push('/')
+    window.location.reload()
+  } catch {
+    toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
+  }
+}
+
 onMounted(async () => {
   try {
     const res = await sectionsApi.getAll()
@@ -667,9 +683,18 @@ onUnmounted(() => {
           <Tag :value="data.active ? t('common.active') : t('common.inactive')" :severity="data.active ? 'success' : 'danger'" />
         </template>
       </Column>
-      <Column :header="t('common.actions')" style="width: 100px">
+      <Column :header="t('common.actions')" style="width: 140px">
         <template #body="{ data }">
           <Button icon="pi pi-pencil" severity="secondary" text size="small" @click="openEdit(data)" :aria-label="t('common.edit')" />
+          <Button
+            v-if="data.role !== 'SUPERADMIN' && admin.isModuleEnabled('impersonation')"
+            icon="pi pi-user"
+            severity="danger"
+            text
+            size="small"
+            @click="handleImpersonate(data)"
+            v-tooltip.top="t('auth.impersonation.loginAs')"
+          />
         </template>
       </Column>
     </DataTable>

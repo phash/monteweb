@@ -84,6 +84,7 @@ export default {
       toggle: 'Benutzerwechsel (Impersonation)',
       toggleDescription: 'Ermöglicht dem SuperAdmin, sich als anderer Benutzer anzumelden. Nur für Test- und Supportzwecke.',
       dangerWarning: 'Sicherheitsrelevante Funktion — nur aktivieren wenn benötigt',
+      loginAs: 'Als User anmelden',
     },
   },
   dashboard: {

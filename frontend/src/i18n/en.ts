@@ -84,6 +84,7 @@ export default {
       toggle: 'User Impersonation',
       toggleDescription: 'Allows the SuperAdmin to log in as another user. For testing and support only.',
       dangerWarning: 'Security-sensitive feature — only enable when needed',
+      loginAs: 'Log in as user',
     },
   },
   dashboard: {

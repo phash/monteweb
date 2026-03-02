@@ -22,6 +22,17 @@ const userMenu = ref()
 const rolePopover = ref()
 const globalSearch = ref<InstanceType<typeof GlobalSearch> | null>(null)
 const switching = ref(false)
+const stopping = ref(false)
+
+async function handleStopImpersonation() {
+  stopping.value = true
+  try {
+    await auth.stopImpersonation()
+    window.location.reload()
+  } finally {
+    stopping.value = false
+  }
+}
 
 const menuItems = ref([
   {
@@ -95,6 +106,16 @@ async function onSwitchRole(role: string) {
     </div>
 
     <div class="header-right">
+      <Button
+        v-if="auth.isImpersonating"
+        :label="t('auth.impersonation.stop')"
+        icon="pi pi-sign-out"
+        severity="danger"
+        size="small"
+        :loading="stopping"
+        @click="handleStopImpersonation"
+        class="impersonation-stop-btn"
+      />
       <Tag
         v-if="auth.user?.role"
         :value="t('profile.roleLabels.' + auth.user.role)"
@@ -224,6 +245,10 @@ async function onSwitchRole(role: string) {
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
+}
+
+.impersonation-stop-btn {
+  white-space: nowrap;
 }
 
 .role-badge.clickable {
