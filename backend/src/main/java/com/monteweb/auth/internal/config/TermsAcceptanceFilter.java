@@ -55,6 +55,12 @@ public class TermsAcceptanceFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Skip terms check for impersonation sessions (admin browsing as another user)
+        if (request.getAttribute("impersonatedBy") != null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // Check if terms version is configured
         String termsVersion = adminModuleApi.getTenantConfig().termsVersion();
         if (termsVersion == null || termsVersion.isBlank()) {
