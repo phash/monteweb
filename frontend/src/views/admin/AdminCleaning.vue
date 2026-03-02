@@ -251,10 +251,10 @@ function assignmentStatusSeverity(status: string) {
 </script>
 
 <template>
-  <div class="p-4">
+  <div class="admin-cleaning">
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-2xl font-bold">{{ t('cleaning.admin.title') }}</h1>
-      <div class="flex gap-2">
+      <div class="flex gap-2 action-buttons">
         <Button :label="t('cleaning.admin.putzOrgaManagement')" icon="pi pi-users" severity="secondary"
                 @click="showPutzOrgaDialog = true" />
         <Button :label="t('cleaning.admin.newConfig')" icon="pi pi-plus" @click="showCreateDialog = true" />
@@ -517,6 +517,10 @@ function assignmentStatusSeverity(status: string) {
 </template>
 
 <style scoped>
+.admin-cleaning {
+  padding: 1rem;
+}
+
 .time-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -527,11 +531,11 @@ function assignmentStatusSeverity(status: string) {
   .time-grid {
     grid-template-columns: 1fr;
   }
-  .flex.justify-between {
+  .admin-cleaning > .flex.justify-between {
     flex-direction: column;
     gap: 0.75rem;
   }
-  .flex.gap-2 {
+  .admin-cleaning .action-buttons {
     flex-direction: column;
   }
 }

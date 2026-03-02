@@ -250,7 +250,7 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
   justify-content: space-between;
   align-items: flex-start;
   gap: 1rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: 1rem;
 }
 
 .slot-list {
@@ -281,6 +281,7 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
 .slot-title {
   font-size: var(--mw-font-size-md);
   font-weight: 600;
+  margin: 0;
 }
 
 .slot-section {
@@ -338,5 +339,11 @@ function participantPercent(slot: { currentRegistrations: number; minParticipant
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+@media (max-width: 600px) {
+  .slot-card {
+    padding: 0.75rem;
+  }
 }
 </style>

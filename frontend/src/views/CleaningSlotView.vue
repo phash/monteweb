@@ -104,7 +104,7 @@ async function swap() {
       icon="pi pi-arrow-left"
       text
       severity="secondary"
-      class="mb-1"
+      class="mb-3"
       @click="router.push({ name: 'cleaning' })"
     />
 
@@ -164,6 +164,7 @@ async function swap() {
       </div>
 
       <!-- Registrations Table -->
+      <hr class="section-divider" />
       <h2 class="registrations-title">{{ t('cleaning.registrations') }}</h2>
       <DataTable :value="slot.registrations" stripedRows>
         <Column field="userName" :header="t('common.name')" />
@@ -261,4 +262,9 @@ async function swap() {
   margin-bottom: 0.75rem;
 }
 
+.section-divider {
+  border: none;
+  border-top: 1px solid var(--mw-border, #dee2e6);
+  margin: 1.5rem 0;
+}
 </style>
