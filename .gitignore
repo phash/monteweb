@@ -63,6 +63,7 @@ screenshots*/
 screenshot-*.png
 docs/audit-screenshots/
 docs/*.html
+!docs/acceptance-tests.html
 docs/*.pdf
 !docs/pdf/
 docs/handbuch*.png
