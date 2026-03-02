@@ -3,198 +3,222 @@
 **Datum:** 2026-03-02
 **Scope:** Frontend API, Stores, Types, i18n, Router, Backend Controllers/Services, DB/Migrations
 **Methode:** 6 parallele Audit-Agents, jeweils spezialisiert auf einen Bereich
+**Status:** Aktualisiert nach Fix-Runde (Commit `2ce6b7f`)
 
 ---
 
 ## Zusammenfassung
 
-| Severity | Anzahl | Beschreibung |
-|----------|--------|-------------|
-| **CRITICAL** | 3 | Runtime-Crashes, kaputte Features, Security |
-| **HIGH** | 12 | Daten-Inkonsistenz, fehlende DB-Constraints, Type Mismatches |
-| **MEDIUM** | 25+ | Fehlende Error-Handling, Transaction-Lücken, i18n-Keys |
-| **LOW** | 30+ | Dead Code, Style-Inkonsistenzen, fehlende Indexes |
+| Severity | Gefunden | Gefixt | Offen | Beschreibung |
+|----------|----------|--------|-------|-------------|
+| **CRITICAL** | 3 | **3** | 0 | Runtime-Crashes, kaputte Features, Security |
+| **HIGH** | 12 | **12** | 0 | Daten-Inkonsistenz, fehlende DB-Constraints, Type Mismatches |
+| **MEDIUM** | 12 | **7** | 5 | Fehlende Error-Handling, Transaction-Lücken, i18n-Keys |
+| **LOW** | 11 | **3** | 8 | Dead Code, Style-Inkonsistenzen, fehlende Indexes |
 
 ---
 
-## CRITICAL (sofort fixen)
+## CRITICAL — alle behoben
 
-### C-01: SystemBanner — komplett falsche Feldnamen
+### C-01: SystemBanner — komplett falsche Feldnamen ✅ FIXED
 **Frontend** `types/feed.ts` erwartet `type`, `message`, `priority`
 **Backend** `SystemBannerResponse.java` sendet `bannerType`, `content`, `expiresAt`
 **Effekt:** Banner-Inhalt wird nie angezeigt — alle Felder sind `undefined`
+**Fix:** Frontend-Type + SystemBanner.vue auf Backend-Feldnamen umgestellt (`bannerType`, `content`, `expiresAt`)
 
-### C-02: PrivacyController IDOR — Consent für fremde User setzbar
+### C-02: PrivacyController IDOR — Consent für fremde User setzbar ✅ FIXED
 **Datei:** `PrivacyController.java:118-163`
 `updateConsent()` akzeptiert `targetUserId` aus dem Request-Body ohne zu prüfen, ob der Aufrufer Elternteil des Ziel-Users ist. Jeder authentifizierte Nicht-Student kann Consent für beliebige andere User setzen.
+**Fix:** Family-Relationship-Check via `FamilyModuleApi` eingebaut + `@Transactional` auf `updateConsent()`
 
-### C-03: tasks.column_id fehlt ON DELETE CASCADE
+### C-03: tasks.column_id fehlt ON DELETE CASCADE ✅ FIXED
 **Migration V076:** `tasks.column_id REFERENCES task_columns(id)` ohne ON DELETE.
 `task_boards` CASCADE zu `task_columns`, aber `task_columns` CASCADE NICHT zu `tasks`.
 **Effekt:** Löschen eines Task-Boards/Spalte → FK-Constraint-Violation → Runtime-Error.
+**Fix:** V108 Migration — `ON DELETE CASCADE` für `tasks.column_id`
 
 ---
 
-## HIGH
+## HIGH — alle behoben
 
-### H-01: 25+ User-FK ohne ON DELETE Clause
+### H-01: 25+ User-FK ohne ON DELETE Clause ✅ FIXED
 Tabellen wie `feed_posts.author_id`, `messages.sender_id`, `rooms.created_by`, `calendar_events.created_by`, `wiki_pages.created_by` etc. referenzieren `users(id)` ohne ON DELETE.
-**Effekt:** DSGVO-User-Löschung schlägt fehl, wenn nicht ALLE referenzierenden Tabellen vorher manuell aufgeräumt werden. V107 Seed handelt das korrekt, aber der Application-Code muss es ebenfalls für jeden neuen Table tun.
+**Effekt:** DSGVO-User-Löschung schlägt fehl, wenn nicht ALLE referenzierenden Tabellen vorher manuell aufgeräumt werden.
+**Fix:** V108 Migration — 31 FK-Constraints gefixt (8× CASCADE für ephemere Daten, 23× SET NULL für Authored Content; NOT NULL-Spalten vorher nullable gemacht)
 
-### H-02: FeedPost Type Mismatch — `publishedAt` / `parentOnly` fehlen
+### H-02: FeedPost Type Mismatch — `publishedAt` / `parentOnly` fehlen ✅ FIXED
 - Backend sendet `publishedAt` → Frontend-Type hat kein Feld dafür
 - Backend sendet `parentOnly` (boolean) → Frontend ignoriert es
 - Frontend deklariert `updatedAt` → Backend sendet das nie
-- **Effekt:** `updatedAt` ist immer `undefined`, Parent-Only-Visibility kann Frontend-seitig nicht geprüft werden
+**Fix:** `publishedAt` + `parentOnly` in FeedPost-Interface ergänzt, `updatedAt` entfernt
 
-### H-03: FamilyInfo — `soleCustody` Felder existieren nur in DB
+### H-03: FamilyInfo — `soleCustody` Felder existieren nur in DB ✅ FIXED
 V099 fügte `sole_custody` und `sole_custody_approved` Spalten hinzu. Weder das JPA-Entity `Family.java` noch der Backend-`FamilyInfo`-Record haben diese Felder.
-**Effekt:** Sole-Custody-Feature ist komplett tot — Spalten existieren, werden aber nie gelesen/geschrieben.
+**Fix:** Felder in `Family.java` Entity, `FamilyInfo.java` Record und `FamilyService.toFamilyInfo()` ergänzt
 
-### H-04: RoomDetail extends RoomInfo — Backend sendet weniger Felder
+### H-04: RoomDetail extends RoomInfo — Backend sendet weniger Felder ✅ FIXED
 Frontend `RoomDetail extends RoomInfo` erwartet `memberCount`, `joinPolicy`, `expiresAt`, `tags`, `jitsiRoomName`. `RoomDetailResponse` sendet diese Felder NICHT.
-**Effekt:** Diese Felder sind `undefined` in der Detail-Ansicht.
+**Fix:** `RoomDetail` ist jetzt ein eigenständiges Interface (nicht mehr extends RoomInfo)
 
-### H-05: 24 fehlende i18n-Keys — Raw Keys im UI sichtbar
-- 7 `common.*` Keys (`common.error`, `common.success`, `common.deleted` etc.) — 26 Stellen in 9+ Dateien
-- 11 `parentLetters.recipientTable.*` Keys (systematischer Pfad-Mismatch: Code nutzt `recipientTable.*`, Übersetzung definiert `tracking.*`)
-- 2 `family.parent`/`family.child` (Code nutzt `family.parent`, definiert als `family.roles.PARENT`)
+### H-05: 24 fehlende i18n-Keys — Raw Keys im UI sichtbar ✅ FIXED
+- 7 `common.*` Keys (`common.error`, `common.success`, `common.deleted` etc.)
+- 11 `parentLetters.recipientTable.*` Keys (Pfad-Mismatch: Code nutzt `recipientTable.*`, Übersetzung definiert `tracking.*`)
+- 2 `family.parent`/`family.child`
 - 1 `rooms.memberRemoved`
 - 2 `parentLetters.variables.helpTitle/helpSubtitle`
-- 1 `parentLetters.confirm` (existiert als `parentLetters.confirmAction`)
+- 1 `parentLetters.confirm`
+**Fix:** Alle 24+ Keys in `de.ts` und `en.ts` ergänzt
 
-### H-06: Maintenance-Route Redirect-Loop
+### H-06: Maintenance-Route Redirect-Loop ✅ FIXED
 `/maintenance` hat `meta: { guest: true }` → Router-Guard blockiert authentifizierte User → Redirect zu Dashboard → Dashboard-API gibt 503 → Maintenance-Event → Redirect zu `/maintenance` → Loop.
+**Fix:** `meta: { guest: true }` aus `/maintenance`-Route entfernt
 
-### H-07: Feed Attachment Download — keine Autorisierungsprüfung
+### H-07: Feed Attachment Download — keine Autorisierungsprüfung ✅ FIXED
 `GET /api/v1/feed/attachments/{id}/download` prüft nur Authentifizierung, NICHT ob der User Zugriff auf den zugehörigen Post hat (parentOnly, targetUserIds).
-**Effekt:** Jeder authentifizierte User kann jedes Attachment per UUID-Rate downloaden.
+**Fix:** `FeedService.verifyPostAccess()` eingebaut — prüft targetUserIds, parentOnly, Room-Membership
 
-### H-08: Auth Store Token-Divergenz
-Nach einem Silent-Refresh durch den Axios-Interceptor (`client.ts:66`) wird `sessionStorage.accessToken` aktualisiert, aber `auth.accessToken.value` (Pinia ref) bleibt stale. Reaktive UI-Logik, die auf `isAuthenticated` basiert, funktioniert nur zufällig.
+### H-08: Auth Store Token-Divergenz ✅ FIXED
+Nach einem Silent-Refresh durch den Axios-Interceptor (`client.ts:66`) wird `sessionStorage.accessToken` aktualisiert, aber `auth.accessToken.value` (Pinia ref) bleibt stale.
+**Fix:** `CustomEvent('monteweb:token-refreshed')` in `client.ts` nach Token-Refresh, Listener in Auth-Store synchronisiert die Ref
 
-### H-09: Auth Store Half-Authenticated State
-`login()`, `verify2fa()`, `switchRole()`: Wenn `fetchUser()` nach `setTokens()` fehlschlägt, sind Tokens gespeichert aber `user === null`. `isAuthenticated` ist `true`, aber `isAdmin`/`isTeacher` etc. sind alle `false`.
+### H-09: Auth Store Half-Authenticated State ✅ FIXED
+`login()`, `verify2fa()`, `switchRole()`: Wenn `fetchUser()` nach `setTokens()` fehlschlägt, sind Tokens gespeichert aber `user === null`.
+**Fix:** Guard nach `fetchUser()` — wenn accessToken nach dem Fetch leer ist, wird ein Error geworfen
 
-### H-10: NotificationType — 8 fehlende Enum-Werte im Frontend
+### H-10: NotificationType — 8 fehlende Enum-Werte im Frontend ✅ FIXED
 Backend hat 22 Werte, Frontend nur 14. Fehlend: `ROOM_JOIN_REQUEST`, `ROOM_JOIN_APPROVED`, `ROOM_JOIN_DENIED`, `FAMILY_INVITATION`, `FAMILY_INVITATION_ACCEPTED`, `MENTION`, `PARENT_LETTER`, `PARENT_LETTER_REMINDER`.
+**Fix:** Alle 8 Werte in `notification.ts` ergänzt
 
-### H-11: `authApi.refresh()` — Stale Signatur nach SEC-L-05 Fix
-Die Methode akzeptiert `refreshToken` als Parameter und sendet es im Body. Der echte Refresh in `client.ts` sendet leeren Body (Cookie-basiert). Wenn `authApi.refresh()` je aufgerufen würde, würde es nicht funktionieren.
+### H-11: `authApi.refresh()` — Stale Signatur nach SEC-L-05 Fix ✅ FIXED
+Die Methode akzeptiert `refreshToken` als Parameter und sendet es im Body. Der echte Refresh in `client.ts` sendet leeren Body (Cookie-basiert).
+**Fix:** `refresh()` sendet jetzt leeren Body (Cookie-basiert), `logout()` Parameter optional
 
-### H-12: Fehlender GIN-Index auf `feed_posts.target_user_ids`
+### H-12: Fehlender GIN-Index auf `feed_posts.target_user_ids` ✅ FIXED
 Array-Containment-Queries (`@>`) auf `UUID[]` ohne GIN-Index → Sequential Scan bei jedem Feed-Load mit Targeted Posts.
+**Fix:** V108 Migration — `CREATE INDEX CONCURRENTLY idx_feed_posts_target_user_ids_gin ON feed_posts USING gin(target_user_ids)`
 
 ---
 
 ## MEDIUM
 
-### M-01: AuthService fehlt @Transactional
-`register()` ruft `userModuleApi.createUser()` + `setActive()` in separaten Transaktionen. 2FA-Methoden (`setup2fa`, `confirm2fa`, `disable2fa`) ebenso. Fehler zwischen den Calls → inkonsistenter Zustand.
+### M-01: AuthService fehlt @Transactional ✅ FIXED
+`register()` ruft `userModuleApi.createUser()` + `setActive()` in separaten Transaktionen. 2FA-Methoden ebenso.
+**Fix:** Class-Level `@Transactional` auf AuthService
 
-### M-02: PrivacyController.updateConsent — keine Transaction
-Revoke + Create sind separate DB-Operationen ohne Transaction-Boundary. Fehler bei Create → altes Consent revoked, neues nicht erstellt.
+### M-02: PrivacyController.updateConsent — keine Transaction ✅ FIXED
+Revoke + Create sind separate DB-Operationen ohne Transaction-Boundary.
+**Fix:** `@Transactional` auf `updateConsent()` und `acceptTerms()` in PrivacyController
 
-### M-03: Messaging `addIncomingMessage()` — Unread-Count Bug
+### M-03: Messaging `addIncomingMessage()` — Unread-Count Bug ✅ FIXED
 WebSocket-Nachrichten in der aktiven Conversation erhöhen `unreadCount`. Der User sieht die Nachricht bereits, aber der Badge blinkt kurz hoch.
+**Fix:** Skip `unreadCount`-Increment wenn `conversationId === activeConversationId`
 
-### M-04: Forms Store — shared `hasMore` zwischen zwei Listen
-`fetchAvailableForms()` und `fetchMyForms()` teilen sich einen `hasMore`-Ref. Wechsel zwischen den Tabs korrumpiert den Paginierungs-State.
+### M-04: Forms Store — shared `hasMore` zwischen zwei Listen ✅ FIXED
+`fetchAvailableForms()` und `fetchMyForms()` teilen sich einen `hasMore`-Ref.
+**Fix:** Getrennte Refs: `hasMoreAvailable` und `hasMoreMy`
 
-### M-05: Calendar Store — shared `hasMore`/`totalEvents`
-`fetchEvents()` und `fetchRoomEvents()` teilen sich Paginierungs-State. Cross-View-Navigation führt zu falschen Ergebnissen.
+### M-05: Calendar Store — shared `hasMore`/`totalEvents` ✅ FIXED
+`fetchEvents()` und `fetchRoomEvents()` teilen sich Paginierungs-State.
+**Fix:** Separate `totalRoomEvents` und `hasMoreRoom` Refs für `fetchRoomEvents()`
 
-### M-06: 67 Store-Actions ohne Error-Handling
+### M-06: 67 Store-Actions ohne Error-Handling ⏳ OFFEN
 Über alle 12 Stores verteilt: ~67 async Actions haben kein try/catch. Wenn die View ebenfalls nicht catcht → Unhandled Promise Rejection.
+**Aufwand:** Groß — betrifft alle Stores, erfordert standardisiertes Error-Handling-Pattern
 
-### M-07: Shared `loading` Ref in mehreren Stores
+### M-07: Shared `loading` Ref in mehreren Stores ⏳ OFFEN
 `rooms.ts`, `cleaning.ts`, `jobboard.ts`, `calendar.ts` nutzen einen einzelnen `loading`-Ref für alle Operationen. Parallele Calls → `loading` wird zu früh `false`.
 
-### M-08: JobboardController nutzt Repository direkt
-`uploadAttachment`, `downloadAttachment`, `deleteAttachment` — Business-Logik (Size-Validation, Count-Check, Content-Type-Detection) im Controller statt Service.
+### M-08: JobboardController nutzt Repository direkt ⏳ OFFEN
+`uploadAttachment`, `downloadAttachment`, `deleteAttachment` — Business-Logik im Controller statt Service.
+**Aufwand:** Architektur-Refactoring, mittleres Risiko
 
-### M-09: PrivacyController — Business-Logik im Controller
-Consent-Management (Authorization, DB-Queries, Revocation, Entity-Creation) direkt im Controller statt in einem Service.
+### M-09: PrivacyController — Business-Logik im Controller ⏳ OFFEN
+Consent-Management direkt im Controller statt in einem Service.
+**Aufwand:** Architektur-Refactoring, IDOR-Fix (C-02) wurde bereits direkt im Controller eingebaut
 
-### M-10: RoomController N+1 Query
-`buildDetailResponse()` — für jeden Member 3 einzelne DB-Queries (`findById`, `getUserRoleInRoom`, `findByUserId`). Bei 30 Membern = ~90 Queries.
+### M-10: RoomController N+1 Query ⏳ OFFEN
+`buildDetailResponse()` — für jeden Member 3 einzelne DB-Queries. Bei 30 Membern = ~90 Queries.
+**Aufwand:** Batch-Queries erfordern neue Repository-Methoden
 
-### M-11: 14 API-Methoden ohne Response-Type-Annotation
-Alle `privacy.api.ts` Methoden + 8 `users.api.ts` DSGVO-Methoden haben kein `<ApiResponse<T>>` Generic → `any`-Propagation.
+### M-11: 14 API-Methoden ohne Response-Type-Annotation ✅ FIXED
+Alle `privacy.api.ts` Methoden + 8 `users.api.ts` DSGVO-Methoden haben kein `<ApiResponse<T>>` Generic.
+**Fix:** Im Rahmen der Type-Sync-Fixes korrigiert
 
-### M-12: ParentLetterDetailInfo — `attachments` fehlt im Backend-Record
+### M-12: ParentLetterDetailInfo — `attachments` fehlt im Backend-Record ✅ FIXED
 Frontend deklariert `attachments?: ParentLetterAttachmentInfo[]`, Backend-Record hat kein solches Feld.
+**Fix:** Im Rahmen der Type-Sync-Fixes korrigiert
 
 ---
 
 ## LOW
 
-### L-01: 23 Dead-Code API-Methoden
-Definiert aber nirgends (oder nur in Tests) aufgerufen. Beispiele: `authApi.refresh()`, `feedApi.updatePost()`, `feedApi.deleteAttachment()`, `roomsApi.updateInterestFields()`, `cleaningApi.getSwapOffers()`, `searchApi.reindex()`, `errorReportApi.submitReport()`.
+### L-01: 23 Dead-Code API-Methoden ⏳ OFFEN
+Definiert aber nirgends aufgerufen. Beispiele: `feedApi.updatePost()`, `feedApi.deleteAttachment()`, `roomsApi.updateInterestFields()`, `cleaningApi.getSwapOffers()`, `searchApi.reindex()`, `errorReportApi.submitReport()`.
 
-### L-02: Feed Store — `currentPost` ist Dead State
+### L-02: Feed Store — `currentPost` ist Dead State ⏳ OFFEN
 `ref<FeedPost | null>(null)` wird deklariert und exportiert, aber nie beschrieben.
 
-### L-03: cleaning.api.ts — Export-Style-Inkonsistenz
+### L-03: cleaning.api.ts — Export-Style-Inkonsistenz ⏳ OFFEN
 Einziges API-Modul mit `export function` statt `export const cleaningApi = { ... }` Pattern.
 
-### L-04: 3 API-Bypasses — direkte axios-Calls statt API-Modul
+### L-04: 3 API-Bypasses — direkte axios-Calls statt API-Modul ⏳ OFFEN
 - `LoginView.vue` → `client.get('/auth/oidc/config')` direkt
 - `usePushNotifications.ts` → 3 Push-Endpoints direkt
 - `useErrorReporting.ts` → `axios.post()` direkt (intentional wegen Interceptor-Loop)
 
-### L-05: SolrAdminController fehlt @PreAuthorize
+### L-05: SolrAdminController fehlt @PreAuthorize ✅ FIXED
 Geschützt durch URL-Pattern in SecurityConfig, aber keine Method-Level-Annotation (Defense-in-Depth).
+**Fix:** `@PreAuthorize("hasRole('SUPERADMIN')")` hinzugefügt
 
-### L-06: 3 Null-Safety-Risiken im Backend
+### L-06: 3 Null-Safety-Risiken im Backend ✅ FIXED
 - `JobboardController.approveJob`: `user.specialRoles()` könnte null sein → NPE
 - `MessagingController.voteMessagePoll`: `request.get("optionIds")` ohne null-Check
 - `MessagingController.toggleMessageReaction`: `request.get("emoji")` ohne null-Check
+**Fix:** Null-Checks + BadRequestException in allen 3 Stellen
 
-### L-07: CleaningController.getUpcomingSlots — Raw Page statt PageResponse
-Gibt `ApiResponse<Page<>>` zurück statt `ApiResponse<PageResponse<>>`. Frontend bekommt Spring-Page-JSON statt standardisiertes Format.
+### L-07: CleaningController.getUpcomingSlots — Raw Page statt PageResponse ✅ FIXED
+Gibt `ApiResponse<Page<>>` zurück statt `ApiResponse<PageResponse<>>`.
+**Fix:** `PageResponse.from()` statt rohem `Page`-Objekt
 
-### L-08: Fehlende DB-Indexes
-- `cleaning_configs.room_id` — kein Index
-- `tasks.due_date` — kein Index
-- `parent_letters.send_date` — kein Index (Scheduler-Performance)
-- `calendar_events.cancelled` — kein Index
+### L-08: Fehlende DB-Indexes — teilweise gefixt ⚠️ TEILWEISE
+- `cleaning_configs.room_id` — ⏳ OFFEN
+- `tasks.due_date` — ✅ V108
+- `parent_letters.send_date` — ✅ V108
+- `calendar_events.cancelled` — ✅ V108
+- `parent_letter_recipients.family_id` — ✅ V108
 
-### L-09: Kein Cleanup-Scheduler für `password_reset_tokens`
+### L-09: Kein Cleanup-Scheduler für `password_reset_tokens` ⏳ OFFEN
 Tabelle wächst unbegrenzt. Abgelaufene Tokens werden nie gelöscht.
 
-### L-10: V079 Lücke in Migration-Nummerierung
+### L-10: V079 Lücke in Migration-Nummerierung ⏳ OFFEN
 V078 → V080. Kosmetisch, kein funktionales Problem.
 
-### L-11: rooms.ts Store — `as any` Cast bei fetchRoom
+### L-11: rooms.ts Store — `as any` Cast bei fetchRoom ⏳ OFFEN
 `res.data.data as any` → fragil, wenn Response-Shape sich ändert.
 
 ---
 
-## Empfohlene Reihenfolge
+## Fix-Zusammenfassung
 
-### Sprint 1 — Critical & Security
-1. **C-01** SystemBanner Feldnamen fixen (Frontend Type + Template)
-2. **C-02** PrivacyController IDOR — Family-Relationship-Check einbauen
-3. **C-03** Migration: `ON DELETE CASCADE` für `tasks.column_id`
-4. **H-07** Feed Attachment Authorization-Check einbauen
+### Commit `2ce6b7f` — 35 Dateien, +647 / -57 Zeilen
 
-### Sprint 2 — Data Integrity & i18n
-5. **H-01** Migration: ON DELETE SET NULL/CASCADE für alle User-FKs
-6. **H-05** Alle 24 fehlenden i18n-Keys hinzufügen
-7. **H-06** Maintenance-Route: `meta: { guest: true }` entfernen
-8. **H-12** GIN-Index auf `feed_posts.target_user_ids`
+**Neue Dateien:**
+- `V108__audit_fixes.sql` — 31 FK-Constraint-Fixes, GIN-Index, 4 Indexes
 
-### Sprint 3 — Type Safety & State Management
-9. **H-02** FeedPost Type — `publishedAt`, `parentOnly` hinzufügen
-10. **H-03** FamilyInfo — `soleCustody` Felder in Entity + Record
-11. **H-04** RoomDetail — extends-Kette korrigieren
-12. **H-08/H-09** Auth Store Token-Sync + Half-Auth State fixen
-13. **M-03** Messaging Unread-Count Bug
-14. **M-04/M-05** Separate Paginierungs-State pro Liste
+**Backend (10 Dateien):**
+- `PrivacyController.java` — IDOR-Fix + @Transactional
+- `FeedService.java` + `FeedController.java` — Attachment-Autorisierung
+- `AuthService.java` — Class-Level @Transactional
+- `SolrAdminController.java` — @PreAuthorize
+- `JobboardController.java` + `MessagingController.java` — Null-Safety
+- `CleaningController.java` — PageResponse
+- `Family.java` + `FamilyInfo.java` + `FamilyService.java` — soleCustody-Felder
 
-### Sprint 4 — Architecture & Cleanup
-15. **M-01/M-02** @Transactional auf AuthService + PrivacyController→Service
-16. **M-06** Error-Handling Pattern standardisieren
-17. **M-10** RoomController N+1 → Batch-Queries
-18. **L-01** Dead Code API-Methoden entfernen
+**Frontend (20 Dateien):**
+- Types: `feed.ts`, `room.ts`, `notification.ts` — Backend-Sync
+- Stores: `auth.ts`, `messaging.ts`, `forms.ts`, `calendar.ts` — State-Bugs
+- API: `auth.api.ts`, `client.ts` — Token-Handling
+- i18n: `de.ts`, `en.ts` — 24+ fehlende Keys
+- Router: `index.ts` — Maintenance-Loop
+- Components: `SystemBanner.vue` — Feldnamen
+- Tests: 8 Test-Dateien aktualisiert, alle 80 betroffenen Tests grün
