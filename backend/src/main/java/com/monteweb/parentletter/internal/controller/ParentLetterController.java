@@ -1,10 +1,6 @@
 package com.monteweb.parentletter.internal.controller;
 
-import com.monteweb.parentletter.CreateParentLetterRequest;
-import com.monteweb.parentletter.ParentLetterDetailInfo;
-import com.monteweb.parentletter.ParentLetterInfo;
-import com.monteweb.parentletter.ParentLetterRecipientInfo;
-import com.monteweb.parentletter.UpdateParentLetterRequest;
+import com.monteweb.parentletter.*;
 import com.monteweb.parentletter.internal.service.ParentLetterPdfService;
 import com.monteweb.parentletter.internal.service.ParentLetterService;
 import com.monteweb.shared.dto.ApiResponse;
@@ -12,11 +8,16 @@ import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -179,5 +180,47 @@ public class ParentLetterController {
                 .header("Content-Type", "application/pdf")
                 .header("Content-Disposition", "attachment; filename=\"Ruecklauf-" + safeName + ".pdf\"")
                 .body(pdf);
+    }
+
+    // ---- Attachments ----
+
+    @PostMapping("/{id}/attachments")
+    public ResponseEntity<ApiResponse<List<ParentLetterAttachmentInfo>>> uploadAttachments(
+            @PathVariable UUID id,
+            @RequestParam("files") List<MultipartFile> files) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var result = parentLetterService.uploadAttachments(id, files, userId);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    @GetMapping("/{id}/attachments")
+    public ResponseEntity<ApiResponse<List<ParentLetterAttachmentInfo>>> getAttachments(
+            @PathVariable UUID id) {
+        var result = parentLetterService.getAttachments(id);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    @GetMapping("/{id}/attachments/{attachmentId}")
+    public ResponseEntity<InputStreamResource> downloadAttachment(
+            @PathVariable UUID id,
+            @PathVariable UUID attachmentId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var info = parentLetterService.getAttachmentInfo(attachmentId);
+        var stream = parentLetterService.downloadAttachment(attachmentId, userId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, info.contentType())
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + info.originalFilename() + "\"")
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(info.fileSize()))
+                .body(new InputStreamResource(stream));
+    }
+
+    @DeleteMapping("/{id}/attachments/{attachmentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteAttachment(
+            @PathVariable UUID id,
+            @PathVariable UUID attachmentId) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        parentLetterService.deleteAttachment(attachmentId, userId);
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

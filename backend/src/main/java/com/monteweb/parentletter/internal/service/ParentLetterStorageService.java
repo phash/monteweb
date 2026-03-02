@@ -106,6 +106,58 @@ public class ParentLetterStorageService {
         }
     }
 
+    // ---- Attachment storage ----
+
+    public String uploadAttachment(UUID letterId, UUID attachmentId, MultipartFile file, String contentType) {
+        String extension = resolveExtension(file);
+        String storagePath = "parentletter/" + letterId + "/attachments/" + attachmentId + "." + extension;
+
+        try (InputStream inputStream = file.getInputStream()) {
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(storagePath)
+                            .stream(inputStream, file.getSize(), PART_SIZE)
+                            .contentType(contentType)
+                            .build()
+            );
+            log.info("Uploaded attachment to MinIO: {}", storagePath);
+            return storagePath;
+        } catch (Exception e) {
+            log.error("Failed to upload attachment to MinIO: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to upload attachment: " + e.getMessage(), e);
+        }
+    }
+
+    public InputStream downloadAttachment(String storagePath) {
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(storagePath)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.error("Failed to download attachment from MinIO ({}): {}", storagePath, e.getMessage(), e);
+            throw new RuntimeException("Failed to retrieve attachment: " + e.getMessage(), e);
+        }
+    }
+
+    public void deleteAttachment(String storagePath) {
+        if (storagePath == null || storagePath.isBlank()) return;
+        try {
+            minioClient.removeObject(
+                    RemoveObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(storagePath)
+                            .build()
+            );
+            log.info("Deleted attachment from MinIO: {}", storagePath);
+        } catch (Exception e) {
+            log.warn("Failed to delete attachment from MinIO ({}): {}", storagePath, e.getMessage());
+        }
+    }
+
     // ---- Helpers ----
 
     private String resolveExtension(MultipartFile file) {

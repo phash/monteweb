@@ -6,8 +6,10 @@ import com.monteweb.notification.NotificationModuleApi;
 import com.monteweb.notification.NotificationType;
 import com.monteweb.parentletter.*;
 import com.monteweb.parentletter.internal.model.ParentLetter;
+import com.monteweb.parentletter.internal.model.ParentLetterAttachment;
 import com.monteweb.parentletter.internal.model.ParentLetterConfig;
 import com.monteweb.parentletter.internal.model.ParentLetterRecipient;
+import com.monteweb.parentletter.internal.repository.ParentLetterAttachmentRepository;
 import com.monteweb.parentletter.internal.repository.ParentLetterConfigRepository;
 import com.monteweb.parentletter.internal.repository.ParentLetterRecipientRepository;
 import com.monteweb.parentletter.internal.repository.ParentLetterRepository;
@@ -28,7 +30,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.*;
 
@@ -42,6 +46,8 @@ public class ParentLetterService implements ParentLetterModuleApi {
     private final ParentLetterRepository letterRepository;
     private final ParentLetterRecipientRepository recipientRepository;
     private final ParentLetterConfigRepository configRepository;
+    private final ParentLetterAttachmentRepository attachmentRepository;
+    private final ParentLetterStorageService storageService;
     private final RoomModuleApi roomModuleApi;
     private final UserModuleApi userModuleApi;
     private final FamilyModuleApi familyModuleApi;
@@ -53,9 +59,14 @@ public class ParentLetterService implements ParentLetterModuleApi {
     @Autowired(required = false)
     private SchoolModuleApi schoolModuleApi;
 
+    private static final int MAX_ATTACHMENTS = 5;
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024L; // 10 MB
+
     public ParentLetterService(ParentLetterRepository letterRepository,
                                ParentLetterRecipientRepository recipientRepository,
                                ParentLetterConfigRepository configRepository,
+                               ParentLetterAttachmentRepository attachmentRepository,
+                               ParentLetterStorageService storageService,
                                RoomModuleApi roomModuleApi,
                                UserModuleApi userModuleApi,
                                FamilyModuleApi familyModuleApi,
@@ -63,6 +74,8 @@ public class ParentLetterService implements ParentLetterModuleApi {
         this.letterRepository = letterRepository;
         this.recipientRepository = recipientRepository;
         this.configRepository = configRepository;
+        this.attachmentRepository = attachmentRepository;
+        this.storageService = storageService;
         this.roomModuleApi = roomModuleApi;
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
@@ -346,6 +359,90 @@ public class ParentLetterService implements ParentLetterModuleApi {
             r.setReadAt(now);
             recipientRepository.save(r);
         }
+    }
+
+    // ---- Attachments ----
+
+    public List<ParentLetterAttachmentInfo> uploadAttachments(UUID letterId, List<MultipartFile> files, UUID userId) {
+        var letter = letterRepository.findById(letterId)
+                .orElseThrow(() -> new ResourceNotFoundException("ParentLetter", letterId));
+        requireLeaderOrSuperadmin(letter.getRoomId(), userId);
+
+        long existingCount = attachmentRepository.countByLetterId(letterId);
+        if (existingCount + files.size() > MAX_ATTACHMENTS) {
+            throw new ForbiddenException("Maximum " + MAX_ATTACHMENTS + " attachments per letter");
+        }
+
+        List<ParentLetterAttachmentInfo> result = new ArrayList<>();
+        int sortOrder = (int) existingCount;
+
+        for (var file : files) {
+            if (file.getSize() > MAX_FILE_SIZE) {
+                throw new ForbiddenException("File " + file.getOriginalFilename() + " exceeds maximum size of 10 MB");
+            }
+
+            var attachment = new ParentLetterAttachment();
+            attachment.setLetter(letter);
+            attachment.setOriginalFilename(file.getOriginalFilename() != null ? file.getOriginalFilename() : "unnamed");
+            attachment.setFileSize(file.getSize());
+            attachment.setContentType(file.getContentType() != null ? file.getContentType() : "application/octet-stream");
+            attachment.setUploadedBy(userId);
+            attachment.setSortOrder(sortOrder++);
+            attachment = attachmentRepository.save(attachment);
+
+            String storagePath = storageService.uploadAttachment(letterId, attachment.getId(), file, attachment.getContentType());
+            attachment.setStoragePath(storagePath);
+            attachment = attachmentRepository.save(attachment);
+
+            result.add(toAttachmentInfo(attachment));
+        }
+
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ParentLetterAttachmentInfo> getAttachments(UUID letterId) {
+        return attachmentRepository.findByLetterIdOrderBySortOrder(letterId).stream()
+                .map(this::toAttachmentInfo)
+                .toList();
+    }
+
+    public InputStream downloadAttachment(UUID attachmentId, UUID userId) {
+        var attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+        return storageService.downloadAttachment(attachment.getStoragePath());
+    }
+
+    public ParentLetterAttachmentInfo getAttachmentInfo(UUID attachmentId) {
+        var attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+        return toAttachmentInfo(attachment);
+    }
+
+    public void deleteAttachment(UUID attachmentId, UUID userId) {
+        var attachment = attachmentRepository.findById(attachmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+        var letter = attachment.getLetter();
+
+        if (letter.getStatus() != ParentLetterStatus.DRAFT) {
+            throw new ForbiddenException("Attachments can only be deleted from DRAFT letters");
+        }
+        requireLeaderOrSuperadmin(letter.getRoomId(), userId);
+
+        storageService.deleteAttachment(attachment.getStoragePath());
+        attachmentRepository.delete(attachment);
+    }
+
+    private ParentLetterAttachmentInfo toAttachmentInfo(ParentLetterAttachment attachment) {
+        return new ParentLetterAttachmentInfo(
+                attachment.getId(),
+                attachment.getOriginalFilename(),
+                attachment.getStoragePath(),
+                attachment.getFileSize(),
+                attachment.getContentType(),
+                attachment.getSortOrder(),
+                attachment.getCreatedAt()
+        );
     }
 
     // ---- PDF helpers ----
