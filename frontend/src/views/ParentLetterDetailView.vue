@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useLocaleDate } from '@/composables/useLocaleDate'
+import { useMarkdown } from '@/composables/useMarkdown'
 import { useParentLetterStore } from '@/stores/parentletter'
 import { useAuthStore } from '@/stores/auth'
 import type { ParentLetterStatus } from '@/types/parentletter'
@@ -22,6 +23,7 @@ const route = useRoute()
 const toast = useToast()
 const store = useParentLetterStore()
 const auth = useAuthStore()
+const { renderMarkdown } = useMarkdown()
 
 const letterId = computed(() => route.params.id as string)
 
@@ -30,6 +32,8 @@ const sendingLetter = ref(false)
 const closingLetter = ref(false)
 
 const letter = computed(() => store.currentLetter)
+
+const renderedContent = computed(() => renderMarkdown(letter.value?.content ?? ''))
 
 // Is the current user the creator or an admin?
 const isCreatorOrAdmin = computed(() =>
@@ -193,7 +197,7 @@ async function handleConfirm(studentId: string) {
 
       <!-- Letter content -->
       <div class="letter-content card">
-        <div class="content-text">{{ letter.content }}</div>
+        <div class="content-text" v-html="renderedContent" />
       </div>
 
       <!-- Parent confirmation section -->

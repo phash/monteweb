@@ -2429,6 +2429,7 @@ export default {
   },
   parentLetters: {
     title: 'Parent Letters',
+    preview: 'Preview',
     create: 'Create New Letter',
     editLetter: 'Edit Letter',
     noLetters: 'No parent letters yet.',

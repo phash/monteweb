@@ -5,15 +5,16 @@ import { useRouter, useRoute } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import { useParentLetterStore } from '@/stores/parentletter'
 import { useRoomsStore } from '@/stores/rooms'
+import { useAuthStore } from '@/stores/auth'
 import type { CreateParentLetterRequest, UpdateParentLetterRequest } from '@/types/parentletter'
 import type { RoomMember } from '@/types/room'
 import { roomsApi } from '@/api/rooms.api'
 import PageTitle from '@/components/common/PageTitle.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
+import MarkdownLetterEditor from '@/components/parentletter/MarkdownLetterEditor.vue'
 import VariableHelpMenu from '@/components/parentletter/VariableHelpMenu.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import Textarea from 'primevue/textarea'
 import DatePicker from 'primevue/datepicker'
 import Select from 'primevue/select'
 import MultiSelect from 'primevue/multiselect'
@@ -26,6 +27,7 @@ const route = useRoute()
 const toast = useToast()
 const store = useParentLetterStore()
 const rooms = useRoomsStore()
+const auth = useAuthStore()
 
 const isEdit = computed(() => route.name === 'parent-letter-edit')
 const letterId = computed(() => route.params.id as string | undefined)
@@ -48,8 +50,8 @@ const saving = ref(false)
 const sending = ref(false)
 const initialLoading = ref(false)
 
-// Reference to the content textarea for cursor-position variable insertion
-const contentTextareaRef = ref<HTMLTextAreaElement | null>(null)
+// Reference to the markdown editor for cursor-position variable insertion
+const editorRef = ref<InstanceType<typeof MarkdownLetterEditor> | null>(null)
 
 const klasseRooms = computed(() =>
   rooms.myRooms.filter(r => r.type === 'KLASSE')
@@ -198,21 +200,7 @@ async function handleSaveAndSend() {
 }
 
 function insertVariable(variable: string) {
-  // Insert variable at cursor position in content textarea
-  const textarea = contentTextareaRef.value
-  if (!textarea) {
-    content.value += variable
-    return
-  }
-  const start = textarea.selectionStart ?? content.value.length
-  const end = textarea.selectionEnd ?? content.value.length
-  content.value = content.value.slice(0, start) + variable + content.value.slice(end)
-  // Restore cursor after inserted text
-  requestAnimationFrame(() => {
-    textarea.selectionStart = start + variable.length
-    textarea.selectionEnd = start + variable.length
-    textarea.focus()
-  })
+  editorRef.value?.insertAtCursor(variable)
 }
 </script>
 
@@ -267,16 +255,13 @@ function insertVariable(variable: string) {
         <!-- Inhalt -->
         <div class="field">
           <div class="field-label-row">
-            <label for="letter-content" class="required">{{ t('parentLetters.form.content') }}</label>
+            <label class="required">{{ t('parentLetters.form.content') }}</label>
             <VariableHelpMenu @insert="insertVariable" />
           </div>
-          <Textarea
-            id="letter-content"
-            ref="contentTextareaRef"
+          <MarkdownLetterEditor
+            ref="editorRef"
             v-model="content"
-            :autoResize="true"
-            rows="10"
-            class="w-full content-textarea"
+            :user-name="auth.user?.displayName ?? ''"
             :placeholder="t('parentLetters.form.contentPlaceholder')"
           />
         </div>
@@ -435,11 +420,6 @@ function insertVariable(variable: string) {
 
 .field-narrow {
   max-width: 280px;
-}
-
-.content-textarea {
-  font-family: inherit;
-  min-height: 200px;
 }
 
 .recipients-option {

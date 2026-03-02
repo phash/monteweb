@@ -2429,6 +2429,7 @@ export default {
   },
   parentLetters: {
     title: 'Elternbriefe',
+    preview: 'Vorschau',
     create: 'Neuen Brief erstellen',
     editLetter: 'Brief bearbeiten',
     noLetters: 'Keine Elternbriefe vorhanden.',
