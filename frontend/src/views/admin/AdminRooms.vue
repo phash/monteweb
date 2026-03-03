@@ -224,7 +224,7 @@ async function openMembers(room: RoomInfo) {
   showMembers.value = true
   try {
     const res = await roomsApi.getById(room.id)
-    membersRoom.value = res.data.data
+    membersRoom.value = res.data.data as RoomDetail
   } finally {
     membersLoading.value = false
   }
@@ -244,7 +244,7 @@ async function addMember(user: UserInfo) {
     toast.add({ severity: 'success', summary: t('admin.memberAdded'), life: 3000 })
     memberSearchQuery.value = ''
     const res = await roomsApi.getById(membersRoom.value.id)
-    membersRoom.value = res.data.data
+    membersRoom.value = res.data.data as RoomDetail
     await loadData()
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
@@ -257,7 +257,7 @@ async function removeMember(userId: string) {
     await roomsApi.removeMember(membersRoom.value.id, userId)
     toast.add({ severity: 'success', summary: t('admin.memberRemoved'), life: 3000 })
     const res = await roomsApi.getById(membersRoom.value.id)
-    membersRoom.value = res.data.data
+    membersRoom.value = res.data.data as RoomDetail
     await loadData()
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
@@ -269,7 +269,7 @@ async function updateMemberRole(userId: string, role: RoomRole) {
   try {
     await roomsApi.updateMemberRole(membersRoom.value.id, userId, role)
     const res = await roomsApi.getById(membersRoom.value.id)
-    membersRoom.value = res.data.data
+    membersRoom.value = res.data.data as RoomDetail
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
   }
@@ -293,7 +293,7 @@ async function executeMoveCopy() {
     toast.add({ severity: 'success', summary: msg, life: 3000 })
     showMoveCopy.value = false
     const res = await roomsApi.getById(membersRoom.value.id)
-    membersRoom.value = res.data.data
+    membersRoom.value = res.data.data as RoomDetail
     await loadData()
   } catch {
     toast.add({ severity: 'error', summary: t('error.unexpected'), life: 5000 })
