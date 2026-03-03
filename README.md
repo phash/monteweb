@@ -47,7 +47,7 @@ Modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Kripp
 ## Tech-Stack
 
 ### Backend
-Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (96 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO, Apache Solr 9.8
+Java 21, Spring Boot 3.4, Spring Modulith 1.3, Spring Security (JWT), Spring Data JPA + Flyway (111 Migrationen), Spring WebSocket + Redis Pub/Sub, PostgreSQL 16, Redis 7, MinIO, Apache Solr 9.8
 
 ### Frontend
 Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, vue-i18n, Axios, PWA (vite-plugin-pwa + Workbox)
@@ -56,8 +56,9 @@ Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, v
 Docker Compose, nginx (Reverse Proxy), Caddy (Auto-SSL), GitHub Actions CI/CD, Prometheus + Grafana
 
 ### Tests
-- Frontend: ~1341 Tests in 147 Dateien (Vitest + vue-test-utils)
+- Frontend: ~1479 Unit-Tests in 156 Dateien (Vitest + vue-test-utils)
 - Backend: 47 Testklassen, ~490 Tests (Testcontainers + MockMvc)
+- E2E: 550 Playwright-Tests in 22 Dateien (296 User Stories, Chromium)
 
 ## Schnellstart
 
@@ -94,11 +95,14 @@ npm run dev   # http://localhost:5173
 ## Tests
 
 ```bash
-# Frontend (~1341 Tests)
+# Frontend Unit-Tests (~1479 Tests)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker erforderlich)
 cd backend && ./mvnw test
+
+# E2E-Tests (Docker-App muss unter http://localhost laufen)
+cd e2e && npx playwright install chromium && npx playwright test
 ```
 
 ## Port-Belegung
@@ -153,6 +157,7 @@ monteweb/
 │   └── Dockerfile
 ├── backup/               # Backup-Container (pg_dump + mc)
 ├── solr/                 # Solr-Konfiguration (Schema, Stopwords)
+├── e2e/                 # Playwright E2E-Tests (22 Testdateien)
 ├── monitoring/           # Prometheus + Grafana Config
 ├── nginx/                # Production Reverse Proxy
 ├── docker-compose.yml    # Production Stack

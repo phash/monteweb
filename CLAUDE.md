@@ -9,7 +9,7 @@ Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (Q
 
 **Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
-**20 backend modules**, 96 Flyway migrations (V001–V097), ~1341 frontend tests, ~490 backend tests
+**20 backend modules**, 111 Flyway migrations (V001–V112), ~1479 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
 
 ## Commands
 
@@ -27,7 +27,7 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (~1341 tests, ~147 files)
+npm test               # vitest run (~1479 tests, ~156 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
@@ -99,7 +99,7 @@ frontend/src/
 
 ### Database
 
-- **Flyway** V001–V097 (96 migrations). Never modify existing migrations — always create new `V0XX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V112 (111 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
@@ -146,6 +146,15 @@ frontend/src/
 **Backend:** `@SpringBootTest @AutoConfigureMockMvc @Import(TestContainerConfig.class)` — Testcontainers spins up Postgres + Redis. `MonteWebModularityTests` verifies no illegal cross-module dependencies. JaCoCo 70% instruction minimum.
 
 **Frontend:** Vitest + jsdom + @vue/test-utils. Setup mocks `localStorage` and PrimeVue `useToast`. Pattern: `vi.mock()` API modules, `setActivePinia(createPinia())` in `beforeEach`. 55% statement coverage threshold.
+
+**E2E:** Playwright + Chromium. 22 test files covering 296 user stories (550 tests, 171 skipped). API-based login (sessionStorage JWT injection). Run against Docker Compose app at `http://localhost`. Rate limiting disabled via `MONTEWEB_RATE_LIMIT_ENABLED=false` in `.env`.
+
+```bash
+# E2E tests (requires Docker app running at http://localhost)
+cd e2e && npx playwright install chromium && npx playwright test   # all 22 files
+npx playwright test tests/admin/                                    # single module
+npx playwright test --reporter=list                                 # verbose output
+```
 
 ## Modules
 
