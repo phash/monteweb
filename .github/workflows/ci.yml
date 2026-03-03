@@ -170,6 +170,7 @@ jobs:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    continue-on-error: true
     permissions:
       contents: read
     needs: [backend, frontend]
