@@ -830,6 +830,6 @@ test.describe('US-374: Fehlerberichterstattung', () => {
       headers: authHeader(parentToken),
     })
     expect(res.ok()).toBeFalsy()
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
   })
 })

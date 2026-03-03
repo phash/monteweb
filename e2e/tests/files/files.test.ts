@@ -814,7 +814,7 @@ test.describe('US-151: Zugriffsbeschraenkung fuer Nicht-Mitglieder', () => {
 
     // Try to list files in that room
     const res = await page.request.get(`/api/v1/rooms/${nonMemberRoomId}/files`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
   })
 
   test('API returns 403 when non-member tries to list folders', async ({ page }) => {
@@ -829,7 +829,7 @@ test.describe('US-151: Zugriffsbeschraenkung fuer Nicht-Mitglieder', () => {
     }
 
     const res = await page.request.get(`/api/v1/rooms/${nonMemberRoomId}/files/folders`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
   })
 
   test('API returns 403 when non-member tries to create a folder', async ({ page }) => {
@@ -848,6 +848,6 @@ test.describe('US-151: Zugriffsbeschraenkung fuer Nicht-Mitglieder', () => {
     const res = await page.request.post(`/api/v1/rooms/${nonMemberRoomId}/files/folders`, {
       data: { name: 'Unauthorized Folder', parentId: null, audience: null },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
   })
 })

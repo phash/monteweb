@@ -130,6 +130,7 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@monteweb.local}
       SOLR_URL: http://solr:8983/solr/monteweb
+      MONTEWEB_RATE_LIMIT_ENABLED: ${MONTEWEB_RATE_LIMIT_ENABLED:-true}
     networks:
       - backend
       - frontend

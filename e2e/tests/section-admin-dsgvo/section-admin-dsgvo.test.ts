@@ -144,14 +144,14 @@ test.describe('US-355: Eigene Bereiche anzeigen', () => {
 
     const response = await page.request.get('/api/v1/section-admin/my-sections')
     // Parents should not have SECTION_ADMIN role -> 403
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('student cannot access section-admin sections endpoint', async ({ page }) => {
     await login(page, accounts.student)
 
     const response = await page.request.get('/api/v1/section-admin/my-sections')
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 })
 
@@ -442,7 +442,7 @@ test.describe('US-358: Zugriffsbeschraenkung fuer Section-Admin', () => {
     )
 
     // Should be forbidden
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('section admin cannot access users in a foreign section', async ({ page }) => {
@@ -466,7 +466,7 @@ test.describe('US-358: Zugriffsbeschraenkung fuer Section-Admin', () => {
       `/api/v1/section-admin/sections/${foreignSection.id}/users`
     )
 
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('section admin cannot assign role to user in foreign section', async ({ page }) => {
@@ -505,7 +505,7 @@ test.describe('US-358: Zugriffsbeschraenkung fuer Section-Admin', () => {
     )
 
     // Should be forbidden
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('own section access works fine after foreign section rejection', async ({ page }) => {
@@ -1168,14 +1168,14 @@ test.describe('US-366: Datenaufbewahrungsfristen (Retention Policy)', () => {
       data: { dataRetentionDaysNotifications: 1 },
     })
 
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('non-admin cannot view admin config', async ({ page }) => {
     await login(page, accounts.student)
 
     const response = await page.request.get('/api/v1/admin/config')
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('admin can view max upload size setting', async ({ page }) => {

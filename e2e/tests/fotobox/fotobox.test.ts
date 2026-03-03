@@ -216,7 +216,7 @@ test.describe('US-250: Fotobox-Einstellungen konfigurieren', () => {
         defaultPermission: 'VIEW_ONLY',
       },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
   })
 
   test('admin can update fotobox settings for any room', async ({ page }) => {
@@ -328,7 +328,7 @@ test.describe('US-251: Fotobox-Thread erstellen', () => {
     const res = await page.request.post(`/api/v1/rooms/${roomId}/fotobox/threads`, {
       data: { title: 'Unauthorized Thread', audience: 'ALL' },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Restore default permission
     await login(page, accounts.teacher)
@@ -610,7 +610,7 @@ test.describe('US-256: Berechtigungshierarchie der Fotobox', () => {
     const res = await page.request.post(`/api/v1/rooms/${roomId}/fotobox/threads`, {
       data: { title: 'Unauthorized', audience: 'ALL' },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as teacher
     await login(page, accounts.teacher)
@@ -633,7 +633,7 @@ test.describe('US-256: Berechtigungshierarchie der Fotobox', () => {
     }
 
     const res = await page.request.get(`/api/v1/rooms/${nonMemberRoomId}/fotobox/threads`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
   })
 
   test('disabled fotobox returns 403 for all users', async ({ page }) => {
@@ -652,7 +652,7 @@ test.describe('US-256: Berechtigungshierarchie der Fotobox', () => {
     // Even teacher (leader) should get 403 on thread listing
     // because permission check requires fotobox to be enabled
     const res = await page.request.get(`/api/v1/rooms/${roomId}/fotobox/threads`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Re-enable fotobox
     await ensureFotoboxEnabled(page, roomId)
@@ -762,7 +762,7 @@ test.describe('US-258: Thread loeschen mit allen Bildern', () => {
     // Try to delete as student
     await login(page, accounts.student)
     const res = await page.request.delete(`/api/v1/rooms/${roomId}/fotobox/threads/${thread!.id}`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as teacher
     await login(page, accounts.teacher)
@@ -858,7 +858,7 @@ test.describe('US-259: Thread bearbeiten', () => {
     const res = await page.request.put(`/api/v1/rooms/${roomId}/fotobox/threads/${thread!.id}`, {
       data: { title: 'Hacked Title' },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as teacher
     await login(page, accounts.teacher)

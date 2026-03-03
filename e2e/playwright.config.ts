@@ -23,6 +23,7 @@ export default defineConfig({
       name: 'setup',
       testMatch: /global-setup\.ts/,
       teardown: 'teardown',
+      timeout: 120000, // account provisioning may need retries
     },
     {
       name: 'teardown',

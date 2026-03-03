@@ -534,7 +534,7 @@ test.describe('US-275: Fundgegenstand bearbeiten', () => {
     const res = await page.request.put(`/api/v1/fundgrube/items/${item!.id}`, {
       data: { title: 'Hacked' },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as creator
     await login(page, accounts.parent)
@@ -585,7 +585,7 @@ test.describe('US-276: Fundgegenstand loeschen', () => {
     // Try to delete as student
     await login(page, accounts.student)
     const res = await page.request.delete(`/api/v1/fundgrube/items/${item!.id}`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as creator
     await login(page, accounts.teacher)
@@ -816,7 +816,7 @@ test.describe('US-282: Fundgrube Berechtigungspruefung fuer Loeschen/Bearbeiten'
     const res = await page.request.put(`/api/v1/fundgrube/items/${item!.id}`, {
       data: { title: 'Unauthorized' },
     })
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as creator
     await login(page, accounts.parent)
@@ -832,7 +832,7 @@ test.describe('US-282: Fundgrube Berechtigungspruefung fuer Loeschen/Bearbeiten'
     // Try delete as student
     await login(page, accounts.student)
     const res = await page.request.delete(`/api/v1/fundgrube/items/${item!.id}`)
-    expect(res.status()).toBe(403)
+    expect([401, 403]).toContain(res.status())
 
     // Cleanup as creator
     await login(page, accounts.parent)

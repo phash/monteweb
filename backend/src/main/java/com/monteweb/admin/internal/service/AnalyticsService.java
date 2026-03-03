@@ -19,7 +19,7 @@ public class AnalyticsService {
         Map<String, Object> stats = new LinkedHashMap<>();
 
         stats.put("totalUsers", countQuery("SELECT COUNT(*) FROM users"));
-        stats.put("activeUsers", countQuery("SELECT COUNT(*) FROM users WHERE active = true"));
+        stats.put("activeUsers", countQuery("SELECT COUNT(*) FROM users WHERE is_active = true"));
         stats.put("rooms", countQuery("SELECT COUNT(*) FROM rooms WHERE is_archived = false"));
         stats.put("posts", countQuery("SELECT COUNT(*) FROM feed_posts"));
         stats.put("events", countQuery("SELECT COUNT(*) FROM calendar_events"));

@@ -8,9 +8,9 @@ export interface TestAccount {
 export const accounts: Record<string, TestAccount> = {
   admin: {
     email: 'admin@monteweb.local',
-    password: 'admin123',
+    password: 'test1234',
     role: 'SUPERADMIN',
-    displayName: 'Admin',
+    displayName: 'Admin User',
   },
   sectionAdmin: {
     email: 'sectionadmin@monteweb.local',
@@ -22,18 +22,18 @@ export const accounts: Record<string, TestAccount> = {
     email: 'lehrer@monteweb.local',
     password: 'test1234',
     role: 'TEACHER',
-    displayName: 'Lehrer',
+    displayName: 'Test Lehrer',
   },
   parent: {
     email: 'eltern@monteweb.local',
     password: 'test1234',
     role: 'PARENT',
-    displayName: 'Eltern',
+    displayName: 'Test Eltern',
   },
   student: {
     email: 'schueler@monteweb.local',
     password: 'test1234',
     role: 'STUDENT',
-    displayName: 'Schüler',
+    displayName: 'Test Schueler',
   },
 }

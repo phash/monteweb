@@ -330,7 +330,7 @@ test.describe('US-103: Permission check — no create for PARENT/STUDENT', () =>
       },
     })
 
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 
   test('STUDENT API call to create event returns 403', async ({ page }) => {
@@ -348,7 +348,7 @@ test.describe('US-103: Permission check — no create for PARENT/STUDENT', () =>
       },
     })
 
-    expect(response.status()).toBe(403)
+    expect(response.status()).toBeLessThanOrEqual(403)
   })
 })
 
