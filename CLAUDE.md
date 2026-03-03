@@ -9,7 +9,7 @@ Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (Q
 
 **Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
-**20 backend modules**, 111 Flyway migrations (V001–V112), ~1479 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
+**20 backend modules**, 112 Flyway migrations (V001–V113), ~1479 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
 
 ## Commands
 
@@ -99,7 +99,7 @@ frontend/src/
 
 ### Database
 
-- **Flyway** V001–V112 (111 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V113 (112 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
