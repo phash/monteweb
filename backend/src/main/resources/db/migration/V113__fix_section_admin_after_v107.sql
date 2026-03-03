@@ -4,19 +4,12 @@
 
 -- Clear any stale SECTION_ADMIN entries and re-add with current kinderhaus UUID
 UPDATE users
-SET special_roles = (
-    SELECT array_agg(sr)
-    FROM unnest(special_roles) AS sr
-    WHERE sr NOT LIKE 'SECTION_ADMIN:%'
+SET special_roles = COALESCE(
+    (SELECT array_agg(sr) FROM unnest(special_roles) AS sr WHERE sr NOT LIKE 'SECTION_ADMIN:%'),
+    '{}'::TEXT[]
 )
 WHERE email = 'sectionadmin@monteweb.local'
   AND EXISTS (SELECT 1 FROM unnest(special_roles) AS sr WHERE sr LIKE 'SECTION_ADMIN:%');
-
--- Set to empty array if all special_roles were stale SECTION_ADMIN entries (avoid NULL)
-UPDATE users
-SET special_roles = '{}'
-WHERE email = 'sectionadmin@monteweb.local'
-  AND special_roles IS NULL;
 
 -- Re-add with current kinderhaus section UUID
 UPDATE users
