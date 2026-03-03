@@ -48,7 +48,7 @@ export async function login(page: Page, account: TestAccount): Promise<void> {
   await page.reload()
 
   // Step 5: Wait for the app to load with authenticated state
-  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 15000 })
+  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 5000 })
 }
 
 /**
