@@ -56,7 +56,7 @@ Vue 3.5 (Composition API), TypeScript 5.9, Vite 7, PrimeVue 4 (Aura), Pinia 3, v
 Docker Compose, nginx (Reverse Proxy), Caddy (Auto-SSL), GitHub Actions CI/CD, Prometheus + Grafana
 
 ### Tests
-- Frontend: ~1479 Unit-Tests in 156 Dateien (Vitest + vue-test-utils)
+- Frontend: ~1835 Unit-Tests in 156 Dateien (Vitest + vue-test-utils)
 - Backend: 47 Testklassen, ~490 Tests (Testcontainers + MockMvc)
 - E2E: 550 Playwright-Tests in 22 Dateien (296 User Stories, Chromium)
 
@@ -95,7 +95,7 @@ npm run dev   # http://localhost:5173
 ## Tests
 
 ```bash
-# Frontend Unit-Tests (~1479 Tests)
+# Frontend Unit-Tests (~1835 Tests)
 cd frontend && npm test
 
 # Backend (Testcontainers, Docker erforderlich)

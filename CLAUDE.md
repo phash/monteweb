@@ -9,7 +9,7 @@ Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (Q
 
 **Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
-**20 backend modules**, 112 Flyway migrations (V001–V113), ~1479 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
+**20 backend modules**, 112 Flyway migrations (V001–V113), ~1835 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
 
 ## Commands
 
@@ -145,7 +145,7 @@ frontend/src/
 
 **Backend:** `@SpringBootTest @AutoConfigureMockMvc @Import(TestContainerConfig.class)` — Testcontainers spins up Postgres + Redis. `MonteWebModularityTests` verifies no illegal cross-module dependencies. JaCoCo 70% instruction minimum.
 
-**Frontend:** Vitest + jsdom + @vue/test-utils. Setup mocks `localStorage` and PrimeVue `useToast`. Pattern: `vi.mock()` API modules, `setActivePinia(createPinia())` in `beforeEach`. 55% statement coverage threshold.
+**Frontend:** Vitest + jsdom + @vue/test-utils. Setup mocks `localStorage` and PrimeVue `useToast`. Pattern: `vi.mock()` API modules, `setActivePinia(createPinia())` in `beforeEach`. 53% statement coverage threshold.
 
 **E2E:** Playwright + Chromium. 22 test files covering 296 user stories (550 tests, 171 skipped). API-based login (sessionStorage JWT injection). Run against Docker Compose app at `http://localhost`. Rate limiting disabled via `MONTEWEB_RATE_LIMIT_ENABLED=false` in `.env`.
 
