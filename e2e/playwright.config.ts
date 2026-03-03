@@ -12,9 +12,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost',
-    trace: 'on-first-retry',
+    trace: process.env.CI ? 'off' : 'on-first-retry',
     screenshot: 'only-on-failure',
-    video: 'on-first-retry',
+    video: process.env.CI ? 'off' : 'on-first-retry',
     locale: 'de-DE',
     timezoneId: 'Europe/Berlin',
   },
