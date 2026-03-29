@@ -9,7 +9,7 @@ Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (Q
 
 **Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
-**20 backend modules**, 114 Flyway migrations (V001–V115), ~1835 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
+**20 backend modules**, 114 Flyway migrations (V001–V115), ~1990 frontend tests (56% coverage), ~490 backend tests, 550 Playwright E2E tests (22 test files)
 
 ## Commands
 
@@ -27,7 +27,7 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (~1835 tests, ~176 files)
+npm test               # vitest run (~1990 tests, ~183 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
@@ -54,7 +54,7 @@ docker compose --profile monitoring up -d              # Grafana :3000, Promethe
 ./scripts/deploy.sh --status         # show service status + tunnel URL
 ```
 
-**Test Accounts:** `admin@monteweb.local` / `admin123` (SUPERADMIN), `lehrer@monteweb.local` / `test1234` (TEACHER), `eltern@monteweb.local` / `test1234` (PARENT), `schueler@monteweb.local` / `test1234` (STUDENT), `sectionadmin@monteweb.local` / `test1234` (SECTION_ADMIN). Plus ~220 realistic seed users from V040.
+**Test Accounts:** `admin@monteweb.local` / `admin123` (SUPERADMIN, V032), `lehrer@monteweb.local` / `test1234` (TEACHER), `eltern@monteweb.local` / `test1234` (PARENT), `schueler@monteweb.local` / `test1234` (STUDENT), `sectionadmin@monteweb.local` / `test1234` (SECTION_ADMIN). Plus ~220 seed users from V040 (all `test1234`). **Note:** On fresh prod deployments, named test accounts may need manual creation (see `docs/DEPLOYMENT.md`).
 
 ## Architecture
 
@@ -124,7 +124,7 @@ frontend/src/
 
 **Backend:** `@SpringBootTest @AutoConfigureMockMvc @Import(TestContainerConfig.class)` — Testcontainers spins up Postgres + Redis. `MonteWebModularityTests` verifies no illegal cross-module dependencies. JaCoCo 70% instruction minimum.
 
-**Frontend:** Vitest + jsdom + @vue/test-utils. Setup mocks `localStorage` and PrimeVue `useToast`. Pattern: `vi.mock()` API modules, `setActivePinia(createPinia())` in `beforeEach`. 53% statement coverage threshold.
+**Frontend:** Vitest + jsdom + @vue/test-utils. Setup mocks `localStorage`, PrimeVue `useToast`, and `Element.prototype.scrollTo`. Pattern: `vi.mock()` API modules, `setActivePinia(createPinia())` in `beforeEach`. 53% statement coverage threshold (actual: 56%).
 
 **E2E:** Playwright + Chromium. 22 test files covering 296 user stories (550 tests, 171 skipped). API-based login (sessionStorage JWT injection). Run against Docker Compose app at `http://localhost`. Rate limiting disabled via `MONTEWEB_RATE_LIMIT_ENABLED=false` in `.env`.
 
@@ -193,6 +193,7 @@ Key rules to know:
 
 ## Gotchas
 
+- **`@EnableAsync`** muss auf `MonteWebApplication` stehen, sonst werden alle `@Async`-Methoden (DeletionListeners, Solr-Indexing) synchron ausgefuehrt -- kein Fehler, kein Warning
 - **`@ApplicationModuleListener`** beinhaltet bereits `@TransactionalEventListener` + `@Transactional`. NIEMALS zusaetzlich `@Transactional` annotieren -- Spring wirft `BeanInitializationException`
 - **`@Transactional(readOnly = true)`** auf Service-Klassen-Ebene: Alle mutierenden Methoden brauchen explizites `@Transactional` (ohne readOnly)
 - **Java 21 nicht lokal verfuegbar:** Backend-Kompilierung nur via Docker (`docker compose build backend`)
