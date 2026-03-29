@@ -34,7 +34,7 @@ public class WikiPage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
-    @Column(name = "created_by", nullable = false)
+    @Column(name = "created_by")
     private UUID createdBy;
 
     @Column(name = "last_edited_by")

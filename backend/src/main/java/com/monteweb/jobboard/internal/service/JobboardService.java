@@ -562,7 +562,7 @@ public class JobboardService implements JobboardModuleApi {
     @Transactional(readOnly = true)
     public List<JobAssignmentInfo> getAssignmentsForFamily(UUID familyId) {
         return assignmentRepository.findByFamilyId(familyId).stream()
-                .filter(a -> "COMPLETED".equals(a.getStatus()) && a.isConfirmed())
+                .filter(a -> a.getStatus() == AssignmentStatus.COMPLETED && a.isConfirmed())
                 .sorted((a, b) -> b.getCompletedAt().compareTo(a.getCompletedAt()))
                 .map(this::toAssignmentInfo)
                 .toList();
@@ -720,9 +720,11 @@ public class JobboardService implements JobboardModuleApi {
     private JobInfo toJobInfo(Job job) {
         long currentAssignees = assignmentRepository.countByJobIdAndStatusNot(job.getId(), AssignmentStatus.CANCELLED);
 
-        String creatorName = userModuleApi.findById(job.getCreatedBy())
-                .map(u -> u.firstName() + " " + u.lastName())
-                .orElse("Unknown");
+        String creatorName = job.getCreatedBy() != null
+                ? userModuleApi.findById(job.getCreatedBy())
+                    .map(u -> u.firstName() + " " + u.lastName())
+                    .orElse("Unbekannt")
+                : "Geloeschter Benutzer";
 
         String eventTitle = null;
         if (job.getEventId() != null && calendarModuleApi != null) {

@@ -218,8 +218,16 @@ public class CsvImportService {
                         line = line.substring(1);
                     }
                     firstLine = false;
-                    // Skip header row
-                    if (line.toLowerCase().contains("email") || line.toLowerCase().contains("e-mail")) {
+                    // Skip header row — check if the first field is a known header name
+                    String firstField;
+                    if (line.contains(";")) {
+                        firstField = line.split(";", 2)[0].trim().toLowerCase();
+                    } else if (line.contains("\t")) {
+                        firstField = line.split("\t", 2)[0].trim().toLowerCase();
+                    } else {
+                        firstField = line.split(",", 2)[0].trim().toLowerCase();
+                    }
+                    if (firstField.equals("email") || firstField.equals("e-mail") || firstField.equals("mail")) {
                         continue;
                     }
                 }

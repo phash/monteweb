@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 public class AuthService implements AuthModuleApi {
 
     private static final Logger log = LoggerFactory.getLogger(AuthService.class);
@@ -53,6 +53,7 @@ public class AuthService implements AuthModuleApi {
         this.aesEncryptionService = aesEncryptionService;
     }
 
+    @Transactional
     public LoginResponse register(RegisterRequest request) {
         if (userModuleApi.existsByEmail(request.email())) {
             throw new BusinessException("Email already registered");
@@ -78,6 +79,7 @@ public class AuthService implements AuthModuleApi {
         return generateTokenResponse(user);
     }
 
+    @Transactional
     public LoginResponse login(LoginRequest request) {
         // First try local DB authentication
         UserInfo user = null;
@@ -180,6 +182,7 @@ public class AuthService implements AuthModuleApi {
         return generateTokenResponse(user);
     }
 
+    @Transactional
     public void logout(String refreshToken) {
         if (refreshToken != null) {
             refreshTokenService.revoke(refreshToken);
@@ -187,6 +190,7 @@ public class AuthService implements AuthModuleApi {
     }
 
     @Override
+    @Transactional
     public TokenResponse generateTokensForUser(UserInfo user) {
         String accessToken = jwtService.generateAccessToken(user.id(), user.email(), user.role().name());
         String refreshToken = refreshTokenService.createRefreshToken(user.id());
@@ -218,6 +222,7 @@ public class AuthService implements AuthModuleApi {
     /**
      * 2FA Setup: Generate a new TOTP secret and return the QR URI.
      */
+    @Transactional
     public TwoFactorSetupResponse setup2fa(java.util.UUID userId) {
         UserInfo user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
@@ -232,6 +237,7 @@ public class AuthService implements AuthModuleApi {
     /**
      * 2FA Confirm: Verify code against stored secret, enable 2FA, return recovery codes.
      */
+    @Transactional
     public TwoFactorConfirmResponse confirm2fa(java.util.UUID userId, String code) {
         String secret = userModuleApi.getTotpSecret(userId)
                 .map(aesEncryptionService::decrypt)
@@ -253,6 +259,7 @@ public class AuthService implements AuthModuleApi {
     /**
      * 2FA Disable: Verify password and disable 2FA for the user.
      */
+    @Transactional
     public void disable2fa(java.util.UUID userId, String password) {
         UserInfo user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
@@ -271,6 +278,7 @@ public class AuthService implements AuthModuleApi {
      * 2FA Verify: Validate temp token + TOTP code, return real tokens.
      * Also accepts recovery codes (consumed on use).
      */
+    @Transactional
     public LoginResponse verify2fa(String tempToken, String code) {
         var claimsOpt = jwtService.validateTempToken(tempToken);
         if (claimsOpt.isEmpty()) {
@@ -318,6 +326,7 @@ public class AuthService implements AuthModuleApi {
         return userModuleApi.isTotpEnabled(userId);
     }
 
+    @Transactional
     public LoginResponse startImpersonation(java.util.UUID adminUserId, java.util.UUID targetUserId) {
         // 1. Verify admin exists and is SUPERADMIN
         var admin = userModuleApi.findById(adminUserId)
@@ -352,6 +361,7 @@ public class AuthService implements AuthModuleApi {
         return new LoginResponse(accessToken, refreshToken, target.id(), target.email(), target.role().name());
     }
 
+    @Transactional
     public LoginResponse stopImpersonation(java.util.UUID adminUserId) {
         var admin = userModuleApi.findById(adminUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin user not found"));

@@ -28,7 +28,7 @@ public class WikiPageVersion {
     @Column(nullable = false, length = 255)
     private String title;
 
-    @Column(name = "edited_by", nullable = false)
+    @Column(name = "edited_by")
     private UUID editedBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)

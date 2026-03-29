@@ -24,6 +24,8 @@ import com.monteweb.user.internal.repository.ConsentRecordRepository;
 import com.monteweb.user.internal.repository.DataAccessLogRepository;
 import com.monteweb.user.internal.repository.TermsAcceptanceRepository;
 import com.monteweb.user.internal.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.ApplicationEventPublisher;
@@ -39,6 +41,8 @@ import java.util.*;
 @Service
 @Transactional(readOnly = true)
 public class UserService implements UserModuleApi {
+
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -423,7 +427,7 @@ public class UserService implements UserModuleApi {
         try {
             data.put(key, exporter.get());
         } catch (Exception e) {
-            // Module disabled — @Lazy proxy could not resolve the bean, or API is null
+            log.warn("Failed to export module '{}': {}", key, e.getMessage());
         }
     }
 
@@ -610,8 +614,7 @@ public class UserService implements UserModuleApi {
     @Override
     public List<UserModuleApi.DigestUserInfo> findUsersForDigest() {
         var now = Instant.now();
-        return userRepository.findAll().stream()
-                .filter(u -> u.isActive() && !"NONE".equals(u.getDigestFrequency()))
+        return userRepository.findDigestEligibleUsers().stream()
                 .filter(u -> shouldSendDigest(u, now))
                 .map(u -> new UserModuleApi.DigestUserInfo(u.getId(), u.getEmail(), u.getFirstName(), u.getDigestFrequency(), u.getDigestLastSentAt()))
                 .toList();

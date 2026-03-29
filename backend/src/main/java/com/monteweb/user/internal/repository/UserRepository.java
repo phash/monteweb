@@ -54,6 +54,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             Pageable pageable
     );
 
+    @Query("SELECT u FROM User u WHERE u.active = true AND u.digestFrequency <> 'NONE' AND u.digestFrequency IS NOT NULL")
+    List<User> findDigestEligibleUsers();
+
     List<User> findByScheduledDeletionAtBeforeAndDeletionRequestedAtIsNotNull(Instant cutoff);
 
     @Query("""

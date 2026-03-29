@@ -35,7 +35,7 @@ public class Task {
     @Column(name = "assignee_id")
     private UUID assigneeId;
 
-    @Column(name = "created_by", nullable = false)
+    @Column(name = "created_by")
     private UUID createdBy;
 
     @Column(name = "due_date")
