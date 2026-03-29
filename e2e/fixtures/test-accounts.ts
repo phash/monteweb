@@ -8,7 +8,7 @@ export interface TestAccount {
 export const accounts: Record<string, TestAccount> = {
   admin: {
     email: 'admin@monteweb.local',
-    password: 'test1234',
+    password: 'admin123',
     role: 'SUPERADMIN',
     displayName: 'Admin User',
   },

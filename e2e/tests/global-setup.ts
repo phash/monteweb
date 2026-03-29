@@ -4,7 +4,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 
 const authDir = path.join(__dirname, '..', 'auth-states')
-const BASE = 'http://localhost'
+const BASE = process.env.BASE_URL || 'http://localhost'
 
 // Cache tokens from the ensure step to avoid re-login in authenticate step
 const tokenCache: Record<string, string> = {}

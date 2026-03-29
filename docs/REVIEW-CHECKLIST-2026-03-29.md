@@ -44,5 +44,5 @@
 - [x] **V1: Backend compiles cleanly (Docker Java 21)**
 - [x] **V2: Frontend 1990 tests pass (183 files)**
 - [x] **V3: Frontend coverage 56.22% (>= 50%)**
-- [ ] **V4: Start server locally**
-- [ ] **V5: Run E2E tests**
+- [x] **V4: Start server locally** -- all 6 services healthy on port 8888
+- [x] **V5: Run E2E tests** -- 58 passed, 106 skipped, 0 failed (12.7min)
