@@ -33,6 +33,7 @@ NEW_TUNNEL=false
 BACKEND_ONLY=false
 FRONTEND_ONLY=false
 NO_BUILD=false
+NO_CACHE=false
 STATUS_ONLY=false
 
 for arg in "$@"; do
@@ -41,6 +42,7 @@ for arg in "$@"; do
     --backend-only)   BACKEND_ONLY=true ;;
     --frontend-only)  FRONTEND_ONLY=true ;;
     --no-build)       NO_BUILD=true ;;
+    --no-cache)       NO_CACHE=true ;;
     --status)         STATUS_ONLY=true ;;
     --help|-h)
       echo "Usage: $0 [OPTIONS]"
@@ -50,6 +52,7 @@ for arg in "$@"; do
       echo "  --backend-only    Rebuild and restart only the backend"
       echo "  --frontend-only   Rebuild and restart only the frontend"
       echo "  --no-build        Restart services without rebuilding images"
+      echo "  --no-cache        Rebuild without Docker cache (clean build)"
       echo "  --status          Show current service status and tunnel URL"
       echo "  -h, --help        Show this help"
       exit 0
@@ -234,16 +237,22 @@ deploy() {
   echo ""
 
   # Step 1: Build
+  local build_args=""
+  if [[ "$NO_CACHE" == true ]]; then
+    build_args="--no-cache"
+    log "Building without cache (clean build)..."
+  fi
+
   if [[ "$NO_BUILD" == false ]]; then
     if [[ "$BACKEND_ONLY" == true ]]; then
       log "Building backend..."
-      docker compose build backend
+      docker compose build $build_args backend
     elif [[ "$FRONTEND_ONLY" == true ]]; then
       log "Building frontend..."
-      docker compose build frontend
+      docker compose build $build_args frontend
     else
       log "Building all services..."
-      docker compose build backend frontend
+      docker compose build $build_args backend frontend
     fi
     ok "Build complete"
   else
