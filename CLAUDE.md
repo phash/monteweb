@@ -54,7 +54,7 @@ docker compose --profile monitoring up -d              # Grafana :3000, Promethe
 ./scripts/deploy.sh --status         # show service status + tunnel URL
 ```
 
-**Test Accounts** (password: `test1234`): `admin@monteweb.local` (SUPERADMIN), `lehrer@monteweb.local` (TEACHER), `eltern@monteweb.local` (PARENT), `schueler@monteweb.local` (STUDENT), `sectionadmin@monteweb.local` (SECTION_ADMIN). Plus ~220 realistic seed users from V040.
+**Test Accounts:** `admin@monteweb.local` / `admin123` (SUPERADMIN), `lehrer@monteweb.local` / `test1234` (TEACHER), `eltern@monteweb.local` / `test1234` (PARENT), `schueler@monteweb.local` / `test1234` (STUDENT), `sectionadmin@monteweb.local` / `test1234` (SECTION_ADMIN). Plus ~220 realistic seed users from V040.
 
 ## Architecture
 
@@ -108,49 +108,17 @@ frontend/src/
 ### Database
 
 - **Flyway** V001–V115 (114 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
-- UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
-- `room_members`: composite PK `(room_id, user_id)` — no `id` column
-- `rooms.is_archived` (not `archived`)
-- `feed_posts.target_user_ids`: `UUID[]` — NULL=visible to all, filled=only listed users
-- `cleaning_configs.specific_date`: optional DATE for one-time Putzaktionen
-- `tenant_config.bundesland`: VARCHAR(5) default `'BY'`, determines public holidays
-- `tenant_config.school_vacations`: JSONB array of `{name, from, to}`
-- `tenant_config.github_repo`: VARCHAR — GitHub repo for error report issue creation
-- `tenant_config.github_pat`: VARCHAR — GitHub Personal Access Token for issue creation
-- `room_folders.audience`: VARCHAR(20) default `'ALL'` — visibility: ALL, PARENTS_ONLY, STUDENTS_ONLY
-- `fotobox_threads.audience`: VARCHAR(20) default `'ALL'` — same visibility as folders
-- `forms.section_ids`: `UUID[]` with GIN index — multi-section targeting for SECTION-scoped forms
-- `billing_periods`: family billing with year/month/status (OPEN/CLOSED) — Jahresabrechnung
-- `error_reports`: fingerprint-based dedup, status (NEW/REPORTED/RESOLVED/IGNORED), `github_issue_url`, occurrence tracking
-- `fundgrube_items`: lost & found items with section filter, claim workflow (expires +24h)
-- `fundgrube_images`: MinIO image storage with thumbnails for lost & found
-- `messages.reply_to_id`: UUID FK for reply threading (ON DELETE SET NULL)
-- `messages.content`: nullable (image-only messages)
-- `message_images`: chat images with MinIO storage, thumbnails, 90-day auto-cleanup
-- `cleaning_configs.calendar_event_id` + `cleaning_configs.job_id`: links Putzaktion to calendar event and job
-- `families.is_hours_exempt`: BOOLEAN default false, exempts family from Elternstunden
-- `families.is_active`: BOOLEAN default true, family deactivation support
-- `tenant_config.require_assignment_confirmation`: BOOLEAN default true, auto-confirms job hours when false
-- `tenant_config.available_languages`: TEXT[] default `'{de,en}'`, stores selectable languages
-- `tenant_config.modules`: JSONB map of all feature toggles. Core modules (messaging, files, jobboard, cleaning, calendar, forms, fotobox, fundgrube, bookmarks, tasks, wiki, profilefields) plus DB-managed toggles migrated from dedicated columns (jitsi, wopi, clamav, maintenance, ldap, directoryAdminOnly). Admin UI at `/admin/modules`, backend check via `adminModuleApi.isModuleEnabled("name")`
-- `feed_post_attachments`: id, post_id (FK), file_name, file_url (MinIO path), file_type, file_size, sort_order, created_at
-- `task_boards` + `task_columns` + `tasks`: per-room kanban (V076), boards unique per room, columns ordered by position
-- `wiki_pages` + `wiki_page_versions`: per-room wiki (V077), slug unique per room, self-referencing parent_id
-- `bookmarks`: user bookmarks for posts, events, jobs, wiki pages (type + target_id)
-- `profile_field_definitions` + `profile_field_values`: custom profile fields defined by admins, values per user
-- `users.force_password_change`: BOOLEAN default false, set by CSV import for users with random passwords
-- `users.totp_secret`: VARCHAR(256), AES-256-GCM encrypted (legacy plaintext auto-handled by `AesEncryptionService.decrypt()`)
+- UUID PKs, `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays, JSONB
+- **Key gotchas:** `room_members` has composite PK (no `id`), `rooms.is_archived` (NOT `archived`), `messages.content` is nullable
+- **See:** [`docs/DATABASE-SCHEMA.md`](docs/DATABASE-SCHEMA.md) for full schema reference
 
 ### Infrastructure (Docker / CI/CD)
 
-- **Docker:** Multi-stage builds, `.dockerignore` for minimal build context, non-root containers (nginx user, monteweb user), OCI labels
-- **nginx:** Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy), `server_tokens off`, `client_max_body_size 50m`, actuator blocking (only `/health` public)
-- **Docker Compose:** Two isolated networks (`monteweb-frontend`, `monteweb-backend`), memory limits on all services, MinIO version pinned, Solr 9.8-slim for full-text search
-- **CI/CD:** GitHub Actions with SHA-pinned actions, concurrency groups, job timeouts, Docker Buildx with GHA cache, Trivy image scanning
-- **Dependabot:** Weekly updates for GitHub Actions, npm, Maven, Docker base images
-- **Backup:** Optional profile (`--profile backup`). Alpine container with `pg_dump` + `mc` (MinIO Client). Daily/weekly/monthly rotation with configurable retention. Optional S3 remote upload. See `BACKUP.md`
-- **Deployment:** `scripts/deploy.sh` — builds, starts all services, waits for health. `--new-tunnel` for Cloudflare Quick Tunnel (URL saved to `.tunnel-url`). `--backend-only`, `--frontend-only`, `--no-build`, `--status`
-- **See also:** `INFRA-CHANGELOG.md` (all optimizations), `LOCAL-DEV-GUIDE.md` (comprehensive dev guide), `BACKUP.md` (backup & restore), `docs/REVIEW-REMAINING-ITEMS.md` (open audit findings)
+- **Docker Compose:** 6 core services (postgres, redis, minio, solr, backend, frontend). Two isolated networks. Memory limits on all services. Optional profiles: `ssl` (Caddy), `monitoring` (Prometheus+Grafana), `office` (OnlyOffice), `backup`, `clamav`
+- **CI/CD:** GitHub Actions, Docker Buildx with GHA cache, Trivy image scanning, Dependabot
+- **Deployment:** `scripts/deploy.sh` with `--new-tunnel` for Cloudflare Quick Tunnel
+- **Prod:** SSH `manuel@192.168.178.131`, Verzeichnis `~/claude/monteweb`
+- **See:** [`DEPLOYMENT.md`](DEPLOYMENT.md), [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md), [`LOCAL-DEV-GUIDE.md`](LOCAL-DEV-GUIDE.md), [`BACKUP.md`](BACKUP.md), [`docs/REVIEW-REMAINING-ITEMS.md`](docs/REVIEW-REMAINING-ITEMS.md)
 
 ### Testing
 
@@ -208,68 +176,35 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 
 ## Business Rules
 
-1. **Familienverbund = Abrechnungseinheit.** Stunden aus Jobboerse/Putz werden Familie gutgeschrieben (Putzstunden: Sonder-Unterkonto)
-2. **Ein Elternteil = ein Familienverbund.** Kind kann mehreren zugeordnet sein (getrennte Eltern)
-3. **Putz-Orga ist Opt-in**, nicht Rotation. Einmalig (mit Datum) oder wiederkehrend (Wochentag). DatePicker zeigt Feiertage (rot) und Schulferien (orange) je Bundesland
-4. **Feed-Banner:** kontextabhaengig (Putz-Banner nur fuer betroffene Eltern)
-5. **Module abschaltbar:** Backend via `@ConditionalOnProperty`, Frontend: Menue nur wenn Modul aktiv
-6. **Kommunikationsregeln:** Lehrer↔Eltern immer erlaubt. Eltern↔Eltern / Schueler↔Schueler: konfigurierbar
-7. **Kalender-Berechtigungen:** ROOM→LEADER/SUPERADMIN, SECTION→TEACHER/SUPERADMIN, SCHOOL→SUPERADMIN. Absage→Feed fuer alle, Loeschung→Feed nur fuer Zusager
-8. **Raum-Beitrittsanfragen:** Non-Members anfragen, LEADER genehmigt/lehnt ab, auto-MEMBER bei Genehmigung
-9. **Familien-Einladungen:** Per User-Suche mit Rollenwahl (PARENT/CHILD), Annehmen/Ablehnen via Notification
-10. **Fotobox:** VIEW_ONLY < POST_IMAGES < CREATE_THREADS. LEADER/SUPERADMIN = CREATE_THREADS. MinIO, Thumbnails auto, Content-Type aus Magic Bytes, max 20 Dateien/Upload
-11. **Targeted Feed Posts:** `feed_posts.target_user_ids UUID[]` — NULL=fuer alle sichtbar, gefuellt=nur fuer diese User
-12. **Audience-Sichtbarkeit:** Ordner und Fotobox-Threads haben `audience` (ALL, PARENTS_ONLY, STUDENTS_ONLY). Parents erstellen automatisch PARENTS_ONLY; Teachers/Leaders/Admins waehlen
-13. **Multi-Section Forms:** SECTION-scoped Formulare koennen mehrere Schulbereiche via `section_ids UUID[]` targeten. Dashboard-Widget zeigt offene Formulare
-14. **Auto-Folder Creation:** When a KLASSE room is created (`RoomCreatedEvent`), the files module automatically creates a default folder for the room
-15. **Error Reporting:** Frontend errors are reported via `/api/v1/error-reports` with fingerprint-based deduplication. Admin can view, manage status (NEW/REPORTED/RESOLVED/IGNORED), and optionally create GitHub Issues via configured `github_repo` + `github_pat`
-16. **Fundgrube (Lost & Found):** Schulweite Fundgrube mit Fotos, optionalem Bereichsfilter. Claim-Workflow (expires +24h via `@Scheduled` cleanup). MinIO image storage mit Thumbnails
-17. **Chat-Bilder & Antworten:** Nachrichten koennen Bilder enthalten (multipart upload, MinIO, Thumbnails). Reply-Threading via `reply_to_id`. 90-Tage Auto-Cleanup fuer Bilder
-18. **PWA:** Installierbar als Progressive Web App. Workbox Service Worker mit NetworkFirst-Caching fuer API-Calls. Install-Banner mit 7-Tage-Dismiss
-19. **Mehrsprachigkeit:** `available_languages TEXT[]` bestimmt waehlbare Sprachen. LanguageSwitcher in Profil + Login (nicht Header). Nur sichtbar wenn >1 Sprache aktiviert
-20. **Familien-Deaktivierung:** Familien koennen deaktiviert werden (`is_active`). Stundenkonto-Befreiung via `is_hours_exempt`
-21. **Chat-Stummschaltung:** Conversations koennen stummgeschaltet werden (`conversation_participants.muted`). Mute-Toggle in DM-View und RoomChat-Header. Profilseite zeigt alle stummgeschalteten Chats mit Unmute-Buttons
-22. **Feed-Anhaenge:** Posts koennen Datei-Anhaenge haben (MinIO upload, multi-file). Zwei-Schritt: Post erstellen → Dateien hochladen
-23. **Solr-Volltextsuche:** Apache Solr 9.8 mit deutscher Sprachanalyse (Stemming, Stopwords). 8 Dokumenttypen (USER, ROOM, POST, EVENT, FILE, WIKI, TASK). Echtzeit-Indexierung via Spring Events. Tika-Extraktion fuer Dateiinhalte (PDF, DOCX, etc.). Admin-Reindex via `POST /api/v1/admin/search/reindex`. Fallback auf DB-Suche wenn Solr deaktiviert
-24. **Dark Mode:** Drei Modi (SYSTEM/LIGHT/DARK), gespeichert in `users.dark_mode`. CSS Custom Properties `--mw-*` schalten um. `useDarkMode` Composable. Auch auf Login-Seite waehlbar
-25. **2FA (TOTP):** Drei Modi (DISABLED/OPTIONAL/MANDATORY). Bei MANDATORY 7-Tage Grace Period. Recovery Codes. Admin steuert Modus + Deadline
-26. **Backup:** Docker-Profile `backup`. Taeglich pg_dump + MinIO mirror. Rotation: 7 taegliche, 4 woechentliche, 3 monatliche. Optional S3-Remote-Upload. Siehe `BACKUP.md`
-27. **iCal-Subscriptions:** Externe Kalender via URL abonnieren, Events automatisch importieren (RFC 5545)
-28. **CSV-Import:** Admin kann Benutzer per CSV importieren. Jeder User bekommt ein zufaelliges Passwort (24 Bytes SecureRandom, Base64) und `forcePasswordChange=true`. User muss Password-Reset nutzen, Flag wird bei Passwortaenderung zurueckgesetzt
-29. **TOTP-Verschluesselung:** TOTP-Secrets werden mit AES-256-GCM verschluesselt gespeichert. `AesEncryptionService` behandelt Legacy-Klartext automatisch (Passthrough wenn kein `ENC(`-Prefix)
+**See:** [`docs/BUSINESS-RULES.md`](docs/BUSINESS-RULES.md) for all 29 rules.
+
+Key rules to know:
+- **Familienverbund = Abrechnungseinheit.** Stunden aus Jobboerse/Putz werden Familie gutgeschrieben
+- **Module abschaltbar:** Backend via `@ConditionalOnProperty`, Frontend: Menue nur wenn Modul aktiv
+- **Kommunikationsregeln:** Lehrer↔Eltern immer, Eltern↔Eltern / Schueler↔Schueler: konfigurierbar
+- **Audience-Sichtbarkeit:** Ordner/Fotobox-Threads: ALL, PARENTS_ONLY, STUDENTS_ONLY
+- **DSGVO:** 14-Tage Loeschfrist, Datenexport, Consent-Records, DeletionListeners in allen 15 Modulen
 
 ## Conventions
 
 - **Code:** English. **UI-Texte:** German + English (i18n). **Git:** Conventional Commits
 - **Java:** Records for DTOs, `*Info` public DTOs, `*ModuleApi` facades, Lombok entities, UUIDs as PK, `Instant` for timestamps, Bean Validation on requests
 - **Vue/TS:** `<script setup lang="ts">`, `@/` path alias, PascalCase components, `use`-prefix composables, types in `types/`, scoped styles
+
+## Gotchas
+
+- **`@ApplicationModuleListener`** beinhaltet bereits `@TransactionalEventListener` + `@Transactional`. NIEMALS zusaetzlich `@Transactional` annotieren -- Spring wirft `BeanInitializationException`
+- **`@Transactional(readOnly = true)`** auf Service-Klassen-Ebene: Alle mutierenden Methoden brauchen explizites `@Transactional` (ohne readOnly)
+- **Java 21 nicht lokal verfuegbar:** Backend-Kompilierung nur via Docker (`docker compose build backend`)
+- **FRONTEND_URL muss zur aktuellen URL passen:** Bei Cloudflare Tunnel `.env` anpassen, sonst CORS 403
+- **Admin-Passwort ist `admin123`** (V032), nicht `test1234` wie andere Test-Accounts (V033/V040)
+- **Modularity-Test `@Disabled`:** user↔family Zyklus (AdminUserController nutzt FamilyModuleApi). TODO: AdminUserController in admin-Modul verschieben
+
+## API & Integrations
+
 - **API:** `/api/v1/`, `ResponseEntity<ApiResponse<T>>`, `SecurityUtils.requireCurrentUserId()` in controllers, pagination `?page=0&size=20&sort=createdAt,desc`
-
-## API Endpoints (Quick Reference)
-
-- **Auth** `/api/v1/auth`: register, login, logout, refresh, password-reset, oidc/config, oidc/token
-- **Users** `/api/v1/users`: /me (GET/PUT), /me/avatar, /me/data-export, DELETE /me (DSGVO), /{id}, /search
-- **Admin** `/api/v1/admin/users`: CRUD, roles, status | `/api/v1/admin`: config, theme, modules, logo, audit-log, error-reports
-- **Families** `/api/v1/families`: CRUD, /mine, /join, invite, children, hours, invitations
-- **Rooms** `/api/v1/rooms`: /mine, /browse, /discover, CRUD, settings, avatar, archive, members, mute, join-requests
-- **Feed** `/api/v1/feed`: feed, banners, posts CRUD, pin, comments, attachments (upload/download/delete)
-- **Calendar** `/api/v1/calendar`: events CRUD, cancel, rsvp, room events
-- **Messaging** `/api/v1/messages`: conversations, messages (multipart with images), reply threading, image download/thumbnail, WS `/ws/messages`
-- **Files** `/api/v1/rooms/{id}/files`: upload/download/delete, folders
-- **Billing** `/api/v1/billing`: periods, report (Jahresabrechnung)
-- **Jobboard** `/api/v1/jobs`: CRUD, apply, assignments, family hours, report/export/pdf
-- **Cleaning** `/api/v1/cleaning`: slots, register, swap, checkin/checkout, configs, generate, qr-codes, dashboard
-- **Forms** `/api/v1/forms`: CRUD, publish, close, respond, results, csv/pdf export
-- **Fotobox** `/api/v1/rooms/{id}/fotobox` + `/api/v1/fotobox`: threads, images, thumbnails (`?token=` JWT)
-- **Error Reports** `/api/v1/error-reports`: submit (public) | `/api/v1/admin/error-reports`: list, update status
-- **Section Admin** `/api/v1/section-admin`: rooms, members, overview for SECTION_ADMIN role
-- **Fundgrube** `/api/v1/fundgrube`: items CRUD, claim, images upload/download/thumbnail (`?token=` JWT)
-- **Bookmarks** `/api/v1/bookmarks`: CRUD bookmarks for posts, events, jobs, wiki pages
-- **Tasks** `/api/v1/rooms/{id}/tasks`: kanban boards, columns, tasks CRUD, drag & drop reorder
-- **Wiki** `/api/v1/rooms/{id}/wiki`: pages CRUD, versions, hierarchy, search
-- **Profile Fields** `/api/v1/profile-fields`: list, /me (GET/PUT) | `/api/v1/admin/profile-fields`: CRUD field definitions
-- **Search** `/api/v1/search`: global search (q, type, limit) | `/api/v1/admin/search`: reindex (Solr)
-- **Notifications** `/api/v1/notifications`: list, unread-count, read, read-all, delete, push subscribe/unsubscribe
+- **See:** [`docs/API-REFERENCE.md`](docs/API-REFERENCE.md) for all endpoints
+- **See:** [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) for Caddy, Cloudflare Tunnel, E-Mail, OIDC, LDAP, Jitsi, WOPI, ClamAV, Monitoring, Solr
 ## PindeX – Codebase Navigation
 
 Dieses Projekt ist mit PindeX indexiert.

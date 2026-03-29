@@ -71,7 +71,7 @@ Der erste Build dauert einige Minuten (Maven-Dependencies + npm install).
 
 | Rolle | E-Mail | Passwort |
 |-------|--------|----------|
-| Superadmin | `admin@monteweb.local` | `test1234` |
+| Superadmin | `admin@monteweb.local` | `admin123` |
 | Section-Admin | `sectionadmin@monteweb.local` | `test1234` |
 | Lehrer | `lehrer@monteweb.local` | `test1234` |
 | Eltern | `eltern@monteweb.local` | `test1234` |
@@ -86,6 +86,31 @@ Internet --HTTPS--> Caddy :443 --HTTP--> nginx :80 --proxy--> Backend :8080
 
 5 Container: `frontend` (nginx), `backend` (Java), `postgres`, `redis`, `minio`
 Mit SSL-Profil: + `caddy` (6 Container)
+
+## Prod-Umgebung
+
+**Server:** `192.168.178.131` (SSH: `ssh manuel@192.168.178.131`)
+**Verzeichnis:** `~/claude/monteweb`
+**Cloudflare Tunnel:** URL in `.tunnel-url`, starten mit `./scripts/deploy.sh --new-tunnel`
+
+### Deployment auf Prod
+
+```bash
+# Vom Entwicklungsrechner:
+ssh manuel@192.168.178.131 "cd ~/claude/monteweb && git pull origin main && docker compose build backend frontend && docker compose up -d"
+
+# Oder mit deploy.sh (auf dem Server):
+./scripts/deploy.sh                  # Build + Deploy
+./scripts/deploy.sh --new-tunnel     # + neuer Cloudflare Tunnel
+./scripts/deploy.sh --backend-only   # Nur Backend
+./scripts/deploy.sh --status         # Status pruefen
+```
+
+### Gotchas
+
+- **FRONTEND_URL muss zur Tunnel-URL passen!** Sonst CORS 403. Bei neuem Tunnel: `.env` anpassen + Backend neustarten
+- **Java 21 nicht lokal installiert:** Backend-Kompilierung nur via Docker (`docker compose build backend`) oder `docker run eclipse-temurin:21-jdk-alpine`
+- **Admin-Passwort:** `admin@monteweb.local` / `admin123` (NICHT `test1234` -- siehe V032 Migration). Andere Test-Accounts nutzen `test1234`
 
 ## Nuetzliche Befehle
 
