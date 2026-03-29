@@ -94,6 +94,7 @@ function goBack() {
       :src="iframeSrc"
       class="wopi-iframe"
       frameborder="0"
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
       allowfullscreen
       :title="t('wopi.editorTitle')"
     />

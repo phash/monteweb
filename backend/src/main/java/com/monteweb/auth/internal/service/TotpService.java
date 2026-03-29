@@ -17,6 +17,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * TOTP (Time-based One-Time Password) service implementing RFC 6238.
@@ -73,7 +74,7 @@ public class TotpService {
      * Checks current time step and +/- 1 window for clock drift tolerance.
      * Uses Redis to track used codes and prevent replay attacks (90-second TTL).
      */
-    public boolean verifyCode(String secret, String code) {
+    public boolean verifyCode(String secret, String code, UUID userId) {
         if (code == null || code.length() != CODE_DIGITS) {
             return false;
         }
@@ -93,12 +94,10 @@ public class TotpService {
             long timeStep = currentTimeStep + i;
             int generatedCode = generateCode(secretBytes, timeStep);
             if (generatedCode == codeInt) {
-                // Atomically mark this (secret, timeStep) combination as used.
-                // Key uses a hash of the secret (not the secret itself) to avoid storing
-                // secrets in Redis. The 90-second TTL covers the full ±1 step window.
-                String redisKey = TOTP_USED_PREFIX
-                        + Integer.toHexString(secret.hashCode())
-                        + ":" + timeStep;
+                // Atomically mark this (userId, timeStep) combination as used.
+                // Key uses the userId (collision-free) instead of a secret hash.
+                // The 90-second TTL covers the full ±1 step window.
+                String redisKey = TOTP_USED_PREFIX + userId + ":" + timeStep;
                 Boolean wasAbsent = redisTemplate.opsForValue()
                         .setIfAbsent(redisKey, "1", Duration.ofSeconds(90));
                 if (Boolean.FALSE.equals(wasAbsent)) {

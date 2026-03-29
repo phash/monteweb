@@ -19,6 +19,10 @@ public class SolrSearchService {
 
     private static final Logger log = LoggerFactory.getLogger(SolrSearchService.class);
 
+    private static final Set<String> VALID_DOC_TYPES = Set.of(
+        "USER", "ROOM", "POST", "EVENT", "FILE", "WIKI", "TASK"
+    );
+
     private final SolrClient solrClient;
 
     public SolrSearchService(SolrClient solrClient) {
@@ -32,8 +36,12 @@ public class SolrSearchService {
             solrQuery.setRows(limit);
 
             // Filter by doc_type if not ALL
-            if (!"ALL".equals(type)) {
-                solrQuery.addFilterQuery("doc_type:" + type);
+            if (type != null && !type.equalsIgnoreCase("ALL")) {
+                String upperType = type.toUpperCase();
+                if (!VALID_DOC_TYPES.contains(upperType)) {
+                    return List.of();
+                }
+                solrQuery.addFilterQuery("doc_type:" + upperType);
             }
 
             // Highlighting

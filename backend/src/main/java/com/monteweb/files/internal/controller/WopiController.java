@@ -131,24 +131,28 @@ public class WopiController {
     @PostMapping("/{token}/contents")
     public ResponseEntity<Void> putFile(@PathVariable String token, InputStream body,
                                         HttpServletRequest request) {
-        // Validate OnlyOffice JWT when a secret is configured
-        if (onlyofficeJwtSecret != null && !onlyofficeJwtSecret.isBlank()
-                && !onlyofficeJwtSecret.equals("changeme-onlyoffice-jwt-secret")) {
-            String authHeader = request.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                log.warn("WOPI PutFile rejected: missing or invalid Authorization header");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
-            try {
-                String jwtToken = authHeader.substring(7);
-                Jwts.parser()
-                        .verifyWith(Keys.hmacShaKeyFor(onlyofficeJwtSecret.getBytes()))
-                        .build()
-                        .parseSignedClaims(jwtToken);
-            } catch (JwtException | IllegalArgumentException e) {
-                log.warn("WOPI PutFile rejected: invalid OnlyOffice JWT — {}", e.getMessage());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-            }
+        // Reject if OnlyOffice JWT secret is not properly configured
+        if (onlyofficeJwtSecret == null || onlyofficeJwtSecret.isBlank()
+                || onlyofficeJwtSecret.equals("changeme-onlyoffice-jwt-secret")) {
+            log.warn("WOPI PutFile rejected: OnlyOffice JWT secret not configured");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
+        // Validate OnlyOffice JWT
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("WOPI PutFile rejected: missing or invalid Authorization header");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            String jwtToken = authHeader.substring(7);
+            Jwts.parser()
+                    .verifyWith(Keys.hmacShaKeyFor(onlyofficeJwtSecret.getBytes()))
+                    .build()
+                    .parseSignedClaims(jwtToken);
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("WOPI PutFile rejected: invalid OnlyOffice JWT — {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         // Enforce upload size limit before reading the body

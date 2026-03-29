@@ -109,6 +109,9 @@ public class User {
     @Column(name = "digest_last_sent_at")
     private Instant digestLastSentAt;
 
+    @Column(name = "force_password_change")
+    private boolean forcePasswordChange = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = Instant.now();

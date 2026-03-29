@@ -9,6 +9,7 @@ import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.AesEncryptionService;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
@@ -31,6 +32,7 @@ public class AuthService implements AuthModuleApi {
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
     private final TotpService totpService;
+    private final AesEncryptionService aesEncryptionService;
 
     @Autowired(required = false)
     private LdapAuthService ldapAuthService;
@@ -40,13 +42,15 @@ public class AuthService implements AuthModuleApi {
                        JwtService jwtService,
                        RefreshTokenService refreshTokenService,
                        PasswordEncoder passwordEncoder,
-                       TotpService totpService) {
+                       TotpService totpService,
+                       AesEncryptionService aesEncryptionService) {
         this.userModuleApi = userModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.passwordEncoder = passwordEncoder;
         this.totpService = totpService;
+        this.aesEncryptionService = aesEncryptionService;
     }
 
     public LoginResponse register(RegisterRequest request) {
@@ -219,7 +223,7 @@ public class AuthService implements AuthModuleApi {
                 .orElseThrow(() -> new BusinessException("User not found"));
 
         String secret = totpService.generateSecret();
-        userModuleApi.setTotpSecret(userId, secret);
+        userModuleApi.setTotpSecret(userId, aesEncryptionService.encrypt(secret));
 
         String qrUri = totpService.generateTotpUri(secret, user.email());
         return new TwoFactorSetupResponse(secret, qrUri);
@@ -230,9 +234,10 @@ public class AuthService implements AuthModuleApi {
      */
     public TwoFactorConfirmResponse confirm2fa(java.util.UUID userId, String code) {
         String secret = userModuleApi.getTotpSecret(userId)
+                .map(aesEncryptionService::decrypt)
                 .orElseThrow(() -> new BusinessException("2FA not set up. Call setup first."));
 
-        if (!totpService.verifyCode(secret, code)) {
+        if (!totpService.verifyCode(secret, code, userId)) {
             throw new BusinessException("Invalid 2FA code");
         }
 
@@ -279,8 +284,8 @@ public class AuthService implements AuthModuleApi {
                 .orElseThrow(() -> new BusinessException("User not found"));
 
         // Try TOTP code first
-        String secret = userModuleApi.getTotpSecret(userId).orElse(null);
-        if (secret != null && totpService.verifyCode(secret, code)) {
+        String secret = userModuleApi.getTotpSecret(userId).map(aesEncryptionService::decrypt).orElse(null);
+        if (secret != null && totpService.verifyCode(secret, code, userId)) {
             userModuleApi.updateLastLogin(userId);
             return generateTokenResponse(user);
         }

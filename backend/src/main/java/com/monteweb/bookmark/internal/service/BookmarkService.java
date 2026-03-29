@@ -4,6 +4,8 @@ import com.monteweb.bookmark.BookmarkInfo;
 import com.monteweb.bookmark.BookmarkModuleApi;
 import com.monteweb.bookmark.internal.model.Bookmark;
 import com.monteweb.bookmark.internal.repository.BookmarkRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class BookmarkService implements BookmarkModuleApi {
 
+    private static final Logger log = LoggerFactory.getLogger(BookmarkService.class);
     private static final Set<String> VALID_TYPES = Set.of("POST", "EVENT", "WIKI_PAGE", "JOB");
 
     private final BookmarkRepository bookmarkRepository;
@@ -65,6 +68,12 @@ public class BookmarkService implements BookmarkModuleApi {
                 .map(this::toInfo)
                 .toList();
         return Map.of("bookmarks", bookmarks);
+    }
+
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        bookmarkRepository.deleteByUserId(userId);
+        log.info("Cleaned up bookmarks for deleted user {}", userId);
     }
 
     private void validateContentType(String contentType) {

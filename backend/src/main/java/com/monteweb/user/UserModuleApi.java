@@ -87,6 +87,12 @@ public interface UserModuleApi {
     UserInfo setActive(UUID userId, boolean active);
 
     /**
+     * Sets the force-password-change flag for a user. Used by admin CSV import
+     * to require imported users to change their password on first login.
+     */
+    void setForcePasswordChange(UUID userId, boolean force);
+
+    /**
      * Updates a user's profile information. Used by auth module for LDAP attribute sync.
      */
     UserInfo updateProfile(UUID userId, String firstName, String lastName, String phone);

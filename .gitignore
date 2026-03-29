@@ -72,6 +72,10 @@ planung/produkthandbuch.*
 # Rezepte (project-independent recipes)
 rezepte/
 
+# Cloudflare Tunnel
+.tunnel-url
+.tunnel.log
+
 # Misc
 nul
 

@@ -1,5 +1,6 @@
 package com.monteweb.auth.internal.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monteweb.admin.AdminModuleApi;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,10 +15,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.Set;
 
 @Component
 public class MaintenanceModeFilter extends OncePerRequestFilter {
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Set<String> ALLOWED_PREFIXES = Set.of(
             "/api/v1/auth/",
@@ -76,8 +80,7 @@ public class MaintenanceModeFilter extends OncePerRequestFilter {
                 ? config.maintenanceMessage()
                 : "System is under maintenance";
 
-        // Write JSON manually to avoid ObjectMapper dependency during filter init
-        String json = "{\"maintenance\":true,\"message\":\"" + message.replace("\"", "\\\"") + "\"}";
+        String json = objectMapper.writeValueAsString(Map.of("maintenance", true, "message", message));
         response.getOutputStream().write(json.getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -38,7 +38,7 @@ import java.time.LocalDate;
 import java.util.*;
 
 @Service
-@Transactional
+@Transactional(readOnly = true)
 @ConditionalOnProperty(prefix = "monteweb.modules.jobboard", name = "enabled", havingValue = "true")
 public class JobboardService implements JobboardModuleApi {
 
@@ -109,6 +109,7 @@ public class JobboardService implements JobboardModuleApi {
 
     // ---- Event Listener: Putzaktion → Job ----
 
+    @Transactional
     @ApplicationModuleListener
     public void onPutzaktionCreated(PutzaktionCreatedEvent event) {
         var job = new Job();
@@ -134,6 +135,7 @@ public class JobboardService implements JobboardModuleApi {
 
     // ---- Job CRUD ----
 
+    @Transactional
     public JobInfo createJob(UUID userId, CreateJobRequest request) {
         var job = new Job();
         job.setTitle(request.title());
@@ -191,6 +193,7 @@ public class JobboardService implements JobboardModuleApi {
         return toJobInfo(savedJob);
     }
 
+    @Transactional
     public JobInfo updateJob(UUID jobId, UUID userId, UpdateJobRequest request) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
@@ -271,6 +274,7 @@ public class JobboardService implements JobboardModuleApi {
         return jobRepository.findAllCategories();
     }
 
+    @Transactional
     public void cancelJob(UUID jobId, UUID userId) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
@@ -287,6 +291,7 @@ public class JobboardService implements JobboardModuleApi {
         jobRepository.save(job);
     }
 
+    @Transactional
     public void deleteJob(UUID jobId, UUID userId) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
@@ -305,6 +310,7 @@ public class JobboardService implements JobboardModuleApi {
     /**
      * Approve a draft job (JOBBOARD_ADMIN or SUPERADMIN only).
      */
+    @Transactional
     public JobInfo approveJob(UUID jobId, UUID approverId) {
         var job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job", jobId));
@@ -327,6 +333,7 @@ public class JobboardService implements JobboardModuleApi {
 
     // ---- Assignment operations ----
 
+    @Transactional
     public JobAssignmentInfo applyForJob(UUID jobId, UUID userId) {
         // Acquire pessimistic lock to prevent race conditions on concurrent applications
         var job = jobRepository.findByIdForUpdate(jobId)
@@ -389,6 +396,7 @@ public class JobboardService implements JobboardModuleApi {
         return toAssignmentInfo(assignment);
     }
 
+    @Transactional
     public JobAssignmentInfo startAssignment(UUID assignmentId, UUID userId) {
         var assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
@@ -414,6 +422,7 @@ public class JobboardService implements JobboardModuleApi {
         return toAssignmentInfo(assignment);
     }
 
+    @Transactional
     public JobAssignmentInfo completeAssignment(UUID assignmentId, UUID userId, BigDecimal actualHours, String notes) {
         var assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
@@ -461,6 +470,7 @@ public class JobboardService implements JobboardModuleApi {
         return toAssignmentInfo(assignment);
     }
 
+    @Transactional
     public JobAssignmentInfo confirmAssignment(UUID assignmentId, UUID confirmerId) {
         var assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
@@ -495,6 +505,7 @@ public class JobboardService implements JobboardModuleApi {
         return toAssignmentInfo(assignment);
     }
 
+    @Transactional
     public void rejectAssignment(UUID assignmentId, UUID rejecterId) {
         var assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
@@ -518,6 +529,7 @@ public class JobboardService implements JobboardModuleApi {
         }
     }
 
+    @Transactional
     public void cancelAssignment(UUID assignmentId, UUID userId) {
         var assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment", assignmentId));
@@ -841,6 +853,7 @@ public class JobboardService implements JobboardModuleApi {
     /**
      * Upload an attachment for a job. Validates size, count, detects content type via magic bytes.
      */
+    @Transactional
     public JobAttachmentInfo uploadAttachment(UUID jobId, UUID userId, MultipartFile file) {
         getJob(jobId); // verify job exists
 
@@ -906,6 +919,7 @@ public class JobboardService implements JobboardModuleApi {
     /**
      * Delete an attachment. Checks authorization (owner, or SUPERADMIN/TEACHER/SECTION_ADMIN).
      */
+    @Transactional
     public void deleteAttachment(UUID jobId, UUID attachmentId, UUID userId) {
         var attachment = attachmentRepository.findById(attachmentId)
                 .filter(a -> a.getJobId().equals(jobId))

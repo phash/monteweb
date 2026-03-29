@@ -13,6 +13,8 @@ import java.util.UUID;
 
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
+    List<Notification> findByUserId(UUID userId);
+
     Page<Notification> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 
     long countByUserIdAndReadFalse(UUID userId);
@@ -34,4 +36,6 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff")
     int deleteByCreatedAtBefore(@org.springframework.data.repository.query.Param("cutoff") Instant cutoff);
+
+    void deleteByUserId(UUID userId);
 }

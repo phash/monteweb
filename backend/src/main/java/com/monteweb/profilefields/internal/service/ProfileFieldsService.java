@@ -13,6 +13,8 @@ import com.monteweb.profilefields.internal.repository.ProfileFieldDefinitionRepo
 import com.monteweb.profilefields.internal.repository.ProfileFieldValueRepository;
 import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ import java.util.stream.Collectors;
 @ConditionalOnProperty(prefix = "monteweb.modules", name = "profilefields.enabled", havingValue = "true")
 public class ProfileFieldsService implements ProfileFieldsModuleApi {
 
+    private static final Logger log = LoggerFactory.getLogger(ProfileFieldsService.class);
     private final ProfileFieldDefinitionRepository definitionRepo;
     private final ProfileFieldValueRepository valueRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -168,6 +171,12 @@ public class ProfileFieldsService implements ProfileFieldsModuleApi {
         }).toList());
 
         return data;
+    }
+
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        valueRepo.deleteByUserId(userId);
+        log.info("Cleaned up profile field values for deleted user {}", userId);
     }
 
     // ---- Helpers ----

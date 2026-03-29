@@ -15,6 +15,7 @@ import com.monteweb.wiki.internal.model.WikiPageVersion;
 import com.monteweb.wiki.internal.repository.WikiPageRepository;
 import com.monteweb.wiki.internal.repository.WikiPageVersionRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.text.Normalizer;
 import java.util.*;
 import java.util.regex.Pattern;
 
+@Slf4j
 @Service
 @ConditionalOnProperty(prefix = "monteweb.modules", name = "wiki.enabled", havingValue = "true")
 @RequiredArgsConstructor
@@ -322,6 +324,14 @@ public class WikiService implements WikiModuleApi {
         )).toList());
 
         return data;
+    }
+
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        pageRepo.anonymizeCreator(userId);
+        pageRepo.anonymizeLastEditor(userId);
+        versionRepo.anonymizeEditor(userId);
+        log.info("Anonymized wiki data for deleted user {}", userId);
     }
 
     // ---- Helpers ----

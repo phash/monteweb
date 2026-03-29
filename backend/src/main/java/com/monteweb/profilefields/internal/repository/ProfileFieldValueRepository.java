@@ -11,4 +11,6 @@ public interface ProfileFieldValueRepository extends JpaRepository<ProfileFieldV
     List<ProfileFieldValue> findByUserId(UUID userId);
 
     void deleteByFieldId(UUID fieldId);
+
+    void deleteByUserId(UUID userId);
 }

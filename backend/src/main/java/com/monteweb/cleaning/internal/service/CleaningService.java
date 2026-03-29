@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
 
 @Service
 @ConditionalOnProperty(prefix = "monteweb.modules.cleaning", name = "enabled", havingValue = "true")
-@Transactional
+@Transactional(readOnly = true)
 public class CleaningService implements CleaningModuleApi {
 
     private static final Logger log = LoggerFactory.getLogger(CleaningService.class);
@@ -76,6 +76,7 @@ public class CleaningService implements CleaningModuleApi {
 
     // ── Config Management ───────────────────────────────────────────────
 
+    @Transactional
     public CleaningConfigInfo createConfig(CreateConfigRequest request) {
         UUID currentUserId = SecurityUtils.requireCurrentUserId();
         CleaningConfig config = new CleaningConfig();
@@ -144,6 +145,7 @@ public class CleaningService implements CleaningModuleApi {
         return toConfigInfo(config);
     }
 
+    @Transactional
     public CleaningConfigInfo updateConfig(UUID configId, UpdateConfigRequest request) {
         CleaningConfig config = configRepository.findById(configId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", configId));
@@ -186,6 +188,7 @@ public class CleaningService implements CleaningModuleApi {
      * Generates cleaning slots for a config in the given date range.
      * Skips dates where a slot already exists for this config.
      */
+    @Transactional
     public List<CleaningSlotInfo> generateSlots(UUID configId, LocalDate from, LocalDate to) {
         CleaningConfig config = configRepository.findById(configId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", configId));
@@ -271,6 +274,7 @@ public class CleaningService implements CleaningModuleApi {
      * Scheduled task: auto-generates cleaning slots for all active recurring configs.
      * Runs daily at 2:00 AM. Generates slots for the next 3 months.
      */
+    @Transactional
     @Scheduled(cron = "0 0 2 * * *")
     public void autoGenerateRecurringSlots() {
         List<CleaningConfig> activeConfigs = configRepository.findByActiveTrue();
@@ -336,6 +340,7 @@ public class CleaningService implements CleaningModuleApi {
 
     // ── Registration ────────────────────────────────────────────────────
 
+    @Transactional
     public CleaningSlotInfo registerForSlot(UUID slotId, UUID userId, String userName, UUID familyId) {
         CleaningSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
@@ -383,6 +388,7 @@ public class CleaningService implements CleaningModuleApi {
         return toSlotInfo(slot, getConfigTitle(slot.getConfigId()));
     }
 
+    @Transactional
     public void unregisterFromSlot(UUID slotId, UUID userId) {
         CleaningRegistration reg = registrationRepository.findBySlotIdAndUserId(slotId, userId)
                 .orElseThrow(() -> new BusinessException("Not registered for this slot"));
@@ -401,6 +407,7 @@ public class CleaningService implements CleaningModuleApi {
         }
     }
 
+    @Transactional
     public void offerSwap(UUID slotId, UUID userId) {
         CleaningRegistration reg = registrationRepository.findBySlotIdAndUserId(slotId, userId)
                 .orElseThrow(() -> new BusinessException("Not registered for this slot"));
@@ -424,6 +431,7 @@ public class CleaningService implements CleaningModuleApi {
     /**
      * QR-based check-in. Validates the QR token against the slot.
      */
+    @Transactional
     public CleaningSlotInfo checkIn(UUID slotId, UUID userId, String qrToken) {
         CleaningSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
@@ -460,6 +468,7 @@ public class CleaningService implements CleaningModuleApi {
     /**
      * Check-out with actual duration recording.
      */
+    @Transactional
     public CleaningSlotInfo checkOut(UUID slotId, UUID userId) {
         CleaningSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
@@ -516,6 +525,7 @@ public class CleaningService implements CleaningModuleApi {
     /**
      * Update actual minutes and confirm duration after checkout.
      */
+    @Transactional
     public CleaningSlotInfo.RegistrationInfo updateRegistrationMinutes(UUID registrationId, int actualMinutes, UUID userId) {
         CleaningRegistration reg = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
@@ -546,6 +556,7 @@ public class CleaningService implements CleaningModuleApi {
     /**
      * Confirm a cleaning registration (admin/teacher/putzorga).
      */
+    @Transactional
     public CleaningSlotInfo.RegistrationInfo confirmCleaningRegistration(UUID registrationId, UUID confirmerId) {
         CleaningRegistration reg = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
@@ -567,6 +578,7 @@ public class CleaningService implements CleaningModuleApi {
     /**
      * Reject a cleaning registration – sets noShow=true and resets checkout data.
      */
+    @Transactional
     public void rejectCleaningRegistration(UUID registrationId) {
         CleaningRegistration reg = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
@@ -584,6 +596,7 @@ public class CleaningService implements CleaningModuleApi {
 
     // ── Slot Admin ──────────────────────────────────────────────────────
 
+    @Transactional
     public CleaningSlotInfo updateSlot(UUID slotId, UpdateSlotRequest request) {
         CleaningSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
@@ -595,6 +608,7 @@ public class CleaningService implements CleaningModuleApi {
         return toSlotInfo(slot, getConfigTitle(slot.getConfigId()));
     }
 
+    @Transactional
     public void cancelSlot(UUID slotId) {
         CleaningSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
@@ -606,6 +620,7 @@ public class CleaningService implements CleaningModuleApi {
     // ── Family Hours ────────────────────────────────────────────────────
 
     @Override
+    @Transactional
     public void linkJobToConfig(UUID configId, UUID jobId) {
         CleaningConfig config = configRepository.findById(configId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", configId));

@@ -2,7 +2,9 @@ package com.monteweb.wiki.internal.repository;
 
 import com.monteweb.wiki.internal.model.WikiPage;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,4 +30,12 @@ public interface WikiPageRepository extends JpaRepository<WikiPage, UUID> {
 
     @Query("SELECT p FROM WikiPage p WHERE p.roomId = :roomId AND (LOWER(p.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<WikiPage> searchByRoomIdAndQuery(UUID roomId, String query);
+
+    @Modifying
+    @Query("UPDATE WikiPage w SET w.createdBy = null WHERE w.createdBy = :userId")
+    void anonymizeCreator(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query("UPDATE WikiPage w SET w.lastEditedBy = null WHERE w.lastEditedBy = :userId")
+    void anonymizeLastEditor(@Param("userId") UUID userId);
 }

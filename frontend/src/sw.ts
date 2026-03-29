@@ -32,7 +32,7 @@ registerRoute(
     cacheName: 'user-data-cache',
     plugins: [
       new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 86400 }),
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new CacheableResponsePlugin({ statuses: [200] }),
     ],
   }),
 )
@@ -44,19 +44,19 @@ registerRoute(
     cacheName: 'content-cache',
     plugins: [
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 3600 }),
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new CacheableResponsePlugin({ statuses: [200] }),
     ],
   }),
 )
 
 // Feed and other API calls — cache 5min
 registerRoute(
-  ({ url }) => /\/api\/v1\//.test(url.pathname),
+  ({ url }) => /\/api\/v1\//.test(url.pathname) && !/\/api\/v1\/auth\//.test(url.pathname),
   new NetworkFirst({
     cacheName: 'api-cache',
     plugins: [
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 300 }),
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new CacheableResponsePlugin({ statuses: [200] }),
     ],
   }),
 )
@@ -82,7 +82,8 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const targetUrl = event.notification.data?.url || '/'
+  const rawUrl = event.notification.data?.url || '/'
+  const targetUrl = rawUrl.startsWith('/') && !rawUrl.startsWith('//') ? rawUrl : '/'
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
 import java.util.*;
 import java.util.regex.Pattern;
 
@@ -23,7 +24,7 @@ import java.util.regex.Pattern;
 public class CsvImportService {
 
     private static final Logger log = LoggerFactory.getLogger(CsvImportService.class);
-    private static final String DEFAULT_PASSWORD = "changeme123";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$");
     private static final Set<String> VALID_ROLES = Set.of("PARENT", "STUDENT", "TEACHER", "SECTION_ADMIN");
     private static final Set<String> VALID_FAMILY_ROLES = Set.of("PARENT", "CHILD");
@@ -60,8 +61,6 @@ public class CsvImportService {
         Map<String, UUID> importedFamilies = new HashMap<>();
         // Track emails seen in this import to detect duplicates within the file
         Set<String> seenEmails = new HashSet<>();
-
-        String hashedPassword = passwordEncoder.encode(DEFAULT_PASSWORD);
 
         for (int i = 0; i < rows.size(); i++) {
             int rowNum = i + 2; // +2 because row 1 is header, data starts at row 2
@@ -126,11 +125,13 @@ public class CsvImportService {
             seenEmails.add(email);
 
             if (!dryRun) {
-                // Create user
+                // Create user with a random password — they must reset via "force password change"
                 UserRole role = UserRole.valueOf(roleStr);
-                var userInfo = userModuleApi.createUser(email, hashedPassword, firstName, lastName, null, role);
-                // Activate user immediately
+                String randomPassword = passwordEncoder.encode(generateRandomPassword());
+                var userInfo = userModuleApi.createUser(email, randomPassword, firstName, lastName, null, role);
+                // Activate user and require password change on first login
                 userModuleApi.setActive(userInfo.id(), true);
+                userModuleApi.setForcePasswordChange(userInfo.id(), true);
                 usersCreated++;
 
                 // Handle family assignment
@@ -242,6 +243,12 @@ public class CsvImportService {
             throw new RuntimeException("Fehler beim Lesen der CSV-Datei: " + e.getMessage(), e);
         }
         return rows;
+    }
+
+    private String generateRandomPassword() {
+        byte[] bytes = new byte[24];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private String col(String[] cols, int index) {

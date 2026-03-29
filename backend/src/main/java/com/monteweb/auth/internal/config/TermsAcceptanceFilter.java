@@ -1,5 +1,6 @@
 package com.monteweb.auth.internal.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.user.UserModuleApi;
 import jakarta.servlet.FilterChain;
@@ -11,11 +12,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
 public class TermsAcceptanceFilter extends OncePerRequestFilter {
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final UserModuleApi userModuleApi;
     private final AdminModuleApi adminModuleApi;
 
@@ -76,10 +79,8 @@ public class TermsAcceptanceFilter extends OncePerRequestFilter {
             if (!accepted) {
                 response.setStatus(451);
                 response.setContentType("application/json");
-                // Inline JSON to avoid ObjectMapper dependency in filter registration phase
                 response.getWriter().write(
-                    "{\"termsRequired\":true,\"termsVersion\":\"" +
-                    termsVersion.replace("\"", "\\\"") + "\"}");
+                    objectMapper.writeValueAsString(Map.of("termsRequired", true, "termsVersion", termsVersion)));
                 return;
             }
         } catch (IllegalArgumentException e) {

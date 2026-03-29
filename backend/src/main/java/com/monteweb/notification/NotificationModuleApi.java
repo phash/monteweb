@@ -1,5 +1,6 @@
 package com.monteweb.notification;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -15,4 +16,7 @@ public interface NotificationModuleApi {
 
     /** DSGVO: Delete notifications older than the given cutoff. Returns deleted count. */
     int deleteOlderThan(java.time.Instant cutoff);
+
+    /** DSGVO: Export all notification data for a user. */
+    Map<String, Object> exportUserData(UUID userId);
 }

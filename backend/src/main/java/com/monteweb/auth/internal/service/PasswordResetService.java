@@ -84,6 +84,9 @@ public class PasswordResetService {
         String passwordHash = passwordEncoder.encode(newPassword);
         userModule.updatePasswordHash(resetToken.getUserId(), passwordHash);
 
+        // Clear force-password-change flag (set by CSV import)
+        userModule.setForcePasswordChange(resetToken.getUserId(), false);
+
         // Revoke all existing refresh tokens (invalidate all sessions)
         refreshTokenService.revokeAllForUser(resetToken.getUserId());
 

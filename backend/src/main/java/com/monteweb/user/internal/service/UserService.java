@@ -1,5 +1,6 @@
 package com.monteweb.user.internal.service;
 
+import com.monteweb.bookmark.BookmarkModuleApi;
 import com.monteweb.calendar.CalendarModuleApi;
 import com.monteweb.cleaning.CleaningModuleApi;
 import com.monteweb.family.FamilyModuleApi;
@@ -10,7 +11,11 @@ import com.monteweb.fotobox.FotoboxModuleApi;
 import com.monteweb.fundgrube.FundgrubeModuleApi;
 import com.monteweb.jobboard.JobboardModuleApi;
 import com.monteweb.messaging.MessagingModuleApi;
+import com.monteweb.notification.NotificationModuleApi;
+import com.monteweb.profilefields.ProfileFieldsModuleApi;
 import com.monteweb.room.RoomModuleApi;
+import com.monteweb.tasks.TasksModuleApi;
+import com.monteweb.wiki.WikiModuleApi;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.*;
 import com.monteweb.user.internal.model.DataAccessLog;
@@ -55,6 +60,11 @@ public class UserService implements UserModuleApi {
     private final FotoboxModuleApi fotoboxModuleApi;
     private final FundgrubeModuleApi fundgrubeModuleApi;
     private final FilesModuleApi filesModuleApi;
+    private final BookmarkModuleApi bookmarkModuleApi;
+    private final TasksModuleApi tasksModuleApi;
+    private final WikiModuleApi wikiModuleApi;
+    private final ProfileFieldsModuleApi profileFieldsModuleApi;
+    private final NotificationModuleApi notificationModuleApi;
 
     public UserService(UserRepository userRepository,
                        ApplicationEventPublisher eventPublisher,
@@ -71,7 +81,12 @@ public class UserService implements UserModuleApi {
                        @Lazy @Autowired(required = false) FormsModuleApi formsModuleApi,
                        @Lazy @Autowired(required = false) FotoboxModuleApi fotoboxModuleApi,
                        @Lazy @Autowired(required = false) FundgrubeModuleApi fundgrubeModuleApi,
-                       @Lazy @Autowired(required = false) FilesModuleApi filesModuleApi) {
+                       @Lazy @Autowired(required = false) FilesModuleApi filesModuleApi,
+                       @Lazy @Autowired(required = false) BookmarkModuleApi bookmarkModuleApi,
+                       @Lazy @Autowired(required = false) TasksModuleApi tasksModuleApi,
+                       @Lazy @Autowired(required = false) WikiModuleApi wikiModuleApi,
+                       @Lazy @Autowired(required = false) ProfileFieldsModuleApi profileFieldsModuleApi,
+                       @Lazy @Autowired(required = false) NotificationModuleApi notificationModuleApi) {
         this.userRepository = userRepository;
         this.eventPublisher = eventPublisher;
         this.dataAccessLogRepository = dataAccessLogRepository;
@@ -88,6 +103,11 @@ public class UserService implements UserModuleApi {
         this.fotoboxModuleApi = fotoboxModuleApi;
         this.fundgrubeModuleApi = fundgrubeModuleApi;
         this.filesModuleApi = filesModuleApi;
+        this.bookmarkModuleApi = bookmarkModuleApi;
+        this.tasksModuleApi = tasksModuleApi;
+        this.wikiModuleApi = wikiModuleApi;
+        this.profileFieldsModuleApi = profileFieldsModuleApi;
+        this.notificationModuleApi = notificationModuleApi;
     }
 
     @Override
@@ -339,6 +359,14 @@ public class UserService implements UserModuleApi {
         return toUserInfo(userRepository.save(user));
     }
 
+    @Override
+    @Transactional
+    public void setForcePasswordChange(UUID userId, boolean force) {
+        var user = findEntityById(userId);
+        user.setForcePasswordChange(force);
+        userRepository.save(user);
+    }
+
     /**
      * DSGVO: Export all personal data for a user, aggregated from all modules.
      */
@@ -374,6 +402,11 @@ public class UserService implements UserModuleApi {
         safeExportModule(data, "fotobox", () -> fotoboxModuleApi.exportUserData(userId));
         safeExportModule(data, "fundgrube", () -> fundgrubeModuleApi.exportUserData(userId));
         safeExportModule(data, "files", () -> filesModuleApi.exportUserData(userId));
+        safeExportModule(data, "bookmarks", () -> bookmarkModuleApi.exportUserData(userId));
+        safeExportModule(data, "tasks", () -> tasksModuleApi.exportUserData(userId));
+        safeExportModule(data, "wiki", () -> wikiModuleApi.exportUserData(userId));
+        safeExportModule(data, "profileFields", () -> profileFieldsModuleApi.exportUserData(userId));
+        safeExportModule(data, "notifications", () -> notificationModuleApi.exportUserData(userId));
 
         data.put("exportedAt", Instant.now());
 

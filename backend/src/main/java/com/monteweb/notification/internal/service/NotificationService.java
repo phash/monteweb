@@ -5,6 +5,9 @@ import com.monteweb.notification.NotificationModuleApi;
 import com.monteweb.notification.NotificationType;
 import com.monteweb.notification.internal.model.Notification;
 import com.monteweb.notification.internal.repository.NotificationRepository;
+import com.monteweb.notification.internal.repository.PushSubscriptionRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -12,22 +15,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Transactional(readOnly = true)
 public class NotificationService implements NotificationModuleApi {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+
     private final NotificationRepository repository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final Optional<WebPushService> webPushService;
 
     public NotificationService(NotificationRepository repository,
+                               PushSubscriptionRepository pushSubscriptionRepository,
                                SimpMessagingTemplate messagingTemplate,
                                Optional<WebPushService> webPushService) {
         this.repository = repository;
+        this.pushSubscriptionRepository = pushSubscriptionRepository;
         this.messagingTemplate = messagingTemplate;
         this.webPushService = webPushService;
     }
@@ -96,6 +102,21 @@ public class NotificationService implements NotificationModuleApi {
                 .stream()
                 .map(this::toInfo)
                 .toList();
+    }
+
+    @Override
+    public Map<String, Object> exportUserData(UUID userId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("notifications", repository.findByUserId(userId));
+        data.put("pushSubscriptions", pushSubscriptionRepository.findByUserId(userId));
+        return data;
+    }
+
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        repository.deleteByUserId(userId);
+        pushSubscriptionRepository.deleteByUserId(userId);
+        log.info("Cleaned up notifications and push subscriptions for deleted user {}", userId);
     }
 
     private NotificationInfo toInfo(Notification n) {

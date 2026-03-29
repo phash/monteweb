@@ -19,6 +19,7 @@ import com.monteweb.tasks.internal.repository.TaskRepository;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+@Slf4j
 @Service
 @ConditionalOnProperty(prefix = "monteweb.modules", name = "tasks.enabled", havingValue = "true")
 @RequiredArgsConstructor
@@ -360,6 +362,13 @@ public class TaskService implements TasksModuleApi {
                 "title", t.getTitle()
         )).toList());
         return data;
+    }
+
+    @Transactional
+    public void cleanupUserData(UUID userId) {
+        taskRepo.anonymizeAssignee(userId);
+        taskRepo.anonymizeCreator(userId);
+        log.info("Anonymized tasks for deleted user {}", userId);
     }
 
     // ---- Helpers ----
