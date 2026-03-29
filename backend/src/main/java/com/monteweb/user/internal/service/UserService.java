@@ -422,8 +422,8 @@ public class UserService implements UserModuleApi {
     private void safeExportModule(Map<String, Object> data, String key, java.util.function.Supplier<Map<String, Object>> exporter) {
         try {
             data.put(key, exporter.get());
-        } catch (org.springframework.beans.factory.NoSuchBeanDefinitionException e) {
-            // Module disabled — @Lazy proxy could not resolve the bean
+        } catch (Exception e) {
+            // Module disabled — @Lazy proxy could not resolve the bean, or API is null
         }
     }
 

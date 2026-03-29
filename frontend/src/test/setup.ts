@@ -44,6 +44,9 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
+// Mock Element.scrollTo (not available in jsdom)
+Element.prototype.scrollTo = vi.fn()
+
 // Mock PrimeVue useToast globally
 vi.mock('primevue/usetoast', () => ({
   useToast: () => ({

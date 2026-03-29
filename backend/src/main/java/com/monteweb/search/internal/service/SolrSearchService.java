@@ -149,7 +149,11 @@ public class SolrSearchService {
                 .replace("]", "\\]")
                 .replace("^", "\\^")
                 .replace("~", "\\~")
-                .replace(":", "\\:");
+                .replace(":", "\\:")
+                .replace("\"", "\\\"")
+                .replace("*", "\\*")
+                .replace("?", "\\?")
+                .replace("/", "\\/");
     }
 
     private String getStringField(SolrDocument doc, String field) {

@@ -76,8 +76,10 @@ public class AesEncryptionService {
             String base64 = value.substring(ENC_PREFIX.length(), value.length() - ENC_SUFFIX.length());
             byte[] combined = Base64.getDecoder().decode(base64);
 
-            byte[] iv = ByteBuffer.wrap(combined, 0, GCM_IV_LENGTH).array();
-            byte[] ciphertext = ByteBuffer.wrap(combined, GCM_IV_LENGTH, combined.length - GCM_IV_LENGTH).array();
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            System.arraycopy(combined, 0, iv, 0, GCM_IV_LENGTH);
+            byte[] ciphertext = new byte[combined.length - GCM_IV_LENGTH];
+            System.arraycopy(combined, GCM_IV_LENGTH, ciphertext, 0, ciphertext.length);
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));

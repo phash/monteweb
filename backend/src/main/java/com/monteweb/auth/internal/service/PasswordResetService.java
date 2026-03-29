@@ -20,7 +20,7 @@ import java.util.UUID;
 public class PasswordResetService {
 
     private static final Logger log = LoggerFactory.getLogger(PasswordResetService.class);
-    private static final int TOKEN_EXPIRY_HOURS = 24;
+    private static final int TOKEN_EXPIRY_HOURS = 2;
 
     private final PasswordResetTokenRepository tokenRepository;
     private final UserModuleApi userModule;

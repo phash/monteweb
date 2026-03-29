@@ -106,10 +106,23 @@ public class NotificationService implements NotificationModuleApi {
 
     @Override
     public Map<String, Object> exportUserData(UUID userId) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("notifications", repository.findByUserId(userId));
-        data.put("pushSubscriptions", pushSubscriptionRepository.findByUserId(userId));
-        return data;
+        List<Map<String, Object>> notifs = repository.findByUserId(userId).stream()
+                .map(n -> Map.<String, Object>of(
+                        "id", n.getId(),
+                        "type", n.getType(),
+                        "title", n.getTitle(),
+                        "message", n.getMessage() != null ? n.getMessage() : "",
+                        "read", n.isRead(),
+                        "createdAt", n.getCreatedAt()
+                )).toList();
+
+        List<Map<String, Object>> subs = pushSubscriptionRepository.findByUserId(userId).stream()
+                .map(s -> Map.<String, Object>of(
+                        "endpoint", s.getEndpoint(),
+                        "createdAt", s.getCreatedAt()
+                )).toList();
+
+        return Map.of("notifications", notifs, "pushSubscriptions", subs);
     }
 
     @Transactional
