@@ -9,7 +9,7 @@ Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (Q
 
 **Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
-**20 backend modules**, 112 Flyway migrations (V001–V113), ~1835 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
+**20 backend modules**, 114 Flyway migrations (V001–V115), ~1835 frontend tests, ~490 backend tests, 550 Playwright E2E tests (22 test files)
 
 ## Commands
 
@@ -27,7 +27,7 @@ docker compose -f docker-compose.dev.yml up -d
 # Frontend dev (hot reload, proxies /api to localhost:8080) — needs backend via Docker
 cd frontend && npm install && npm run dev              # http://localhost:5173
 npm run build          # vue-tsc + vite build
-npm test               # vitest run (~1479 tests, ~156 files)
+npm test               # vitest run (~1835 tests, ~176 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
@@ -45,6 +45,13 @@ docker compose exec backup restore.sh latest           # restore latest
 
 # Monitoring (optional)
 docker compose --profile monitoring up -d              # Grafana :3000, Prometheus :9090
+
+# Deployment (production)
+./scripts/deploy.sh                  # build + deploy all
+./scripts/deploy.sh --new-tunnel     # deploy + new Cloudflare Quick Tunnel
+./scripts/deploy.sh --backend-only   # rebuild + restart backend only
+./scripts/deploy.sh --frontend-only  # rebuild + restart frontend only
+./scripts/deploy.sh --status         # show service status + tunnel URL
 ```
 
 **Test Accounts** (password: `test1234`): `admin@monteweb.local` (SUPERADMIN), `lehrer@monteweb.local` (TEACHER), `eltern@monteweb.local` (PARENT), `schueler@monteweb.local` (STUDENT), `sectionadmin@monteweb.local` (SECTION_ADMIN). Plus ~220 realistic seed users from V040.
@@ -73,7 +80,8 @@ com.monteweb.<module>/
 - **NEVER** import from another module's `internal/` package. Use `*ModuleApi` facades (sync) or Spring `ApplicationEventPublisher` (async)
 - **Shared** (`com.monteweb.shared`): not a module — cross-cutting via `@NamedInterface` (`shared-dto`, `shared-exception`, `shared-util`, `shared-config`). Provides `ApiResponse<T>`, `PageResponse<T>`, `SecurityUtils`, exception hierarchy, `PdfService`
 - **Optional modules:** `@ConditionalOnProperty(prefix = "monteweb.modules", name = "xyz.enabled")` on **ALL** beans (not just Config). Use `@Autowired(required = false)` for optional injection
-- **Security:** JWT (15min access + 7d refresh), rate-limiting on auth endpoints. Fotobox image endpoints accept JWT via `?token=` query parameter
+- **Security:** JWT (15min access + 7d refresh), rate-limiting on auth endpoints. Fotobox image endpoints accept JWT via `?token=` query parameter. TOTP secrets encrypted at rest (AES-256-GCM via `AesEncryptionService`). CSV-imported users get random passwords + `forcePasswordChange` flag
+- **User Deletion (DSGVO Art. 17):** `UserDeletionExecutedEvent` triggers DeletionListeners in ALL 15 data-holding modules (feed, room, family, messaging, jobboard, cleaning, calendar, forms, fotobox, fundgrube, files, bookmarks, tasks, wiki, profilefields, notification). Each listener calls `service.cleanupUserData(userId)` — either deletes or anonymizes data depending on ownership
 
 ### Frontend (Vue 3)
 
@@ -99,7 +107,7 @@ frontend/src/
 
 ### Database
 
-- **Flyway** V001–V113 (112 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V115 (114 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs (`DEFAULT gen_random_uuid()`), `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays (`TEXT[]`, `UUID[]`), JSONB
 - `room_members`: composite PK `(room_id, user_id)` — no `id` column
 - `rooms.is_archived` (not `archived`)
@@ -130,6 +138,8 @@ frontend/src/
 - `wiki_pages` + `wiki_page_versions`: per-room wiki (V077), slug unique per room, self-referencing parent_id
 - `bookmarks`: user bookmarks for posts, events, jobs, wiki pages (type + target_id)
 - `profile_field_definitions` + `profile_field_values`: custom profile fields defined by admins, values per user
+- `users.force_password_change`: BOOLEAN default false, set by CSV import for users with random passwords
+- `users.totp_secret`: VARCHAR(256), AES-256-GCM encrypted (legacy plaintext auto-handled by `AesEncryptionService.decrypt()`)
 
 ### Infrastructure (Docker / CI/CD)
 
@@ -139,7 +149,8 @@ frontend/src/
 - **CI/CD:** GitHub Actions with SHA-pinned actions, concurrency groups, job timeouts, Docker Buildx with GHA cache, Trivy image scanning
 - **Dependabot:** Weekly updates for GitHub Actions, npm, Maven, Docker base images
 - **Backup:** Optional profile (`--profile backup`). Alpine container with `pg_dump` + `mc` (MinIO Client). Daily/weekly/monthly rotation with configurable retention. Optional S3 remote upload. See `BACKUP.md`
-- **See also:** `INFRA-CHANGELOG.md` (all optimizations), `LOCAL-DEV-GUIDE.md` (comprehensive dev guide), `BACKUP.md` (backup & restore)
+- **Deployment:** `scripts/deploy.sh` — builds, starts all services, waits for health. `--new-tunnel` for Cloudflare Quick Tunnel (URL saved to `.tunnel-url`). `--backend-only`, `--frontend-only`, `--no-build`, `--status`
+- **See also:** `INFRA-CHANGELOG.md` (all optimizations), `LOCAL-DEV-GUIDE.md` (comprehensive dev guide), `BACKUP.md` (backup & restore), `docs/REVIEW-REMAINING-ITEMS.md` (open audit findings)
 
 ### Testing
 
@@ -224,6 +235,8 @@ Additional toggles: E-Mail (`monteweb.email.enabled`), OIDC/SSO (`monteweb.oidc.
 25. **2FA (TOTP):** Drei Modi (DISABLED/OPTIONAL/MANDATORY). Bei MANDATORY 7-Tage Grace Period. Recovery Codes. Admin steuert Modus + Deadline
 26. **Backup:** Docker-Profile `backup`. Taeglich pg_dump + MinIO mirror. Rotation: 7 taegliche, 4 woechentliche, 3 monatliche. Optional S3-Remote-Upload. Siehe `BACKUP.md`
 27. **iCal-Subscriptions:** Externe Kalender via URL abonnieren, Events automatisch importieren (RFC 5545)
+28. **CSV-Import:** Admin kann Benutzer per CSV importieren. Jeder User bekommt ein zufaelliges Passwort (24 Bytes SecureRandom, Base64) und `forcePasswordChange=true`. User muss Password-Reset nutzen, Flag wird bei Passwortaenderung zurueckgesetzt
+29. **TOTP-Verschluesselung:** TOTP-Secrets werden mit AES-256-GCM verschluesselt gespeichert. `AesEncryptionService` behandelt Legacy-Klartext automatisch (Passthrough wenn kein `ENC(`-Prefix)
 
 ## Conventions
 
