@@ -109,7 +109,6 @@ public class JobboardService implements JobboardModuleApi {
 
     // ---- Event Listener: Putzaktion → Job ----
 
-    @Transactional
     @ApplicationModuleListener
     public void onPutzaktionCreated(PutzaktionCreatedEvent event) {
         var job = new Job();
