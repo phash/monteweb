@@ -6,6 +6,7 @@ import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import com.monteweb.wiki.WikiModuleApi;
 import com.monteweb.wiki.WikiPageDeletedEvent;
 import com.monteweb.wiki.WikiPageSavedEvent;
@@ -341,8 +342,14 @@ public class WikiService implements WikiModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Wiki page not found: " + pageId));
     }
 
+    private boolean isSuperAdmin(UUID userId) {
+        return userModule.findById(userId)
+                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
+                .orElse(false);
+    }
+
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!roomModule.isUserInRoom(userId, roomId)) {
+        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }

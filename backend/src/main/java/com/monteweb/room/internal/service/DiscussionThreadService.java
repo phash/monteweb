@@ -201,8 +201,14 @@ public class DiscussionThreadService {
                 .orElseThrow(() -> new ResourceNotFoundException("Discussion thread", threadId));
     }
 
+    private boolean isSuperAdmin(UUID userId) {
+        return userModuleApi.findById(userId)
+                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
+                .orElse(false);
+    }
+
     private void requireRoomMember(UUID roomId, UUID userId) {
-        if (!roomModuleApi.isUserInRoom(userId, roomId)) {
+        if (!isSuperAdmin(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("You are not a member of this room");
         }
     }
@@ -212,16 +218,17 @@ public class DiscussionThreadService {
      * or PARENT if allowMemberThreadCreation is enabled.
      */
     private void requireThreadCreator(UUID roomId, UUID userId) {
+        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
+        // SUPERADMIN / SECTION_ADMIN can always create
+        if (userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN) return;
+
         var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId)
                 .orElseThrow(() -> new ForbiddenException("You are not a member of this room"));
-        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
 
         // LEADER can always create
         if (roomRole == RoomRole.LEADER) return;
         // TEACHER can create discussions in rooms they're a member of
         if (userRole == UserRole.TEACHER) return;
-        // SUPERADMIN can always create
-        if (userRole == UserRole.SUPERADMIN) return;
 
         // PARENT can create if room setting allows
         if (userRole == UserRole.PARENT || roomRole == RoomRole.PARENT_MEMBER) {
@@ -239,13 +246,14 @@ public class DiscussionThreadService {
      * Check if user can manage (archive/delete) threads: LEADER, TEACHER, SUPERADMIN.
      */
     private void requireThreadManager(UUID roomId, UUID userId) {
+        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
+        if (userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN) return;
+
         var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId)
                 .orElseThrow(() -> new ForbiddenException("You are not a member of this room"));
-        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
 
         if (roomRole == RoomRole.LEADER) return;
         if (userRole == UserRole.TEACHER) return;
-        if (userRole == UserRole.SUPERADMIN) return;
 
         throw new ForbiddenException("Only room leaders or teachers can manage threads");
     }

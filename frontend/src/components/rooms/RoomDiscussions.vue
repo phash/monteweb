@@ -43,7 +43,11 @@ const userRoomRole = ref<string | null>(null)
 const filteredThreads = computed(() => discussions.threads)
 
 onMounted(async () => {
-  await discussions.fetchThreads(props.roomId)
+  try {
+    await discussions.fetchThreads(props.roomId)
+  } catch {
+    // Threads not accessible (e.g. permission issue)
+  }
   // Check if current user is LEADER and determine room role
   const member = rooms.currentRoom?.members?.find(m => m.userId === auth.user?.id)
   isLeader.value = member?.role === 'LEADER' || auth.isAdmin

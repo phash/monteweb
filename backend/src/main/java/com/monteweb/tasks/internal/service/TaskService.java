@@ -18,6 +18,7 @@ import com.monteweb.tasks.internal.repository.TaskColumnRepository;
 import com.monteweb.tasks.internal.repository.TaskRepository;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -378,8 +379,14 @@ public class TaskService implements TasksModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
     }
 
+    private boolean isSuperAdmin(UUID userId) {
+        return userModule.findById(userId)
+                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
+                .orElse(false);
+    }
+
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!roomModule.isUserInRoom(userId, roomId)) {
+        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }
