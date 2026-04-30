@@ -32,17 +32,17 @@
   },
   "devDependencies": {
     "@pinia/testing": "^1.0.3",
-    "@types/node": "^25.3.0",
-    "@vitejs/plugin-vue": "^6.0.2",
-    "@vitest/coverage-v8": "^4.0.18",
-    "@vue/test-utils": "^2.4.6",
-    "@vue/tsconfig": "^0.8.1",
-    "jsdom": "^28.1.0",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
+    "@types/node": "^25.6.0",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vue/test-utils": "^2.4.9",
+    "@vue/tsconfig": "^0.9.1",
+    "jsdom": "^29.1.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.10",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.18",
     "vitest-axe": "^0.1.0",
-    "vue-tsc": "^3.2.5"
+    "vue-tsc": "^3.2.7"
   }
 }
