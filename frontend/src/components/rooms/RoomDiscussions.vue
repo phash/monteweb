@@ -5,6 +5,7 @@ import { useLocaleDate } from '@/composables/useLocaleDate'
 import { useDiscussionsStore } from '@/stores/discussions'
 import { useAuthStore } from '@/stores/auth'
 import { useRoomsStore } from '@/stores/rooms'
+import { useToast } from 'primevue/usetoast'
 import DiscussionThreadView from './DiscussionThreadView.vue'
 import LoadingSpinner from '@/components/common/LoadingSpinner.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
@@ -23,6 +24,7 @@ const { formatCompactDateTime } = useLocaleDate()
 const discussions = useDiscussionsStore()
 const auth = useAuthStore()
 const rooms = useRoomsStore()
+const toast = useToast()
 
 const selectedThreadId = ref<string | null>(null)
 const showCreateDialog = ref(false)
@@ -45,8 +47,10 @@ const filteredThreads = computed(() => discussions.threads)
 onMounted(async () => {
   try {
     await discussions.fetchThreads(props.roomId)
-  } catch {
-    // Threads not accessible (e.g. permission issue)
+  } catch (e: any) {
+    if (e?.response?.status !== 403) {
+      toast.add({ severity: 'error', summary: t('common.error'), detail: t('discussions.loadError'), life: 4000 })
+    }
   }
   // Check if current user is LEADER and determine room role
   const member = rooms.currentRoom?.members?.find(m => m.userId === auth.user?.id)

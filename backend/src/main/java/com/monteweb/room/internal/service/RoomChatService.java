@@ -37,9 +37,9 @@ public class RoomChatService {
     private final MessagingModuleApi messagingModuleApi;
     private final UserModuleApi userModuleApi;
 
-    private boolean isSuperAdmin(UUID userId) {
+    private boolean hasAdminRole(UUID userId) {
         return userModuleApi.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN)
+                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
                 .orElse(false);
     }
 
@@ -48,7 +48,7 @@ public class RoomChatService {
      */
     @Transactional(readOnly = true)
     public List<RoomChatChannelInfo> getChannels(UUID roomId, UUID userId) {
-        boolean superAdmin = isSuperAdmin(userId);
+        boolean superAdmin = hasAdminRole(userId);
 
         if (!superAdmin && !roomService.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
@@ -82,7 +82,7 @@ public class RoomChatService {
      */
     @Transactional
     public RoomChatChannelInfo getOrCreateChannel(UUID roomId, UUID userId, ChannelType type) {
-        boolean superAdmin = isSuperAdmin(userId);
+        boolean superAdmin = hasAdminRole(userId);
 
         if (!superAdmin && !roomService.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");

@@ -28,15 +28,15 @@ public class FotoboxPermissionService {
     private final FotoboxImageRepository imageRepo;
 
     public FotoboxPermissionLevel getPermission(UUID userId, UUID roomId) {
-        boolean isSuperAdmin = isSuperAdmin(userId);
-        if (!isSuperAdmin && !roomModule.isUserInRoom(userId, roomId)) {
+        boolean hasAdminRole = hasAdminRole(userId);
+        if (!hasAdminRole && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
         var settings = settingsRepo.findByRoomId(roomId).orElse(null);
         if (settings == null || !settings.isEnabled()) {
             throw new ForbiddenException("Fotobox not enabled for this room");
         }
-        if (isSuperAdmin) {
+        if (hasAdminRole) {
             return FotoboxPermissionLevel.CREATE_THREADS;
         }
         var role = roomModule.getUserRoleInRoom(userId, roomId).orElse(null);
@@ -54,20 +54,20 @@ public class FotoboxPermissionService {
     }
 
     public void requireRoomMember(UUID userId, UUID roomId) {
-        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }
 
     public boolean isLeaderOrAdmin(UUID userId, UUID roomId) {
-        if (isSuperAdmin(userId)) {
+        if (hasAdminRole(userId)) {
             return true;
         }
         var role = roomModule.getUserRoleInRoom(userId, roomId).orElse(null);
         return role == RoomRole.LEADER;
     }
 
-    private boolean isSuperAdmin(UUID userId) {
+    private boolean hasAdminRole(UUID userId) {
         return userModule.findById(userId)
                 .map(u -> u.role() == UserRole.SUPERADMIN)
                 .orElse(false);

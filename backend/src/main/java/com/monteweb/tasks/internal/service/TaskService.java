@@ -379,14 +379,14 @@ public class TaskService implements TasksModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
     }
 
-    private boolean isSuperAdmin(UUID userId) {
+    private boolean hasAdminRole(UUID userId) {
         return userModule.findById(userId)
                 .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
                 .orElse(false);
     }
 
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }

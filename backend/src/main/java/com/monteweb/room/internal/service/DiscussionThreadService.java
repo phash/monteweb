@@ -46,7 +46,12 @@ public class DiscussionThreadService {
     }
 
     public Page<ThreadInfo> getThreads(UUID roomId, UUID userId, String statusFilter, Pageable pageable) {
-        requireRoomMember(roomId, userId);
+        // Fetch user role once (reused for membership check + audience filtering)
+        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
+        boolean isAdmin = userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN;
+        if (!isAdmin && !roomModuleApi.isUserInRoom(userId, roomId)) {
+            throw new ForbiddenException("You are not a member of this room");
+        }
 
         var room = roomRepository.findById(roomId).orElse(null);
         var settings = room != null ? room.getSettings() : RoomSettings.defaults();
@@ -57,8 +62,6 @@ public class DiscussionThreadService {
         }
 
         // Determine which audiences the user can see
-        var user = userModuleApi.findById(userId);
-        var userRole = user.map(u -> u.role()).orElse(null);
         var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId).orElse(null);
 
         boolean canSeeAll = userRole == UserRole.TEACHER || userRole == UserRole.SUPERADMIN
@@ -201,14 +204,14 @@ public class DiscussionThreadService {
                 .orElseThrow(() -> new ResourceNotFoundException("Discussion thread", threadId));
     }
 
-    private boolean isSuperAdmin(UUID userId) {
+    private boolean hasAdminRole(UUID userId) {
         return userModuleApi.findById(userId)
                 .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
                 .orElse(false);
     }
 
     private void requireRoomMember(UUID roomId, UUID userId) {
-        if (!isSuperAdmin(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRole(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("You are not a member of this room");
         }
     }
@@ -243,7 +246,7 @@ public class DiscussionThreadService {
     }
 
     /**
-     * Check if user can manage (archive/delete) threads: LEADER, TEACHER, SUPERADMIN.
+     * Check if user can manage (archive/delete) threads: LEADER, TEACHER, SUPERADMIN, SECTION_ADMIN.
      */
     private void requireThreadManager(UUID roomId, UUID userId) {
         var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);

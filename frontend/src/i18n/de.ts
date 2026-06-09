@@ -1016,6 +1016,7 @@ export default {
     audienceAlle: 'Alle',
     audienceEltern: 'Eltern',
     audienceKinder: 'Kinder',
+    loadError: 'Diskussionen konnten nicht geladen werden',
   },
   calendar: {
     title: 'Kalender',

@@ -73,7 +73,7 @@ public class CalendarService implements CalendarModuleApi {
     }
 
     public Page<EventInfo> getRoomEvents(UUID roomId, UUID userId, LocalDate from, LocalDate to, Pageable pageable) {
-        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new IllegalArgumentException("User is not a member of this room");
         }
         return eventRepository.findByRoomId(roomId, from, to, pageable)
@@ -298,9 +298,9 @@ public class CalendarService implements CalendarModuleApi {
                 .stream().map(e -> toEventInfo(e, null)).toList();
     }
 
-    private boolean isSuperAdmin(UUID userId) {
+    private boolean hasAdminRole(UUID userId) {
         return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN)
+                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
                 .orElse(false);
     }
 
