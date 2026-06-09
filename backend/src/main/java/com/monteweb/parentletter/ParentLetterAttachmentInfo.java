@@ -6,7 +6,6 @@ import java.util.UUID;
 public record ParentLetterAttachmentInfo(
     UUID id,
     String originalFilename,
-    String storagePath,
     long fileSize,
     String contentType,
     int sortOrder,

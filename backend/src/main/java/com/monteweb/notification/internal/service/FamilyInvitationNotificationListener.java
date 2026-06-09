@@ -3,8 +3,7 @@ package com.monteweb.notification.internal.service;
 import com.monteweb.family.FamilyInvitationEvent;
 import com.monteweb.notification.NotificationModuleApi;
 import com.monteweb.notification.NotificationType;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,8 +15,7 @@ public class FamilyInvitationNotificationListener {
         this.notificationModule = notificationModule;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onFamilyInvitation(FamilyInvitationEvent event) {
         if (event.accepted()) {
             // Notify inviter that invitation was accepted

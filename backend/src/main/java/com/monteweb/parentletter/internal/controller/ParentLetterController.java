@@ -206,7 +206,8 @@ public class ParentLetterController {
     @GetMapping("/{id}/attachments")
     public ResponseEntity<ApiResponse<List<ParentLetterAttachmentInfo>>> getAttachments(
             @PathVariable UUID id) {
-        var result = parentLetterService.getAttachments(id);
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var result = parentLetterService.getAttachments(id, userId);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
@@ -215,8 +216,8 @@ public class ParentLetterController {
             @PathVariable UUID id,
             @PathVariable UUID attachmentId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        var info = parentLetterService.getAttachmentInfo(attachmentId);
-        var stream = parentLetterService.downloadAttachment(attachmentId, userId);
+        var info = parentLetterService.getAttachmentInfo(id, attachmentId, userId);
+        var stream = parentLetterService.downloadAttachment(id, attachmentId, userId);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_TYPE, info.contentType())
                 .header(HttpHeaders.CONTENT_DISPOSITION,

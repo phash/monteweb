@@ -11,6 +11,8 @@ public record UpdateTaskRequest(
         UUID assigneeId,
         LocalDate dueDate,
         UUID columnId,
-        Integer position
+        Integer position,
+        Boolean clearAssignee,
+        Boolean clearDueDate
 ) {
 }

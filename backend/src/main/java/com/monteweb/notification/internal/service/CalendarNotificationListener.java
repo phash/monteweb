@@ -6,8 +6,7 @@ import com.monteweb.calendar.EventScope;
 import com.monteweb.notification.NotificationModuleApi;
 import com.monteweb.notification.NotificationType;
 import com.monteweb.room.RoomModuleApi;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,8 +24,7 @@ public class CalendarNotificationListener {
         this.roomModule = roomModule;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onEventCreated(EventCreatedEvent event) {
         if (event.scope() != EventScope.ROOM || event.scopeId() == null) return;
 
@@ -38,8 +36,7 @@ public class CalendarNotificationListener {
                 title, message, link, event.eventId());
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onEventCancelled(EventCancelledEvent event) {
         if (event.scope() != EventScope.ROOM || event.scopeId() == null) return;
 

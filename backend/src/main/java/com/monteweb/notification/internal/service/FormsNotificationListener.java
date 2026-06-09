@@ -6,8 +6,7 @@ import com.monteweb.forms.FormType;
 import com.monteweb.notification.NotificationModuleApi;
 import com.monteweb.notification.NotificationType;
 import com.monteweb.room.RoomModuleApi;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,8 +24,7 @@ public class FormsNotificationListener {
         this.roomModule = roomModule;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onFormPublished(FormPublishedEvent event) {
         if (event.scope() != FormScope.ROOM || event.scopeId() == null) return;
 

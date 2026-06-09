@@ -43,7 +43,8 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Page Tree ----
 
-    public List<WikiPageSummary> getPageTree(UUID roomId) {
+    public List<WikiPageSummary> getPageTree(UUID userId, UUID roomId) {
+        requireRoomMembership(userId, roomId);
         var pages = pageRepo.findByRoomIdOrderByTitleAsc(roomId);
         // Build set of IDs that have children
         Set<UUID> parentIds = new HashSet<>();
@@ -66,7 +67,8 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Get Page ----
 
-    public WikiPageResponse getPage(UUID roomId, String slug) {
+    public WikiPageResponse getPage(UUID userId, UUID roomId, String slug) {
+        requireRoomMembership(userId, roomId);
         var page = pageRepo.findByRoomIdAndSlug(roomId, slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Wiki page not found: " + slug));
 
@@ -193,7 +195,7 @@ public class WikiService implements WikiModuleApi {
         eventPublisher.publishEvent(new WikiPageSavedEvent(
                 page.getId(), page.getRoomId(), page.getTitle(), page.getContent(), page.getSlug()));
 
-        return getPage(page.getRoomId(), page.getSlug());
+        return getPage(userId, page.getRoomId(), page.getSlug());
     }
 
     // ---- Delete Page ----
@@ -211,7 +213,9 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Version History ----
 
-    public List<WikiPageVersionResponse> getVersions(UUID pageId) {
+    public List<WikiPageVersionResponse> getVersions(UUID userId, UUID pageId) {
+        var page = requirePage(pageId);
+        requireRoomMembership(userId, page.getRoomId());
         var versions = versionRepo.findByPageIdOrderByCreatedAtDesc(pageId);
 
         Set<UUID> userIds = new HashSet<>();
@@ -232,9 +236,17 @@ public class WikiService implements WikiModuleApi {
                 .toList();
     }
 
-    public WikiPageVersionResponse getVersion(UUID versionId) {
+    public WikiPageVersionResponse getVersion(UUID userId, UUID roomId, UUID versionId) {
         var version = versionRepo.findById(versionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Version not found: " + versionId));
+
+        // Resolve the owning page to determine the room, and ensure the version
+        // actually belongs to the room in the request path (prevents cross-room reads).
+        var page = requirePage(version.getPageId());
+        if (!page.getRoomId().equals(roomId)) {
+            throw new ResourceNotFoundException("Version not found: " + versionId);
+        }
+        requireRoomMembership(userId, page.getRoomId());
 
         String userName = userModule.findById(version.getEditedBy())
                 .map(UserInfo::displayName).orElse("Unbekannt");
@@ -251,7 +263,8 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Search ----
 
-    public List<WikiPageSummary> searchPages(UUID roomId, String query) {
+    public List<WikiPageSummary> searchPages(UUID userId, UUID roomId, String query) {
+        requireRoomMembership(userId, roomId);
         if (query == null || query.trim().isEmpty()) {
             return List.of();
         }

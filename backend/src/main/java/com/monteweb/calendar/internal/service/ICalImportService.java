@@ -19,6 +19,9 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -29,6 +32,7 @@ public class ICalImportService {
 
     private static final Logger log = LoggerFactory.getLogger(ICalImportService.class);
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter ICAL_DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
 
     private final ICalSubscriptionRepository subscriptionRepository;
     private final ICalEventRepository eventRepository;
@@ -182,18 +186,75 @@ public class ICalImportService {
                 pe.endDate = pe.startDate;
             }
         } else {
-            // DATETIME format: 20261225T180000 or 20261225T180000Z
+            // DATETIME format: 20261225T180000 (local), 20261225T180000Z (UTC),
+            // or with a TZID parameter (DTSTART;TZID=Europe/Berlin:20261225T180000).
             pe.allDay = false;
-            pe.startDate = LocalDate.parse(dtStart.substring(0, 8), DATE_FORMAT);
-            pe.startTime = dtStart.substring(9, 11) + ":" + dtStart.substring(11, 13);
+
+            ZoneId targetZone = ZoneId.systemDefault();
+
+            LocalDateTime start = toLocalDateTime(dtStart, extractTzid(block, "DTSTART"), targetZone);
+            pe.startDate = start.toLocalDate();
+            pe.startTime = formatTime(start);
 
             if (dtEnd != null && dtEnd.length() >= 13) {
-                pe.endDate = LocalDate.parse(dtEnd.substring(0, 8), DATE_FORMAT);
-                pe.endTime = dtEnd.substring(9, 11) + ":" + dtEnd.substring(11, 13);
+                LocalDateTime end = toLocalDateTime(dtEnd, extractTzid(block, "DTEND"), targetZone);
+                pe.endDate = end.toLocalDate();
+                pe.endTime = formatTime(end);
             } else {
                 pe.endDate = pe.startDate;
             }
         }
+    }
+
+    /**
+     * Converts an iCal date-time value into a {@link LocalDateTime} expressed in {@code targetZone}.
+     *  - Values ending in {@code Z} are UTC and are converted to the target zone.
+     *  - When a {@code TZID} is supplied, the value is interpreted in that zone and converted.
+     *  - Otherwise the value is treated as floating local time and returned unchanged.
+     */
+    private LocalDateTime toLocalDateTime(String value, String tzid, ZoneId targetZone) {
+        boolean utc = value.endsWith("Z");
+        String raw = utc ? value.substring(0, value.length() - 1) : value;
+        LocalDateTime local = LocalDateTime.parse(raw, ICAL_DATETIME_FORMAT);
+
+        if (utc) {
+            return local.atZone(ZoneOffset.UTC).withZoneSameInstant(targetZone).toLocalDateTime();
+        }
+        if (tzid != null) {
+            try {
+                return local.atZone(ZoneId.of(tzid)).withZoneSameInstant(targetZone).toLocalDateTime();
+            } catch (Exception e) {
+                // Unknown TZID -> fall back to treating the value as floating local time
+                log.debug("Unknown iCal TZID '{}', treating time as floating local", tzid);
+                return local;
+            }
+        }
+        return local;
+    }
+
+    private String formatTime(LocalDateTime dt) {
+        return String.format("%02d:%02d", dt.getHour(), dt.getMinute());
+    }
+
+    /**
+     * Extracts the {@code TZID} parameter for a given property from the raw VEVENT block,
+     * e.g. {@code DTSTART;TZID=Europe/Berlin:...} -> {@code Europe/Berlin}. Returns null if absent.
+     */
+    private String extractTzid(String block, String name) {
+        for (String line : block.split("\n")) {
+            line = line.trim();
+            if (line.startsWith(name + ";")) {
+                int colonIdx = line.indexOf(':');
+                String params = colonIdx >= 0 ? line.substring(name.length() + 1, colonIdx)
+                        : line.substring(name.length() + 1);
+                for (String param : params.split(";")) {
+                    if (param.startsWith("TZID=")) {
+                        return param.substring("TZID=".length()).trim();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private String extractProperty(String block, String name) {

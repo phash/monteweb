@@ -162,4 +162,38 @@ class JobboardControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray());
     }
+
+    @Test
+    void exportCsv_unauthenticated_shouldFail() throws Exception {
+        mockMvc.perform(get("/api/v1/jobs/report/export"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void exportPdf_unauthenticated_shouldFail() throws Exception {
+        mockMvc.perform(get("/api/v1/jobs/report/pdf"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void exportCsv_nonAdmin_shouldBeForbidden() throws Exception {
+        // Newly registered users default to PARENT, which may not access reports.
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "job-export-csv@example.com", "Job", "ExportCsv");
+
+        mockMvc.perform(get("/api/v1/jobs/report/export")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void exportPdf_nonAdmin_shouldBeForbidden() throws Exception {
+        // Newly registered users default to PARENT, which may not access reports.
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "job-export-pdf@example.com", "Job", "ExportPdf");
+
+        mockMvc.perform(get("/api/v1/jobs/report/pdf")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
 }

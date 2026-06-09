@@ -114,6 +114,34 @@ class FeedServiceIntegrationTest {
                 .andExpect(jsonPath("$.data.content").value("Detail test post"));
     }
 
+    @Test
+    void getPost_nonMemberOfRoom_shouldReturn403() throws Exception {
+        // Author (PARENT) creates a room-scoped post
+        String authorToken = TestHelper.registerAndGetToken(mockMvc);
+        String roomId = createRoom(authorToken, "Private Detail Room");
+        String postId = createPost(authorToken, roomId, "Members only");
+
+        // A different user who is not a member of the room must be denied
+        String outsiderToken = TestHelper.registerAndGetToken(mockMvc);
+        mockMvc.perform(get("/api/v1/feed/posts/" + postId)
+                        .header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void getRoomPosts_nonMember_shouldReturn403() throws Exception {
+        // Author (PARENT) creates a room
+        String authorToken = TestHelper.registerAndGetToken(mockMvc);
+        String roomId = createRoom(authorToken, "Private Room Posts");
+        createPost(authorToken, roomId, "Room content");
+
+        // A non-member must not be able to list the room's posts
+        String outsiderToken = TestHelper.registerAndGetToken(mockMvc);
+        mockMvc.perform(get("/api/v1/feed/rooms/" + roomId + "/posts")
+                        .header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().isForbidden());
+    }
+
     // ── Update Post ──────────────────────────────────────────────────
 
     @Test

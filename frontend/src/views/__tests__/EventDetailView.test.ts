@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { createI18n } from 'vue-i18n'
 import EventDetailView from '@/views/EventDetailView.vue'
+import { useAuthStore } from '@/stores/auth'
+import { useCalendarStore } from '@/stores/calendar'
 
 vi.mock('vue-router', () => ({
   useRouter: vi.fn(() => ({ push: vi.fn(), back: vi.fn() })),
@@ -113,8 +115,7 @@ const stubs = {
   Select: { template: '<select class="select-stub" />', props: ['modelValue', 'options', 'optionLabel', 'optionValue', 'placeholder'] },
 }
 
-function mountEventDetail() {
-  const pinia = createPinia()
+function mountEventDetail(pinia = createPinia()) {
   return mount(EventDetailView, {
     props: { id: 'evt-1' },
     global: {
@@ -147,5 +148,48 @@ describe('EventDetailView', () => {
     await wrapper.vm.$nextTick()
     // Either loading or page-title should be rendered
     expect(wrapper.find('.loading-stub').exists() || wrapper.find('.page-title-stub').exists()).toBe(true)
+  })
+
+  it('canManage() returns true for a SECTION_ADMIN who is not the creator', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    // SECTION_ADMIN with a different id than the event creator (createdBy: 'user-1')
+    useAuthStore().user = { id: 'admin-9', role: 'SECTION_ADMIN' } as never
+    const wrapper = mountEventDetail(pinia)
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect(useCalendarStore().currentEvent?.createdBy).toBe('user-1')
+    expect((wrapper.vm as unknown as { canManage: () => boolean }).canManage()).toBe(true)
+  })
+
+  it('canManage() returns true for a SUPERADMIN who is not the creator', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 'super-1', role: 'SUPERADMIN' } as never
+    const wrapper = mountEventDetail(pinia)
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as unknown as { canManage: () => boolean }).canManage()).toBe(true)
+  })
+
+  it('canManage() returns false for a PARENT who is not the creator', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAuthStore().user = { id: 'parent-3', role: 'PARENT' } as never
+    const wrapper = mountEventDetail(pinia)
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as unknown as { canManage: () => boolean }).canManage()).toBe(false)
+  })
+
+  it('canManage() returns true for the event creator regardless of role', async () => {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    // createdBy in the mock is 'user-1'
+    useAuthStore().user = { id: 'user-1', role: 'PARENT' } as never
+    const wrapper = mountEventDetail(pinia)
+    await flushPromises()
+    await wrapper.vm.$nextTick()
+    expect((wrapper.vm as unknown as { canManage: () => boolean }).canManage()).toBe(true)
   })
 })

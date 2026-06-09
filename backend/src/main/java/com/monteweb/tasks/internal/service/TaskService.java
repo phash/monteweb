@@ -73,8 +73,12 @@ public class TaskService implements TasksModuleApi {
 
     /**
      * Returns the full board response with columns and tasks, resolving user names.
+     * Requires the caller to be a member of the room (or an admin) before any board
+     * is read or lazily created.
      */
-    public TaskBoardResponse getBoard(UUID roomId) {
+    @Transactional
+    public TaskBoardResponse getBoard(UUID roomId, UUID userId) {
+        requireRoomMembership(userId, roomId);
         var board = getOrCreateBoard(roomId);
         var columns = columnRepo.findByBoardIdOrderByPosition(board.getId());
         var tasks = taskRepo.findByBoardId(board.getId());
@@ -172,8 +176,10 @@ public class TaskService implements TasksModuleApi {
 
         if (request.title() != null && !request.title().isBlank()) task.setTitle(request.title());
         if (request.description() != null) task.setDescription(request.description());
-        if (request.assigneeId() != null) task.setAssigneeId(request.assigneeId());
-        if (request.dueDate() != null) task.setDueDate(request.dueDate());
+        if (Boolean.TRUE.equals(request.clearAssignee())) task.setAssigneeId(null);
+        else if (request.assigneeId() != null) task.setAssigneeId(request.assigneeId());
+        if (Boolean.TRUE.equals(request.clearDueDate())) task.setDueDate(null);
+        else if (request.dueDate() != null) task.setDueDate(request.dueDate());
         if (request.columnId() != null) {
             var column = columnRepo.findById(request.columnId())
                     .orElseThrow(() -> new ResourceNotFoundException("Column not found"));

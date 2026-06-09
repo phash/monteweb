@@ -57,6 +57,17 @@ public class OidcAuthenticationSuccessHandler implements AuthenticationSuccessHa
             return;
         }
 
+        // Reject the whole SSO flow when the IdP has not asserted email ownership.
+        // OidcUserService links/creates accounts by email (findByEmail); without a verified
+        // email an attacker who registers the victim's email at the IdP could take over the
+        // victim's existing MonteWeb account on first SSO login (classic OIDC linking pitfall).
+        Boolean emailVerified = oidcUser.getEmailVerified();
+        if (!Boolean.TRUE.equals(emailVerified)) {
+            log.warn("OIDC login rejected: email not verified by IdP for subject {}", subject);
+            response.sendRedirect(frontendUrl().concat("/login?error=oidc_email_not_verified"));
+            return;
+        }
+
         String code = codeStore.storeVerifiedClaims(providerName, subject, email, firstName, lastName);
         log.info("OIDC authentication successful for {}, redirecting with auth code", email);
         response.sendRedirect(frontendUrl().concat("/login?oidc_code=" + code));

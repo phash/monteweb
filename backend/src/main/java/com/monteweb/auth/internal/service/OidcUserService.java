@@ -43,6 +43,10 @@ public class OidcUserService {
         }
 
         // 2. Email-based linking: existing user with same email?
+        // SECURITY: This auto-links the external OIDC identity to an existing local account
+        // purely on email match. Safe ONLY because OidcAuthenticationSuccessHandler already
+        // rejected the flow unless the IdP asserted email_verified=true. Do not call this
+        // path with an unverified email. See finding [4]/[5] in the auth security review.
         Optional<UserInfo> byEmail = userModuleApi.findByEmail(email);
         if (byEmail.isPresent()) {
             log.info("Linking OIDC identity to existing user: {}", email);

@@ -6,6 +6,7 @@ import com.monteweb.bookmark.internal.model.Bookmark;
 import com.monteweb.bookmark.internal.repository.BookmarkRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
+@ConditionalOnProperty(prefix = "monteweb.modules", name = "bookmarks.enabled", havingValue = "true")
 @Transactional(readOnly = true)
 public class BookmarkService implements BookmarkModuleApi {
 

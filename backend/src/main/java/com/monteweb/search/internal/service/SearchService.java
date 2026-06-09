@@ -46,7 +46,7 @@ public class SearchService {
 
         // Delegate to Solr if available
         if (solrSearchService != null) {
-            return solrSearchService.search(query.trim(), type, limit);
+            return solrSearchService.search(query.trim(), type, limit, userId);
         }
 
         // Fallback: DB-based search

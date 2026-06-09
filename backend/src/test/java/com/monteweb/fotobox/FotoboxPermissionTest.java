@@ -124,4 +124,35 @@ class FotoboxPermissionTest {
                     .doesNotThrowAnyException();
         }
     }
+
+    // ── Admin Role Consistency (SUPERADMIN + SECTION_ADMIN) ───────────────
+
+    @Nested
+    @DisplayName("Admin Role Consistency")
+    class AdminRoleConsistency {
+
+        @Test
+        @DisplayName("SUPERADMIN is treated as admin even when not a room member")
+        void superAdminNonMemberTreatedAsAdmin() {
+            when(userModule.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.SUPERADMIN)));
+
+            assertThatCode(() -> service.requireRoomMember(USER_ID, ROOM_ID))
+                    .doesNotThrowAnyException();
+            assertThat(service.isLeaderOrAdmin(USER_ID, ROOM_ID)).isTrue();
+        }
+
+        @Test
+        @DisplayName("SECTION_ADMIN is treated as admin even when not a room member")
+        void sectionAdminNonMemberTreatedAsAdmin() {
+            when(userModule.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.SECTION_ADMIN)));
+
+            // requireRoomMember must NOT throw for a non-member SECTION_ADMIN
+            assertThatCode(() -> service.requireRoomMember(USER_ID, ROOM_ID))
+                    .doesNotThrowAnyException();
+            // SECTION_ADMIN must be recognised as leader-or-admin for moderation
+            assertThat(service.isLeaderOrAdmin(USER_ID, ROOM_ID)).isTrue();
+        }
+    }
 }

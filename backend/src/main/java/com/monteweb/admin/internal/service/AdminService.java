@@ -149,7 +149,12 @@ public class AdminService implements AdminModuleApi {
                 "Jitsi kann nicht aktiviert werden, ohne eine eigene Jitsi-Server-URL zu konfigurieren. " +
                 "Bitte tragen Sie zuerst die URL Ihres selbst-gehosteten Jitsi-Servers ein.");
         }
-        config.setModules(modules);
+        // Merge with existing toggles instead of replacing the whole map, so a partial
+        // update does not silently wipe unrelated flags (e.g. maintenance, wopi, clamav,
+        // ldap, directoryAdminOnly). Mirrors the copy-and-merge pattern in updateMaintenance().
+        var existing = new java.util.HashMap<>(config.getModules());
+        existing.putAll(modules);
+        config.setModules(existing);
         return toInfo(configRepository.save(config));
     }
 

@@ -35,7 +35,7 @@ public interface CleaningRegistrationRepository extends JpaRepository<CleaningRe
     List<CleaningRegistration> findSwapOffersForSlot(@Param("slotId") UUID slotId);
 
     @Query("SELECT COUNT(r) FROM CleaningRegistration r JOIN CleaningSlot s ON r.slotId = s.id " +
-            "WHERE r.familyId = :familyId AND r.checkedOut = true " +
+            "WHERE r.familyId = :familyId AND r.checkedOut = true AND r.confirmed = true " +
             "AND s.slotDate BETWEEN :from AND :to")
     long countCompletedByFamilyInRange(@Param("familyId") UUID familyId,
                                        @Param("from") LocalDate from,
@@ -43,7 +43,7 @@ public interface CleaningRegistrationRepository extends JpaRepository<CleaningRe
 
     @Query("SELECT COALESCE(SUM(r.actualMinutes), 0) FROM CleaningRegistration r " +
             "JOIN CleaningSlot s ON r.slotId = s.id " +
-            "WHERE r.familyId = :familyId AND r.checkedOut = true " +
+            "WHERE r.familyId = :familyId AND r.checkedOut = true AND r.confirmed = true " +
             "AND s.slotDate BETWEEN :from AND :to")
     int sumActualMinutesByFamilyInRange(@Param("familyId") UUID familyId,
                                         @Param("from") LocalDate from,

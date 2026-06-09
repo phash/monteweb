@@ -83,6 +83,7 @@ public class CalendarService implements CalendarModuleApi {
     public EventInfo getEvent(UUID eventId, UUID userId) {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
+        checkReadAccess(event, userId);
         return toEventInfo(event, userId);
     }
 
@@ -184,6 +185,8 @@ public class CalendarService implements CalendarModuleApi {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
+        checkReadAccess(event, userId);
+
         if (event.isCancelled()) {
             throw new IllegalStateException("Cannot RSVP to a cancelled event");
         }
@@ -236,6 +239,7 @@ public class CalendarService implements CalendarModuleApi {
     public EventInfo generateJitsiRoom(UUID eventId, UUID userId) {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Event not found"));
+        checkReadAccess(event, userId);
         String shortId = eventId.toString().substring(0, 8);
         event.setJitsiRoomName("monteweb-event-" + shortId);
         eventRepository.save(event);
@@ -246,6 +250,7 @@ public class CalendarService implements CalendarModuleApi {
     public EventInfo removeJitsiRoom(UUID eventId, UUID userId) {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Event not found"));
+        checkReadAccess(event, userId);
         event.setJitsiRoomName(null);
         eventRepository.save(event);
         return toEventInfo(event, userId);
@@ -325,12 +330,63 @@ public class CalendarService implements CalendarModuleApi {
                 }
             }
             case SECTION -> {
-                if (user.role() != UserRole.TEACHER && user.role() != UserRole.SECTION_ADMIN) {
+                if (scopeId == null) throw new IllegalArgumentException("Section ID required for SECTION scope");
+                if (user.role() == UserRole.SECTION_ADMIN) {
+                    // Section admins may only manage events for sections they actually administer
+                    if (user.specialRoles() == null
+                            || !user.specialRoles().contains("SECTION_ADMIN:" + scopeId)) {
+                        throw new IllegalArgumentException("You do not administer this section");
+                    }
+                } else if (user.role() == UserRole.TEACHER) {
+                    // The data model has no direct teacher->section assignment; derive section
+                    // membership from the teacher's rooms (a teacher in a room belonging to the
+                    // target section may manage that section's events).
+                    boolean inSection = roomModule.findByUserId(userId).stream()
+                            .anyMatch(r -> scopeId.equals(r.sectionId()));
+                    if (!inSection) {
+                        throw new IllegalArgumentException("You are not assigned to this section");
+                    }
+                } else {
                     throw new IllegalArgumentException("Only teachers or Elternbeirat can create section events");
                 }
             }
             case SCHOOL -> {
                 throw new IllegalArgumentException("Only admins can create school-wide events");
+            }
+        }
+    }
+
+    /**
+     * Ensures the user is allowed to read/interact with a single event based on its scope.
+     * Mirrors the membership guard used by getRoomEvents so a single-event-by-id path
+     * cannot be used to enumerate private ROOM/SECTION events (IDOR).
+     *  - SCHOOL events: readable by any authenticated user.
+     *  - ROOM events: admin role, or membership in the event's room.
+     *  - SECTION events: admin role, or membership in any room belonging to that section.
+     */
+    private void checkReadAccess(CalendarEvent event, UUID userId) {
+        if (userId == null) {
+            // Internal/system callers (toEventInfo passes null in *ModuleApi facade paths)
+            // pass null userId; those paths are already gated by their own callers.
+            return;
+        }
+        if (hasAdminRole(userId)) return;
+
+        switch (event.getScope()) {
+            case ROOM -> {
+                if (!roomModule.isUserInRoom(userId, event.getScopeId())) {
+                    throw new IllegalArgumentException("User is not a member of this room");
+                }
+            }
+            case SECTION -> {
+                boolean inSection = roomModule.findByUserId(userId).stream()
+                        .anyMatch(r -> event.getScopeId() != null && event.getScopeId().equals(r.sectionId()));
+                if (!inSection) {
+                    throw new IllegalArgumentException("User does not belong to this section");
+                }
+            }
+            case SCHOOL -> {
+                // school-wide events are visible to every authenticated user
             }
         }
     }

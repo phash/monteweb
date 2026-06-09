@@ -196,8 +196,8 @@ public class FileService implements FilesModuleApi {
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("File", fileId));
 
-        // Only uploader or room leaders can delete
-        if (!roomFile.getUploadedBy().equals(userId)) {
+        // Only uploader, room leaders, or admins (SUPERADMIN/SECTION_ADMIN) can delete
+        if (!roomFile.getUploadedBy().equals(userId) && !hasAdminRole(userId)) {
             var role = roomModuleApi.getUserRoleInRoom(userId, roomId);
             if (role.isEmpty() || !"LEADER".equals(role.get().name())) {
                 throw new ForbiddenException("Only the uploader or room leaders can delete files");

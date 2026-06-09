@@ -772,7 +772,7 @@ public class MessagingService implements MessagingModuleApi {
         if (!message.getSenderId().equals(userId)) {
             var user = userModuleApi.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-            if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            if (!isStaffRole(user.role())) {
                 throw new ForbiddenException("Only the poll creator or admin can close this poll");
             }
         }
@@ -792,8 +792,9 @@ public class MessagingService implements MessagingModuleApi {
         if (!ALLOWED_EMOJIS.contains(emoji)) {
             throw new BusinessException("Invalid emoji. Allowed: " + ALLOWED_EMOJIS);
         }
-        messageRepository.findById(messageId)
+        var message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+        requireParticipant(message.getConversationId(), userId);
         var existing = messageReactionRepository.findByMessageIdAndUserIdAndEmoji(messageId, userId, emoji);
         if (existing.isPresent()) {
             messageReactionRepository.delete(existing.get());
@@ -807,6 +808,9 @@ public class MessagingService implements MessagingModuleApi {
     }
 
     public List<MessageInfo.ReactionSummary> getMessageReactions(UUID messageId, UUID currentUserId) {
+        var message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+        requireParticipant(message.getConversationId(), currentUserId);
         var reactions = messageReactionRepository.findByMessageId(messageId);
         return reactions.stream()
                 .collect(Collectors.groupingBy(MessageReaction::getEmoji))

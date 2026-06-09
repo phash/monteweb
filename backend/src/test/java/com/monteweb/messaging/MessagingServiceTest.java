@@ -404,4 +404,56 @@ class MessagingServiceTest {
                     .hasMessageContaining("not a participant");
         }
     }
+
+    // ── Message Reactions ────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Message Reactions")
+    class MessageReactions {
+
+        @Test
+        @DisplayName("Non-participant cannot toggle a reaction (IDOR blocked)")
+        void toggleMessageReaction_nonParticipantThrows() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.toggleMessageReaction(msgId, USER_A, "👍"))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("not a participant");
+
+            verify(messageReactionRepository, never()).save(any(MessageReaction.class));
+        }
+
+        @Test
+        @DisplayName("Participant can add a reaction")
+        void toggleMessageReaction_participantAddsReaction() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(true);
+            when(messageReactionRepository.findByMessageIdAndUserIdAndEmoji(msgId, USER_A, "👍"))
+                    .thenReturn(Optional.empty());
+
+            service.toggleMessageReaction(msgId, USER_A, "👍");
+
+            verify(messageReactionRepository).save(any(MessageReaction.class));
+        }
+
+        @Test
+        @DisplayName("Non-participant cannot read reactions (IDOR blocked)")
+        void getMessageReactions_nonParticipantThrows() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.getMessageReactions(msgId, USER_A))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("not a participant");
+
+            verify(messageReactionRepository, never()).findByMessageId(any(UUID.class));
+        }
+    }
 }

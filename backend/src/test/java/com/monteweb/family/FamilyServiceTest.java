@@ -324,4 +324,125 @@ class FamilyServiceTest {
                     .hasMessageContaining("Not your invitation");
         }
     }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Remove Member (parent-role + last-parent safeguards)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("Remove Member")
+    class RemoveMember {
+
+        @Test
+        @DisplayName("CHILD member cannot remove another member")
+        void removeMember_childRequesterBlocked() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+            var parent = new FamilyMember(family, OTHER_USER_ID, FamilyMemberRole.PARENT);
+            var child = new FamilyMember(family, USER_ID, FamilyMemberRole.CHILD);
+            family.getMembers().add(parent);
+            family.getMembers().add(child);
+
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            // requester (USER_ID) is a CHILD, not a SUPERADMIN
+            when(userModuleApi.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.STUDENT)));
+
+            assertThatThrownBy(() -> service.removeMember(FAMILY_ID, OTHER_USER_ID, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Only family parents");
+
+            assertThat(family.getMembers()).hasSize(2);
+            verify(familyRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("PARENT cannot remove the last parent while children exist")
+        void removeMember_lastParentWithChildrenBlocked() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+            var parent = new FamilyMember(family, USER_ID, FamilyMemberRole.PARENT);
+            var child = new FamilyMember(family, OTHER_USER_ID, FamilyMemberRole.CHILD);
+            family.getMembers().add(parent);
+            family.getMembers().add(child);
+
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            when(userModuleApi.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
+
+            // The sole parent tries to remove themselves while a child remains
+            assertThatThrownBy(() -> service.removeMember(FAMILY_ID, USER_ID, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("last parent");
+
+            assertThat(family.getMembers()).hasSize(2);
+            verify(familyRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("PARENT removes a CHILD member successfully")
+        void removeMember_parentRemovesChild() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+            var parent = new FamilyMember(family, USER_ID, FamilyMemberRole.PARENT);
+            var child = new FamilyMember(family, OTHER_USER_ID, FamilyMemberRole.CHILD);
+            family.getMembers().add(parent);
+            family.getMembers().add(child);
+
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            when(userModuleApi.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
+            stubFamilySave();
+
+            service.removeMember(FAMILY_ID, OTHER_USER_ID, USER_ID);
+
+            assertThat(family.getMembers()).hasSize(1);
+            assertThat(family.getMembers().get(0).getUserId()).isEqualTo(USER_ID);
+            verify(familyRepository).save(family);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Generate Invite Code (parent-role guard)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("Generate Invite Code")
+    class GenerateInviteCode {
+
+        @Test
+        @DisplayName("CHILD member cannot generate an invite code")
+        void generateInviteCode_childRequesterBlocked() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+            var child = new FamilyMember(family, USER_ID, FamilyMemberRole.CHILD);
+            family.getMembers().add(child);
+
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            when(userModuleApi.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.STUDENT)));
+
+            assertThatThrownBy(() -> service.generateInviteCode(FAMILY_ID, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Only family parents");
+
+            verify(familyRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("PARENT member generates an invite code successfully")
+        void generateInviteCode_parentSuccess() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+            var parent = new FamilyMember(family, USER_ID, FamilyMemberRole.PARENT);
+            family.getMembers().add(parent);
+
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            when(userModuleApi.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
+            when(inviteCodeService.generateCode()).thenReturn("NEWCODE");
+            stubFamilySave();
+
+            String code = service.generateInviteCode(FAMILY_ID, USER_ID);
+
+            assertThat(code).isEqualTo("NEWCODE");
+            assertThat(family.getInviteCode()).isEqualTo("NEWCODE");
+            verify(familyRepository).save(family);
+        }
+    }
 }

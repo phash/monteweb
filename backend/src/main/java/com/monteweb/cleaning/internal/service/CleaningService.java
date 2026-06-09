@@ -47,6 +47,9 @@ public class CleaningService implements CleaningModuleApi {
 
     private static final Logger log = LoggerFactory.getLogger(CleaningService.class);
 
+    /** Grace window added to the scheduled slot duration when capping measured check-out minutes. */
+    private static final long CHECKOUT_GRACE_MINUTES = 15;
+
     private final CleaningConfigRepository configRepository;
     private final CleaningSlotRepository slotRepository;
     private final CleaningRegistrationRepository registrationRepository;
@@ -486,14 +489,24 @@ public class CleaningService implements CleaningModuleApi {
         reg.setCheckedOut(true);
         reg.setCheckOutAt(java.time.Instant.now());
 
-        // Calculate actual minutes from check-in to check-out
-        int actualMinutes = (int) Duration.between(reg.getCheckInAt(), reg.getCheckOutAt()).toMinutes();
-        reg.setActualMinutes(actualMinutes);
-        registrationRepository.save(reg);
-
-        // Get hours credit from config
+        // Get hours credit + scheduled duration from config
         CleaningConfig config = configRepository.findById(slot.getConfigId()).orElse(null);
         BigDecimal hoursCredit = config != null ? config.getHoursCredit() : BigDecimal.ZERO;
+
+        // Calculate actual minutes from check-in to check-out, capped against the scheduled
+        // slot duration (+ grace window). Prevents a forgotten check-out from crediting the
+        // family with hundreds/thousands of minutes toward billing.
+        long rawMinutes = Duration.between(reg.getCheckInAt(), reg.getCheckOutAt()).toMinutes();
+        long capMinutes = rawMinutes;
+        if (config != null && config.getStartTime() != null && config.getEndTime() != null) {
+            long scheduledMinutes = Duration.between(config.getStartTime(), config.getEndTime()).toMinutes();
+            if (scheduledMinutes > 0) {
+                capMinutes = Math.min(rawMinutes, scheduledMinutes + CHECKOUT_GRACE_MINUTES);
+            }
+        }
+        int actualMinutes = (int) Math.max(0, capMinutes);
+        reg.setActualMinutes(actualMinutes);
+        registrationRepository.save(reg);
 
         // Check if all checked-in users have checked out -> complete slot
         List<CleaningRegistration> allRegs = registrationRepository.findBySlotId(slotId);

@@ -100,9 +100,7 @@ public class FamilyService implements FamilyModuleApi {
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
 
-        if (!familyRepository.isMember(requestingUserId, familyId)) {
-            throw new BusinessException("Not a member of this family");
-        }
+        assertParentMember(requestingUserId, family);
 
         String code = inviteCodeService.generateCode();
         family.setInviteCode(code);
@@ -139,9 +137,7 @@ public class FamilyService implements FamilyModuleApi {
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
 
-        if (!familyRepository.isMember(requestingUserId, familyId)) {
-            throw new BusinessException("Not a member of this family");
-        }
+        assertParentMember(requestingUserId, family);
 
         if (familyRepository.isMember(childUserId, familyId)) {
             throw new BusinessException("User is already a member of this family");
@@ -159,8 +155,26 @@ public class FamilyService implements FamilyModuleApi {
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
 
-        if (!familyRepository.isMember(requestingUserId, familyId)) {
-            throw new BusinessException("Not a member of this family");
+        // Only a PARENT member (or SUPERADMIN) may remove members — a CHILD must not be
+        // able to remove a PARENT and thereby orphan the Familienverbund.
+        assertParentMember(requestingUserId, family);
+
+        // Enforce the same last-parent-with-children invariant as leaveFamily():
+        // a family of children must always retain at least one responsible parent.
+        var target = family.getMembers().stream()
+                .filter(m -> m.getUserId().equals(memberUserId))
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("Member not found"));
+
+        if (target.getRole() == FamilyMemberRole.PARENT) {
+            long parentCount = family.getMembers().stream()
+                    .filter(m -> m.getRole() == FamilyMemberRole.PARENT)
+                    .count();
+            boolean hasChildren = family.getMembers().stream()
+                    .anyMatch(m -> m.getRole() == FamilyMemberRole.CHILD);
+            if (parentCount <= 1 && hasChildren) {
+                throw new BusinessException("Cannot remove the last parent while children exist in this family");
+            }
         }
 
         family.getMembers().removeIf(m -> m.getUserId().equals(memberUserId));
@@ -274,9 +288,8 @@ public class FamilyService implements FamilyModuleApi {
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
 
-        if (!familyRepository.isMember(inviterId, familyId)) {
-            throw new BusinessException("Not a member of this family");
-        }
+        assertParentMember(inviterId, family);
+
         if (familyRepository.isMember(inviteeId, familyId)) {
             throw new BusinessException("User is already a member of this family");
         }
@@ -402,6 +415,25 @@ public class FamilyService implements FamilyModuleApi {
                 && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN) {
             throw new BusinessException("Only SUPERADMIN or SECTION_ADMIN can manage families");
         }
+    }
+
+    /**
+     * Ensures the requesting user is a PARENT member of the family (or a SUPERADMIN).
+     * CHILD members (typically STUDENT accounts) must not be able to manage the
+     * Familienverbund — generate invite codes, add children, invite or remove members.
+     */
+    private void assertParentMember(UUID userId, Family family) {
+        boolean isSuperAdmin = userModuleApi.findById(userId)
+                .map(u -> u.role() == com.monteweb.user.UserRole.SUPERADMIN)
+                .orElse(false);
+        if (isSuperAdmin) {
+            return;
+        }
+        family.getMembers().stream()
+                .filter(m -> m.getUserId().equals(userId))
+                .findFirst()
+                .filter(m -> m.getRole() == FamilyMemberRole.PARENT)
+                .orElseThrow(() -> new BusinessException("Only family parents can manage members"));
     }
 
     private FamilyInfo toFamilyInfo(Family family) {

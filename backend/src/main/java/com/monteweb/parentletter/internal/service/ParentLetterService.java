@@ -401,21 +401,36 @@ public class ParentLetterService implements ParentLetterModuleApi {
     }
 
     @Transactional(readOnly = true)
-    public List<ParentLetterAttachmentInfo> getAttachments(UUID letterId) {
+    public List<ParentLetterAttachmentInfo> getAttachments(UUID letterId, UUID userId) {
+        requireLetterAccess(letterId, userId);
         return attachmentRepository.findByLetterIdOrderBySortOrder(letterId).stream()
                 .map(this::toAttachmentInfo)
                 .toList();
     }
 
-    public InputStream downloadAttachment(UUID attachmentId, UUID userId) {
+    /**
+     * Load an attachment after verifying that it belongs to the given letter and that
+     * the caller is authorized to access that letter.
+     */
+    private ParentLetterAttachment loadAuthorizedAttachment(UUID letterId, UUID attachmentId, UUID userId) {
         var attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+        if (!attachment.getLetter().getId().equals(letterId)) {
+            throw new ResourceNotFoundException("Attachment", attachmentId);
+        }
+        requireLetterAccess(letterId, userId);
+        return attachment;
+    }
+
+    @Transactional(readOnly = true)
+    public InputStream downloadAttachment(UUID letterId, UUID attachmentId, UUID userId) {
+        var attachment = loadAuthorizedAttachment(letterId, attachmentId, userId);
         return storageService.downloadAttachment(attachment.getStoragePath());
     }
 
-    public ParentLetterAttachmentInfo getAttachmentInfo(UUID attachmentId) {
-        var attachment = attachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Attachment", attachmentId));
+    @Transactional(readOnly = true)
+    public ParentLetterAttachmentInfo getAttachmentInfo(UUID letterId, UUID attachmentId, UUID userId) {
+        var attachment = loadAuthorizedAttachment(letterId, attachmentId, userId);
         return toAttachmentInfo(attachment);
     }
 
@@ -437,7 +452,6 @@ public class ParentLetterService implements ParentLetterModuleApi {
         return new ParentLetterAttachmentInfo(
                 attachment.getId(),
                 attachment.getOriginalFilename(),
-                attachment.getStoragePath(),
                 attachment.getFileSize(),
                 attachment.getContentType(),
                 attachment.getSortOrder(),
@@ -639,6 +653,31 @@ public class ParentLetterService implements ParentLetterModuleApi {
         var role = roomModuleApi.getUserRoleInRoom(userId, roomId);
         if (role.isEmpty() || role.get() != RoomRole.LEADER) {
             throw new ForbiddenException("Only LEADER or SUPERADMIN can manage parent letters");
+        }
+    }
+
+    /**
+     * Authorize read access to a letter (and its attachments).
+     * Allowed: SUPERADMIN, the letter's creator, a LEADER of the letter's room,
+     * or a parent recipient of the letter. Mirrors the checks in
+     * {@link #getLetterDetail} plus the recipient-parent check from {@link #getLetterForParent}.
+     */
+    private void requireLetterAccess(UUID letterId, UUID userId) {
+        var letter = letterRepository.findById(letterId)
+                .orElseThrow(() -> new ResourceNotFoundException("ParentLetter", letterId));
+
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", userId));
+
+        boolean isSuperadmin = user.role() == UserRole.SUPERADMIN;
+        boolean isCreator = userId.equals(letter.getCreatedBy());
+        boolean isLeader = roomModuleApi.getUserRoleInRoom(userId, letter.getRoomId())
+                .map(role -> role == RoomRole.LEADER)
+                .orElse(false);
+        boolean isRecipientParent = recipientRepository.existsByLetterIdAndParentId(letterId, userId);
+
+        if (!isSuperadmin && !isCreator && !isLeader && !isRecipientParent) {
+            throw new ForbiddenException("You are not authorized to access this letter");
         }
     }
 

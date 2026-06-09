@@ -110,6 +110,10 @@ public class FotoboxService implements FotoboxModuleApi {
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("FotoboxThread", threadId);
         }
+        // Enforce audience visibility (mirrors the filter in getThreads)
+        if (!getAllowedAudiences(userId, thread.getRoomId()).contains(thread.getAudience())) {
+            throw new ResourceNotFoundException("FotoboxThread", threadId);
+        }
         return toThreadInfo(thread);
     }
 
@@ -118,6 +122,10 @@ public class FotoboxService implements FotoboxModuleApi {
         var thread = threadRepo.findById(threadId)
                 .orElseThrow(() -> new ResourceNotFoundException("FotoboxThread", threadId));
         if (!thread.getRoomId().equals(roomId)) {
+            throw new ResourceNotFoundException("FotoboxThread", threadId);
+        }
+        // Enforce audience visibility (mirrors the filter in getThreads)
+        if (!getAllowedAudiences(userId, thread.getRoomId()).contains(thread.getAudience())) {
             throw new ResourceNotFoundException("FotoboxThread", threadId);
         }
         var images = imageRepo.findByThreadIdOrderBySortOrderAscCreatedAtAsc(threadId);
@@ -289,6 +297,11 @@ public class FotoboxService implements FotoboxModuleApi {
         var thread = threadRepo.findById(image.getThreadId())
                 .orElseThrow(() -> new ResourceNotFoundException("FotoboxThread", image.getThreadId()));
         permissionService.requirePermission(userId, thread.getRoomId(), FotoboxPermissionLevel.VIEW_ONLY);
+        // Enforce audience visibility (mirrors the filter in getThreads) — return 404 to avoid
+        // confirming existence of images in an audience the user may not see.
+        if (!getAllowedAudiences(userId, thread.getRoomId()).contains(thread.getAudience())) {
+            throw new ResourceNotFoundException("FotoboxThread", thread.getId());
+        }
         return image;
     }
 

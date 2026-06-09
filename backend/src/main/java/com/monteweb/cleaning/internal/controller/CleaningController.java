@@ -11,6 +11,9 @@ import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -151,11 +154,11 @@ public class CleaningController {
     @PutMapping("/registrations/{registrationId}/update-minutes")
     public ResponseEntity<ApiResponse<CleaningSlotInfo.RegistrationInfo>> updateRegistrationMinutes(
             @PathVariable UUID registrationId,
-            @RequestBody UpdateMinutesRequest request) {
+            @Valid @RequestBody UpdateMinutesRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var result = cleaningService.updateRegistrationMinutes(registrationId, request.actualMinutes(), userId);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
-    public record UpdateMinutesRequest(int actualMinutes) {}
+    public record UpdateMinutesRequest(@Min(0) @Max(1440) int actualMinutes) {}
 }

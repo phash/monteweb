@@ -123,6 +123,37 @@ class DiscussionThreadControllerIntegrationTest {
     }
 
     @Test
+    void getThread_leaderCanReadKinderAudienceThread() throws Exception {
+        // Regression guard for the audience-filter refactor: a room LEADER (canSeeAll)
+        // must still be able to read a thread restricted to the KINDER audience.
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "disc-kinder@example.com", "Disc", "Kinder");
+
+        String roomId = createRoomAndGetId(token);
+
+        var threadResult = mockMvc.perform(post("/api/v1/rooms/" + roomId + "/threads")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Kinder Thread", "content": "Content", "audience": "KINDER"}
+                                """))
+                .andReturn();
+        String threadId = TestHelper.parseResponse(threadResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+
+        mockMvc.perform(get("/api/v1/rooms/" + roomId + "/threads/" + threadId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.audience").value("KINDER"));
+
+        // And replies endpoint must remain accessible to the leader for that thread
+        mockMvc.perform(get("/api/v1/rooms/" + roomId + "/threads/" + threadId + "/replies")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.content").isArray());
+    }
+
+    @Test
     void getReplies_shouldReturnPage() throws Exception {
         String token = TestHelper.registerAndGetToken(mockMvc,
                 "disc-replies@example.com", "Disc", "Replies");

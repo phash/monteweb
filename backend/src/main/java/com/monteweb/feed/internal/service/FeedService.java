@@ -67,6 +67,79 @@ public class FeedService implements FeedModuleApi {
         this.eventPublisher = eventPublisher;
     }
 
+    // --- Helpers ---
+
+    /**
+     * Treats both SUPERADMIN and SECTION_ADMIN as administrators, matching the
+     * convention used across the codebase (e.g. RoomChatService, DiscussionThreadService).
+     */
+    private boolean hasAdminRole(UserInfo user) {
+        return user != null && (user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN);
+    }
+
+    private boolean hasAdminRole(UUID userId) {
+        return userModuleApi.findById(userId).map(this::hasAdminRole).orElse(false);
+    }
+
+    /**
+     * Verifies that the given user may read the given post.
+     * Mirrors the personal-feed visibility rules: targetUserIds, parentOnly (students blocked),
+     * and room membership. Author and admins always have access.
+     */
+    public void verifyPostReadAccess(FeedPost post, UUID userId) {
+        var user = userModuleApi.findById(userId).orElse(null);
+
+        // Author and admins always have access
+        if (post.getAuthorId().equals(userId) || hasAdminRole(user)) {
+            return;
+        }
+
+        // targetUserIds — if set, only listed users (besides author/admin) can access
+        if (post.getTargetUserIds() != null && post.getTargetUserIds().length > 0) {
+            boolean isTarget = false;
+            for (UUID targetId : post.getTargetUserIds()) {
+                if (targetId.equals(userId)) {
+                    isTarget = true;
+                    break;
+                }
+            }
+            if (!isTarget) {
+                throw new ForbiddenException("You do not have access to this post");
+            }
+        }
+
+        // parentOnly — students cannot access parent-only posts
+        if (post.isParentOnly() && user != null && user.role() == UserRole.STUDENT) {
+            throw new ForbiddenException("You do not have access to this post");
+        }
+
+        // Room membership if post is room-scoped
+        if (post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
+            if (!roomModuleApi.isUserInRoom(userId, post.getSourceId())) {
+                throw new ForbiddenException("You do not have access to this post");
+            }
+        }
+    }
+
+    /**
+     * Loads the post by id and verifies the given user may read it.
+     * Throws ResourceNotFoundException if the post does not exist, ForbiddenException if access is denied.
+     */
+    public void verifyPostReadAccess(UUID postId, UUID userId) {
+        var post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+        verifyPostReadAccess(post, userId);
+    }
+
+    /**
+     * Verifies the given user may read posts of the given room (membership or admin).
+     */
+    public void verifyRoomReadAccess(UUID roomId, UUID userId) {
+        if (!hasAdminRole(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
+            throw new ForbiddenException("Not a member of this room");
+        }
+    }
+
     // --- Public API (FeedModuleApi) ---
 
     @Override
@@ -189,9 +262,11 @@ public class FeedService implements FeedModuleApi {
         }
 
         String authorName = userModuleApi.findById(authorId).map(UserInfo::displayName).orElse("Unknown");
+        // Covers all three valid post shapes (content, poll, title-only) without NPE
+        String eventBody = content != null ? content : (pollRequest != null ? pollRequest.question() : title);
         eventPublisher.publishEvent(new FeedPostCreatedEvent(
                 post.getId(), authorId, authorName, title,
-                content != null ? content : pollRequest.question(),
+                eventBody,
                 sourceType, sourceId
         ));
 
@@ -262,7 +337,7 @@ public class FeedService implements FeedModuleApi {
         // Only author or admin can close
         var user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-        if (!post.getAuthorId().equals(userId) && user.role() != UserRole.SUPERADMIN) {
+        if (!post.getAuthorId().equals(userId) && !hasAdminRole(user)) {
             throw new ForbiddenException("Only the author or admin can close this poll");
         }
 
@@ -295,7 +370,7 @@ public class FeedService implements FeedModuleApi {
         var user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        if (!post.getAuthorId().equals(userId) && user.role() != UserRole.SUPERADMIN) {
+        if (!post.getAuthorId().equals(userId) && !hasAdminRole(user)) {
             throw new ForbiddenException("Only the author or admin can delete this post");
         }
         // Clean up attachment files from storage
@@ -314,7 +389,7 @@ public class FeedService implements FeedModuleApi {
         if (!post.getAuthorId().equals(userId)) {
             var user = userModuleApi.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-            if (user.role() != UserRole.SUPERADMIN) {
+            if (!hasAdminRole(user)) {
                 throw new ForbiddenException("Only the author or admin can add attachments");
             }
         }
@@ -368,9 +443,9 @@ public class FeedService implements FeedModuleApi {
                 }
             }
             if (!isTarget) {
-                // Allow author and SUPERADMIN
+                // Allow author and admins
                 var user = userModuleApi.findById(userId).orElse(null);
-                if (!post.getAuthorId().equals(userId) && (user == null || user.role() != UserRole.SUPERADMIN)) {
+                if (!post.getAuthorId().equals(userId) && !hasAdminRole(user)) {
                     throw new ForbiddenException("You do not have access to this attachment");
                 }
             }
@@ -387,9 +462,9 @@ public class FeedService implements FeedModuleApi {
         // Check room membership if post is room-scoped
         if (post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
             if (!roomModuleApi.isUserInRoom(userId, post.getSourceId())) {
-                // Allow SUPERADMIN
+                // Allow admins
                 var user = userModuleApi.findById(userId).orElse(null);
-                if (user == null || user.role() != UserRole.SUPERADMIN) {
+                if (!hasAdminRole(user)) {
                     throw new ForbiddenException("You do not have access to this attachment");
                 }
             }
@@ -408,7 +483,7 @@ public class FeedService implements FeedModuleApi {
         if (!post.getAuthorId().equals(userId)) {
             var user = userModuleApi.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-            if (user.role() != UserRole.SUPERADMIN) {
+            if (!hasAdminRole(user)) {
                 throw new ForbiddenException("Only the author or admin can delete attachments");
             }
         }
@@ -421,7 +496,18 @@ public class FeedService implements FeedModuleApi {
     public FeedPostInfo togglePin(UUID postId, UUID userId) {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
+
         // Only room leaders or admins can pin
+        boolean allowed = hasAdminRole(userId);
+        if (!allowed && post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
+            allowed = roomModuleApi.getUserRoleInRoom(userId, post.getSourceId())
+                    .map(role -> role == com.monteweb.room.RoomRole.LEADER)
+                    .orElse(false);
+        }
+        if (!allowed) {
+            throw new ForbiddenException("Only room leaders or admins can pin posts");
+        }
+
         post.setPinned(!post.isPinned());
         return toPostInfo(postRepository.save(post));
     }

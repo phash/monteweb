@@ -85,11 +85,14 @@ public class JwtService {
     /**
      * Generates a short-lived (5 min) temp token for 2FA verification.
      * Contains user ID, email, and role — but type="2fa_temp" prevents use as access token.
+     * A random "jti" (JWT ID) is included so the token can be marked single-use
+     * server-side once 2FA verification succeeds (replay protection).
      */
     public String generateTempToken(UUID userId, String email, String role) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .subject(userId.toString())
+                .id(UUID.randomUUID().toString())
                 .claims(Map.of(
                         "email", email,
                         "role", role,

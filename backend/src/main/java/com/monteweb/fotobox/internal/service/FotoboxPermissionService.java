@@ -69,7 +69,7 @@ public class FotoboxPermissionService {
 
     private boolean hasAdminRole(UUID userId) {
         return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN)
+                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
                 .orElse(false);
     }
 

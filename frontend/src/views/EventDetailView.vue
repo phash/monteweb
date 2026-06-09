@@ -52,7 +52,7 @@ onMounted(async () => {
 
 function canManage() {
   if (!calendar.currentEvent) return false
-  if (auth.isAdmin) return true
+  if (auth.isAdmin || auth.isSectionAdmin) return true
   return calendar.currentEvent.createdBy === auth.user?.id
 }
 

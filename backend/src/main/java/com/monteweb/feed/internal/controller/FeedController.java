@@ -68,6 +68,7 @@ public class FeedController {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var post = feedService.findPostById(id)
                 .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("FeedPost", id));
+        feedService.verifyPostReadAccess(id, userId);
         return ResponseEntity.ok(ApiResponse.ok(enrichPost(post, userId)));
     }
 
@@ -99,6 +100,7 @@ public class FeedController {
             @PathVariable UUID id,
             @PageableDefault(size = 20) Pageable pageable) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        feedService.verifyPostReadAccess(id, userId);
         var page = feedService.getComments(id, pageable);
         var enriched = page.map(c -> enrichComment(c, userId));
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(enriched)));
@@ -109,6 +111,7 @@ public class FeedController {
             @PathVariable UUID id,
             @Valid @RequestBody CreateCommentRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        feedService.verifyPostReadAccess(id, userId);
         var comment = feedService.addComment(id, userId, request.content());
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(comment));
     }
@@ -203,6 +206,7 @@ public class FeedController {
             @PathVariable UUID roomId,
             @PageableDefault(size = 20) Pageable pageable) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        feedService.verifyRoomReadAccess(roomId, userId);
         var page = feedService.getPostsBySource(SourceType.ROOM, roomId, pageable);
         return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(enrichPage(page, userId))));
     }

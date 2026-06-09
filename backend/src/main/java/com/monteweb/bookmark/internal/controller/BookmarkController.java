@@ -5,6 +5,7 @@ import com.monteweb.bookmark.internal.service.BookmarkService;
 import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import com.monteweb.shared.util.SecurityUtils;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/bookmarks")
+@ConditionalOnProperty(prefix = "monteweb.modules", name = "bookmarks.enabled", havingValue = "true")
 public class BookmarkController {
 
     private final BookmarkService bookmarkService;

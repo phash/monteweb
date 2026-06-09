@@ -481,6 +481,39 @@ class CleaningServiceTest {
         }
 
         @Test
+        @DisplayName("Forgotten check-out caps actualMinutes at scheduled duration + grace window")
+        void checkOut_forgottenCheckoutIsCapped() {
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "IN_PROGRESS");
+            // Config scheduled 14:00-16:00 => 120 scheduled minutes, +15 grace => cap at 135
+            CleaningConfig config = makeConfig(null, 5);
+
+            CleaningRegistration reg = makeRegistration(SLOT_ID, USER_ID, true, false);
+            // Checked in 25 hours ago (forgot to check out) -> raw 1500 minutes
+            reg.setCheckInAt(Instant.now().minusSeconds(25 * 3600));
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(registrationRepository.findBySlotIdAndUserId(SLOT_ID, USER_ID))
+                    .thenReturn(Optional.of(reg));
+            when(registrationRepository.save(any(CleaningRegistration.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            when(slotRepository.save(any(CleaningSlot.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            when(configRepository.findById(slot.getConfigId())).thenReturn(Optional.of(config));
+            when(registrationRepository.findBySlotId(SLOT_ID)).thenReturn(List.of(reg));
+            mockSectionLookup();
+
+            service.checkOut(SLOT_ID, USER_ID);
+
+            // Capped at scheduled (120) + grace (15) instead of the raw 1500 minutes
+            assertThat(reg.getActualMinutes()).isEqualTo(135);
+
+            ArgumentCaptor<CleaningCompletedEvent> eventCaptor =
+                    ArgumentCaptor.forClass(CleaningCompletedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue().actualMinutes()).isEqualTo(135);
+        }
+
+        @Test
         @DisplayName("Check-out without prior check-in throws BusinessException")
         void checkOut_notCheckedIn() {
             CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "IN_PROGRESS");
