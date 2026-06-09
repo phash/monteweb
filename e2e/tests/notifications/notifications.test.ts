@@ -140,7 +140,7 @@ async function findFirstNotification(
 // US-325: In-App-Benachrichtigungsliste
 // ============================================================================
 test.describe('US-325: In-App-Benachrichtigungsliste', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   test('GET /notifications returns paginated list', async ({ page }) => {
     await login(page, accounts.parent)
@@ -285,7 +285,7 @@ test.describe('US-325: In-App-Benachrichtigungsliste', () => {
 // US-326: Unread-Count Badge
 // ============================================================================
 test.describe('US-326: Unread-Count Badge', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   test('GET /notifications/unread-count returns numeric count', async ({ page }) => {
     await login(page, accounts.parent)
@@ -358,7 +358,7 @@ test.describe('US-326: Unread-Count Badge', () => {
 // US-327: Benachrichtigung als gelesen markieren
 // ============================================================================
 test.describe('US-327: Benachrichtigung als gelesen markieren', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   test('PUT /notifications/{id}/read marks a single notification as read', async ({ page }) => {
     await login(page, accounts.parent)
@@ -430,7 +430,7 @@ test.describe('US-327: Benachrichtigung als gelesen markieren', () => {
 // US-328: Alle als gelesen markieren
 // ============================================================================
 test.describe('US-328: Alle als gelesen markieren', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   test('PUT /notifications/read-all marks all notifications as read', async ({ page }) => {
     await login(page, accounts.parent)
@@ -518,7 +518,7 @@ test.describe('US-328: Alle als gelesen markieren', () => {
 // US-329: Benachrichtigung loeschen
 // ============================================================================
 test.describe('US-329: Benachrichtigung loeschen', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   test('DELETE /notifications/{id} removes notification from list', async ({ page }) => {
     await login(page, accounts.parent)
@@ -657,7 +657,7 @@ test.describe('US-329: Benachrichtigung loeschen', () => {
 // US-330: Benachrichtigungstypen
 // ============================================================================
 test.describe('US-330: Benachrichtigungstypen', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   // Triggering various notification types requires cross-module events
   // (e.g., creating a room join request, publishing a form, sending a message).
@@ -677,7 +677,7 @@ test.describe('US-330: Benachrichtigungstypen', () => {
 // US-331: Push-Benachrichtigungen
 // ============================================================================
 test.describe('US-331: Push-Benachrichtigungen', () => {
-  test.use({ storageState: 'e2e/.auth/parent.json' })
+  test.use({ storageState: 'auth-states/parent.json' })
 
   // Push notifications require:
   // 1. Browser push permission grant (not automatable in headless Playwright)
