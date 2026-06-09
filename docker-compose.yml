@@ -233,9 +233,12 @@ services:
     profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      # Set GRAFANA_PASSWORD in .env before enabling the monitoring profile. Bound to
-      # 127.0.0.1 only (see ports below), so the default is loopback-reachable at worst.
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      # Set GRAFANA_PASSWORD in .env before enabling the monitoring profile. ${VAR:?}
+      # (required) can't be used — Compose interpolates all services regardless of
+      # `profiles:`, so it would break the core stack's `docker compose build`/`up`.
+      # The default is NOT the well-known admin/admin and the dashboard is bound to
+      # 127.0.0.1 only (see ports below), so it is loopback-reachable at worst.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-changeme_set_a_strong_grafana_password}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -261,10 +264,13 @@ services:
       # this server can drive document conversion/command callbacks unauthenticated.
       - JWT_ENABLED=${ONLYOFFICE_JWT_ENABLED:-true}
       # Set ONLYOFFICE_JWT_SECRET in .env when enabling the office profile (must match
-      # the backend). Empty default keeps `docker compose` usable without the profile;
-      # with JWT enabled the server rejects unsigned requests, so an unset secret simply
-      # makes the editor non-functional rather than insecure.
-      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-}
+      # the backend). NOTE: ${VAR:?} (required) cannot be used here — Docker Compose
+      # interpolates ALL services regardless of `profiles:`, so :? would break
+      # `docker compose build`/`up` of the core stack. Instead it FAILS CLOSED: the
+      # default is the placeholder the backend WopiController explicitly rejects
+      # (and the backend's own ONLYOFFICE_JWT_SECRET stays empty), so an unset secret
+      # makes WOPI operations be rejected on both sides — no auth bypass.
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-changeme-onlyoffice-jwt-secret}
     ports:
       # Loopback only — backend<->onlyoffice traffic stays on the internal Docker
       # network. If browsers must reach the editor directly, proxy it via nginx/Caddy
