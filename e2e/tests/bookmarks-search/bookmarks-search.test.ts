@@ -8,7 +8,7 @@ import { selectors } from '../../helpers/selectors'
 
 type Page = import('@playwright/test').Page
 
-const BASE = 'http://localhost'
+const BASE = process.env.BASE_URL || 'http://localhost'
 
 // ---------------------------------------------------------------------------
 // Token cache — avoids hitting rate limits by reusing tokens per user
