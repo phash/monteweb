@@ -131,6 +131,11 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@monteweb.local}
       SOLR_URL: http://solr:8983/solr/monteweb
       MONTEWEB_RATE_LIMIT_ENABLED: ${MONTEWEB_RATE_LIMIT_ENABLED:-true}
+      # Empty/default profile enforces strong-secret validation (fail closed).
+      # Set SPRING_PROFILES_ACTIVE=dev in .env for local dev with relaxed checks.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
+      # Shared HMAC secret with the ONLYOFFICE document server (office profile).
+      ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-}
     networks:
       - backend
       - frontend
@@ -210,7 +215,8 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     ports:
-      - "9090:9090"
+      # Loopback only — Prometheus has no auth; reach it via SSH tunnel.
+      - "127.0.0.1:9090:9090"
     networks:
       - backend
     depends_on:
@@ -224,13 +230,14 @@ services:
     profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required (set a strong value in .env)}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3000:3000"
+      # Loopback only — reach the dashboard via SSH tunnel, do not expose publicly.
+      - "127.0.0.1:3000:3000"
     networks:
       - backend
     depends_on:
@@ -244,7 +251,11 @@ services:
     restart: unless-stopped
     profiles: ["office"]
     environment:
-      - JWT_ENABLED=false
+      # JWT MUST be enabled — the backend WopiController signs/verifies WOPI
+      # callbacks with ONLYOFFICE_JWT_SECRET. With JWT disabled, anyone reaching
+      # this server can drive document conversion/command callbacks unauthenticated.
+      - JWT_ENABLED=${ONLYOFFICE_JWT_ENABLED:-true}
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:?ONLYOFFICE_JWT_SECRET is required and must match the backend}
     ports:
       - "8443:443"
     volumes:

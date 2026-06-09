@@ -10,8 +10,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 
-import java.util.Arrays;
-
 /**
  * Validates that critical secrets are properly configured in non-dev/test environments.
  * Logs errors for every weak/default secret found, counts problems, and in production
@@ -52,8 +50,8 @@ public class SecretValidationConfig {
     public void validateSecrets() {
         int problems = 0;
 
-        if (jwtSecret.isBlank() || jwtSecret.contains("dev-only")) {
-            log.error("SECURITY: JWT_SECRET is not configured or uses the insecure default. Set JWT_SECRET environment variable.");
+        if (jwtSecret.isBlank() || jwtSecret.contains("dev-only") || jwtSecret.startsWith("change-this-to-a-secure")) {
+            log.error("SECURITY: JWT_SECRET is not configured or uses the insecure example placeholder. Set JWT_SECRET environment variable.");
             problems++;
         } else if (jwtSecret.length() < 64) {
             log.error("SECURITY: JWT_SECRET is too short ({}). Must be at least 64 characters.", jwtSecret.length());
@@ -81,8 +79,8 @@ public class SecretValidationConfig {
         }
 
         if (encryptionSecret.isBlank()) {
+            // Falls back to JWT_SECRET (documented behaviour) — warn but do not abort startup.
             log.warn("SECURITY: ENCRYPTION_SECRET is not set. AES key falls back to JWT_SECRET — set a separate ENCRYPTION_SECRET (64+ chars).");
-            problems++;
         } else if (encryptionSecret.length() < 64) {
             log.warn("SECURITY: ENCRYPTION_SECRET is too short ({} chars). Use at least 64 characters.", encryptionSecret.length());
             problems++;
@@ -92,14 +90,13 @@ public class SecretValidationConfig {
         }
 
         if (problems > 0) {
-            String profiles = String.join(",", Arrays.asList(environment.getActiveProfiles()));
-            boolean isProd = profiles.contains("prod") || profiles.contains("production");
-            if (isProd) {
-                throw new IllegalStateException(
-                        "SECURITY: " + problems + " secret validation failure(s) detected in production! Fix configuration before starting.");
-            } else {
-                log.warn("SECURITY WARNING: {} secret validation failure(s) detected. These MUST be fixed before production deployment!", problems);
-            }
+            // This bean is @Profile("!dev & !test"), so it only runs in real
+            // (non-dev/non-test) environments. Fail closed: never boot a real
+            // deployment with weak/default secrets. For local development with
+            // relaxed validation, activate the 'dev' profile (SPRING_PROFILES_ACTIVE=dev).
+            throw new IllegalStateException(
+                    "SECURITY: " + problems + " secret validation failure(s) detected. "
+                            + "Fix the configuration before starting, or set SPRING_PROFILES_ACTIVE=dev for local development.");
         } else {
             log.info("Secret validation passed: all critical secrets are configured.");
         }
