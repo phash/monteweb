@@ -7,6 +7,63 @@ import { login } from '../../helpers/auth'
 // ============================================================================
 
 /**
+ * Helper: fetch a user's id by logging in with their credentials.
+ */
+async function getUserId(page: import('@playwright/test').Page, account: { email: string; password: string }): Promise<string | null> {
+  const base = process.env.BASE_URL || 'http://localhost'
+  const loginRes = await page.request.post(`${base}/api/v1/auth/login`, {
+    data: { email: account.email, password: account.password },
+  })
+  if (!loginRes.ok()) return null
+  const token = (await loginRes.json()).data?.accessToken
+  if (!token) return null
+  const meRes = await page.request.get(`${base}/api/v1/users/me`, { headers: { Authorization: `Bearer ${token}` } })
+  if (!meRes.ok()) return null
+  return (await meRes.json()).data?.id ?? null
+}
+
+/**
+ * Helper: create a room led by the teacher with the parent + student added as
+ * members, fotobox enabled, and return its id. Audience-visibility tests need a
+ * room ALL three roles belong to (the /rooms list now shows non-member rooms,
+ * so picking "the first room" lands on one where the parent/student can't see
+ * any threads). The caller must be logged in as the teacher.
+ */
+async function createSharedFotoboxRoom(page: import('@playwright/test').Page): Promise<string | null> {
+  // Resolve the parent/student user ids FIRST. getUserId logs in via the API,
+  // which sets auth cookies on the shared page.request context — so we must
+  // resolve all ids before doing any teacher-authenticated requests, then
+  // restore the teacher session below.
+  const memberIds: string[] = []
+  for (const account of [accounts.parent, accounts.student]) {
+    const userId = await getUserId(page, account)
+    if (userId) memberIds.push(userId)
+  }
+
+  // Restore the teacher session (clobbered by the logins above) before creating
+  // the room / threads.
+  await login(page, accounts.teacher)
+
+  const createRes = await page.request.post('/api/v1/rooms', {
+    data: { name: `E2E-Fotobox-Room ${Date.now()}`, description: 'fotobox audience test', type: 'KLASSE' },
+  })
+  if (!createRes.ok()) return null
+  const roomId = (await createRes.json()).data?.id as string | undefined
+  if (!roomId) return null
+
+  for (const userId of memberIds) {
+    await page.request.post(`/api/v1/rooms/${roomId}/members`, {
+      data: { userId, role: 'MEMBER' },
+    }).catch(() => undefined)
+  }
+
+  await page.request.put(`/api/v1/rooms/${roomId}/fotobox/settings`, {
+    data: { enabled: true, defaultPermission: 'POST_IMAGES', maxImagesPerThread: 50, maxFileSizeMb: 10 },
+  })
+  return roomId
+}
+
+/**
  * Helper: get the first room ID the current user is a member of via API.
  */
 async function getFirstRoomId(page: import('@playwright/test').Page): Promise<string | null> {
@@ -344,9 +401,9 @@ test.describe('US-251: Fotobox-Thread erstellen', () => {
 test.describe('US-252: Thread-Audience fuer verschiedene Rollen', () => {
 
   test('parent auto-creates PARENTS_ONLY threads regardless of audience parameter', async ({ page }) => {
-    // First enable fotobox and set permission to CREATE_THREADS
+    // Create a room the parent is a member of, then allow members to create threads.
     await login(page, accounts.teacher)
-    const roomId = await getFirstRoomId(page)
+    const roomId = await createSharedFotoboxRoom(page)
     if (!roomId) {
       test.skip()
       return
@@ -413,13 +470,13 @@ test.describe('US-252: Thread-Audience fuer verschiedene Rollen', () => {
 
   test('student sees only ALL and STUDENTS_ONLY threads', async ({ page }) => {
     await login(page, accounts.teacher)
-    const roomId = await getFirstRoomId(page)
+    // Use a room the student is a member of (and fotobox-enabled) so the student
+    // can actually list threads.
+    const roomId = await createSharedFotoboxRoom(page)
     if (!roomId) {
       test.skip()
       return
     }
-
-    await ensureFotoboxEnabled(page, roomId)
 
     const suffix = Date.now()
     const tAll = await createThreadViaApi(page, roomId, `All-${suffix}`, 'ALL')
@@ -448,13 +505,13 @@ test.describe('US-252: Thread-Audience fuer verschiedene Rollen', () => {
 
   test('parent sees only ALL and PARENTS_ONLY threads', async ({ page }) => {
     await login(page, accounts.teacher)
-    const roomId = await getFirstRoomId(page)
+    // Use a room the parent is a member of (and fotobox-enabled) so the parent
+    // can actually list threads.
+    const roomId = await createSharedFotoboxRoom(page)
     if (!roomId) {
       test.skip()
       return
     }
-
-    await ensureFotoboxEnabled(page, roomId)
 
     const suffix = Date.now()
     const tAll = await createThreadViaApi(page, roomId, `All-${suffix}`, 'ALL')

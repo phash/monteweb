@@ -10,6 +10,45 @@ import { selectors, toastWithText } from '../../helpers/selectors'
 type Page = import('@playwright/test').Page
 
 /**
+ * Helper: ensure a given account belongs to a family.
+ *
+ * Jobboard auto-assignment and hour-crediting are family-based: a PRIVATE job is
+ * auto-assigned to the creator's family, and applying for a job assigns the
+ * applicant's family. A user with no family therefore cannot be auto-assigned
+ * (the job stays OPEN) and cannot apply. The family-module E2E tests now reliably
+ * remove the parent from any family, so we (re-)establish one here.
+ *
+ * Returns nothing; logs in via the API which sets cookies on page.request — the
+ * caller's own login() in the test body re-establishes the desired session.
+ */
+async function ensureHasFamily(page: Page, account: { email: string; password: string }): Promise<void> {
+  const base = process.env.BASE_URL || 'http://localhost'
+  const loginRes = await page.request.post(`${base}/api/v1/auth/login`, {
+    data: { email: account.email, password: account.password },
+  })
+  if (!loginRes.ok()) return
+  const token = (await loginRes.json()).data?.accessToken
+  if (!token) return
+  const headers = { Authorization: `Bearer ${token}` }
+
+  const mineRes = await page.request.get(`${base}/api/v1/families/mine`, { headers })
+  if (mineRes.ok()) {
+    const families = (await mineRes.json()).data ?? []
+    if (families.length > 0) return
+  }
+  await page.request.post(`${base}/api/v1/families`, {
+    headers,
+    data: { name: `E2E-Job-Fam-${Date.now()}` },
+  }).catch(() => undefined)
+}
+
+// The parent (primary job applicant/creator) must belong to a family for
+// auto-assignment and hour-crediting to work.
+test.beforeEach(async ({ page }) => {
+  await ensureHasFamily(page, accounts.parent)
+})
+
+/**
  * Helper: navigate to the jobboard page and wait for it to load.
  */
 async function goToJobboard(page: Page): Promise<void> {

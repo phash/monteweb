@@ -223,11 +223,9 @@ test.describe('US-040: Hauptnavigation -- Menuepunkte nach Rolle', () => {
     await expect(sidebar.locator('text=Dashboard')).toBeVisible()
     await expect(sidebar.locator('a:has-text("Räume")')).toBeVisible()
 
-    // Student has canHaveFamily=true (STUDENT is included in canHaveFamily)
-    // So Familie IS shown for students. The US says students don't see Familie,
-    // but the code shows canHaveFamily includes STUDENT.
-    // We test the actual behavior:
-    await expect(sidebar.locator('a:has-text("Familie")')).toBeVisible()
+    // canHaveFamily is now restricted to PARENT and SUPERADMIN, so a STUDENT
+    // does NOT see the Familie menu item (matching this test's intent).
+    await expect(sidebar.locator('a:has-text("Familie")')).not.toBeVisible()
 
     // Student should NOT see Verwaltung
     await expect(sidebar.locator('a:has-text("Verwaltung")')).not.toBeVisible()
@@ -243,8 +241,9 @@ test.describe('US-040: Hauptnavigation -- Menuepunkte nach Rolle', () => {
     // Section admin should see Bereichsverwaltung
     await expect(sidebar.locator('a:has-text("Bereichsverwaltung")')).toBeVisible()
 
-    // Section admin should NOT see Verwaltung (not a SUPERADMIN)
-    await expect(sidebar.locator('a:has-text("Verwaltung")')).not.toBeVisible()
+    // Section admin should NOT see the SUPERADMIN "Verwaltung" link. Use an exact
+    // text match — "Verwaltung" as a substring also matches "Bereichsverwaltung".
+    await expect(sidebar.locator('a').filter({ hasText: /^Verwaltung$/ })).not.toBeVisible()
   })
 
   test('user menu contains Profil and Abmelden', async ({ page }) => {
@@ -366,10 +365,11 @@ test.describe('US-042: Navigation -- Benachrichtigungsglocke', () => {
     await expect(bellButton).toBeVisible({ timeout: 10000 })
     await bellButton.click()
 
-    // Popover should open with "Benachrichtigungen" header
+    // Popover should open with "Benachrichtigungen" header. Use exact match —
+    // "Benachrichtigungen" also matches the "Keine Benachrichtigungen" empty state.
     const popover = page.locator('.notification-popover, .p-popover')
     await expect(popover).toBeVisible({ timeout: 5000 })
-    await expect(popover.locator('text=Benachrichtigungen')).toBeVisible()
+    await expect(popover.getByText('Benachrichtigungen', { exact: true })).toBeVisible()
   })
 
   test('notification popover shows "Alle gelesen" button when unread exist', async ({ page }) => {
@@ -484,16 +484,17 @@ test.describe('US-045: Globale Suche (Ctrl+K)', () => {
     await page.waitForLoadState('networkidle')
     await expect(page.locator('.page-title')).toBeVisible({ timeout: 10000 })
 
-    // Press Ctrl+K to open search
-    await page.keyboard.press('Control+k')
-
-    // The GlobalSearch dialog should appear
+    // Press Ctrl+K to open search. The keystroke can be missed if the keydown
+    // handler isn't bound yet under parallel load, so press until the dialog shows.
     const searchDialog = page.locator('.global-search-dialog, .p-dialog')
-    await expect(searchDialog).toBeVisible({ timeout: 5000 })
+    await expect(async () => {
+      await page.keyboard.press('Control+k')
+      await expect(searchDialog).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 15000 })
 
     // Dialog should contain the search input
     const searchInput = searchDialog.locator('.search-input, input[placeholder]')
-    await expect(searchInput).toBeVisible()
+    await expect(searchInput.first()).toBeVisible()
   })
 
   test('clicking search trigger in header opens search dialog', async ({ page }) => {
@@ -635,13 +636,15 @@ test.describe('US-046: PWA-Installation', () => {
   })
 
   test('web app manifest is served correctly', async ({ page }) => {
-    // Verify the manifest file is accessible
-    const response = await page.goto('/manifest.webmanifest')
+    // Use the request API rather than page.goto: the manifest is served with a
+    // non-HTML content-type (application/octet-stream), which makes a real
+    // navigation start a download and throws in page.goto.
+    const response = await page.request.get('/manifest.webmanifest')
 
-    if (!response || response.status() === 404) {
+    if (response.status() === 404) {
       // Try alternate path
-      const altResponse = await page.goto('/manifest.json')
-      if (!altResponse || altResponse.status() === 404) {
+      const altResponse = await page.request.get('/manifest.json')
+      if (altResponse.status() === 404) {
         test.skip()
         return
       }

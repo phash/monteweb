@@ -217,7 +217,8 @@ test.describe('US-300: Wiki-Seite erstellen', () => {
     expect(created!.content).toBe(content)
     expect(created!.slug).toBeTruthy()
     expect(created!.roomId).toBe(roomId)
-    expect(created!.parentId).toBeNull()
+    // null fields are omitted from the serialized response → undefined
+    expect(created!.parentId ?? null).toBeNull()
 
     // Cleanup
     await deleteWikiPage(page, roomId, created!.id)
@@ -968,7 +969,8 @@ test.describe('US-310: Task erstellen', () => {
     expect(task).toBeTruthy()
     expect(task!.title).toBe(title)
     expect(task!.columnId).toBe(col!.id)
-    expect(task!.description).toBeNull()
+    // null fields are omitted from the serialized response → undefined
+    expect(task!.description ?? null).toBeNull()
 
     // Cleanup
     await deleteTask(page, roomId, task!.id)

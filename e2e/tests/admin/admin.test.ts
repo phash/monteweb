@@ -129,18 +129,32 @@ test.describe('US-340: Benutzer erstellen und Profil bearbeiten (Admin)', () => 
     const listBody = await listRes.json()
     const users = (listBody.data || listBody).content
     expect(users.length).toBeGreaterThan(0)
-    const userId = users[0].id
+    const targetUser = users[0]
+    const userId = targetUser.id
+    // Capture the original names so we can restore them — the teacher is a shared
+    // account, and a lingering renamed profile breaks other tests that match the
+    // teacher by display name.
+    const originalFirstName = targetUser.firstName ?? 'Test'
+    const originalLastName = targetUser.lastName ?? 'Lehrer'
 
-    // Update profile
-    const updateRes = await page.request.put(`/api/v1/admin/users/${userId}/profile`, {
-      headers: { ...authHeader(token), 'Content-Type': 'application/json' },
-      data: {
-        firstName: 'Lehrer',
-        lastName: 'Testupdate',
-      },
-    })
-    // Should succeed (200 or 204)
-    expect(updateRes.status()).toBeLessThan(300)
+    try {
+      // Update profile
+      const updateRes = await page.request.put(`/api/v1/admin/users/${userId}/profile`, {
+        headers: { ...authHeader(token), 'Content-Type': 'application/json' },
+        data: {
+          firstName: 'Lehrer',
+          lastName: 'Testupdate',
+        },
+      })
+      // Should succeed (200 or 204)
+      expect(updateRes.status()).toBeLessThan(300)
+    } finally {
+      // Restore the original profile name.
+      await page.request.put(`/api/v1/admin/users/${userId}/profile`, {
+        headers: { ...authHeader(token), 'Content-Type': 'application/json' },
+        data: { firstName: originalFirstName, lastName: originalLastName },
+      }).catch(() => undefined)
+    }
   })
 
   test('API: teacher cannot update user profiles via admin endpoint', async ({ page }) => {

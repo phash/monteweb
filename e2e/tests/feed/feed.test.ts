@@ -29,6 +29,31 @@ async function navigateToFirstRoom(page: import('@playwright/test').Page): Promi
 }
 
 /**
+ * Helper: create a room via API as the current (authenticated) user and
+ * navigate the UI to it. The creator becomes the room LEADER, so the
+ * PostComposer is enabled and posting is allowed.
+ *
+ * This is needed because the /rooms list now shows ALL rooms (incl. ones the
+ * user is not a member of), so navigating to "the first room" can land on a
+ * room where the user cannot post (composer disabled / read-only).
+ *
+ * Returns the room name, or null if the room could not be created.
+ */
+async function navigateToOwnRoom(page: import('@playwright/test').Page): Promise<string | null> {
+  const roomName = `E2E-Feed-Room ${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const res = await page.request.post('/api/v1/rooms', {
+    data: { name: roomName, description: 'E2E feed test room', type: 'KLASSE' },
+  })
+  if (!res.ok()) return null
+  const roomId = (await res.json()).data?.id as string | undefined
+  if (!roomId) return null
+
+  await page.goto(`/rooms/${roomId}`)
+  await page.waitForLoadState('networkidle')
+  return roomName
+}
+
+/**
  * Helper: create a post via API and return its id.
  * Uses page.request to make authenticated API calls.
  */
@@ -206,10 +231,11 @@ test.describe('US-070: Beitrag erstellen (T/SA im Raum)', () => {
     await expect(contentArea).toBeVisible()
   })
 
-  test('teacher can create a post in room and sees success toast', async ({ page }) => {
+  test('teacher can create a post in room and it appears in the feed', async ({ page }) => {
     await login(page, accounts.teacher)
 
-    const roomName = await navigateToFirstRoom(page)
+    // Create a room the teacher leads so the composer is enabled.
+    const roomName = await navigateToOwnRoom(page)
     if (!roomName) {
       test.skip()
       return
@@ -228,25 +254,18 @@ test.describe('US-070: Beitrag erstellen (T/SA im Raum)', () => {
     await expect(publishButton).toBeEnabled()
     await publishButton.click()
 
-    // Expect success toast "Beitrag veröffentlicht"
-    await expect(page.locator(toastWithText('Beitrag veröffentlicht'))).toBeVisible({ timeout: 10000 })
-
-    // The new post should appear in the room feed
-    await page.waitForTimeout(1000) // Wait for feed refresh
+    // The room post handler does not emit a toast (unlike the dashboard); the
+    // success signal is the new post appearing in the room feed.
     const newPost = page.locator(`.feed-post:has-text("${uniqueContent}")`)
-    const postAppeared = await newPost.isVisible({ timeout: 5000 }).catch(() => false)
-
-    // Clean up: if post appeared, try to delete it
-    if (postAppeared) {
-      // Verify the post text is actually there
-      await expect(newPost.locator('.post-content')).toContainText(uniqueContent)
-    }
+    await expect(newPost.first()).toBeVisible({ timeout: 10000 })
+    await expect(newPost.first().locator('.post-content')).toContainText(uniqueContent)
   })
 
   test('teacher can create a post with optional title', async ({ page }) => {
     await login(page, accounts.teacher)
 
-    const roomName = await navigateToFirstRoom(page)
+    // Create a room the teacher leads so the composer is enabled.
+    const roomName = await navigateToOwnRoom(page)
     if (!roomName) {
       test.skip()
       return
@@ -261,14 +280,18 @@ test.describe('US-070: Beitrag erstellen (T/SA im Raum)', () => {
     await titleInput.fill(uniqueTitle)
 
     // Fill content
+    const uniqueContent = `Testinhalt mit Titel ${Date.now()}`
     const contentTextarea = composer.locator('.composer-content textarea').first()
-    await contentTextarea.fill('Testinhalt mit Titel')
+    await contentTextarea.fill(uniqueContent)
 
     // Publish
     const publishButton = composer.locator('button:has-text("Veröffentlichen")')
+    await expect(publishButton).toBeEnabled()
     await publishButton.click()
 
-    await expect(page.locator(toastWithText('Beitrag veröffentlicht'))).toBeVisible({ timeout: 10000 })
+    // The post (with its title) should appear in the room feed.
+    const newPost = page.locator(`.feed-post:has-text("${uniqueTitle}")`)
+    await expect(newPost.first()).toBeVisible({ timeout: 10000 })
   })
 
   test('admin sees PostComposer on dashboard (school-wide scope)', async ({ page }) => {
@@ -505,6 +528,16 @@ test.describe('US-073: Beitrag loeschen', () => {
 
   test('teacher cannot delete other users\' posts (no trash icon)', async ({ page }) => {
     await login(page, accounts.teacher)
+
+    // Fetch the teacher's CURRENT display name from the API rather than relying
+    // on the fixture constant — other E2E tests may have edited the teacher's
+    // profile name, which would otherwise misclassify the teacher's own posts.
+    const meRes = await page.request.get('/api/v1/users/me')
+    const me = (await meRes.json()).data
+    const teacherDisplayName: string = me?.displayName
+      || `${me?.firstName ?? ''} ${me?.lastName ?? ''}`.trim()
+      || accounts.teacher.displayName
+
     await page.waitForLoadState('networkidle')
 
     const feedList = page.locator('.feed-list')
@@ -527,7 +560,7 @@ test.describe('US-073: Beitrag loeschen', () => {
       const post = posts.nth(i)
       const authorName = await post.locator('.post-meta strong').textContent()
       // If this is not the teacher's post, check there's no delete button
-      if (authorName && !authorName.includes(accounts.teacher.displayName)) {
+      if (authorName && !authorName.includes(teacherDisplayName)) {
         const deleteButton = post.locator('.post-footer button:has(.pi-trash)')
         const hasDelete = await deleteButton.isVisible().catch(() => false)
         expect(hasDelete).toBe(false)
@@ -825,9 +858,11 @@ test.describe('US-076: Reaktionen auf Beitraege', () => {
     const picker = reactionBar.locator('.reaction-picker')
     await expect(picker).toBeVisible({ timeout: 3000 })
 
-    // Click the first emoji
+    // Click the first emoji. The picker auto-closes on mouseleave, so the
+    // normal actionability mouse-move can dismiss it before the click lands.
+    // Use force + no-trial to click without the hover stability checks.
     const firstEmoji = picker.locator('.picker-emoji').first()
-    await firstEmoji.click()
+    await firstEmoji.click({ force: true })
 
     // Reaction chip should appear (or counter increment)
     await page.waitForTimeout(1000)
@@ -1142,7 +1177,9 @@ test.describe('US-082: Feed im Raum', () => {
   test('room feed shows posts specific to that room', async ({ page }) => {
     await login(page, accounts.teacher)
 
-    const roomName = await navigateToFirstRoom(page)
+    // Use a room the teacher is a member of (leader) so the Info-Board renders
+    // the feed/empty state rather than a non-member placeholder.
+    const roomName = await navigateToOwnRoom(page)
     if (!roomName) {
       test.skip()
       return
@@ -1207,7 +1244,7 @@ test.describe('US-083: Beitrag-Quell-Labels', () => {
     await page.waitForLoadState('networkidle')
 
     const feedList = page.locator('.feed-list')
-    await expect(feedList).toBeVisible({ timeout: 10000 })
+    await expect(feedList).toBeVisible({ timeout: 20000 })
 
     // Look for posts with a source label
     const postSources = page.locator('.feed-post .post-source')
@@ -1437,22 +1474,17 @@ test.describe('US-087: Beitrag schulweit erstellen (nur SA)', () => {
     await expect(page.locator(toastWithText('Beitrag veröffentlicht'))).toBeVisible({ timeout: 10000 })
   })
 
-  test('teacher can also create posts from dashboard (school-wide scope)', async ({ page }) => {
+  test('teacher cannot create school-wide posts (admins/Elternbeirat only)', async ({ page }) => {
+    // NOTE: Only SUPERADMIN/SECTION_ADMIN/Elternbeirat may create school-wide
+    // (SCHOOL-scope) posts now. The dashboard PostComposer is still rendered for
+    // teachers (frontend follow-up: hide/disable it for non-authorized roles),
+    // but the backend correctly rejects the school-wide post with 403.
     await login(page, accounts.teacher)
-    await page.waitForLoadState('networkidle')
 
-    const composer = page.locator('.post-composer')
-    await expect(composer).toBeVisible({ timeout: 5000 })
-
-    // Teachers have the PostComposer on dashboard too (v-if="auth.isTeacher || auth.isAdmin")
-    const uniqueContent = `Lehrer-Dashboard-Post ${Date.now()}`
-    const contentTextarea = composer.locator('.composer-content textarea').first()
-    await contentTextarea.fill(uniqueContent)
-
-    const publishButton = composer.locator('button:has-text("Veröffentlichen")')
-    await publishButton.click()
-
-    await expect(page.locator(toastWithText('Beitrag veröffentlicht'))).toBeVisible({ timeout: 10000 })
+    const response = await page.request.post('/api/v1/feed/posts', {
+      data: { sourceType: 'SCHOOL', content: `Lehrer-Schulweit-Post ${Date.now()}` },
+    })
+    expect(response.status()).toBe(403)
   })
 
   test('parent cannot create school-wide posts (no PostComposer on dashboard)', async ({ page }) => {
@@ -1567,9 +1599,11 @@ test.describe('US-090: Zugriffsschutz -- unautorisierter API-Zugriff', () => {
       },
     })
 
-    // Login with wrong credentials should return 401 (not 403/500)
-    // The point is the endpoint itself is accessible (not blocked by auth filter)
-    expect([200, 401]).toContain(response.status())
+    // The point is the endpoint itself is accessible (not blocked by the auth
+    // filter). Wrong credentials are surfaced as a 422 BUSINESS_ERROR
+    // ("Invalid credentials") in MonteWeb; 200/401 are also acceptable signals
+    // that the endpoint is reachable.
+    expect([200, 401, 422]).toContain(response.status())
   })
 
   test('unauthenticated request to protected endpoint returns 401', async ({ page }) => {

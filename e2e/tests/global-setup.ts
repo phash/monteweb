@@ -155,7 +155,7 @@ for (const [key, account] of Object.entries(accounts)) {
       sessionStorage.setItem('accessToken', accessToken)
     }, token)
     await page.reload()
-    await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 15000 })
+    await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 30000 })
 
     // Save storage state (cookies + localStorage — sessionStorage doesn't persist but we handle it)
     await context.storageState({ path: path.join(authDir, `${key}.json`) })

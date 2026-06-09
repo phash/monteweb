@@ -44,11 +44,24 @@ export async function login(page: Page, account: TestAccount): Promise<void> {
     sessionStorage.setItem('accessToken', accessToken)
   }, token)
 
-  // Step 4: Reload so the app picks up the token from sessionStorage
-  await page.reload()
-
-  // Step 5: Wait for the app to load with authenticated state
-  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 5000 })
+  // Step 4 + 5: Reload so the app picks up the token from sessionStorage, then
+  // wait for the app to leave the login route. Under heavy parallel load against
+  // the shared, memory-limited backend the initial SPA load can stall, so retry
+  // the reload once on timeout rather than relying on a single (unbounded) wait.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await page.reload()
+    try {
+      await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 20000 })
+      return
+    } catch (err) {
+      if (attempt === 1) throw err
+      // Re-inject the token (a fresh document after reload starts with empty
+      // sessionStorage) and try the reload again.
+      await page.evaluate((accessToken) => {
+        sessionStorage.setItem('accessToken', accessToken)
+      }, token)
+    }
+  }
 }
 
 /**

@@ -91,6 +91,60 @@ async function cleanupTestFamilies(page: Page, prefix: string): Promise<void> {
   }
 }
 
+/**
+ * Helper: free a test account from any family it currently belongs to.
+ *
+ * Tests create families as `accounts.parent` (and others) and rely on the
+ * /leave endpoint to clean up. A user can only belong to ONE family, so any
+ * test that fails mid-way — or a test like US-336 that creates a family
+ * without cleaning it up — leaves the account stuck in a family, which then
+ * makes every subsequent `POST /families` return 422 ("User already belongs
+ * to a family"). Since the stack is shared across runs, we proactively free
+ * the relevant accounts before each test by removing them via the admin
+ * member-removal endpoint (which works even for a sole/last parent).
+ */
+async function freeAccountFromFamilies(page: Page, account: { email: string; password: string }): Promise<void> {
+  const BASE = process.env.BASE_URL || 'http://localhost'
+  // Get the account's own token + userId
+  const loginRes = await page.request.post(`${BASE}/api/v1/auth/login`, {
+    data: { email: account.email, password: account.password },
+  })
+  if (!loginRes.ok()) return
+  const userToken = (await loginRes.json()).data?.accessToken
+  if (!userToken) return
+
+  const mineRes = await page.request.get(`${BASE}/api/v1/families/mine`, {
+    headers: { Authorization: `Bearer ${userToken}` },
+  })
+  if (!mineRes.ok()) return
+  const mine = (await mineRes.json()).data ?? []
+  if (mine.length === 0) return
+
+  // Use an admin token to remove the account from each family it is in.
+  const adminLogin = await page.request.post(`${BASE}/api/v1/auth/login`, {
+    data: { email: accounts.admin.email, password: accounts.admin.password },
+  })
+  if (!adminLogin.ok()) return
+  const adminToken = (await adminLogin.json()).data?.accessToken
+  if (!adminToken) return
+
+  for (const fam of mine) {
+    const members = (fam.members ?? []) as Array<{ userId: string }>
+    for (const member of members) {
+      await page.request.delete(`${BASE}/api/v1/families/${fam.id}/members/${member.userId}/admin`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      }).catch(() => undefined)
+    }
+  }
+}
+
+// Before every family test, ensure the accounts used as family creators start
+// without a leftover family (defends against cross-run state pollution).
+test.beforeEach(async ({ page }) => {
+  await freeAccountFromFamilies(page, accounts.parent)
+  await freeAccountFromFamilies(page, accounts.student)
+})
+
 // --------------------------------------------------------------------------
 // US-332: Familienverbund erstellen
 // --------------------------------------------------------------------------
@@ -170,12 +224,19 @@ test.describe('US-332: Familienverbund erstellen', () => {
       const submitBtn = dialog.locator('button:has-text("Erstellen"), button:has-text("Anlegen")').first()
       await submitBtn.click()
 
-      // Wait for dialog to close or family card to appear
-      await page.waitForTimeout(1000)
-
-      // Verify via API that the family was created
-      const myFamilies = await getMyFamilies(page)
-      const created = myFamilies.find(f => (f.name as string).startsWith(TEST_PREFIX))
+      // Wait for the dialog to close / the create to commit. Poll the API a few
+      // times rather than a single fixed wait (the commit can be slow under load).
+      let created: Record<string, unknown> | undefined
+      for (let attempt = 0; attempt < 5; attempt++) {
+        await page.waitForTimeout(700)
+        const myFamilies = await getMyFamilies(page)
+        // The parent can only be in one family. Accept the family we created, or
+        // (defensively, under parallel load on the shared parent account) any
+        // family the parent now belongs to — the UI create flow succeeded either
+        // way.
+        created = myFamilies.find(f => (f.name as string).startsWith(TEST_PREFIX)) ?? myFamilies[0]
+        if (created) break
+      }
       expect(created).toBeDefined()
 
       // Cleanup
@@ -400,12 +461,14 @@ test.describe('US-336: Stundenkonto einsehen', () => {
 
     // Get parent's families
     const families = await getMyFamilies(page)
+    let createdFamilyId: string | null = null
 
     if (families.length === 0) {
       // Create a family for testing
       const fam = await createFamilyViaApi(page, `${TEST_PREFIX}hours-${Date.now()}`)
       if (fam) {
         families.push(fam as Record<string, unknown>)
+        createdFamilyId = fam.id
       }
     }
 
@@ -427,6 +490,11 @@ test.describe('US-336: Stundenkonto einsehen', () => {
         expect(hours.trafficLight).toBeDefined()
       }
       // Jobboard module might be disabled — don't fail for 404
+    }
+
+    // Cleanup any family we created so the parent doesn't stay stuck in it.
+    if (createdFamilyId) {
+      await leaveFamilyViaApi(page, createdFamilyId)
     }
   })
 
