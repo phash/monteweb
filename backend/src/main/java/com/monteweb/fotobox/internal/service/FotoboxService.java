@@ -13,6 +13,7 @@ import com.monteweb.room.RoomRole;
 import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.ClamAvService;
 import com.monteweb.user.UserModuleApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -42,6 +43,7 @@ public class FotoboxService implements FotoboxModuleApi {
     private final RoomModuleApi roomModule;
     private final UserModuleApi userModule;
     private final ApplicationEventPublisher eventPublisher;
+    private final ClamAvService clamAvService;
 
     // --- Settings ---
 
@@ -222,6 +224,17 @@ public class FotoboxService implements FotoboxModuleApi {
             }
 
             String contentType = storageService.validateAndDetectContentType(file);
+
+            // Virus scan before storing (no-op unless the 'clamav' module toggle is enabled).
+            try {
+                ClamAvService.ScanResult scan = clamAvService.scan(file.getBytes());
+                if (!scan.isClean()) {
+                    throw new BadRequestException("File rejected: malware detected (" + scan.virusName() + ")");
+                }
+            } catch (java.io.IOException e) {
+                throw new BadRequestException("Could not read the uploaded file for virus scanning");
+            }
+
             String extension = FotoboxStorageService.extensionFromContentType(contentType);
             UUID imageId = UUID.randomUUID();
 

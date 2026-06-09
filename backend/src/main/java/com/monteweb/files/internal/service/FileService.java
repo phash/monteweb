@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.monteweb.shared.util.ClamAvService;
 import com.monteweb.shared.util.FileValidationUtils;
 
 import java.io.InputStream;
@@ -41,19 +42,22 @@ public class FileService implements FilesModuleApi {
     private final RoomModuleApi roomModuleApi;
     private final UserModuleApi userModuleApi;
     private final ApplicationEventPublisher eventPublisher;
+    private final ClamAvService clamAvService;
 
     public FileService(RoomFileRepository fileRepository,
                        RoomFolderRepository folderRepository,
                        FileStorageService storageService,
                        RoomModuleApi roomModuleApi,
                        UserModuleApi userModuleApi,
-                       ApplicationEventPublisher eventPublisher) {
+                       ApplicationEventPublisher eventPublisher,
+                       ClamAvService clamAvService) {
         this.fileRepository = fileRepository;
         this.folderRepository = folderRepository;
         this.storageService = storageService;
         this.roomModuleApi = roomModuleApi;
         this.userModuleApi = userModuleApi;
         this.eventPublisher = eventPublisher;
+        this.clamAvService = clamAvService;
     }
 
     // ---- Public API (FilesModuleApi) ----
@@ -146,6 +150,16 @@ public class FileService implements FilesModuleApi {
 
         // Detect actual content type via magic bytes instead of trusting client header
         String detectedContentType = FileValidationUtils.detectContentType(file);
+
+        // Virus scan before storing (no-op unless the 'clamav' module toggle is enabled).
+        try {
+            ClamAvService.ScanResult scan = clamAvService.scan(file.getBytes());
+            if (!scan.isClean()) {
+                throw new BusinessException("File rejected: malware detected (" + scan.virusName() + ")");
+            }
+        } catch (java.io.IOException e) {
+            throw new BusinessException("Could not read the uploaded file for virus scanning");
+        }
 
         String storedName = UUID.randomUUID() + "_" + sanitizeFileName(file.getOriginalFilename());
         String storagePath = storageService.upload(roomId, folderId, storedName, file, detectedContentType);
