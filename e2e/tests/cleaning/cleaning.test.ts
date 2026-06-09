@@ -109,18 +109,31 @@ async function getQrTokenViaApi(page: Page, slotId: string): Promise<string | nu
 
 /**
  * Helper: register a user for a slot via API.
+ *
+ * Retries a couple of times: under heavy parallel load against the shared
+ * backend the register POST can transiently fail (timeout / 5xx), and a
+ * spurious null here cascades into "0 registrations" assertion failures.
  */
 async function registerForSlotViaApi(
   page: Page,
   slotId: string
 ): Promise<Record<string, unknown> | null> {
-  try {
-    const response = await page.request.post(`/api/v1/cleaning/slots/${slotId}/register`)
-    if (response.ok()) {
-      const json = await response.json()
-      return json.data
-    }
-  } catch { /* ignore */ }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const response = await page.request.post(`/api/v1/cleaning/slots/${slotId}/register`)
+      if (response.ok()) {
+        const json = await response.json()
+        return json.data
+      }
+      // 409/422 "already registered" won't change — stop. Other failures
+      // (429 rate-limit, 5xx, transient conflicts under load) are retried.
+      if ([409, 422].includes(response.status())) {
+        const body = await response.json().catch(() => ({}))
+        if (/already|registered|bereits/i.test(JSON.stringify(body))) return null
+      }
+    } catch { /* transient — retry */ }
+    await page.waitForTimeout(800)
+  }
   return null
 }
 
@@ -206,7 +219,8 @@ test.describe('US-220: Putzaktion erstellen (wiederkehrend)', () => {
     expect(config.title).toBe(title)
     expect(config.active).toBe(true)
     expect(config.dayOfWeek).toBe(3)
-    expect(config.specificDate).toBeNull()
+    // null fields are omitted from the serialized response (NON_NULL) → undefined
+    expect(config.specificDate ?? null).toBeNull()
     expect(config.participantCircle).toBe('SECTION')
     expect(config.sectionId).toBe(sectionId)
   })
@@ -286,7 +300,7 @@ test.describe('US-221: Putzaktion erstellen (einmalig)', () => {
 
     expect(recurring).toBeTruthy()
     expect(oneTime).toBeTruthy()
-    expect(recurring!.specificDate).toBeNull()
+    expect(recurring!.specificDate ?? null).toBeNull()
     expect(oneTime!.specificDate).toBe('2026-05-20')
   })
 })
@@ -352,16 +366,16 @@ test.describe('US-222: Slots generieren fuer einen Zeitraum', () => {
     const from = '2026-05-01'
     const to = '2026-05-31'
 
-    // Generate first batch
+    // Generate first batch — endpoint returns the newly-created slots
     const slots1 = await generateSlotsViaApi(page, config!.id as string, from, to)
     expect(slots1).toBeTruthy()
-    const count1 = slots1!.length
+    expect(slots1!.length).toBeGreaterThan(0)
 
-    // Re-generate same range — should not produce duplicates
+    // Re-generate same range — should create no NEW slots (idempotent, no duplicates).
+    // The endpoint now returns only the slots it just created, so a re-run yields an empty array.
     const slots2 = await generateSlotsViaApi(page, config!.id as string, from, to)
     expect(slots2).toBeTruthy()
-    // Slot count should remain the same (no duplicates added)
-    expect(slots2!.length).toBe(count1)
+    expect(slots2!.length).toBe(0)
   })
 })
 
@@ -474,8 +488,8 @@ test.describe('US-225: Fuer Putzslot registrieren', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-06-01',
-      '2026-06-08'
+      '2027-02-01',
+      '2027-02-07'
     )
     expect(slots).toBeTruthy()
     expect(slots!.length).toBeGreaterThan(0)
@@ -508,8 +522,8 @@ test.describe('US-225: Fuer Putzslot registrieren', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-06-01',
-      '2026-06-08'
+      '2027-02-08',
+      '2027-02-14'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -545,8 +559,8 @@ test.describe('US-225: Fuer Putzslot registrieren', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-07-06',
-      '2026-07-13'
+      '2027-02-15',
+      '2027-02-21'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -583,8 +597,8 @@ test.describe('US-226: Von Putzslot abmelden', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-07-01',
-      '2026-07-08'
+      '2027-02-22',
+      '2027-02-28'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -625,8 +639,8 @@ test.describe('US-226: Von Putzslot abmelden', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-08-01',
-      '2026-08-08'
+      '2027-03-01',
+      '2027-03-07'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -674,8 +688,8 @@ test.describe('US-227: QR-Code-Check-in', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-09-07',
-      '2026-09-14'
+      '2027-03-08',
+      '2027-03-14'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -725,8 +739,8 @@ test.describe('US-227: QR-Code-Check-in', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-09-07',
-      '2026-09-14'
+      '2027-03-15',
+      '2027-03-21'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -762,8 +776,8 @@ test.describe('US-227: QR-Code-Check-in', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-09-14',
-      '2026-09-21'
+      '2027-03-22',
+      '2027-03-28'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -818,8 +832,8 @@ test.describe('US-228: QR-Code-Check-out', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-10-06',
-      '2026-10-13'
+      '2027-04-12',
+      '2027-04-18'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -870,8 +884,8 @@ test.describe('US-228: QR-Code-Check-out', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-10-13',
-      '2026-10-20'
+      '2027-04-19',
+      '2027-04-25'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -912,8 +926,8 @@ test.describe('US-229: QR-Codes generieren und exportieren', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-11-04',
-      '2026-11-11'
+      '2027-05-03',
+      '2027-05-09'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -946,11 +960,11 @@ test.describe('US-229: QR-Codes generieren und exportieren', () => {
     const configId = config!.id as string
 
     // Generate slots first
-    await generateSlotsViaApi(page, configId, '2026-11-04', '2026-11-25')
+    await generateSlotsViaApi(page, configId, '2027-04-12', '2027-05-02')
 
     // Export QR codes PDF
     const pdfResp = await page.request.get(
-      `/api/v1/cleaning/configs/${configId}/qr-codes?from=2026-11-04&to=2026-11-25`
+      `/api/v1/cleaning/configs/${configId}/qr-codes?from=2027-04-12&to=2027-05-02`
     )
     if (!pdfResp.ok()) {
       test.skip(true, 'User lacks permission to export QR codes PDF')
@@ -983,8 +997,8 @@ test.describe('US-229: QR-Codes generieren und exportieren', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-11-04',
-      '2026-11-11'
+      '2027-05-10',
+      '2027-05-16'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -1022,8 +1036,8 @@ test.describe('US-230: Swap-Angebot erstellen', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-12-01',
-      '2026-12-08'
+      '2027-05-17',
+      '2027-05-23'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -1057,8 +1071,8 @@ test.describe('US-230: Swap-Angebot erstellen', () => {
     const slots = await generateSlotsViaApi(
       page,
       config!.id as string,
-      '2026-12-08',
-      '2026-12-15'
+      '2027-05-24',
+      '2027-05-30'
     )
     expect(slots).toBeTruthy()
     const slotId = slots![0].id as string
@@ -1249,7 +1263,8 @@ test.describe('US-232: Putzminuten manuell anpassen', () => {
 
     // Full lifecycle as parent: register, checkin, checkout
     await login(page, accounts.parent)
-    await registerForSlotViaApi(page, slotId)
+    const registration = await registerForSlotViaApi(page, slotId)
+    expect(registration).toBeTruthy() // registration must succeed before check-in
     await page.request.post(`/api/v1/cleaning/slots/${slotId}/checkin`, {
       data: { qrToken },
     })

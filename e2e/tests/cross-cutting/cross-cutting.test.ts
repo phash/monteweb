@@ -565,12 +565,14 @@ test.describe('US-373: Tastaturnavigation in der globalen Suche', () => {
     await login(page, accounts.teacher)
     await page.waitForLoadState('networkidle')
 
-    await page.keyboard.press('Control+k')
-    await page.waitForTimeout(500)
-
-    // Search dialog should be visible
+    // The Ctrl+K keystroke can be missed if the page's keydown handler isn't
+    // bound yet (slow hydration under parallel load). Press until the dialog
+    // appears.
     const dialog = page.locator('.global-search-dialog')
-    await expect(dialog).toBeVisible({ timeout: 5000 })
+    await expect(async () => {
+      await page.keyboard.press('Control+k')
+      await expect(dialog).toBeVisible({ timeout: 2000 })
+    }).toPass({ timeout: 15000 })
   })
 
   test('Escape closes the search dialog', async ({ page }) => {

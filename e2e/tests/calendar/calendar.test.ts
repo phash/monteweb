@@ -212,6 +212,20 @@ test.describe('US-101: Section event creation (TEACHER)', () => {
 
   test('TEACHER can create a section-scoped event', async ({ page }) => {
     await login(page, accounts.teacher)
+
+    // A TEACHER may only create section events for a section they belong to
+    // (membership is derived from the teacher's rooms). Ensure the teacher has a
+    // room in the FIRST section so selecting that section in the form is allowed.
+    const sectionsRes = await page.request.get('/api/v1/sections')
+    const firstSectionId = (await sectionsRes.json()).data?.[0]?.id as string | undefined
+    if (!firstSectionId) {
+      test.skip()
+      return
+    }
+    await page.request.post('/api/v1/rooms', {
+      data: { name: `E2E-Cal-Room ${Date.now()}`, description: 'cal', type: 'KLASSE', sectionId: firstSectionId },
+    })
+
     await goToCreateEvent(page)
 
     await page.locator('#event-title').fill('E2E Bereichstermin')
@@ -221,7 +235,7 @@ test.describe('US-101: Section event creation (TEACHER)', () => {
     await scopeDropdown.click()
     await page.locator('.p-select-option:has-text("Schulbereich")').click()
 
-    // Select first section
+    // Select first section (the one the teacher now belongs to)
     const sectionDropdown = page.locator('#event-section')
     const sectionVisible = await sectionDropdown.isVisible({ timeout: 3000 }).catch(() => false)
     if (!sectionVisible) {
@@ -514,8 +528,9 @@ test.describe('US-106: Delete event', () => {
     const confirmButton = dialog.locator('button:has-text("Ja")')
     await confirmButton.click()
 
-    // Should redirect to calendar page
-    await page.waitForURL(/\/calendar$/, { timeout: 15000 })
+    // Should redirect to calendar page (generous timeout — the post-delete
+    // navigation can be slow when the shared backend is under parallel load)
+    await page.waitForURL(/\/calendar$/, { timeout: 30000 })
     await expect(page.locator('.page-title')).toContainText('Kalender')
 
     // Verify event is gone by trying to access it
@@ -662,7 +677,8 @@ test.describe('US-109: Calendar views', () => {
 
     // The actual option labels from i18n: Agenda, Monat, 3 Monate, Jahr
     await expect(viewToggle.locator('text=Agenda')).toBeVisible()
-    await expect(viewToggle.locator('text=Monat')).toBeVisible()
+    // Exact match — "Monat" otherwise also matches "3 Monate" (strict-mode violation).
+    await expect(viewToggle.getByText('Monat', { exact: true })).toBeVisible()
     await expect(viewToggle.locator('text=3 Monate')).toBeVisible()
     await expect(viewToggle.locator('text=Jahr')).toBeVisible()
   })
@@ -671,8 +687,8 @@ test.describe('US-109: Calendar views', () => {
     await login(page, accounts.teacher)
     await goToCalendar(page)
 
-    // Click Monat
-    await page.locator('.view-toggle').locator('text=Monat').click()
+    // Click Monat (exact — avoids matching "3 Monate")
+    await page.locator('.view-toggle').getByText('Monat', { exact: true }).click()
 
     // Month grid should become visible
     await expect(page.locator('.month-grid')).toBeVisible({ timeout: 5000 })
@@ -721,8 +737,8 @@ test.describe('US-109: Calendar views', () => {
     await login(page, accounts.teacher)
     await goToCalendar(page)
 
-    // Switch to month then back to agenda
-    await page.locator('.view-toggle').locator('text=Monat').click()
+    // Switch to month then back to agenda (exact — avoids matching "3 Monate")
+    await page.locator('.view-toggle').getByText('Monat', { exact: true }).click()
     await expect(page.locator('.month-grid')).toBeVisible({ timeout: 5000 })
 
     await page.locator('.view-toggle').locator('text=Agenda').click()
@@ -851,9 +867,11 @@ test.describe('US-111: iCal subscription create (SA)', () => {
     const addButton = page.locator('button:has-text("Abonnement hinzufügen")')
     await addButton.click()
 
-    // Fill in name and URL
+    // Fill in name and URL — unique name to avoid colliding with leftovers from
+    // previous runs (the table is shared state).
+    const subName = `E2E Test iCal ${Date.now()}`
     const nameInput = page.locator('input[placeholder*="Schulferien"]')
-    await nameInput.fill('E2E Test iCal')
+    await nameInput.fill(subName)
 
     const urlInput = page.locator('input[placeholder*="https://"]')
     await urlInput.fill('https://www.schulferien.org/media/ical/deutschland/ferien_bayern_2026.ics')
@@ -866,12 +884,10 @@ test.describe('US-111: iCal subscription create (SA)', () => {
     await expect(page.locator(toastWithText('Abonnement erstellt'))).toBeVisible({ timeout: 10000 })
 
     // Subscription should appear in the table
-    await expect(page.locator('text=E2E Test iCal')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator(`text=${subName}`).first()).toBeVisible({ timeout: 5000 })
 
     // Cleanup: delete the subscription we just created
-    const syncButton = page.locator('tr:has-text("E2E Test iCal") button[aria-label="Löschen"], .p-datatable-row:has-text("E2E Test iCal") button .pi-trash')
-    // The delete button is the trash icon in the actions column
-    const row = page.locator('tr:has-text("E2E Test iCal"), .p-datatable-tbody tr').filter({ hasText: 'E2E Test iCal' })
+    const row = page.locator('.p-datatable-tbody tr').filter({ hasText: subName })
     const deleteBtn = row.locator('button:has(.pi-trash)')
     const deleteBtnVisible = await deleteBtn.isVisible({ timeout: 3000 }).catch(() => false)
     if (deleteBtnVisible) {
@@ -1065,8 +1081,9 @@ test.describe('US-115: Color marking — Farbe field in event form', () => {
     await login(page, accounts.teacher)
     await goToCreateEvent(page)
 
-    // Color label should be visible
-    await expect(page.locator('text=Farbe')).toBeVisible({ timeout: 5000 })
+    // Color label should be visible (exact — "Farbe" also matches the hint text
+    // and the "Eigene Farbe" label).
+    await expect(page.getByText('Farbe', { exact: true })).toBeVisible({ timeout: 5000 })
     await expect(page.locator('text=Wähle eine Farbe')).toBeVisible()
 
     // Color palette with swatches

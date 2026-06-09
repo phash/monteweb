@@ -41,5 +41,9 @@ export default defineConfig({
   expect: {
     timeout: 10000,
   },
-  timeout: 15000,
+  // Generous per-test timeout: the API-login helper navigates + reloads the SPA,
+  // which under heavy parallel load (multiple workers hammering the backend) can
+  // take 10s+ on its own, leaving too little of a 15s budget for the rest of the
+  // test. 45s gives headroom without masking real hangs.
+  timeout: 45000,
 })

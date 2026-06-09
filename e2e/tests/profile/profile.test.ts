@@ -61,14 +61,18 @@ test.describe('Profile & Settings', () => {
       await page.waitForLoadState('networkidle')
       await expect(page.locator('#profile-firstName')).toBeVisible({ timeout: 10000 })
 
-      // Read original first name
+      // Read original first name. Wait until the field is actually populated —
+      // under load, networkidle can fire before the profile data fills the form,
+      // which would otherwise make us edit/save a stale (empty) value.
       const firstNameInput = page.locator('#profile-firstName')
+      await expect(firstNameInput).not.toHaveValue('', { timeout: 10000 })
       const originalFirstName = await firstNameInput.inputValue()
 
       // Change first name to a test value
       const testFirstName = originalFirstName === 'TestChange' ? 'TestRevert' : 'TestChange'
       await firstNameInput.clear()
       await firstNameInput.fill(testFirstName)
+      await expect(firstNameInput).toHaveValue(testFirstName)
 
       // Click save button (the first submit button in the profile form)
       const saveButton = page.locator('.profile-form button[type="submit"]').first()
@@ -81,7 +85,7 @@ test.describe('Profile & Settings', () => {
       await page.reload()
       await page.waitForLoadState('networkidle')
       await expect(page.locator('#profile-firstName')).toBeVisible({ timeout: 10000 })
-      await expect(page.locator('#profile-firstName')).toHaveValue(testFirstName)
+      await expect(page.locator('#profile-firstName')).toHaveValue(testFirstName, { timeout: 15000 })
 
       // CLEANUP: Revert first name back to original
       await page.locator('#profile-firstName').clear()
@@ -150,8 +154,8 @@ test.describe('Profile & Settings', () => {
       const systemOption = page.locator('.p-select-overlay .p-select-option:has-text("Automatisch")').first()
       await systemOption.click()
 
-      // Wait for the toast confirmation
-      await expect(page.locator('.p-toast-message')).toBeVisible({ timeout: 5000 })
+      // Wait for the toast confirmation (multiple toasts may stack — match the first)
+      await expect(page.locator('.p-toast-message').first()).toBeVisible({ timeout: 5000 })
     })
   })
 
@@ -249,10 +253,10 @@ test.describe('Profile & Settings', () => {
       await page.goto('/admin/profile-fields')
       await page.waitForLoadState('networkidle')
 
-      // Verify the page loaded — look for the page title
-      // "Profilfelder verwalten"
+      // Verify the page loaded — look for the page title heading.
+      // (Use the h1.page-title to avoid matching the identical sidebar nav item.)
       await expect(
-        page.locator('text=Profilfelder verwalten')
+        page.locator('h1.page-title', { hasText: 'Profilfelder verwalten' })
       ).toBeVisible({ timeout: 10000 })
 
       // Verify the "Neues Feld" (New Field) button is present

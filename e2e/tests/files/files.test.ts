@@ -146,6 +146,57 @@ async function getFirstRoomId(page: import('@playwright/test').Page): Promise<st
 }
 
 /**
+ * Helper: fetch a user's id by logging in with their credentials (does not
+ * affect the page's UI session, but DOES set cookies on page.request — callers
+ * must restore the desired session afterwards).
+ */
+async function getUserId(page: import('@playwright/test').Page, account: { email: string; password: string }): Promise<string | null> {
+  const base = process.env.BASE_URL || 'http://localhost'
+  const loginRes = await page.request.post(`${base}/api/v1/auth/login`, {
+    data: { email: account.email, password: account.password },
+  })
+  if (!loginRes.ok()) return null
+  const token = (await loginRes.json()).data?.accessToken
+  if (!token) return null
+  const meRes = await page.request.get(`${base}/api/v1/users/me`, { headers: { Authorization: `Bearer ${token}` } })
+  if (!meRes.ok()) return null
+  return (await meRes.json()).data?.id ?? null
+}
+
+/**
+ * Helper: create a room led by the teacher with the parent + student added as
+ * members, and return its id. Folder-audience visibility tests need a room ALL
+ * three roles belong to (the /rooms list now exposes non-member rooms, and a
+ * parent/student who is not a member of the room cannot list its folders at all).
+ * The caller must be logged in as the teacher; this restores that session.
+ */
+async function createSharedRoom(page: import('@playwright/test').Page): Promise<string | null> {
+  // Resolve member ids first (each login clobbers page.request cookies).
+  const memberIds: string[] = []
+  for (const account of [accounts.parent, accounts.student]) {
+    const userId = await getUserId(page, account)
+    if (userId) memberIds.push(userId)
+  }
+
+  // Restore the teacher session before creating the room.
+  await login(page, accounts.teacher)
+
+  const createRes = await page.request.post('/api/v1/rooms', {
+    data: { name: `E2E-Files-Room ${Date.now()}`, description: 'folder audience test', type: 'KLASSE' },
+  })
+  if (!createRes.ok()) return null
+  const roomId = (await createRes.json()).data?.id as string | undefined
+  if (!roomId) return null
+
+  for (const userId of memberIds) {
+    await page.request.post(`/api/v1/rooms/${roomId}/members`, {
+      data: { userId, role: 'MEMBER' },
+    }).catch(() => undefined)
+  }
+  return roomId
+}
+
+/**
  * Helper: find a room the user is NOT a member of.
  * Uses the browse endpoint to get all rooms, then finds one not in /mine.
  */
@@ -397,9 +448,10 @@ test.describe('US-142: Ordner erstellen und verwalten', () => {
 test.describe('US-143: Ordner-Sichtbarkeit Nur Eltern', () => {
 
   test('parent can see a PARENTS_ONLY folder', async ({ page }) => {
-    // First, create the folder as teacher (who is LEADER)
+    // Create the folder in a room the parent is a member of (otherwise the
+    // parent cannot list the room's folders at all).
     await login(page, accounts.teacher)
-    const roomId = await getFirstRoomId(page)
+    const roomId = await createSharedRoom(page)
     if (!roomId) {
       test.skip()
       return
@@ -497,9 +549,10 @@ test.describe('US-143: Ordner-Sichtbarkeit Nur Eltern', () => {
 test.describe('US-144: Ordner-Sichtbarkeit Nur Schueler', () => {
 
   test('student can see a STUDENTS_ONLY folder', async ({ page }) => {
-    // Create folder as teacher
+    // Create the folder in a room the student is a member of (otherwise the
+    // student cannot list the room's folders at all).
     await login(page, accounts.teacher)
-    const roomId = await getFirstRoomId(page)
+    const roomId = await createSharedRoom(page)
     if (!roomId) {
       test.skip()
       return
