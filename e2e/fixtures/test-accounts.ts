@@ -7,8 +7,10 @@ export interface TestAccount {
 
 export const accounts: Record<string, TestAccount> = {
   admin: {
+    // V111 resets the seeded admin to the common test password (V032 set admin123,
+    // but the latest migration normalises it to test1234 in the migrated DB).
     email: 'admin@monteweb.local',
-    password: 'admin123',
+    password: 'test1234',
     role: 'SUPERADMIN',
     displayName: 'Admin User',
   },

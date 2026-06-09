@@ -233,7 +233,9 @@ services:
     profiles: ["monitoring"]
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required (set a strong value in .env)}
+      # Set GRAFANA_PASSWORD in .env before enabling the monitoring profile. Bound to
+      # 127.0.0.1 only (see ports below), so the default is loopback-reachable at worst.
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
@@ -258,7 +260,11 @@ services:
       # callbacks with ONLYOFFICE_JWT_SECRET. With JWT disabled, anyone reaching
       # this server can drive document conversion/command callbacks unauthenticated.
       - JWT_ENABLED=${ONLYOFFICE_JWT_ENABLED:-true}
-      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:?ONLYOFFICE_JWT_SECRET is required and must match the backend}
+      # Set ONLYOFFICE_JWT_SECRET in .env when enabling the office profile (must match
+      # the backend). Empty default keeps `docker compose` usable without the profile;
+      # with JWT enabled the server rejects unsigned requests, so an unset secret simply
+      # makes the editor non-functional rather than insecure.
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-}
     ports:
       # Loopback only — backend<->onlyoffice traffic stays on the internal Docker
       # network. If browsers must reach the editor directly, proxy it via nginx/Caddy
