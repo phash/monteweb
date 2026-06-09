@@ -1,7 +1,7 @@
 import { type Page, type BrowserContext, expect } from '@playwright/test'
 import { accounts, type TestAccount } from '../fixtures/test-accounts'
 
-const BASE = 'http://localhost'
+const BASE = process.env.BASE_URL || 'http://localhost'
 
 /**
  * Login via API and inject token into sessionStorage.

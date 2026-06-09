@@ -15,7 +15,11 @@ public interface FundgrubeItemRepository extends JpaRepository<FundgrubeItem, UU
     @Query("SELECT i FROM FundgrubeItem i WHERE (i.expiresAt IS NULL OR i.expiresAt > :now) ORDER BY i.createdAt DESC")
     List<FundgrubeItem> findAllActive(@Param("now") Instant now);
 
-    @Query("SELECT i FROM FundgrubeItem i WHERE i.sectionId = :sectionId AND (i.expiresAt IS NULL OR i.expiresAt > :now) ORDER BY i.createdAt DESC")
+    /**
+     * Items belonging to the given section PLUS school-wide items (sectionId IS NULL),
+     * which are visible under every section filter.
+     */
+    @Query("SELECT i FROM FundgrubeItem i WHERE (i.sectionId = :sectionId OR i.sectionId IS NULL) AND (i.expiresAt IS NULL OR i.expiresAt > :now) ORDER BY i.createdAt DESC")
     List<FundgrubeItem> findActiveBySectionId(@Param("sectionId") UUID sectionId, @Param("now") Instant now);
 
     @Query("SELECT i FROM FundgrubeItem i WHERE i.expiresAt IS NOT NULL AND i.expiresAt < :now")

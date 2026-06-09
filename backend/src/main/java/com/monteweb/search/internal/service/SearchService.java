@@ -4,18 +4,25 @@ import com.monteweb.calendar.CalendarModuleApi;
 import com.monteweb.calendar.EventInfo;
 import com.monteweb.feed.FeedModuleApi;
 import com.monteweb.feed.FeedPostInfo;
+import com.monteweb.files.FileInfo;
+import com.monteweb.files.FilesModuleApi;
 import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.search.SearchResult;
+import com.monteweb.tasks.TasksModuleApi;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.wiki.WikiModuleApi;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -25,17 +32,26 @@ public class SearchService {
     private final RoomModuleApi roomModuleApi;
     private final FeedModuleApi feedModuleApi;
     private final CalendarModuleApi calendarModuleApi;
+    private final FilesModuleApi filesModuleApi;
+    private final WikiModuleApi wikiModuleApi;
+    private final TasksModuleApi tasksModuleApi;
     private final SolrSearchService solrSearchService;
 
     public SearchService(UserModuleApi userModuleApi,
                          RoomModuleApi roomModuleApi,
                          @Autowired(required = false) FeedModuleApi feedModuleApi,
                          @Autowired(required = false) CalendarModuleApi calendarModuleApi,
+                         @Autowired(required = false) FilesModuleApi filesModuleApi,
+                         @Autowired(required = false) WikiModuleApi wikiModuleApi,
+                         @Autowired(required = false) TasksModuleApi tasksModuleApi,
                          @Autowired(required = false) SolrSearchService solrSearchService) {
         this.userModuleApi = userModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.feedModuleApi = feedModuleApi;
         this.calendarModuleApi = calendarModuleApi;
+        this.filesModuleApi = filesModuleApi;
+        this.wikiModuleApi = wikiModuleApi;
+        this.tasksModuleApi = tasksModuleApi;
         this.solrSearchService = solrSearchService;
     }
 
@@ -46,7 +62,7 @@ public class SearchService {
 
         // Delegate to Solr if available
         if (solrSearchService != null) {
-            return solrSearchService.search(query.trim(), type, limit);
+            return solrSearchService.search(query.trim(), type, limit, userId);
         }
 
         // Fallback: DB-based search
@@ -67,6 +83,19 @@ public class SearchService {
         }
         if ("ALL".equals(type) || "EVENT".equals(type)) {
             results.addAll(searchEvents(q, limit));
+        }
+        // Room-scoped types: only resolve the user's accessible rooms when needed.
+        if (isRoomScopedRequested(type)) {
+            Set<UUID> accessibleRoomIds = resolveAccessibleRoomIds(userId);
+            if ("ALL".equals(type) || "FILE".equals(type)) {
+                results.addAll(searchFiles(q, limit, accessibleRoomIds));
+            }
+            if ("ALL".equals(type) || "WIKI".equals(type)) {
+                results.addAll(searchWiki(q, limit, accessibleRoomIds));
+            }
+            if ("ALL".equals(type) || "TASK".equals(type)) {
+                results.addAll(searchTasks(q, limit, accessibleRoomIds));
+            }
         }
 
         // Sort: exact title matches first, then by timestamp descending
@@ -127,6 +156,88 @@ public class SearchService {
         }
     }
 
+    private boolean isRoomScopedRequested(String type) {
+        return "ALL".equals(type) || "FILE".equals(type) || "WIKI".equals(type) || "TASK".equals(type);
+    }
+
+    /**
+     * Resolves the set of room IDs the user may see. Room-scoped fallback results
+     * (FILE, WIKI, TASK) must be constrained to these rooms — mirroring the Solr
+     * access filter in {@link SolrSearchService}. Fails closed (empty set) on error
+     * or when no user is given.
+     */
+    private Set<UUID> resolveAccessibleRoomIds(UUID userId) {
+        if (userId == null) return Set.of();
+        try {
+            return roomModuleApi.findByUserId(userId).stream()
+                    .map(RoomInfo::id)
+                    .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        } catch (Exception e) {
+            return Set.of();
+        }
+    }
+
+    private List<SearchResult> searchFiles(String query, int limit, Set<UUID> accessibleRoomIds) {
+        if (filesModuleApi == null || accessibleRoomIds.isEmpty()) return List.of();
+        String lowerQ = query.toLowerCase();
+        try {
+            return filesModuleApi.findAllFiles().stream()
+                    .filter(f -> f.roomId() != null && accessibleRoomIds.contains(f.roomId()))
+                    .filter(f -> f.originalName() != null
+                            && f.originalName().toLowerCase().contains(lowerQ))
+                    .limit(limit)
+                    .map(this::toFileResult)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private List<SearchResult> searchWiki(String query, int limit, Set<UUID> accessibleRoomIds) {
+        if (wikiModuleApi == null || accessibleRoomIds.isEmpty()) return List.of();
+        String lowerQ = query.toLowerCase();
+        try {
+            return wikiModuleApi.findAllPagesForIndexing().stream()
+                    .filter(p -> {
+                        UUID roomId = (UUID) p.get("roomId");
+                        return roomId != null && accessibleRoomIds.contains(roomId);
+                    })
+                    .filter(p -> matchesAny(lowerQ, (String) p.get("title"), (String) p.get("content")))
+                    .limit(limit)
+                    .map(this::toWikiResult)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private List<SearchResult> searchTasks(String query, int limit, Set<UUID> accessibleRoomIds) {
+        if (tasksModuleApi == null || accessibleRoomIds.isEmpty()) return List.of();
+        String lowerQ = query.toLowerCase();
+        try {
+            return tasksModuleApi.findAllTasksForIndexing().stream()
+                    .filter(t -> {
+                        UUID roomId = (UUID) t.get("roomId");
+                        return roomId != null && accessibleRoomIds.contains(roomId);
+                    })
+                    .filter(t -> matchesAny(lowerQ, (String) t.get("title"), (String) t.get("description")))
+                    .limit(limit)
+                    .map(this::toTaskResult)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private boolean matchesAny(String lowerQ, String... fields) {
+        for (String field : fields) {
+            if (field != null && field.toLowerCase().contains(lowerQ)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private SearchResult toUserResult(UserInfo user) {
         return new SearchResult(
                 user.id(),
@@ -176,6 +287,63 @@ public class SearchService {
                 "/calendar?event=" + event.id(),
                 event.createdAt()
         );
+    }
+
+    private SearchResult toFileResult(FileInfo file) {
+        String roomName = roomName(file.roomId());
+        return new SearchResult(
+                file.id(),
+                "FILE",
+                file.originalName(),
+                roomName,
+                file.contentType(),
+                "/rooms/" + file.roomId() + "/files",
+                file.createdAt()
+        );
+    }
+
+    private SearchResult toWikiResult(Map<String, Object> page) {
+        UUID pageId = (UUID) page.get("id");
+        UUID roomId = (UUID) page.get("roomId");
+        String title = (String) page.get("title");
+        String content = (String) page.get("content");
+        String slug = (String) page.get("slug");
+        String roomName = roomName(roomId);
+        return new SearchResult(
+                pageId,
+                "WIKI",
+                title,
+                roomName != null ? "Wiki - " + roomName : "Wiki",
+                truncate(content, 150),
+                "/rooms/" + roomId + "/wiki/" + slug,
+                null
+        );
+    }
+
+    private SearchResult toTaskResult(Map<String, Object> task) {
+        UUID taskId = (UUID) task.get("id");
+        UUID roomId = (UUID) task.get("roomId");
+        String title = (String) task.get("title");
+        String description = (String) task.get("description");
+        String roomName = roomName(roomId);
+        return new SearchResult(
+                taskId,
+                "TASK",
+                title,
+                roomName != null ? "Aufgabe - " + roomName : "Aufgabe",
+                truncate(description, 150),
+                "/rooms/" + roomId + "/tasks",
+                null
+        );
+    }
+
+    private String roomName(UUID roomId) {
+        if (roomId == null) return null;
+        try {
+            return roomModuleApi.findById(roomId).map(RoomInfo::name).orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String truncate(String text, int maxLength) {

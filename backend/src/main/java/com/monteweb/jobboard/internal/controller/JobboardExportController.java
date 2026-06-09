@@ -3,7 +3,11 @@ package com.monteweb.jobboard.internal.controller;
 import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.jobboard.FamilyHoursInfo;
 import com.monteweb.jobboard.internal.service.JobboardService;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.PdfService;
+import com.monteweb.shared.util.SecurityUtils;
+import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/jobs/report")
@@ -23,17 +28,21 @@ public class JobboardExportController {
     private final JobboardService jobboardService;
     private final PdfService pdfService;
     private final AdminModuleApi adminModuleApi;
+    private final UserModuleApi userModuleApi;
 
     public JobboardExportController(JobboardService jobboardService,
                                     PdfService pdfService,
-                                    AdminModuleApi adminModuleApi) {
+                                    AdminModuleApi adminModuleApi,
+                                    UserModuleApi userModuleApi) {
         this.jobboardService = jobboardService;
         this.pdfService = pdfService;
         this.adminModuleApi = adminModuleApi;
+        this.userModuleApi = userModuleApi;
     }
 
     @GetMapping(value = "/export", produces = "text/csv")
     public ResponseEntity<byte[]> exportCsv() {
+        requireAdminRole(SecurityUtils.requireCurrentUserId());
         List<FamilyHoursInfo> report = jobboardService.getAllFamilyHoursReport();
 
         StringBuilder csv = new StringBuilder();
@@ -65,6 +74,7 @@ public class JobboardExportController {
 
     @GetMapping(value = "/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> exportPdf() {
+        requireAdminRole(SecurityUtils.requireCurrentUserId());
         List<FamilyHoursInfo> report = jobboardService.getAllFamilyHoursReport();
         String schoolName = adminModuleApi.getTenantConfig().schoolName();
 
@@ -85,6 +95,15 @@ public class JobboardExportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"familien-stundenbericht.pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(pdf);
+    }
+
+    private void requireAdminRole(UUID userId) {
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() != UserRole.SUPERADMIN && user.role() != UserRole.SECTION_ADMIN
+                && user.role() != UserRole.TEACHER) {
+            throw new ForbiddenException("Only administrators and teachers can access reports");
+        }
     }
 
     private String escapeCsv(String value) {

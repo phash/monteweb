@@ -22,16 +22,16 @@ public class WikiController {
 
     @GetMapping
     public ApiResponse<List<WikiPageSummary>> getPageTree(@PathVariable UUID roomId) {
-        SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(wikiService.getPageTree(roomId));
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(wikiService.getPageTree(userId, roomId));
     }
 
     @GetMapping("/pages/{slug}")
     public ApiResponse<WikiPageResponse> getPage(
             @PathVariable UUID roomId,
             @PathVariable String slug) {
-        SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(wikiService.getPage(roomId, slug));
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(wikiService.getPage(userId, roomId, slug));
     }
 
     @PostMapping("/pages")
@@ -64,23 +64,23 @@ public class WikiController {
     public ApiResponse<List<WikiPageVersionResponse>> getVersions(
             @PathVariable UUID roomId,
             @PathVariable UUID pageId) {
-        SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(wikiService.getVersions(pageId));
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(wikiService.getVersions(userId, pageId));
     }
 
     @GetMapping("/versions/{versionId}")
     public ApiResponse<WikiPageVersionResponse> getVersion(
             @PathVariable UUID roomId,
             @PathVariable UUID versionId) {
-        SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(wikiService.getVersion(versionId));
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(wikiService.getVersion(userId, roomId, versionId));
     }
 
     @GetMapping("/search")
     public ApiResponse<List<WikiPageSummary>> searchPages(
             @PathVariable UUID roomId,
             @RequestParam("q") String query) {
-        SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(wikiService.searchPages(roomId, query));
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(wikiService.searchPages(userId, roomId, query));
     }
 }

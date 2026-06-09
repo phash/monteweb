@@ -246,6 +246,13 @@ describe('Auth Store - Multi-Role', () => {
         assignedRoles: ['TEACHER', 'PARENT'],
       } as any
       expect(auth.canHaveFamily).toBe(true)
+
+      // US-040: students must NOT see the "Familie" nav item
+      auth.user = {
+        role: 'STUDENT',
+        assignedRoles: ['STUDENT'],
+      } as any
+      expect(auth.canHaveFamily).toBe(false)
     })
   })
 })

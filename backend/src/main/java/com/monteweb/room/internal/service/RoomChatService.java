@@ -37,10 +37,26 @@ public class RoomChatService {
     private final MessagingModuleApi messagingModuleApi;
     private final UserModuleApi userModuleApi;
 
-    private boolean isSuperAdmin(UUID userId) {
-        return userModuleApi.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN)
-                .orElse(false);
+    /**
+     * Returns true if the user is a global SUPERADMIN, or a SECTION_ADMIN scoped to the
+     * section the given room belongs to. SECTION_ADMINs are NOT global admins: a section
+     * admin scoped to e.g. Krippe must not gain access to an Oberstufe room's chat.
+     * Mirrors {@code RoomController.requireLeaderOrAdmin} / {@code isAdminForSection}.
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModuleApi.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomService.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     /**
@@ -48,7 +64,7 @@ public class RoomChatService {
      */
     @Transactional(readOnly = true)
     public List<RoomChatChannelInfo> getChannels(UUID roomId, UUID userId) {
-        boolean superAdmin = isSuperAdmin(userId);
+        boolean superAdmin = hasAdminRoleForRoom(userId, roomId);
 
         if (!superAdmin && !roomService.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
@@ -82,7 +98,7 @@ public class RoomChatService {
      */
     @Transactional
     public RoomChatChannelInfo getOrCreateChannel(UUID roomId, UUID userId, ChannelType type) {
-        boolean superAdmin = isSuperAdmin(userId);
+        boolean superAdmin = hasAdminRoleForRoom(userId, roomId);
 
         if (!superAdmin && !roomService.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");

@@ -628,7 +628,7 @@
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
 | 1 | Verwaltung > "Profilfelder" klicken | Seite "Profilfelder verwalten" mit Untertitel "Benutzerdefinierte Felder fuer Benutzerprofile erstellen und verwalten" |
-| 2 | Button "Neues Feld" klicken | Dialog oeffnet sich mit Feldern: Feldschluessel, Bezeichnung (DE), Bezeichnung (EN), Feldtyp, Pflichtfeld, Position, Aktiv |
+| 2 | Button "Neues Feld" klicken | Dialog oeffnet sich mit Feldern: Feldschluessel, Bezeichnung (DE), Bezeichnung (EN), Feldtyp, Pflichtfeld, Position (Aktiv-Toggle erscheint erst beim Bearbeiten; neue Felder sind serverseitig immer aktiv) |
 | 3 | Feldschluessel "hobby", Bezeichnung DE "Hobby", Typ "Text" eingeben | Felder werden befuellt |
 | 4 | Speichern | Toast: "Profilfeld erstellt"; Feld erscheint in der Liste |
 | 5 | Feld bearbeiten: Typ auf "Auswahl" aendern, Optionen "Lesen, Sport, Musik" eingeben | Optionen-Feld wird sichtbar |
@@ -777,8 +777,8 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Als SA einloggen | Navigation enthaelt: Dashboard, Raeume, Familie, Nachrichten, Kalender, Formulare, Entdecken, Verwaltung, Profil, Abmelden (+ optionale Module) |
-| 2 | Als T einloggen | Navigation enthaelt: Dashboard, Raeume, Nachrichten, Kalender, Entdecken, Profil, Abmelden (kein "Verwaltung") |
+| 1 | Als SA einloggen | Navigation enthaelt: Dashboard, Raeume, Familie, Nachrichten, Kalender, Formulare, Verzeichnis, Verwaltung, Profil, Abmelden (+ optionale Module) |
+| 2 | Als T einloggen | Navigation enthaelt: Dashboard, Raeume, Nachrichten, Kalender, Verzeichnis, Profil, Abmelden (kein "Verwaltung") |
 | 3 | Als P einloggen | Navigation enthaelt: Dashboard, Raeume, Familie, Nachrichten, Kalender, Profil, Abmelden |
 | 4 | Als S einloggen | Navigation enthaelt: Dashboard, Raeume, Nachrichten, Kalender, Profil, Abmelden (kein "Familie") |
 | 5 | Als SECADMIN einloggen | Navigation enthaelt zusaetzlich "Bereichsverwaltung" |
@@ -1989,17 +1989,17 @@
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
 | 1 | Kalender oeffnen | Standard-Ansicht wird angezeigt |
-| 2 | Auf "1 Monat" klicken | Monatsansicht wird angezeigt |
+| 2 | Auf "Monat" klicken | Monatsansicht wird angezeigt |
 | 3 | Auf "3 Monate" klicken | 3-Monats-Ansicht wird angezeigt |
-| 4 | Auf "Schuljahr" klicken | Jahresansicht wird angezeigt |
-| 5 | Auf "Liste" klicken | Listenansicht mit Terminen wird angezeigt |
+| 4 | Auf "Jahr" klicken | Jahresansicht wird angezeigt |
+| 5 | Auf "Agenda" klicken | Agenda-/Listenansicht mit Terminen wird angezeigt |
 | 6 | Button "Heute" klicken | Ansicht springt auf das aktuelle Datum |
 
 **Akzeptanzkriterien:**
-- [ ] Vier Ansichten verfuegbar: Liste, 1 Monat, 3 Monate, Schuljahr
+- [ ] Vier Ansichten verfuegbar: Agenda, Monat, 3 Monate, Jahr
 - [ ] "Heute"-Button navigiert zum aktuellen Datum
 - [ ] Feiertage werden rot markiert angezeigt
-- [ ] Schulferien werden orange markiert angezeigt
+- [ ] Schulferien werden grau markiert angezeigt
 
 ---
 
@@ -2405,7 +2405,7 @@
 
 **Akzeptanzkriterien:**
 - [ ] Nachrichten erscheinen in Echtzeit ohne Seitenneuladen
-- [ ] WebSocket-Verbindung ueber `/ws/messages`
+- [ ] WebSocket-Verbindung ueber STOMP-Endpoint `/ws` (Client abonniert `/user/queue/messages`)
 - [ ] Bei Verbindungsabbruch: automatische Wiederverbindung
 - [ ] Neue Nachrichten in nicht-geoeffneten Konversationen aktualisieren den Ungelesen-Zaehler
 
@@ -2496,7 +2496,7 @@
 - [ ] Mehrfachauswahl kann aktiviert/deaktiviert werden
 - [ ] Jeder Teilnehmer kann abstimmen (erneute Abstimmung aendert die Stimme)
 - [ ] Stimmenanzahl und prozentuale Verteilung werden angezeigt
-- [ ] Nur Ersteller kann die Umfrage schliessen
+- [ ] Ersteller oder Personal (SUPERADMIN/SECTION_ADMIN/TEACHER) koennen die Umfrage schliessen
 
 ---
 
@@ -2562,7 +2562,7 @@
 - [ ] Ordner koennen in der Root-Ebene und als Unterordner erstellt werden
 - [ ] Ordnername ist Pflichtfeld
 - [ ] Ordner zeigt Sichtbarkeit (Alle/Nur Eltern/Nur Schueler)
-- [ ] KLASSE-Raeume erhalten automatisch einen Standard-Ordner bei Erstellung
+- [ ] KLASSE-Raeume erhalten bei Erstellung automatisch drei Standard-Ordner: "Eltern & Lehrer" (Nur Eltern), "Schueler & Lehrer" (Nur Schueler) und "Alle"
 
 ---
 
@@ -2751,6 +2751,327 @@
 - [ ] SUPERADMIN hat Zugriff auf alle Raum-Dateien
 - [ ] Fehlermeldung ist klar und verstaendlich
 - [ ] Keine Information ueber Existenz der Dateien wird preisgegeben
+
+---
+
+## Modul: Elternbriefe
+
+### US-375: Elternbrief als Entwurf erstellen
+**Als** Raumleiter **moechte ich** einen Elternbrief als Entwurf erstellen, **damit** ich Eltern einer Klasse strukturiert informieren kann.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als `lehrer@monteweb.local` (LEADER eines KLASSE-Raums).
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | KLASSE-Raum oeffnen, Bereich "Elternbriefe" waehlen | Liste der Elternbriefe (oder leerer Zustand) wird angezeigt |
+| 2 | Button "Neuer Elternbrief" klicken | Formular mit Titel, Inhalt, optionalem Sendedatum, Frist (deadline) und Erinnerungstagen oeffnet sich |
+| 3 | Titel und Inhalt eingeben | Felder werden befuellt (Titel max. 300 Zeichen, Inhalt Pflicht) |
+| 4 | API: `POST /api/v1/parent-letters` mit `{roomId, title, content, sendDate?, deadline?, reminderDays?, studentIds?}` | HTTP 200, Brief mit Status `DRAFT` wird zurueckgegeben |
+| 5 | API-Versuch fuer einen Nicht-KLASSE-Raum (z.B. FACHRAUM) | HTTP 403 — nur KLASSE-Raeume erlaubt |
+
+**Akzeptanzkriterien:**
+- [ ] Nur LEADER des Raums oder SUPERADMIN koennen Briefe erstellen
+- [ ] Elternbriefe sind nur fuer KLASSE-Raeume moeglich
+- [ ] Neuer Brief erhaelt Status `DRAFT`
+- [ ] `reminderDays` ist optional; ohne Angabe wird der Standardwert 3 gesetzt
+- [ ] `studentIds = null` adressiert die ganze Klasse, eine Auswahl beschraenkt die Empfaenger
+
+---
+
+### US-376: Empfaengerliste ueber Familienverbund aufbauen
+**Als** Raumleiter **moechte ich**, dass die Empfaenger automatisch aus dem Familienverbund ermittelt werden, **damit** alle Eltern der betroffenen Kinder erreicht werden.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. KLASSE-Raum mit Schuelern, deren Familien Eltern-Mitglieder haben. Login als LEADER.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | Elternbrief ohne `studentIds` erstellen | Fuer jeden STUDENT des Raums werden Empfaenger erzeugt |
+| 2 | Brief-Details abrufen | Empfaengerliste enthaelt pro Kind je einen Eintrag pro PARENT-Mitglied der zugehoerigen Familie(n) |
+| 3 | Elternbrief mit `studentIds = [kindA, kindB]` erstellen | Nur die Eltern der ausgewaehlten Kinder werden als Empfaenger angelegt |
+| 4 | Empfaengerstatus pruefen | Jeder Empfaengereintrag startet mit Status `OPEN` |
+
+**Akzeptanzkriterien:**
+- [ ] Pro Kind werden alle PARENT-Mitglieder der zugehoerigen Familie(n) als Empfaenger erzeugt
+- [ ] Ohne `studentIds`-Auswahl werden alle STUDENT-Mitglieder des KLASSE-Raums beruecksichtigt
+- [ ] Doppelte Empfaenger (gleiche Kombination Brief + Elternteil + Kind) werden vermieden
+- [ ] Jeder Empfaengereintrag haelt Kind-, Eltern- und Familien-Bezug
+
+---
+
+### US-377: Eigene Elternbriefe auflisten
+**Als** Raumleiter **moechte ich** meine erstellten Elternbriefe paginiert sehen, **damit** ich den Ueberblick behalte.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als Ersteller mehrerer Briefe.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `GET /api/v1/parent-letters/my?page=0&size=20` | Paginierte Liste der selbst erstellten Briefe (nach `createdAt`) |
+| 2 | Liste pruefen | Jeder Eintrag zeigt Titel, Status, Raumname, Empfaengerzahl und bestaetigte Anzahl |
+| 3 | Als anderer Lehrer einloggen, Endpoint erneut aufrufen | Nur die eigenen Briefe des anderen Lehrers werden gelistet |
+
+**Akzeptanzkriterien:**
+- [ ] Nur die vom angemeldeten Nutzer erstellten Briefe werden zurueckgegeben
+- [ ] Antwort ist paginiert (Standard `size=20`, sortiert nach `createdAt`)
+- [ ] Jeder Listeneintrag enthaelt Gesamt- und Bestaetigt-Empfaengerzahl
+
+---
+
+### US-378: Elternbrief-Posteingang fuer Eltern
+**Als** Elternteil **moechte ich** alle an mich gesendeten Elternbriefe sehen, **damit** ich keine Information verpasse.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als `eltern@monteweb.local`, der Empfaenger gesendeter Briefe ist.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `GET /api/v1/parent-letters/inbox?page=0&size=20` | Paginierte Liste der Briefe, bei denen der Nutzer Empfaenger ist |
+| 2 | Liste pruefen | Nur Briefe mit Status `SENT` oder `CLOSED` erscheinen |
+| 3 | Geplanter Brief (zukuenftiges Sendedatum) pruefen | Brief erscheint NICHT im Posteingang, solange das Sendedatum nicht erreicht ist |
+
+**Akzeptanzkriterien:**
+- [ ] Nur Briefe, bei denen der Nutzer Empfaenger ist, werden angezeigt
+- [ ] Nur Briefe mit Status `SENT` oder `CLOSED` erscheinen
+- [ ] Briefe mit zukuenftigem `sendDate` werden bis zur Freigabe ausgeblendet
+- [ ] Liste ist nach Erstellungsdatum absteigend sortiert und paginiert
+
+---
+
+### US-379: Briefdetails mit rollenabhaengiger Sicht
+**Als** Nutzer **moechte ich** Briefdetails passend zu meiner Rolle sehen, **damit** ich nur die fuer mich relevanten Informationen erhalte.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein gesendeter Elternbrief existiert.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | Als Ersteller/LEADER/SUPERADMIN `GET /api/v1/parent-letters/{id}` | Vollansicht inkl. vollstaendiger Empfaengerliste mit Status |
+| 2 | Als Eltern-Empfaenger denselben Endpoint aufrufen | Brief-Detail mit aufgeloestem Inhalt wird angezeigt |
+| 3 | Empfaengerstatus nach dem Abruf durch das Elternteil pruefen | Offene (`OPEN`) Empfaengereintraege des Elternteils werden automatisch auf `READ` mit `readAt` gesetzt |
+| 4 | Als nicht beteiligter Nutzer den Endpoint aufrufen | HTTP 403 — kein Zugriff |
+
+**Akzeptanzkriterien:**
+- [ ] Ersteller, LEADER des Raums und SUPERADMIN sehen die Empfaengerliste
+- [ ] Eltern-Empfaenger sehen den Brief; der Abruf markiert ihre offenen Eintraege als gelesen
+- [ ] Nutzer ohne Bezug zum Brief erhalten HTTP 403
+
+---
+
+### US-380: Entwurf bearbeiten
+**Als** Raumleiter **moechte ich** einen Entwurf nachtraeglich bearbeiten, **damit** ich Inhalt und Empfaengerkreis vor dem Versand anpassen kann.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein Brief im Status `DRAFT` existiert. Login als Ersteller/LEADER.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `PUT /api/v1/parent-letters/{id}` mit geaendertem Titel/Inhalt und neuen `studentIds` | HTTP 200, Brief aktualisiert |
+| 2 | Empfaengerliste pruefen | Alte Empfaenger werden entfernt und gemaess neuen `studentIds` neu aufgebaut |
+| 3 | Bearbeitung eines bereits gesendeten Briefs (Status `SENT`) versuchen | HTTP 403 — nur `DRAFT` ist editierbar |
+
+**Akzeptanzkriterien:**
+- [ ] Nur Briefe im Status `DRAFT` koennen bearbeitet werden
+- [ ] Nur LEADER des Raums oder SUPERADMIN duerfen bearbeiten
+- [ ] Beim Speichern wird die Empfaengerliste vollstaendig neu aufgebaut
+- [ ] `reminderDays` wird nur ueberschrieben, wenn ein Wert uebergeben wird
+
+---
+
+### US-381: Elternbrief versenden oder terminiert planen
+**Als** Raumleiter **moechte ich** einen Brief sofort versenden oder fuer ein Datum planen, **damit** Eltern zum richtigen Zeitpunkt informiert werden.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein Brief im Status `DRAFT` existiert. Login als Ersteller/LEADER.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | Brief ohne Sendedatum: `POST /api/v1/parent-letters/{id}/send` | Status wechselt auf `SENT`, Benachrichtigungen werden ausgeloest |
+| 2 | Empfaenger pruefen | Jeder Empfaenger erhaelt eine Benachrichtigung vom Typ `PARENT_LETTER` (einmal pro Elternteil) |
+| 3 | Brief mit zukuenftigem `sendDate` versenden | Status wechselt auf `SCHEDULED`, noch keine Benachrichtigung |
+| 4 | Versand eines bereits gesendeten Briefs erneut versuchen | HTTP 403 — nur `DRAFT` kann versendet werden |
+
+**Akzeptanzkriterien:**
+- [ ] Nur LEADER des Raums oder SUPERADMIN koennen versenden
+- [ ] Liegt `sendDate` in der Zukunft, wird der Status `SCHEDULED` (kein Sofortversand)
+- [ ] Andernfalls Status `SENT` mit Benachrichtigung (`PARENT_LETTER`) und `ParentLetterSentEvent`
+- [ ] Pro Elternteil wird nur eine Benachrichtigung erzeugt, auch bei mehreren Kindern
+
+---
+
+### US-382: Terminierte Briefe automatisch versenden
+**Als** System **moechte ich** geplante Elternbriefe automatisch zustellen, **damit** kein manueller Versand noetig ist.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Mindestens ein Brief mit Status `SCHEDULED` und erreichtem `sendDate`.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | Geplanter Scheduler `dispatchScheduledLetters` laeuft taeglich um 07:00 | Faellige `SCHEDULED`-Briefe werden gefunden |
+| 2 | Verarbeitung pruefen | Status wechselt auf `SENT`, Benachrichtigungen und `ParentLetterSentEvent` werden ausgeloest |
+| 3 | Brief mit noch nicht erreichtem `sendDate` | Bleibt unveraendert `SCHEDULED` |
+
+**Akzeptanzkriterien:**
+- [ ] Scheduler laeuft taeglich um 07:00 (`cron 0 0 7 * * *`)
+- [ ] Nur `SCHEDULED`-Briefe mit erreichtem `sendDate` werden zugestellt
+- [ ] Beim Versand werden Empfaenger benachrichtigt und das Sent-Event publiziert
+
+---
+
+### US-383: Erinnerungs-Benachrichtigungen vor Fristablauf
+**Als** Elternteil **moechte ich** vor Ablauf der Frist erinnert werden, **damit** ich die Kenntnisnahme nicht vergesse.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein `SENT`-Brief mit gesetzter `deadline` und offenen Empfaengern.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | Scheduler `sendReminders` laeuft taeglich um 07:05 | Briefe im Erinnerungsfenster werden ermittelt |
+| 2 | Erinnerungsfenster pruefen | Erinnerung wird gesendet, sobald `deadline - reminderDays <= jetzt` |
+| 3 | Empfaengerbenachrichtigung pruefen | Nur noch offene (`OPEN`) Empfaenger erhalten eine `PARENT_LETTER_REMINDER`-Benachrichtigung |
+| 4 | Erneuter Scheduler-Lauf am Folgetag | Keine erneute Erinnerung — `reminderSent`-Flag verhindert Doppelversand |
+
+**Akzeptanzkriterien:**
+- [ ] Scheduler laeuft taeglich um 07:05 (`cron 0 5 7 * * *`)
+- [ ] Erinnerung greift, sobald `deadline - reminderDays` erreicht ist
+- [ ] Nur noch offene Empfaenger erhalten die Erinnerung
+- [ ] Pro Brief wird die Erinnerung nur einmal ausgeloest (`reminderSent`-Flag)
+
+---
+
+### US-384: Kenntnisnahme bestaetigen
+**Als** Elternteil **moechte ich** die Kenntnisnahme eines Elternbriefs pro Kind bestaetigen, **damit** die Lehrkraft den Ruecklauf nachvollziehen kann.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als Eltern-Empfaenger eines gesendeten Briefs.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `POST /api/v1/parent-letters/{id}/confirm/{studentId}` | Empfaengereintrag wechselt auf Status `CONFIRMED` |
+| 2 | Empfaengerdaten pruefen | `confirmedAt` und `confirmedBy` werden gesetzt |
+| 3 | Erneute Bestaetigung desselben Eintrags | Idempotent — bereits bestaetigter Eintrag wird unveraendert zurueckgegeben |
+| 4 | Bestaetigung fuer ein fremdes Kind/Eltern-Kombination versuchen | HTTP 404 — kein passender Empfaengereintrag |
+
+**Akzeptanzkriterien:**
+- [ ] Bestaetigung erfolgt pro Kind (`studentId`) separat
+- [ ] Status wechselt auf `CONFIRMED` mit `confirmedAt`/`confirmedBy`
+- [ ] Wiederholte Bestaetigung ist idempotent
+- [ ] Nur der zugeordnete Elternteil kann seinen Empfaengereintrag bestaetigen
+
+---
+
+### US-385: Brief explizit als gelesen markieren
+**Als** Elternteil **moechte ich** einen Brief als gelesen markieren koennen, **damit** mein Lesestatus erfasst wird, auch ohne Bestaetigung.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als Eltern-Empfaenger mit offenem (`OPEN`) Eintrag.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `POST /api/v1/parent-letters/{id}/read` | Offene Empfaengereintraege des Nutzers wechseln auf `READ` |
+| 2 | Empfaengerdaten pruefen | `readAt` wird gesetzt |
+| 3 | Bereits bestaetigten (`CONFIRMED`) Eintrag pruefen | Status bleibt `CONFIRMED` — nur `OPEN`-Eintraege werden auf `READ` gesetzt |
+
+**Akzeptanzkriterien:**
+- [ ] Nur eigene Empfaengereintraege im Status `OPEN` werden auf `READ` gesetzt
+- [ ] `readAt`-Zeitstempel wird gespeichert
+- [ ] Das Oeffnen der Detailansicht (`GET /{id}`) markiert den Brief ebenfalls als gelesen
+
+---
+
+### US-386: Variablen/Platzhalter im Briefinhalt
+**Als** Raumleiter **moechte ich** Platzhalter im Brief verwenden, **damit** Inhalte je Kind/Familie personalisiert werden.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein Brief mit Platzhaltern im Inhalt existiert.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | Inhalt mit `{Familie}`, `{NameKind}`, `{Anrede}`, `{LehrerName}` erstellen | Platzhalter werden im Entwurf gespeichert |
+| 2 | API: `GET /api/v1/parent-letters/{id}/pdf?studentId={kind}` | Platzhalter werden fuer das angegebene Kind aufgeloest |
+| 3 | Aufloesung pruefen | `{Familie}` = Familienname, `{NameKind}` = Vorname des Kindes, `{LehrerName}` = Anzeigename der Lehrkraft |
+| 4 | `{Anrede}` ohne ermittelbares Elternteil | Faellt auf "Sehr geehrte Eltern" zurueck |
+
+**Akzeptanzkriterien:**
+- [ ] Unterstuetzte Platzhalter: `{Familie}`, `{NameKind}`, `{Anrede}`, `{LehrerName}`
+- [ ] Aufloesung erfolgt pro Kind (ueber `studentId`)
+- [ ] Ohne `studentId` wird der Rohinhalt mit unaufgeloesten Platzhaltern ausgegeben
+- [ ] `{Anrede}` nutzt "Sehr geehrte/r <Anzeigename>" bzw. den Fallback "Sehr geehrte Eltern"
+
+---
+
+### US-387: Brief und Ruecklaufliste als PDF
+**Als** Raumleiter **moechte ich** den Brief und die Ruecklaufliste als PDF herunterladen, **damit** ich sie drucken oder archivieren kann.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein Brief mit Empfaengern existiert. Login als Ersteller/LEADER/SUPERADMIN.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `GET /api/v1/parent-letters/{id}/pdf` | PDF des Briefs (Dateiname `Elternbrief-<Titel>.pdf`) wird geliefert |
+| 2 | PDF mit `?studentId=` abrufen | Platzhalter sind fuer das gewaehlte Kind aufgeloest |
+| 3 | API: `GET /api/v1/parent-letters/{id}/tracking-pdf` | Ruecklaufliste mit Bestaetigungsstatus aller Empfaenger (Dateiname `Ruecklauf-<Titel>.pdf`) |
+| 4 | Als nicht berechtigter Nutzer PDF abrufen | HTTP 403 — kein Zugriff |
+
+**Akzeptanzkriterien:**
+- [ ] Brief-PDF wird mit `Content-Type: application/pdf` und sprechendem Dateinamen geliefert
+- [ ] Mit `studentId` werden die Platzhalter im Brief-PDF aufgeloest
+- [ ] Tracking-PDF listet den Bestaetigungsstatus aller Empfaenger
+- [ ] PDF-Abruf erfordert Detail-Zugriff (Ersteller/LEADER/SUPERADMIN)
+
+---
+
+### US-388: Datei-Anhaenge verwalten
+**Als** Raumleiter **moechte ich** Dateien an einen Elternbrief anhaengen, **damit** Eltern zusaetzliche Dokumente erhalten.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Ein Brief im Status `DRAFT` existiert. Login als Ersteller/LEADER.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `POST /api/v1/parent-letters/{id}/attachments` mit Dateien | Anhaenge werden in MinIO gespeichert und gelistet |
+| 2 | Mehr als 5 Anhaenge bzw. Datei > 10 MB hochladen | HTTP 403 — Limit ueberschritten |
+| 3 | API: `GET /api/v1/parent-letters/{id}/attachments` | Anhangsliste; auch fuer Eltern-Empfaenger zugaenglich |
+| 4 | API: `GET /api/v1/parent-letters/{id}/attachments/{attachmentId}` | Einzelner Anhang wird heruntergeladen (mit Pruefung der Brief-Zugehoerigkeit) |
+| 5 | API: `DELETE /api/v1/parent-letters/{id}/attachments/{attachmentId}` an `DRAFT`-Brief | Anhang wird geloescht |
+| 6 | Anhang aus einem gesendeten Brief loeschen | HTTP 403 — nur aus `DRAFT` moeglich |
+
+**Akzeptanzkriterien:**
+- [ ] Maximal 5 Anhaenge pro Brief, jeweils maximal 10 MB
+- [ ] Anhaenge werden in MinIO gespeichert
+- [ ] Liste und Download stehen autorisierten Nutzern inkl. Eltern-Empfaengern offen
+- [ ] Anhaenge koennen nur aus `DRAFT`-Briefen durch LEADER/SUPERADMIN geloescht werden
+
+---
+
+### US-389: Brief schliessen und Entwurf loeschen
+**Als** Raumleiter **moechte ich** Briefe schliessen oder Entwuerfe loeschen, **damit** ich den Ruecklauf beenden bzw. Fehlerstuecke entfernen kann.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als Ersteller/LEADER/SUPERADMIN.
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `POST /api/v1/parent-letters/{id}/close` bei `SENT`/`SCHEDULED`-Brief | Status wechselt auf `CLOSED` |
+| 2 | Nach dem Schliessen Bestaetigung versuchen | Keine weiteren Bestaetigungen werden erwartet (Brief abgeschlossen) |
+| 3 | Schliessen eines `DRAFT`- oder bereits `CLOSED`-Briefs versuchen | HTTP 403 — nur `SENT`/`SCHEDULED` koennen geschlossen werden |
+| 4 | API: `DELETE /api/v1/parent-letters/{id}` bei `DRAFT`-Brief | Brief und seine Empfaengereintraege werden geloescht |
+| 5 | Loeschen eines gesendeten Briefs versuchen | HTTP 403 — nur `DRAFT` ist loeschbar |
+
+**Akzeptanzkriterien:**
+- [ ] Nur `SENT`- oder `SCHEDULED`-Briefe koennen geschlossen werden (Status `CLOSED`)
+- [ ] Nur `DRAFT`-Briefe koennen geloescht werden (inkl. Empfaengereintraege)
+- [ ] Aktionen sind LEADER des Raums oder SUPERADMIN vorbehalten
+
+---
+
+### US-390: Konfiguration, Statistik und DSGVO-Bereinigung
+**Als** Administrator **moechte ich** Elternbrief-Einstellungen pflegen, Statistiken sehen und die DSGVO-Loeschung sicherstellen, **damit** das Modul rechtskonform und konfigurierbar bleibt.
+
+**Vorbedingungen:** Modul `parentletter` ist aktiv. Login als SUPERADMIN (bzw. SECTION_ADMIN fuer den eigenen Bereich).
+
+| # | Testschritt | Erwartetes Ergebnis |
+|---|------------|---------------------|
+| 1 | API: `GET /api/v1/parent-letter-config?sectionId=` | Bereichs-Config (Briefkopf-Pfad, Signatur-Template, Erinnerungstage) mit Fallback auf globale Config |
+| 2 | API: `PUT /api/v1/parent-letter-config` mit `{signatureTemplate, reminderDays}` | Config aktualisiert; `reminderDays` nur 1–30 erlaubt |
+| 3 | API: `POST /api/v1/parent-letter-config/letterhead` (jpeg/png/svg/pdf) | Briefkopf hochgeladen; vorhandener Briefkopf wird ersetzt |
+| 4 | API: `DELETE /api/v1/parent-letter-config/letterhead` | Briefkopf wird entfernt |
+| 5 | Als Lehrkraft/Eltern Config-Endpoints aufrufen | HTTP 403 — nur SUPERADMIN/SECTION_ADMIN |
+| 6 | API: `GET /api/v1/parent-letters/stats` | Statistik: aktive Briefe, Empfaenger gesamt, bestaetigt, gelesen, ueberfaellig |
+| 7 | Nutzer loeschen (DSGVO): `UserDeletionExecutedEvent` | Ersteller wird anonymisiert, Empfaengereintraege (als Elternteil und als Kind) werden entfernt |
+
+**Akzeptanzkriterien:**
+- [ ] Config wird pro Bereich gelesen/geschrieben, mit Fallback auf die globale Config
+- [ ] `reminderDays` ist auf 1–30 begrenzt; nur SUPERADMIN/SECTION_ADMIN duerfen die Config aendern
+- [ ] Briefkopf-Upload akzeptiert image/jpeg, image/png, image/svg+xml, application/pdf und ersetzt den vorhandenen Briefkopf
+- [ ] Statistik basiert auf den `SENT`-Briefen des Nutzers (Empfaenger, bestaetigt, gelesen, ueberfaellig)
+- [ ] Bei DSGVO-Loeschung wird der Ersteller anonymisiert und alle Empfaengereintraege des Nutzers entfernt; `exportUserData` liefert erstellte Briefe und Empfaengereintraege
 
 ---
 
@@ -3479,7 +3800,7 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Navigiere zum Familien-Stundenkonto (GET /api/v1/jobs/family-hours/{familyId}) | Stundenuebersicht wird angezeigt |
+| 1 | Navigiere zum Familien-Stundenkonto (GET /api/v1/jobs/family/{familyId}/hours) | Stundenuebersicht wird angezeigt |
 | 2 | Pruefe die angezeigten Werte | `targetHours` (Zielstunden), `completedHours` (bestaetigte Elternstunden), `cleaningHours` (Putzstunden), `totalHours`, `remainingHours`, `pendingHours` werden korrekt angezeigt |
 | 3 | Pruefe die Ampel-Farbe (trafficLight) | Gruen (>= Ziel), Gelb (teilweise erfuellt), Rot (weit unter Ziel) |
 | 4 | Pruefe das Putz-Sonder-Unterkonto | `cleaningHours` zeigt separat die Stunden aus Reinigungskategorie + QR-Putzstunden |
@@ -3583,7 +3904,7 @@
 | 1 | Rufe die Gesamtuebersicht auf (GET /api/v1/jobs/report/summary) | Zusammenfassung wird angezeigt |
 | 2 | Pruefe die Job-Zaehler | `openJobs`, `activeJobs` (IN_PROGRESS), `completedJobs` werden korrekt gezaehlt |
 | 3 | Pruefe die Ampel-Zaehler | `greenCount`, `yellowCount`, `redCount` fuer alle nicht-befreiten Familien |
-| 4 | Pruefe die Sortierung im Gesamtbericht (GET /api/v1/jobs/report/all) | Familien sind sortiert: Rot zuerst, dann Gelb, dann Gruen. Innerhalb gleicher Ampel alphabetisch |
+| 4 | Pruefe die Sortierung im Gesamtbericht (GET /api/v1/jobs/report) | Familien sind sortiert: Rot zuerst, dann Gelb, dann Gruen. Innerhalb gleicher Ampel alphabetisch |
 
 **Akzeptanzkriterien:**
 - [ ] Befreite Familien (`hoursExempt=true`) werden bei den Ampelzaehlern ausgeschlossen
@@ -3695,8 +4016,8 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Navigiere zur Putz-Orga-Verwaltung (GET /api/v1/cleaning/admin/configs) | Putz-Konfigurations-Uebersicht wird angezeigt |
-| 2 | Erstelle eine neue Konfiguration (POST /api/v1/cleaning/admin/configs) mit: Titel "Wochenputz Sonnengruppe", Wochentag 3 (Mittwoch), 14:00-16:00, min 2, max 5, 2.0 Stunden-Gutschrift, ohne specificDate | Konfiguration wird erstellt |
+| 1 | Navigiere zur Putz-Orga-Verwaltung (GET /api/v1/cleaning/configs) | Putz-Konfigurations-Uebersicht wird angezeigt |
+| 2 | Erstelle eine neue Konfiguration (POST /api/v1/cleaning/configs) mit: Titel "Wochenputz Sonnengruppe", Wochentag 3 (Mittwoch), 14:00-16:00, min 2, max 5, 2.0 Stunden-Gutschrift, ohne specificDate | Konfiguration wird erstellt |
 | 3 | Pruefe die Konfiguration | `dayOfWeek=3`, `startTime=14:00`, `endTime=16:00`, `specificDate=null` (wiederkehrend), `active=true` |
 | 4 | Pruefe `participantCircle` | Standard: "SECTION" |
 
@@ -3734,7 +4055,7 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Generiere Slots (POST /api/v1/cleaning/admin/configs/{id}/generate) fuer 2026-03-01 bis 2026-03-31 | Slots werden fuer jeden Mittwoch im Maerz generiert |
+| 1 | Generiere Slots (POST /api/v1/cleaning/configs/{id}/generate) fuer 2026-03-01 bis 2026-03-31 | Slots werden fuer jeden Mittwoch im Maerz generiert |
 | 2 | Pruefe die generierten Slots | Slots existieren fuer 04.03., 11.03., 18.03., 25.03. |
 | 3 | Pruefe die Slot-Details | Jeder Slot hat `configId`, `sectionId`, `slotDate`, `startTime`, `endTime`, `minParticipants`, `maxParticipants`, `status=OPEN` |
 | 4 | Generiere nochmals fuer denselben Zeitraum | Bereits existierende Slots werden nicht dupliziert |
@@ -3872,12 +4193,13 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Rufe den QR-Token fuer einen Slot ab (GET /api/v1/cleaning/admin/slots/{id}/qr-token) | QR-Token wird zurueckgegeben |
-| 2 | Exportiere QR-Codes als PDF (GET /api/v1/cleaning/admin/qr-codes/pdf) | PDF mit QR-Codes wird generiert |
+| 1 | Rufe den QR-Token fuer einen Slot ab (GET /api/v1/cleaning/slots/{id}/qr) | QR-Token wird zurueckgegeben |
+| 2 | Exportiere QR-Codes als PDF (GET /api/v1/cleaning/configs/{id}/qr-codes?from=&to=) | PDF mit QR-Codes fuer die Slots der Konfiguration im angegebenen Zeitraum wird generiert |
 | 3 | Pruefe den PDF-Inhalt | Jeder QR-Code enthaelt den Slot-spezifischen Token, Datum und Uhrzeit |
 
 **Akzeptanzkriterien:**
 - [ ] Jeder Slot hat einen eindeutigen `qrToken`
+- [ ] PDF-Export ist konfigurations-gebunden und akzeptiert `from`/`to`-Datumsparameter
 - [ ] PDF enthaelt druckbare QR-Codes mit Slot-Informationen (Datum, Uhrzeit)
 - [ ] Nur Putz-Admins koennen QR-Codes abrufen
 
@@ -4018,7 +4340,7 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Bearbeite den Slot (PUT /api/v1/cleaning/admin/slots/{id}) mit neuer startTime, endTime, minParticipants, maxParticipants | Slot-Daten werden aktualisiert |
+| 1 | Bearbeite den Slot (PUT /api/v1/cleaning/slots/{id}) mit neuer startTime, endTime, minParticipants, maxParticipants | Slot-Daten werden aktualisiert |
 | 2 | Pruefe die aktualisierten Werte | Neue Werte sind gesetzt, `updatedAt` ist aktualisiert |
 
 **Akzeptanzkriterien:**
@@ -4035,7 +4357,7 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Bearbeite die Konfiguration (PUT /api/v1/cleaning/admin/configs/{id}) mit neuem Titel und Zeiten | Konfiguration wird aktualisiert |
+| 1 | Bearbeite die Konfiguration (PUT /api/v1/cleaning/configs/{id}) mit neuem Titel und Zeiten | Konfiguration wird aktualisiert |
 | 2 | Aendere `active` auf `false` | Konfiguration wird deaktiviert, keine neuen Slots werden generiert |
 | 3 | Pruefe `hoursCredit` | Stundengutschrift kann angepasst werden |
 
@@ -4208,7 +4530,7 @@
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
 | 1 | Logge dich als Uploader des Bildes ein | Login erfolgreich |
-| 2 | Loesche das Bild (DELETE /api/v1/rooms/{roomId}/fotobox/images/{imageId}) | Bild und Thumbnail werden aus MinIO und DB geloescht |
+| 2 | Loesche das Bild (DELETE /api/v1/fotobox/images/{imageId}) | Bild und Thumbnail werden aus MinIO und DB geloescht |
 | 3 | Versuche als anderer Benutzer (nicht Uploader, nicht Leader) zu loeschen | Fehler: Nur Uploader oder Leader/Admin koennen loeschen |
 | 4 | Logge dich als LEADER ein und loesche ein beliebiges Bild | Loeschung erfolgreich (Leader kann alle Bilder loeschen) |
 
@@ -4267,7 +4589,7 @@
 
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
-| 1 | Bearbeite das Bild (PUT /api/v1/rooms/{roomId}/fotobox/images/{imageId}) mit Caption (max 500 Zeichen) | Caption wird aktualisiert |
+| 1 | Bearbeite das Bild (PUT /api/v1/fotobox/images/{imageId}) mit Caption (max 500 Zeichen) | Caption wird aktualisiert |
 | 2 | Pruefe die Bildliste des Threads | Neue Caption wird angezeigt |
 
 **Akzeptanzkriterien:**
@@ -4349,6 +4671,7 @@
 | 2 | Gib optionalen Kommentar ein (max 1000 Zeichen) und sende (POST /api/v1/fundgrube/items/{itemId}/claim) | `claimedBy` wird auf den Benutzer gesetzt, `claimedAt` auf den aktuellen Zeitpunkt |
 | 3 | Pruefe `expiresAt` | `expiresAt = claimedAt + 24 Stunden` |
 | 4 | Versuche, einen bereits beanspruchten Gegenstand erneut zu beanspruchen | Fehler: Gegenstand ist bereits beansprucht |
+| 5 | Versuche, den eigenen Fundgegenstand zu beanspruchen | Fehler (BadRequest): "Cannot claim your own item" |
 
 **Akzeptanzkriterien:**
 - [ ] `claimedBy` wird auf den beanspruchenden Benutzer gesetzt
@@ -4356,6 +4679,7 @@
 - [ ] `expiresAt` wird auf `claimedAt + 24 Stunden` gesetzt
 - [ ] Kommentar ist optional (max 1000 Zeichen)
 - [ ] Doppelbeanspruchung wird verhindert
+- [ ] Der Ersteller kann seinen eigenen Gegenstand NICHT beanspruchen
 
 ---
 
@@ -4389,10 +4713,10 @@
 |---|------------|---------------------|
 | 1 | Bearbeite den Gegenstand (PUT /api/v1/fundgrube/items/{itemId}) mit neuem Titel | Titel wird aktualisiert, `updatedAt` wird gesetzt |
 | 2 | Aendere die Beschreibung | Beschreibung wird aktualisiert |
-| 3 | Versuche als anderer Benutzer zu bearbeiten | Fehler: Nur Ersteller oder Admins koennen bearbeiten |
+| 3 | Versuche als anderer Benutzer zu bearbeiten | Fehler: Nur Ersteller, SUPERADMIN oder zustaendiger SECTION_ADMIN koennen bearbeiten |
 
 **Akzeptanzkriterien:**
-- [ ] Nur der Ersteller oder Admins koennen bearbeiten
+- [ ] Bearbeiten/Loeschen erlaubt fuer Ersteller, SUPERADMIN sowie den SECTION_ADMIN des Item-Bereichs (specialRoles `SECTION_ADMIN:<sectionId>`)
 - [ ] `updatedAt` wird bei jeder Aenderung aktualisiert
 - [ ] Titel und Beschreibung sind aenderbar, sectionId kann geaendert werden
 
@@ -4930,7 +5254,7 @@
 |---|------------|---------------------|
 | 1 | Als `lehrer@monteweb.local` (T) einloggen | Login erfolgreich |
 | 2 | Wiki-Seite in einem Raum oeffnen | Seiteninhalt wird angezeigt |
-| 3 | Lesezeichen-Icon klicken | Bookmark wird gesetzt (`contentType: "WIKI"`) |
+| 3 | Lesezeichen-Icon klicken | Bookmark wird gesetzt (`contentType: "WIKI_PAGE"`) |
 
 **Akzeptanzkriterien:**
 - [ ] Wiki-Seiten koennen gebookmarkt werden
@@ -5207,7 +5531,7 @@
 | 3 | Direktnachricht erhalten → MESSAGE-Benachrichtigung | Typ: `MESSAGE` |
 | 4 | Event erstellt → EVENT_CREATED-Benachrichtigung | Typ: `EVENT_CREATED` |
 | 5 | Event abgesagt → EVENT_CANCELLED-Benachrichtigung | Typ: `EVENT_CANCELLED` |
-| 6 | Formular veroeffentlicht → FORM_PUBLISHED-Benachrichtigung | Typ: `FORM_PUBLISHED` |
+| 6 | Raum-Umfrage veroeffentlicht → FORM_PUBLISHED-Benachrichtigung | Typ: `FORM_PUBLISHED` (nur bei ROOM-Scope-Umfragen; Consent-Formulare loesen `CONSENT_REQUIRED` aus, Bereichs-/Schul-Scopes erzeugen keine Benachrichtigung) |
 | 7 | Raum-Beitrittsanfrage → ROOM_JOIN_REQUEST-Benachrichtigung (an Leader) | Typ: `ROOM_JOIN_REQUEST` |
 | 8 | Beitrittsanfrage genehmigt → ROOM_JOIN_APPROVED (an Antragsteller) | Typ: `ROOM_JOIN_APPROVED` |
 | 9 | Familieneinladung → FAMILY_INVITATION | Typ: `FAMILY_INVITATION` |
@@ -5281,7 +5605,7 @@
 | 4 | Namen des zu einladenden Benutzers suchen | Suchergebnisse werden angezeigt |
 | 5 | Benutzer auswaehlen | Benutzer wird selektiert |
 | 6 | Rolle waehlen: PARENT oder CHILD | Rollen-Auswahl erscheint |
-| 7 | Einladung senden (`POST /api/v1/families/{id}/invite`) | Einladung wird gesendet |
+| 7 | Einladung senden (`POST /api/v1/families/{id}/invitations`) | Einladung wird gesendet |
 | 8 | Eingeladener Benutzer erhaelt Benachrichtigung | FAMILY_INVITATION-Notification erscheint |
 
 **Akzeptanzkriterien:**
@@ -5302,7 +5626,7 @@
 |---|------------|---------------------|
 | 1 | Als eingeladener Benutzer einloggen | Login erfolgreich |
 | 2 | Benachrichtigungsliste oeffnen | FAMILY_INVITATION-Benachrichtigung sichtbar |
-| 3 | Einladungen pruefen: `GET /api/v1/families/invitations/mine` | Offene Einladungen werden angezeigt |
+| 3 | Einladungen pruefen: `GET /api/v1/families/my-invitations` | Offene Einladungen werden angezeigt |
 | 4 | Einladung annehmen: `POST /api/v1/families/invitations/{id}/accept` | Benutzer wird Familienmitglied |
 | 5 | Familie in "Meine Familien" pruefen | Familie ist jetzt sichtbar |
 | 6 | Alternative: Einladung ablehnen: `POST /api/v1/families/invitations/{id}/decline` | Einladung wird entfernt |
@@ -5344,14 +5668,15 @@
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
 | 1 | Als `eltern@monteweb.local` (P) einloggen | Login erfolgreich |
-| 2 | Familien-Seite oeffnen | Stundenkonto wird angezeigt |
-| 3 | Gesamtstunden pruefen | Summe aus Job-Stunden und Putz-Stunden sichtbar |
+| 2 | Familien-Seite oeffnen | Stundenkonto-Widget (FamilyHoursWidget) wird angezeigt, sofern das Jobboard-Modul aktiv ist |
+| 3 | Gesamtstunden pruefen | Summe aus Job-Stunden und Putz-Stunden sichtbar (Daten aus `GET /api/v1/jobs/family/{familyId}/hours`) |
 | 4 | Putz-Stunden werden als Sonder-Unterkonto angezeigt | Separate Anzeige der Putzstunden |
 
 **Akzeptanzkriterien:**
 - [ ] Stundenkonto zeigt Gesamtstunden der Familie
 - [ ] Putzstunden werden separat ausgewiesen (Sonder-Unterkonto)
-- [ ] Stunden stammen aus Jobboerse und Putz-Orga
+- [ ] Die Stundendaten stammen aus dem Jobboard-Modul (`FamilyHoursInfo`), nicht aus dem Familien-Modul (`FamilyInfo` enthaelt keine Stundenfelder)
+- [ ] Das Widget wird nur angezeigt, wenn das Jobboard-Modul aktiviert ist
 - [ ] Familienverbund ist die Abrechnungseinheit
 
 ---
@@ -5540,7 +5865,7 @@
 | 1 | Als `admin@monteweb.local` (SA) einloggen | Login erfolgreich |
 | 2 | Admin > Design (AdminTheme) oeffnen | Theme-Editor wird angezeigt |
 | 3 | Primaerfarbe aendern | Farbwahl (Colorpicker) |
-| 4 | Speichern: `PUT /api/v1/admin/theme` | Theme wird aktualisiert |
+| 4 | Speichern: `PUT /api/v1/admin/config/theme` | Theme wird aktualisiert |
 | 5 | Seite neu laden | Neue Farben werden angewendet (CSS Custom Properties `--mw-*`) |
 
 **Akzeptanzkriterien:**
@@ -5561,7 +5886,7 @@
 | 1 | Als `admin@monteweb.local` (SA) einloggen | Login erfolgreich |
 | 2 | Admin > Module (AdminModules) oeffnen | Liste aller Module mit Toggles |
 | 3 | Modul "Fotobox" deaktivieren | Toggle auf "aus" |
-| 4 | Speichern: `PUT /api/v1/admin/modules` | Modulstatus wird in `tenant_config.modules` JSONB gespeichert |
+| 4 | Speichern: `PUT /api/v1/admin/config/modules` | Modulstatus wird in `tenant_config.modules` JSONB gespeichert |
 | 5 | Fotobox-Menueeintrag verschwindet in der Navigation | Frontend blendet deaktivierte Module aus |
 | 6 | Modul "Fotobox" wieder aktivieren | Toggle auf "ein", Menueeintrag erscheint wieder |
 
@@ -5583,7 +5908,7 @@
 |---|------------|---------------------|
 | 1 | Als `admin@monteweb.local` (SA) einloggen | Login erfolgreich |
 | 2 | Admin-Panel oeffnen, Logo-Bereich suchen | Logo-Upload-Bereich sichtbar |
-| 3 | Logo-Datei auswaehlen (PNG/JPG) | Datei wird hochgeladen: `POST /api/v1/admin/logo` |
+| 3 | Logo-Datei auswaehlen (PNG/JPG) | Datei wird hochgeladen: `POST /api/v1/admin/config/logo` |
 | 4 | Vorschau des Logos pruefen | Hochgeladenes Logo wird angezeigt |
 | 5 | Seite neu laden | Logo erscheint in Navigation und Login |
 
@@ -5626,7 +5951,7 @@
 | 2 | Admin > Error-Reports (AdminErrorReports) oeffnen | Liste der Fehlerberichte |
 | 3 | Fehlerbericht oeffnen | Details: Fingerprint, Occurrences, Status, Stack-Trace |
 | 4 | Status aendern: NEW -> REPORTED | `PUT /api/v1/admin/error-reports/{id}/status` |
-| 5 | GitHub-Issue erstellen | `POST /api/v1/admin/error-reports/{id}/github-issue` |
+| 5 | GitHub-Issue erstellen | `POST /api/v1/admin/error-reports/{id}/github` |
 | 6 | GitHub-Issue-URL wird angezeigt | `github_issue_url` wird gespeichert |
 | 7 | Status auf RESOLVED setzen | Fehlerbericht als geloest markiert |
 
@@ -5723,9 +6048,9 @@
 |---|------------|---------------------|
 | 1 | Als `admin@monteweb.local` (SA) einloggen | Login erfolgreich |
 | 2 | Admin > CSV-Import (AdminCsvImport) oeffnen | Import-Formular wird angezeigt |
-| 3 | Beispiel-CSV herunterladen: `GET /api/v1/admin/csv/example` | CSV-Vorlage wird heruntergeladen |
+| 3 | Beispiel-CSV herunterladen: `GET /api/v1/admin/csv-import/example` | CSV-Vorlage wird heruntergeladen |
 | 4 | CSV-Datei mit Benutzerdaten befuellen | Vorname, Nachname, E-Mail, Rolle |
-| 5 | CSV hochladen: `POST /api/v1/admin/csv/import` | Import wird ausgefuehrt |
+| 5 | CSV hochladen: `POST /api/v1/admin/csv-import` | Import wird ausgefuehrt |
 | 6 | Ergebnis pruefen: Anzahl importierter Benutzer | Erfolgsmeldung mit Statistik |
 | 7 | Importierte Benutzer in der Benutzerliste pruefen | Neue Benutzer sind sichtbar |
 
@@ -6105,9 +6430,9 @@
 | # | Testschritt | Erwartetes Ergebnis |
 |---|------------|---------------------|
 | 1 | Als `admin@monteweb.local` (SA) einloggen | Login erfolgreich |
-| 2 | Admin > Module > Wartungsmodus aktivieren | Toggle in `tenant_config.modules` JSONB: `maintenance: true` |
-| 3 | Wartungsmeldung eingeben: "System wird aktualisiert. Bitte versuchen Sie es in 30 Minuten erneut." | Meldung in `tenant_config.maintenance_message` |
-| 4 | Speichern: `PUT /api/v1/admin/maintenance` | Wartungsmodus wird aktiviert |
+| 2 | Admin > Module > Wartungsmodus aktivieren | Dedizierte Wartungs-Konfiguration (`maintenanceEnabled`), nicht der `modules`-JSONB-Toggle |
+| 3 | Wartungsmeldung eingeben: "System wird aktualisiert. Bitte versuchen Sie es in 30 Minuten erneut." | Meldung wird im Feld `maintenanceMessage` mitgesendet |
+| 4 | Speichern: `PUT /api/v1/admin/config/maintenance` mit Body `{maintenanceEnabled, maintenanceMessage}` | Wartungsmodus wird ueber `adminService.updateMaintenance` aktiviert |
 | 5 | Als `eltern@monteweb.local` (P) einloggen versuchen | 503 Service Unavailable mit Wartungsmeldung |
 | 6 | Admin-Zugang funktioniert weiterhin | SUPERADMIN ist nicht gesperrt |
 | 7 | Wartungsmodus deaktivieren | System ist wieder fuer alle zugaenglich |

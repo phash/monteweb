@@ -90,7 +90,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getSettings_authenticated_shouldReturn() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-settings@example.com", "Foto", "Settings");
         String roomId = createRoomAndGetId(token);
 
@@ -102,7 +102,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getSettings_defaultValues_shouldReturn() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-defaults@example.com", "Foto", "Defaults");
         String roomId = createRoomAndGetId(token);
 
@@ -116,7 +116,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void updateSettings_asLeader_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-update@example.com", "Foto", "Update");
         String roomId = createRoomAndGetId(token);
 
@@ -134,7 +134,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void updateSettings_partialUpdate_shouldPreserveOtherValues() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-partial@example.com", "Foto", "Partial");
         String roomId = createRoomAndGetId(token);
 
@@ -162,7 +162,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void updateSettings_maxImagesZero_shouldSetNull() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-maxi0@example.com", "Foto", "MaxI0");
         String roomId = createRoomAndGetId(token);
 
@@ -180,7 +180,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getThreads_withFotoboxEnabled_shouldReturnList() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-threads@example.com", "Foto", "Threads");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -193,7 +193,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getThreads_fotoboxNotEnabled_shouldFail() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-notenabled@example.com", "Foto", "NotEnabled");
         String roomId = createRoomAndGetId(token);
 
@@ -204,7 +204,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void createThread_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-create@example.com", "Foto", "Creator");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -223,7 +223,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void createThread_withoutDescription_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-nodesc@example.com", "Foto", "NoDesc");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -241,7 +241,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void createThread_blankTitle_shouldFail() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-blanktitle@example.com", "Foto", "BlankTitle");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -257,7 +257,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getThread_shouldReturnThread() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-getthread@example.com", "Foto", "GetThread");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -274,7 +274,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getThread_wrongRoom_shouldFail() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-wrongroom@example.com", "Foto", "WrongRoom");
         String roomId1 = createRoomAndGetId(token);
         String roomId2 = createRoomAndGetId(token);
@@ -291,7 +291,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void updateThread_asOwner_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-updatethread@example.com", "Foto", "UpdateThread");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -310,7 +310,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void deleteThread_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-delete@example.com", "Foto", "Delete");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -329,7 +329,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void deleteThread_nonExistent_shouldFail() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-delnone@example.com", "Foto", "DelNone");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -341,7 +341,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void createMultipleThreads_shouldAllAppear() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-multi@example.com", "Foto", "Multi");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -361,7 +361,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void uploadImages_shouldUploadFile() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-upload@example.com", "Foto", "Upload");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -382,7 +382,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void uploadImages_withCaption_shouldStoreCaption() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-caption@example.com", "Foto", "Caption");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -403,7 +403,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void uploadImages_shouldSetCoverImage() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-cover@example.com", "Foto", "Cover");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -430,7 +430,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void uploadImages_multipleFiles_shouldUploadAll() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-multiup@example.com", "Foto", "MultiUp");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -455,7 +455,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void getThreadImages_shouldReturnImages() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-getimgs@example.com", "Foto", "GetImgs");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -481,7 +481,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getThreadImages_emptyThread_shouldReturnEmpty() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-emptyimgs@example.com", "Foto", "EmptyImgs");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -500,7 +500,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void deleteImage_asUploader_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-delimg@example.com", "Foto", "DelImg");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -532,7 +532,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void deleteImage_coverImage_shouldClearCover() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-delcover@example.com", "Foto", "DelCover");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -572,7 +572,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void updateImage_caption_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-updimg@example.com", "Foto", "UpdImg");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -606,7 +606,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void deleteThread_withImages_shouldDeleteAll() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-delcasc@example.com", "Foto", "DelCasc");
         String roomId = createRoomAndGetId(token);
         enableFotobox(token, roomId);
@@ -639,7 +639,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void createThread_withViewOnlyPermission_shouldFail() throws Exception {
-        String leaderToken = TestHelper.registerAndGetToken(mockMvc,
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-leader-perm@example.com", "Foto", "LeaderPerm");
         String roomId = createRoomAndGetId(leaderToken);
         enableFotoboxWithPermission(leaderToken, roomId, "VIEW_ONLY");
@@ -663,7 +663,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void uploadImages_withViewOnlyPermission_shouldFail() throws Exception {
-        String leaderToken = TestHelper.registerAndGetToken(mockMvc,
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-leader-upl@example.com", "Foto", "LeaderUpl");
         String roomId = createRoomAndGetId(leaderToken);
         enableFotoboxWithPermission(leaderToken, roomId, "VIEW_ONLY");
@@ -690,7 +690,7 @@ class FotoboxControllerIntegrationTest {
     @Disabled("Requires MinIO")
     @Test
     void uploadImages_withPostImagesPermission_shouldSucceed() throws Exception {
-        String leaderToken = TestHelper.registerAndGetToken(mockMvc,
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-leader-post@example.com", "Foto", "LeaderPost");
         String roomId = createRoomAndGetId(leaderToken);
         enableFotoboxWithPermission(leaderToken, roomId, "POST_IMAGES");
@@ -716,7 +716,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getThreads_asViewOnlyMember_shouldSucceed() throws Exception {
-        String leaderToken = TestHelper.registerAndGetToken(mockMvc,
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-leader-view@example.com", "Foto", "LeaderView");
         String roomId = createRoomAndGetId(leaderToken);
         enableFotoboxWithPermission(leaderToken, roomId, "VIEW_ONLY");
@@ -739,7 +739,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void getSettings_asNonMember_shouldFail() throws Exception {
-        String leaderToken = TestHelper.registerAndGetToken(mockMvc,
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-leader-nm@example.com", "Foto", "LeaderNm");
         String roomId = createRoomAndGetId(leaderToken);
 
@@ -753,7 +753,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void updateSettings_asNonLeader_shouldFail() throws Exception {
-        String leaderToken = TestHelper.registerAndGetToken(mockMvc,
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-leader-nl@example.com", "Foto", "LeaderNl");
         String roomId = createRoomAndGetId(leaderToken);
 
@@ -777,7 +777,7 @@ class FotoboxControllerIntegrationTest {
 
     @Test
     void threads_shouldBeIsolatedPerRoom() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "fotobox-isolation@example.com", "Foto", "Isolation");
         String roomId1 = createRoomAndGetId(token);
         String roomId2 = createRoomAndGetId(token);

@@ -3,6 +3,7 @@ package com.monteweb.forms;
 import com.monteweb.forms.internal.model.*;
 import com.monteweb.forms.internal.repository.*;
 import com.monteweb.forms.internal.service.FormsService;
+import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.user.UserInfo;
@@ -106,6 +107,15 @@ class FormsServiceTest {
         return new SubmitResponseRequest(List.of(
                 new AnswerRequest(questionId, text, null, null)
         ));
+    }
+
+    private RoomInfo makeRoom(UUID id, UUID sectionId) {
+        return new RoomInfo(id, "Room", null, null, null, "GENERAL",
+                sectionId, false, 0, "OPEN", null, List.of(), null);
+    }
+
+    private QuestionRequest makeChoiceRequest(QuestionType type, List<String> options) {
+        return new QuestionRequest(type, "Pick one", null, false, options, null);
     }
 
     /**
@@ -426,6 +436,144 @@ class FormsServiceTest {
 
             assertThatCode(() -> service.getResults(FORM_ID, USER_ID))
                     .doesNotThrowAnyException();
+        }
+    }
+
+    // ── Question Validation (US-160 / US-181) ───────────────────────────
+
+    @Nested
+    @DisplayName("Question Validation")
+    class QuestionValidation {
+
+        private CreateFormRequest schoolFormWith(QuestionRequest question) {
+            return new CreateFormRequest(
+                    "Survey", null, FormType.SURVEY, FormScope.SCHOOL,
+                    null, null, false, null, List.of(question)
+            );
+        }
+
+        @BeforeEach
+        void allowSuperadminCreate() {
+            // SUPERADMIN passes checkCreatePermission for any scope
+            when(userModule.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.SUPERADMIN)));
+        }
+
+        @Test
+        @DisplayName("should reject single-choice question with no options")
+        void createForm_singleChoiceNoOptions() {
+            var request = schoolFormWith(makeChoiceRequest(QuestionType.SINGLE_CHOICE, null));
+            when(formRepository.save(any(Form.class))).thenAnswer(inv -> {
+                Form f = inv.getArgument(0);
+                f.setId(FORM_ID);
+                return f;
+            });
+
+            assertThatThrownBy(() -> service.createForm(request, USER_ID))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("at least two distinct options");
+        }
+
+        @Test
+        @DisplayName("should reject multiple-choice question with a single option")
+        void createForm_multipleChoiceOneOption() {
+            var request = schoolFormWith(
+                    makeChoiceRequest(QuestionType.MULTIPLE_CHOICE, List.of("Only one")));
+            when(formRepository.save(any(Form.class))).thenAnswer(inv -> {
+                Form f = inv.getArgument(0);
+                f.setId(FORM_ID);
+                return f;
+            });
+
+            assertThatThrownBy(() -> service.createForm(request, USER_ID))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("at least two distinct options");
+        }
+
+        @Test
+        @DisplayName("should reject choice question with duplicate/blank options collapsing below two")
+        void createForm_choiceDuplicateOptions() {
+            var request = schoolFormWith(
+                    makeChoiceRequest(QuestionType.SINGLE_CHOICE, Arrays.asList("A", " A ", "")));
+            when(formRepository.save(any(Form.class))).thenAnswer(inv -> {
+                Form f = inv.getArgument(0);
+                f.setId(FORM_ID);
+                return f;
+            });
+
+            assertThatThrownBy(() -> service.createForm(request, USER_ID))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("at least two distinct options");
+        }
+
+        @Test
+        @DisplayName("should accept single-choice question with two options")
+        void createForm_singleChoiceTwoOptions() {
+            var request = schoolFormWith(
+                    makeChoiceRequest(QuestionType.SINGLE_CHOICE, List.of("Yes", "No")));
+            when(formRepository.save(any(Form.class))).thenAnswer(inv -> {
+                Form f = inv.getArgument(0);
+                if (f.getId() == null) f.setId(FORM_ID);
+                return f;
+            });
+            when(questionRepository.save(any(FormQuestion.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            // toFormInfo internals (do NOT override the SUPERADMIN user stub)
+            when(questionRepository.countByFormId(FORM_ID)).thenReturn(1);
+            when(responseRepository.countByFormId(FORM_ID)).thenReturn(0);
+            lenient().when(responseRepository.existsByFormIdAndUserId(eq(FORM_ID), any())).thenReturn(false);
+            lenient().when(trackingRepository.existsByFormIdAndUserId(eq(FORM_ID), any())).thenReturn(false);
+
+            assertThatCode(() -> service.createForm(request, USER_ID))
+                    .doesNotThrowAnyException();
+        }
+    }
+
+    // ── Target Count (US-167 / US-172) ──────────────────────────────────
+
+    @Nested
+    @DisplayName("Target Count")
+    class TargetCount {
+
+        @Test
+        @DisplayName("should count distinct section members across rooms for SECTION forms")
+        void getResults_sectionTargetCount() {
+            var sectionId = UUID.randomUUID();
+            var room1 = UUID.randomUUID();
+            var room2 = UUID.randomUUID();
+            var userA = UUID.randomUUID();
+            var userB = UUID.randomUUID();
+            var userC = UUID.randomUUID();
+
+            var form = makeForm(FormStatus.PUBLISHED, false, null);
+            form.setScope(FormScope.SECTION);
+            form.setSectionIds(new UUID[]{sectionId});
+            form.setScopeId(sectionId);
+            when(formRepository.findById(FORM_ID)).thenReturn(Optional.of(form));
+
+            when(userModule.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.SUPERADMIN)));
+
+            // toFormInfo internals
+            when(questionRepository.countByFormId(FORM_ID)).thenReturn(1);
+            when(responseRepository.countByFormId(FORM_ID)).thenReturn(0);
+            lenient().when(responseRepository.existsByFormIdAndUserId(eq(FORM_ID), any())).thenReturn(false);
+            when(schoolModule.findById(sectionId))
+                    .thenReturn(Optional.of(new com.monteweb.school.SchoolSectionInfo(
+                            sectionId, "Section", "section", null, 0, true)));
+
+            when(roomModule.findBySectionId(sectionId))
+                    .thenReturn(List.of(makeRoom(room1, sectionId), makeRoom(room2, sectionId)));
+            // userB is in both rooms -> must be counted once
+            when(roomModule.getMemberUserIds(room1)).thenReturn(List.of(userA, userB));
+            when(roomModule.getMemberUserIds(room2)).thenReturn(List.of(userB, userC));
+
+            when(questionRepository.findByFormIdOrderBySortOrder(FORM_ID)).thenReturn(List.of());
+
+            var summary = service.getResults(FORM_ID, USER_ID);
+
+            // userA, userB, userC -> 3 distinct
+            assertThat(summary.form().targetCount()).isEqualTo(3);
         }
     }
 }

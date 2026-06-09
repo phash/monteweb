@@ -32,7 +32,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void updateResponse_shouldSucceedForPublishedFormWithExistingResponse() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "Update Resp Room");
         String formId = createForm(token, roomId);
 
@@ -62,7 +62,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void updateResponse_shouldFailForAnonymousForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "Anon Resp Room");
         String formId = createAnonymousForm(token, roomId);
 
@@ -92,7 +92,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void updateResponse_shouldFailForClosedForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "Closed Resp Room");
         String formId = createForm(token, roomId);
 
@@ -130,7 +130,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void getMyResponse_shouldReturnAnswersForExistingResponse() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "MyResp Room");
         String formId = createForm(token, roomId);
 
@@ -160,7 +160,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void getMyResponse_shouldReturnNullForAnonymousForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "AnonMyResp Room");
         String formId = createAnonymousForm(token, roomId);
 
@@ -189,7 +189,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void archiveForm_shouldSucceedForClosedForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "Archive Room");
         String formId = createForm(token, roomId);
 
@@ -210,7 +210,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void archiveForm_shouldFailForPublishedForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "ArchiveFail Room");
         String formId = createForm(token, roomId);
 
@@ -229,7 +229,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void deleteForm_creatorCanDeletePublishedForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "Delete Pub Room");
         String formId = createForm(token, roomId);
 
@@ -246,7 +246,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void deleteForm_creatorCanDeleteClosedForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "Delete Closed Room");
         String formId = createForm(token, roomId);
 
@@ -268,7 +268,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void getResults_respondentCanSeeClosedFormResults() throws Exception {
-        String creatorToken = TestHelper.registerAndGetToken(mockMvc);
+        String creatorToken = TestHelper.registerTeacherAndGetToken(mockMvc);
         String respondentToken = TestHelper.registerAndGetToken(mockMvc);
         String roomId = createRoom(creatorToken, "Results Room");
 
@@ -308,7 +308,7 @@ class FormsEnhancementIntegrationTest {
 
     @Test
     void getAvailableForms_shouldIncludeClosedForms() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(token, "AvailClosed Room");
         String formId = createForm(token, roomId);
 

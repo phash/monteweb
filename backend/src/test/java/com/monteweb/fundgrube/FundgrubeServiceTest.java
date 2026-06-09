@@ -92,6 +92,87 @@ class FundgrubeServiceTest {
         lenient().when(imageRepo.findByItemIdOrderByCreatedAt(item.getId())).thenReturn(List.of());
     }
 
+    // ── List Items ───────────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("List Items")
+    class ListItems {
+
+        @Test
+        @DisplayName("Section filter includes school-wide (null-section) items")
+        void listItems_sectionFilterIncludesSchoolWide() {
+            var sectionItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            var schoolWideItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, null);
+            // The repository query (findActiveBySectionId) is responsible for returning both;
+            // here we verify the service forwards to it and maps all returned items.
+            when(itemRepo.findActiveBySectionId(eq(SECTION_ID), any(Instant.class)))
+                    .thenReturn(List.of(sectionItem, schoolWideItem));
+            stubToInfo(sectionItem);
+            stubToInfo(schoolWideItem);
+
+            var result = service.listItems(SECTION_ID, null);
+
+            assertThat(result).hasSize(2);
+            assertThat(result).extracting(FundgrubeItemInfo::id)
+                    .containsExactlyInAnyOrder(sectionItem.getId(), schoolWideItem.getId());
+            verify(itemRepo).findActiveBySectionId(eq(SECTION_ID), any(Instant.class));
+            verify(itemRepo, never()).findAllActive(any());
+        }
+
+        @Test
+        @DisplayName("claimed=true returns only claimed items")
+        void listItems_claimedTrue() {
+            var claimedItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            claimedItem.setClaimedBy(USER_ID);
+            claimedItem.setClaimedAt(Instant.now());
+            var availableItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            when(itemRepo.findAllActive(any(Instant.class)))
+                    .thenReturn(List.of(claimedItem, availableItem));
+            stubToInfo(claimedItem);
+
+            var result = service.listItems(null, true);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).id()).isEqualTo(claimedItem.getId());
+            assertThat(result.get(0).claimed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("claimed=false returns only available (unclaimed) items")
+        void listItems_claimedFalse() {
+            var claimedItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            claimedItem.setClaimedBy(USER_ID);
+            claimedItem.setClaimedAt(Instant.now());
+            var availableItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            when(itemRepo.findAllActive(any(Instant.class)))
+                    .thenReturn(List.of(claimedItem, availableItem));
+            stubToInfo(availableItem);
+
+            var result = service.listItems(null, false);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).id()).isEqualTo(availableItem.getId());
+            assertThat(result.get(0).claimed()).isFalse();
+        }
+
+        @Test
+        @DisplayName("claimed=null returns all active items")
+        void listItems_claimedNullReturnsAll() {
+            var claimedItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            claimedItem.setClaimedBy(USER_ID);
+            claimedItem.setClaimedAt(Instant.now());
+            var availableItem = makeItem(UUID.randomUUID(), OTHER_USER_ID, SECTION_ID);
+            when(itemRepo.findAllActive(any(Instant.class)))
+                    .thenReturn(List.of(claimedItem, availableItem));
+            stubToInfo(claimedItem);
+            stubToInfo(availableItem);
+
+            var result = service.listItems(null, null);
+
+            assertThat(result).hasSize(2);
+        }
+    }
+
     // ── Claim Item ───────────────────────────────────────────────────────
 
     @Nested

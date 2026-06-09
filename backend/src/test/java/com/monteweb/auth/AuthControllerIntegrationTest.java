@@ -147,4 +147,44 @@ class AuthControllerIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty());
     }
+
+    // ── Self-service 2FA enrollment via temp token (MANDATORY mode) ───
+
+    @Test
+    void setup2faTemp_missingTempToken_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/2fa/setup-temp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void setup2faTemp_invalidTempToken_shouldFail() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/2fa/setup-temp")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tempToken": "not-a-valid-temp-token"}
+                                """))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void confirm2faTemp_invalidTempToken_shouldFail() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/2fa/setup-temp/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tempToken": "not-a-valid-temp-token", "code": "123456"}
+                                """))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void confirm2faTemp_missingCode_shouldReturn400() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/2fa/setup-temp/confirm")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"tempToken": "some-token"}
+                                """))
+                .andExpect(status().isBadRequest());
+    }
 }

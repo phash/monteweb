@@ -4,8 +4,7 @@ import com.monteweb.notification.NotificationModuleApi;
 import com.monteweb.notification.NotificationType;
 import com.monteweb.room.DiscussionThreadCreatedEvent;
 import com.monteweb.room.RoomModuleApi;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -20,8 +19,7 @@ public class DiscussionNotificationListener {
         this.roomModule = roomModule;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onDiscussionThreadCreated(DiscussionThreadCreatedEvent event) {
         var room = roomModule.findById(event.roomId()).orElse(null);
         if (room == null) return;

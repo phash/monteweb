@@ -16,9 +16,12 @@ import com.monteweb.user.UserRole;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
 
 @Service
 @Transactional(readOnly = true)
@@ -33,6 +36,9 @@ public class AuthService implements AuthModuleApi {
     private final PasswordEncoder passwordEncoder;
     private final TotpService totpService;
     private final AesEncryptionService aesEncryptionService;
+    private final StringRedisTemplate redisTemplate;
+
+    private static final String TWO_FA_TEMP_USED_PREFIX = "2fa_temp_used:";
 
     @Autowired(required = false)
     private LdapAuthService ldapAuthService;
@@ -43,7 +49,8 @@ public class AuthService implements AuthModuleApi {
                        RefreshTokenService refreshTokenService,
                        PasswordEncoder passwordEncoder,
                        TotpService totpService,
-                       AesEncryptionService aesEncryptionService) {
+                       AesEncryptionService aesEncryptionService,
+                       StringRedisTemplate redisTemplate) {
         this.userModuleApi = userModuleApi;
         this.adminModuleApi = adminModuleApi;
         this.jwtService = jwtService;
@@ -51,6 +58,7 @@ public class AuthService implements AuthModuleApi {
         this.passwordEncoder = passwordEncoder;
         this.totpService = totpService;
         this.aesEncryptionService = aesEncryptionService;
+        this.redisTemplate = redisTemplate;
     }
 
     @Transactional
@@ -105,12 +113,17 @@ public class AuthService implements AuthModuleApi {
             }
         }
 
-        if (!localAuthSuccess || user == null) {
+        // Inactive/pending accounts must return the SAME generic error regardless of
+        // password correctness, otherwise the differing "PENDING_APPROVAL" response leaks
+        // (a) which emails are real pending accounts and (b) that a guessed password is
+        // correct for an inactive account (online password oracle). Check it before the
+        // credential-success branch so the response is identical for right/wrong passwords.
+        if (user != null && !user.active()) {
             throw new BusinessException("Invalid credentials");
         }
 
-        if (!user.active()) {
-            throw new BusinessException("PENDING_APPROVAL");
+        if (!localAuthSuccess || user == null) {
+            throw new BusinessException("Invalid credentials");
         }
 
         // Check if user has 2FA enabled
@@ -203,6 +216,13 @@ public class AuthService implements AuthModuleApi {
             return java.util.Optional.empty();
         }
         var claims = jwtService.extractClaims(token);
+        // Reject special-purpose tokens (e.g. 2fa_temp, image) that carry a "type" claim.
+        // Only full access tokens may authenticate sessions (e.g. WebSocket/STOMP).
+        // This mirrors the REST JwtAuthenticationFilter.authenticateWithJwt() check and
+        // closes the 2FA-bypass and image-token confusion at this shared entry point.
+        if (claims.get("type", String.class) != null) {
+            return java.util.Optional.empty();
+        }
         return java.util.Optional.of(new TokenClaims(
                 claims.getSubject(),
                 claims.get("role", String.class)
@@ -287,6 +307,7 @@ public class AuthService implements AuthModuleApi {
 
         var claims = claimsOpt.get();
         java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        String jti = claims.getId();
 
         UserInfo user = userModuleApi.findById(userId)
                 .orElseThrow(() -> new BusinessException("User not found"));
@@ -294,6 +315,7 @@ public class AuthService implements AuthModuleApi {
         // Try TOTP code first
         String secret = userModuleApi.getTotpSecret(userId).map(aesEncryptionService::decrypt).orElse(null);
         if (secret != null && totpService.verifyCode(secret, code, userId)) {
+            consumeTempToken(jti, userId);
             userModuleApi.updateLastLogin(userId);
             return generateTokenResponse(user);
         }
@@ -303,6 +325,7 @@ public class AuthService implements AuthModuleApi {
         if (recoveryCodes != null) {
             for (int i = 0; i < recoveryCodes.length; i++) {
                 if (recoveryCodes[i] != null && totpService.verifyRecoveryCode(code, recoveryCodes[i])) {
+                    consumeTempToken(jti, userId);
                     // Consume recovery code
                     recoveryCodes[i] = null;
                     // Filter out nulls
@@ -317,6 +340,76 @@ public class AuthService implements AuthModuleApi {
         }
 
         throw new BusinessException("Invalid 2FA code");
+    }
+
+    /**
+     * Self-service 2FA enrollment (step 1) during a MANDATORY-mode login after the grace
+     * deadline. The login endpoint hands the client a 2FA temp token instead of a full
+     * session; here we authenticate with that temp token (the user has no full session and
+     * no TOTP secret yet) and generate + store a fresh TOTP secret, returning the QR URI.
+     * Does NOT consume the temp token — that happens on successful {@link #confirm2faWithTempToken}.
+     */
+    @Transactional
+    public TwoFactorSetupResponse setup2faWithTempToken(String tempToken) {
+        var claims = jwtService.validateTempToken(tempToken)
+                .orElseThrow(() -> new BadRequestException("Invalid or expired temp token"));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        // Users who already have 2FA enabled must use the normal verify flow, not re-enroll.
+        if (userModuleApi.isTotpEnabled(userId)) {
+            throw new BadRequestException("2FA is already enabled");
+        }
+
+        String secret = totpService.generateSecret();
+        userModuleApi.setTotpSecret(userId, aesEncryptionService.encrypt(secret));
+
+        String qrUri = totpService.generateTotpUri(secret, user.email());
+        return new TwoFactorSetupResponse(secret, qrUri);
+    }
+
+    /**
+     * Self-service 2FA enrollment (step 2) during a MANDATORY-mode login. Validates the
+     * 2FA temp token + the code from the freshly configured authenticator, enables 2FA,
+     * single-use-consumes the temp token, and returns a real session plus the one-time
+     * recovery codes. This closes the lock-out where a user without 2FA past the grace
+     * deadline could neither log in nor enroll.
+     */
+    @Transactional
+    public TwoFactorEnrollmentResult confirm2faWithTempToken(String tempToken, String code) {
+        var claims = jwtService.validateTempToken(tempToken)
+                .orElseThrow(() -> new BadRequestException("Invalid or expired temp token"));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        String jti = claims.getId();
+
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        if (userModuleApi.isTotpEnabled(userId)) {
+            throw new BadRequestException("2FA is already enabled");
+        }
+
+        String secret = userModuleApi.getTotpSecret(userId)
+                .map(aesEncryptionService::decrypt)
+                .orElseThrow(() -> new BadRequestException("2FA not set up. Call setup first."));
+
+        if (!totpService.verifyCode(secret, code, userId)) {
+            throw new BusinessException("Invalid 2FA code");
+        }
+
+        var recoveryCodes = totpService.generateRecoveryCodes();
+        var hashedCodes = recoveryCodes.stream()
+                .map(totpService::hashRecoveryCode)
+                .toArray(String[]::new);
+        userModuleApi.enableTotp(userId, hashedCodes);
+
+        // Only consume the temp token once enrollment fully succeeds, so a wrong code can be retried.
+        consumeTempToken(jti, userId);
+        userModuleApi.updateLastLogin(userId);
+
+        return new TwoFactorEnrollmentResult(generateTokenResponse(user), recoveryCodes);
     }
 
     /**
@@ -372,6 +465,24 @@ public class AuthService implements AuthModuleApi {
                 jwtService.generateAccessToken(adminUserId, admin.email(), admin.role().name()),
                 refreshTokenService.createRefreshToken(adminUserId),
                 admin.id(), admin.email(), admin.role().name());
+    }
+
+    /**
+     * Atomically marks a 2FA temp token (identified by its "jti") as used so it cannot be
+     * replayed within its 5-minute lifetime. Mirrors the replay-detection pattern used in
+     * {@link TotpService} (TOTP codes) and {@link RefreshTokenService} (used refresh tokens).
+     * A token without a jti (legacy/older issuance) is allowed through for backwards compatibility.
+     */
+    private void consumeTempToken(String jti, java.util.UUID userId) {
+        if (jti == null) {
+            return; // older temp tokens have no jti; cannot enforce single-use
+        }
+        Boolean wasAbsent = redisTemplate.opsForValue()
+                .setIfAbsent(TWO_FA_TEMP_USED_PREFIX + jti, userId.toString(), Duration.ofMinutes(5));
+        if (Boolean.FALSE.equals(wasAbsent)) {
+            log.warn("2FA temp token replay detected for user {}", userId);
+            throw new BusinessException("Token already used");
+        }
     }
 
     private LoginResponse generateTokenResponse(UserInfo user) {

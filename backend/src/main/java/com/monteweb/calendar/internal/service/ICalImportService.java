@@ -19,6 +19,9 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -29,6 +32,7 @@ public class ICalImportService {
 
     private static final Logger log = LoggerFactory.getLogger(ICalImportService.class);
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final DateTimeFormatter ICAL_DATETIME_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
 
     private final ICalSubscriptionRepository subscriptionRepository;
     private final ICalEventRepository eventRepository;
@@ -40,7 +44,10 @@ public class ICalImportService {
         this.eventRepository = eventRepository;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                // NEVER: redirects are followed manually so each hop is re-validated against
+                // the SSRF allow-list. NORMAL would follow a 30x to an internal host
+                // (cloud metadata, minio/postgres/redis, ...) without re-validation.
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 
@@ -68,6 +75,7 @@ public class ICalImportService {
     }
 
     private static final int MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB
+    private static final int MAX_REDIRECTS = 3;
 
     public void syncSubscription(UUID subId) {
         var subOpt = subscriptionRepository.findById(subId);
@@ -75,16 +83,37 @@ public class ICalImportService {
 
         var sub = subOpt.get();
         try {
-            // SSRF protection: block requests to private/internal networks
-            SsrfProtectionUtils.validateUrl(sub.getUrl());
-
-            var request = HttpRequest.newBuilder()
-                    .uri(URI.create(sub.getUrl()))
-                    .timeout(Duration.ofSeconds(10))
-                    .GET()
-                    .build();
-
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            // SSRF protection: follow redirects manually and re-validate EVERY hop
+            // (initial URL + each redirect target) so a public URL cannot 30x-redirect
+            // to a private/internal host (cloud metadata, minio/postgres/redis, ...).
+            HttpResponse<java.io.InputStream> response = null;
+            String currentUrl = sub.getUrl();
+            for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+                SsrfProtectionUtils.validateUrl(currentUrl);
+                var uri = URI.create(currentUrl);
+                var request = HttpRequest.newBuilder()
+                        .uri(uri)
+                        .timeout(Duration.ofSeconds(10))
+                        .GET()
+                        .build();
+                var resp = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                int status = resp.statusCode();
+                if (status >= 300 && status < 400) {
+                    var location = resp.headers().firstValue("Location").orElse(null);
+                    if (location == null || location.isBlank()) {
+                        log.warn("iCal fetch from {} returned a redirect with no Location header", currentUrl);
+                        return;
+                    }
+                    currentUrl = uri.resolve(location).toString();
+                    continue;
+                }
+                response = resp;
+                break;
+            }
+            if (response == null) {
+                log.warn("Too many redirects fetching iCal from {}", sub.getUrl());
+                return;
+            }
             if (response.statusCode() != 200) {
                 log.warn("Failed to fetch iCal from {}: HTTP {}", sub.getUrl(), response.statusCode());
                 return;
@@ -182,18 +211,75 @@ public class ICalImportService {
                 pe.endDate = pe.startDate;
             }
         } else {
-            // DATETIME format: 20261225T180000 or 20261225T180000Z
+            // DATETIME format: 20261225T180000 (local), 20261225T180000Z (UTC),
+            // or with a TZID parameter (DTSTART;TZID=Europe/Berlin:20261225T180000).
             pe.allDay = false;
-            pe.startDate = LocalDate.parse(dtStart.substring(0, 8), DATE_FORMAT);
-            pe.startTime = dtStart.substring(9, 11) + ":" + dtStart.substring(11, 13);
+
+            ZoneId targetZone = ZoneId.systemDefault();
+
+            LocalDateTime start = toLocalDateTime(dtStart, extractTzid(block, "DTSTART"), targetZone);
+            pe.startDate = start.toLocalDate();
+            pe.startTime = formatTime(start);
 
             if (dtEnd != null && dtEnd.length() >= 13) {
-                pe.endDate = LocalDate.parse(dtEnd.substring(0, 8), DATE_FORMAT);
-                pe.endTime = dtEnd.substring(9, 11) + ":" + dtEnd.substring(11, 13);
+                LocalDateTime end = toLocalDateTime(dtEnd, extractTzid(block, "DTEND"), targetZone);
+                pe.endDate = end.toLocalDate();
+                pe.endTime = formatTime(end);
             } else {
                 pe.endDate = pe.startDate;
             }
         }
+    }
+
+    /**
+     * Converts an iCal date-time value into a {@link LocalDateTime} expressed in {@code targetZone}.
+     *  - Values ending in {@code Z} are UTC and are converted to the target zone.
+     *  - When a {@code TZID} is supplied, the value is interpreted in that zone and converted.
+     *  - Otherwise the value is treated as floating local time and returned unchanged.
+     */
+    private LocalDateTime toLocalDateTime(String value, String tzid, ZoneId targetZone) {
+        boolean utc = value.endsWith("Z");
+        String raw = utc ? value.substring(0, value.length() - 1) : value;
+        LocalDateTime local = LocalDateTime.parse(raw, ICAL_DATETIME_FORMAT);
+
+        if (utc) {
+            return local.atZone(ZoneOffset.UTC).withZoneSameInstant(targetZone).toLocalDateTime();
+        }
+        if (tzid != null) {
+            try {
+                return local.atZone(ZoneId.of(tzid)).withZoneSameInstant(targetZone).toLocalDateTime();
+            } catch (Exception e) {
+                // Unknown TZID -> fall back to treating the value as floating local time
+                log.debug("Unknown iCal TZID '{}', treating time as floating local", tzid);
+                return local;
+            }
+        }
+        return local;
+    }
+
+    private String formatTime(LocalDateTime dt) {
+        return String.format("%02d:%02d", dt.getHour(), dt.getMinute());
+    }
+
+    /**
+     * Extracts the {@code TZID} parameter for a given property from the raw VEVENT block,
+     * e.g. {@code DTSTART;TZID=Europe/Berlin:...} -> {@code Europe/Berlin}. Returns null if absent.
+     */
+    private String extractTzid(String block, String name) {
+        for (String line : block.split("\n")) {
+            line = line.trim();
+            if (line.startsWith(name + ";")) {
+                int colonIdx = line.indexOf(':');
+                String params = colonIdx >= 0 ? line.substring(name.length() + 1, colonIdx)
+                        : line.substring(name.length() + 1);
+                for (String param : params.split(";")) {
+                    if (param.startsWith("TZID=")) {
+                        return param.substring("TZID=".length()).trim();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private String extractProperty(String block, String name) {

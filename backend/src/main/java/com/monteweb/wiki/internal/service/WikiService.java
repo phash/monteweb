@@ -43,7 +43,8 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Page Tree ----
 
-    public List<WikiPageSummary> getPageTree(UUID roomId) {
+    public List<WikiPageSummary> getPageTree(UUID userId, UUID roomId) {
+        requireRoomMembership(userId, roomId);
         var pages = pageRepo.findByRoomIdOrderByTitleAsc(roomId);
         // Build set of IDs that have children
         Set<UUID> parentIds = new HashSet<>();
@@ -66,7 +67,8 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Get Page ----
 
-    public WikiPageResponse getPage(UUID roomId, String slug) {
+    public WikiPageResponse getPage(UUID userId, UUID roomId, String slug) {
+        requireRoomMembership(userId, roomId);
         var page = pageRepo.findByRoomIdAndSlug(roomId, slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Wiki page not found: " + slug));
 
@@ -180,6 +182,15 @@ public class WikiService implements WikiModuleApi {
         page.setTitle(request.title().trim());
         page.setContent(request.content());
         page.setLastEditedBy(userId);
+
+        // Slug may optionally be changed. When the client supplies a (non-blank) slug
+        // it is sanitized and made unique within the room (ignoring this page's own
+        // current slug). When omitted, the existing slug is preserved.
+        if (request.slug() != null && !request.slug().isBlank()) {
+            String newSlug = uniqueSlug(page.getRoomId(), slugify(request.slug()), page.getId());
+            page.setSlug(newSlug);
+        }
+
         pageRepo.save(page);
 
         // Create new version
@@ -193,7 +204,7 @@ public class WikiService implements WikiModuleApi {
         eventPublisher.publishEvent(new WikiPageSavedEvent(
                 page.getId(), page.getRoomId(), page.getTitle(), page.getContent(), page.getSlug()));
 
-        return getPage(page.getRoomId(), page.getSlug());
+        return getPage(userId, page.getRoomId(), page.getSlug());
     }
 
     // ---- Delete Page ----
@@ -211,7 +222,9 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Version History ----
 
-    public List<WikiPageVersionResponse> getVersions(UUID pageId) {
+    public List<WikiPageVersionResponse> getVersions(UUID userId, UUID pageId) {
+        var page = requirePage(pageId);
+        requireRoomMembership(userId, page.getRoomId());
         var versions = versionRepo.findByPageIdOrderByCreatedAtDesc(pageId);
 
         Set<UUID> userIds = new HashSet<>();
@@ -232,9 +245,17 @@ public class WikiService implements WikiModuleApi {
                 .toList();
     }
 
-    public WikiPageVersionResponse getVersion(UUID versionId) {
+    public WikiPageVersionResponse getVersion(UUID userId, UUID roomId, UUID versionId) {
         var version = versionRepo.findById(versionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Version not found: " + versionId));
+
+        // Resolve the owning page to determine the room, and ensure the version
+        // actually belongs to the room in the request path (prevents cross-room reads).
+        var page = requirePage(version.getPageId());
+        if (!page.getRoomId().equals(roomId)) {
+            throw new ResourceNotFoundException("Version not found: " + versionId);
+        }
+        requireRoomMembership(userId, page.getRoomId());
 
         String userName = userModule.findById(version.getEditedBy())
                 .map(UserInfo::displayName).orElse("Unbekannt");
@@ -251,7 +272,8 @@ public class WikiService implements WikiModuleApi {
 
     // ---- Search ----
 
-    public List<WikiPageSummary> searchPages(UUID roomId, String query) {
+    public List<WikiPageSummary> searchPages(UUID userId, UUID roomId, String query) {
+        requireRoomMembership(userId, roomId);
         if (query == null || query.trim().isEmpty()) {
             return List.of();
         }
@@ -342,14 +364,29 @@ public class WikiService implements WikiModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Wiki page not found: " + pageId));
     }
 
-    private boolean isSuperAdmin(UUID userId) {
-        return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * Room-scoped admin check: SUPERADMIN is a global admin for every room,
+     * SECTION_ADMIN only counts as admin for rooms whose section the user actually
+     * administers (special role "SECTION_ADMIN:&lt;sectionId&gt;").
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModule.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }
@@ -368,8 +405,16 @@ public class WikiService implements WikiModuleApi {
      * Generate a URL-safe slug from the title. Ensures uniqueness within the room.
      */
     String generateSlug(UUID roomId, String title) {
+        return uniqueSlug(roomId, slugify(title), null);
+    }
+
+    /**
+     * Normalize an arbitrary input into a URL-safe slug (lowercase, hyphenated,
+     * special chars stripped). Never returns an empty string ("page" fallback).
+     */
+    private String slugify(String input) {
         // Normalize unicode, lowercase, replace spaces with hyphens, remove special chars
-        String normalized = Normalizer.normalize(title.trim().toLowerCase(), Normalizer.Form.NFD);
+        String normalized = Normalizer.normalize(input.trim().toLowerCase(), Normalizer.Form.NFD);
         // Replace umlauts
         normalized = normalized
                 .replaceAll("\\p{M}", "")
@@ -386,15 +431,28 @@ public class WikiService implements WikiModuleApi {
         if (slug.isEmpty()) {
             slug = "page";
         }
+        return slug;
+    }
 
-        // Ensure uniqueness
-        String baseSlug = slug;
+    /**
+     * Ensure the slug is unique within the room, appending -1, -2, ... on collision.
+     * When {@code excludePageId} is non-null, a collision with that page is ignored
+     * (used when updating a page's own slug).
+     */
+    private String uniqueSlug(UUID roomId, String baseSlug, UUID excludePageId) {
+        String slug = baseSlug;
         int counter = 1;
-        while (pageRepo.existsByRoomIdAndSlug(roomId, slug)) {
+        while (slugTaken(roomId, slug, excludePageId)) {
             slug = baseSlug + "-" + counter;
             counter++;
         }
-
         return slug;
+    }
+
+    private boolean slugTaken(UUID roomId, String slug, UUID excludePageId) {
+        if (excludePageId == null) {
+            return pageRepo.existsByRoomIdAndSlug(roomId, slug);
+        }
+        return pageRepo.existsByRoomIdAndSlugAndIdNot(roomId, slug, excludePageId);
     }
 }

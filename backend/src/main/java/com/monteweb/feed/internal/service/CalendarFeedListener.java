@@ -4,8 +4,7 @@ import com.monteweb.calendar.EventCancelledEvent;
 import com.monteweb.calendar.EventDeletedEvent;
 import com.monteweb.feed.FeedModuleApi;
 import com.monteweb.feed.SourceType;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 /**
@@ -22,8 +21,7 @@ public class CalendarFeedListener {
         this.feedModule = feedModule;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onEventCancelled(EventCancelledEvent event) {
         String title = "Termin abgesagt: " + event.eventTitle();
         String content = event.cancellerName() + " hat den Termin \"" + event.eventTitle() + "\" abgesagt.";
@@ -31,8 +29,7 @@ public class CalendarFeedListener {
         feedModule.createSystemPost(title, content, SourceType.SCHOOL, null);
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onEventDeleted(EventDeletedEvent event) {
         if (event.attendingUserIds() == null || event.attendingUserIds().isEmpty()) {
             return;

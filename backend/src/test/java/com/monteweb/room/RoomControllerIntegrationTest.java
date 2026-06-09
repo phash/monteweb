@@ -21,6 +21,22 @@ class RoomControllerIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    /**
+     * Logs in as a seeded account (password {@code test1234}) and returns its access token.
+     * Used to obtain a TEACHER token, since room creation (US-050) is restricted to
+     * TEACHER / SECTION_ADMIN / SUPERADMIN.
+     */
+    private String loginAs(String email) throws Exception {
+        var result = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "%s", "password": "test1234"}
+                                """.formatted(email)))
+                .andReturn();
+        return TestHelper.parseResponse(result.getResponse().getContentAsString())
+                .path("data").path("accessToken").asText();
+    }
+
     @Test
     void getMyRooms_unauthenticated_shouldFail() throws Exception {
         mockMvc.perform(get("/api/v1/rooms/mine"))
@@ -40,9 +56,8 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    void createRoom_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
-                "room-creator@example.com", "Room", "Creator");
+    void createRoom_asTeacher_shouldSucceed() throws Exception {
+        String token = loginAs("lehrer@monteweb.local");
 
         mockMvc.perform(post("/api/v1/rooms")
                         .header("Authorization", "Bearer " + token)
@@ -57,9 +72,38 @@ class RoomControllerIntegrationTest {
     }
 
     @Test
-    void createRoom_blankName_shouldFail() throws Exception {
+    void createRoom_asParent_shouldReturn403() throws Exception {
+        // US-050: PARENT must not be able to create rooms. Freshly registered
+        // users default to UserRole.PARENT.
         String token = TestHelper.registerAndGetToken(mockMvc,
-                "room-blank@example.com", "Room", "Blank");
+                "room-parent-create@example.com", "Parent", "Creator");
+
+        mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Forbidden Room", "type": "PROJEKT"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createRoom_asStudent_shouldReturn403() throws Exception {
+        // US-050: STUDENT must not be able to create rooms.
+        String token = loginAs("schueler@monteweb.local");
+
+        mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Forbidden Room", "type": "PROJEKT"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createRoom_blankName_shouldFail() throws Exception {
+        String token = loginAs("lehrer@monteweb.local");
 
         mockMvc.perform(post("/api/v1/rooms")
                         .header("Authorization", "Bearer " + token)
@@ -72,8 +116,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void getRoom_shouldReturnRoom() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
-                "room-get@example.com", "Room", "Getter");
+        String token = loginAs("lehrer@monteweb.local");
 
         // Create a room first
         var createResult = mockMvc.perform(post("/api/v1/rooms")
@@ -108,9 +151,8 @@ class RoomControllerIntegrationTest {
 
     @Test
     void createJoinRequest_shouldSucceed() throws Exception {
-        // Create room as user A
-        String tokenA = TestHelper.registerAndGetToken(mockMvc,
-                "room-owner-jr@example.com", "Owner", "JR");
+        // Create room as user A (teacher — only staff may create rooms)
+        String tokenA = loginAs("lehrer@monteweb.local");
         var createResult = mockMvc.perform(post("/api/v1/rooms")
                         .header("Authorization", "Bearer " + tokenA)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -159,8 +201,7 @@ class RoomControllerIntegrationTest {
 
     @Test
     void getRoomMembers_asMember_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
-                "room-members@example.com", "Room", "Member");
+        String token = loginAs("lehrer@monteweb.local");
 
         var createResult = mockMvc.perform(post("/api/v1/rooms")
                         .header("Authorization", "Bearer " + token)

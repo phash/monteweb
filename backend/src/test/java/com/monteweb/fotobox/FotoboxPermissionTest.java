@@ -5,6 +5,7 @@ import com.monteweb.fotobox.internal.repository.FotoboxImageRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxRoomSettingsRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxThreadRepository;
 import com.monteweb.fotobox.internal.service.FotoboxPermissionService;
+import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.shared.exception.ForbiddenException;
@@ -39,6 +40,7 @@ class FotoboxPermissionTest {
 
     private static final UUID USER_ID = UUID.randomUUID();
     private static final UUID ROOM_ID = UUID.randomUUID();
+    private static final UUID SECTION_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -48,10 +50,21 @@ class FotoboxPermissionTest {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private UserInfo makeUser(UUID id, UserRole role) {
+        return makeUser(id, role, Set.of());
+    }
+
+    private UserInfo makeUser(UUID id, UserRole role, Set<String> specialRoles) {
         return new UserInfo(
                 id, id + "@monteweb.local", "Max", "Mustermann",
                 "Max Mustermann", null, null,
-                role, Set.of(), Set.of(), true, "SYSTEM"
+                role, specialRoles, Set.of(), true, "SYSTEM"
+        );
+    }
+
+    private RoomInfo makeRoom(UUID roomId, UUID sectionId) {
+        return new RoomInfo(
+                roomId, "Room", "desc", "pub", null, "CLASS",
+                sectionId, false, 5, "OPEN", null, java.util.List.of(), null
         );
     }
 
@@ -122,6 +135,57 @@ class FotoboxPermissionTest {
             // LEADER should pass even the highest permission level
             assertThatCode(() -> service.requirePermission(USER_ID, ROOM_ID, FotoboxPermissionLevel.CREATE_THREADS))
                     .doesNotThrowAnyException();
+        }
+    }
+
+    // ── Admin Role Consistency (SUPERADMIN + SECTION_ADMIN) ───────────────
+
+    @Nested
+    @DisplayName("Admin Role Consistency")
+    class AdminRoleConsistency {
+
+        @Test
+        @DisplayName("SUPERADMIN is treated as admin even when not a room member")
+        void superAdminNonMemberTreatedAsAdmin() {
+            when(userModule.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.SUPERADMIN)));
+
+            assertThatCode(() -> service.requireRoomMember(USER_ID, ROOM_ID))
+                    .doesNotThrowAnyException();
+            assertThat(service.isLeaderOrAdmin(USER_ID, ROOM_ID)).isTrue();
+        }
+
+        @Test
+        @DisplayName("SECTION_ADMIN scoped to the room's section is treated as admin (non-member)")
+        void sectionAdminScopedToRoomSectionTreatedAsAdmin() {
+            when(userModule.findById(USER_ID)).thenReturn(Optional.of(
+                    makeUser(USER_ID, UserRole.SECTION_ADMIN, Set.of("SECTION_ADMIN:" + SECTION_ID))));
+            when(roomModule.findById(ROOM_ID)).thenReturn(Optional.of(makeRoom(ROOM_ID, SECTION_ID)));
+
+            // requireRoomMember must NOT throw for a section-scoped SECTION_ADMIN of this room
+            assertThatCode(() -> service.requireRoomMember(USER_ID, ROOM_ID))
+                    .doesNotThrowAnyException();
+            // SECTION_ADMIN of this room's section must be recognised as leader-or-admin
+            assertThat(service.isLeaderOrAdmin(USER_ID, ROOM_ID)).isTrue();
+        }
+
+        @Test
+        @DisplayName("SECTION_ADMIN scoped to a DIFFERENT section is NOT admin for this room")
+        void sectionAdminScopedToOtherSectionNotAdmin() {
+            UUID otherSection = UUID.randomUUID();
+            when(userModule.findById(USER_ID)).thenReturn(Optional.of(
+                    makeUser(USER_ID, UserRole.SECTION_ADMIN, Set.of("SECTION_ADMIN:" + otherSection))));
+            when(roomModule.findById(ROOM_ID)).thenReturn(Optional.of(makeRoom(ROOM_ID, SECTION_ID)));
+            // Not a room member either
+            when(roomModule.isUserInRoom(USER_ID, ROOM_ID)).thenReturn(false);
+
+            // requireRoomMember MUST throw: section admin of another section has no access
+            assertThatThrownBy(() -> service.requireRoomMember(USER_ID, ROOM_ID))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Not a member of this room");
+            // And must NOT be treated as leader-or-admin
+            when(roomModule.getUserRoleInRoom(USER_ID, ROOM_ID)).thenReturn(Optional.empty());
+            assertThat(service.isLeaderOrAdmin(USER_ID, ROOM_ID)).isFalse();
         }
     }
 }

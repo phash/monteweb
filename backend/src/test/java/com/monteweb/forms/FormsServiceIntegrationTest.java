@@ -71,7 +71,7 @@ class FormsServiceIntegrationTest {
 
     @Test
     void createForm_shouldReturnCreatedForm() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create a room first (user becomes LEADER, which grants create permission for ROOM scope)
         String roomId = createRoom(token, "Forms Room");
@@ -133,7 +133,7 @@ class FormsServiceIntegrationTest {
 
     @Test
     void getForm_existing_shouldReturnDetails() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room and form
         String roomId = createRoom(token, "Detail Form Room");
@@ -149,7 +149,7 @@ class FormsServiceIntegrationTest {
 
     @Test
     void publishForm_shouldUpdateStatus() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room and form
         String roomId = createRoom(token, "Publish Form Room");

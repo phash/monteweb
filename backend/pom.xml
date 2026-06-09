@@ -22,8 +22,6 @@
         <spring-modulith.version>2.0.3</spring-modulith.version>
         <jjwt.version>0.13.0</jjwt.version>
         <testcontainers.version>2.0.3</testcontainers.version>
-        <!-- Upgrade Jackson 3.x BOM to fix GHSA-72hv-8253-57qq (Number Length Constraint Bypass) -->
-        <jackson-bom.version>3.1.0</jackson-bom.version>
     </properties>
 
     <dependencyManagement>
@@ -178,7 +176,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.83</version>
+            <version>1.84</version>
         </dependency>
 
         <!-- MinIO (S3-compatible object storage) -->
@@ -331,13 +329,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
-                </configuration>
             </plugin>
         </plugins>
     </build>

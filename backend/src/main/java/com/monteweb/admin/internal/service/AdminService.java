@@ -18,6 +18,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @Transactional(readOnly = true)
@@ -26,13 +27,23 @@ public class AdminService implements AdminModuleApi {
     private final TenantConfigRepository configRepository;
     private final AesEncryptionService aesEncryptionService;
     private final ErrorReportRepository errorReportRepository;
+    private final AuditService auditService;
 
     public AdminService(TenantConfigRepository configRepository,
                         AesEncryptionService aesEncryptionService,
-                        ErrorReportRepository errorReportRepository) {
+                        ErrorReportRepository errorReportRepository,
+                        AuditService auditService) {
         this.configRepository = configRepository;
         this.aesEncryptionService = aesEncryptionService;
         this.errorReportRepository = errorReportRepository;
+        this.auditService = auditService;
+    }
+
+    @Override
+    @Transactional
+    public void recordAuditEvent(UUID userId, String action, String entityType, UUID entityId,
+                                 Map<String, Object> details, String ipAddress) {
+        auditService.log(userId, action, entityType, entityId, details, ipAddress);
     }
 
     @Override
@@ -55,6 +66,7 @@ public class AdminService implements AdminModuleApi {
                                           String privacyPolicyText, String privacyPolicyVersion,
                                           String termsText, String termsVersion,
                                           Integer dataRetentionDaysNotifications, Integer dataRetentionDaysAudit,
+                                          Integer maxUploadSizeMb,
                                           String schoolFullName, String schoolAddress, String schoolPrincipal,
                                           String techContactName, String techContactEmail,
                                           String twoFactorMode,
@@ -88,6 +100,7 @@ public class AdminService implements AdminModuleApi {
         if (termsVersion != null) config.setTermsVersion(termsVersion);
         if (dataRetentionDaysNotifications != null) config.setDataRetentionDaysNotifications(dataRetentionDaysNotifications);
         if (dataRetentionDaysAudit != null) config.setDataRetentionDaysAudit(dataRetentionDaysAudit);
+        if (maxUploadSizeMb != null) config.setMaxUploadSizeMb(maxUploadSizeMb);
         if (schoolFullName != null) config.setSchoolFullName(schoolFullName);
         if (schoolAddress != null) config.setSchoolAddress(schoolAddress);
         if (schoolPrincipal != null) config.setSchoolPrincipal(schoolPrincipal);
@@ -149,7 +162,12 @@ public class AdminService implements AdminModuleApi {
                 "Jitsi kann nicht aktiviert werden, ohne eine eigene Jitsi-Server-URL zu konfigurieren. " +
                 "Bitte tragen Sie zuerst die URL Ihres selbst-gehosteten Jitsi-Servers ein.");
         }
-        config.setModules(modules);
+        // Merge with existing toggles instead of replacing the whole map, so a partial
+        // update does not silently wipe unrelated flags (e.g. maintenance, wopi, clamav,
+        // ldap, directoryAdminOnly). Mirrors the copy-and-merge pattern in updateMaintenance().
+        var existing = new java.util.HashMap<>(config.getModules());
+        existing.putAll(modules);
+        config.setModules(existing);
         return toInfo(configRepository.save(config));
     }
 

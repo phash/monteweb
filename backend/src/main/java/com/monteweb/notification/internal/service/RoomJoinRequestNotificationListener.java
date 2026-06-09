@@ -6,8 +6,7 @@ import com.monteweb.room.RoomJoinRequestEvent;
 import com.monteweb.room.RoomJoinRequestResolvedEvent;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,8 +21,7 @@ public class RoomJoinRequestNotificationListener {
         this.roomModule = roomModule;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onRoomJoinRequest(RoomJoinRequestEvent event) {
         String title = "Beitrittsanfrage: " + event.roomName();
         String message = event.requesterName() + " möchte dem Raum " + event.roomName() + " beitreten";
@@ -46,8 +44,7 @@ public class RoomJoinRequestNotificationListener {
         }
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onRoomJoinRequestResolved(RoomJoinRequestResolvedEvent event) {
         String title;
         String message;

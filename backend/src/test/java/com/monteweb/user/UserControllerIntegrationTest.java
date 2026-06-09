@@ -67,6 +67,56 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    void updateMe_blankFirstName_shouldReturn400() throws Exception {
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "update-blank-first@example.com", "Before", "Update");
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "firstName": "   ",
+                                    "lastName": "Updated"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateMe_blankLastName_shouldReturn400() throws Exception {
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "update-blank-last@example.com", "Before", "Update");
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "firstName": "After",
+                                    "lastName": ""
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateMe_missingNames_shouldReturn400() throws Exception {
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "update-missing-names@example.com", "Before", "Update");
+
+        mockMvc.perform(put("/api/v1/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "phone": "+49123456789"
+                                }
+                                """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void updateMe_unauthenticated_shouldReturn401() throws Exception {
         mockMvc.perform(put("/api/v1/users/me")
                         .contentType(MediaType.APPLICATION_JSON)

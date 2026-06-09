@@ -1,5 +1,7 @@
 package com.monteweb.search.internal.service;
 
+import com.monteweb.room.RoomInfo;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.search.SearchResult;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
@@ -24,12 +26,14 @@ public class SolrSearchService {
     );
 
     private final SolrClient solrClient;
+    private final RoomModuleApi roomModuleApi;
 
-    public SolrSearchService(SolrClient solrClient) {
+    public SolrSearchService(SolrClient solrClient, RoomModuleApi roomModuleApi) {
         this.solrClient = solrClient;
+        this.roomModuleApi = roomModuleApi;
     }
 
-    public List<SearchResult> search(String query, String type, int limit) {
+    public List<SearchResult> search(String query, String type, int limit, UUID userId) {
         try {
             SolrQuery solrQuery = new SolrQuery();
             solrQuery.setQuery(escapeQuery(query));
@@ -43,6 +47,11 @@ public class SolrSearchService {
                 }
                 solrQuery.addFilterQuery("doc_type:" + upperType);
             }
+
+            // Access control: room-scoped documents (FILE, WIKI, TASK) must be
+            // constrained to the rooms the requesting user is a member of.
+            // Documents without a room_id (USER, ROOM, POST, EVENT) always pass.
+            solrQuery.addFilterQuery(buildAccessFilter(userId));
 
             // Highlighting
             solrQuery.setHighlight(true);
@@ -99,6 +108,46 @@ public class SolrSearchService {
             log.error("Solr search failed for query '{}': {}", query, e.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * Builds a Solr filter query that restricts room-scoped documents to the
+     * rooms the user is a member of, while always allowing documents that have
+     * no room_id (USER, ROOM, POST, EVENT).
+     *
+     * <p>Resulting filter: {@code (*:* -room_id:[* TO *]) OR room_id:(id1 OR id2 ...)}.
+     * If the user is a member of no rooms, the filter collapses to
+     * {@code (*:* -room_id:[* TO *])}, hiding all room-scoped documents.</p>
+     */
+    private String buildAccessFilter(UUID userId) {
+        // Documents without a room_id are never room-scoped and always allowed.
+        String noRoomClause = "(*:* -room_id:[* TO *])";
+
+        if (userId == null) {
+            return noRoomClause;
+        }
+
+        List<UUID> accessibleRoomIds;
+        try {
+            accessibleRoomIds = roomModuleApi.findByUserId(userId).stream()
+                    .map(RoomInfo::id)
+                    .toList();
+        } catch (Exception e) {
+            log.error("Failed to resolve accessible rooms for user {}: {}", userId, e.getMessage());
+            // Fail closed: only non-room-scoped documents are returned.
+            return noRoomClause;
+        }
+
+        if (accessibleRoomIds.isEmpty()) {
+            return noRoomClause;
+        }
+
+        String roomIdsOr = accessibleRoomIds.stream()
+                .map(id -> "\"" + id + "\"")
+                .reduce((a, b) -> a + " OR " + b)
+                .orElse("");
+
+        return noRoomClause + " OR room_id:(" + roomIdsOr + ")";
     }
 
     private String buildSubtitle(String docType, String roomName, String contentType, SolrDocument doc) {

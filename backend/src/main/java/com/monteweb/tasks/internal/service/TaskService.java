@@ -73,8 +73,12 @@ public class TaskService implements TasksModuleApi {
 
     /**
      * Returns the full board response with columns and tasks, resolving user names.
+     * Requires the caller to be a member of the room (or an admin) before any board
+     * is read or lazily created.
      */
-    public TaskBoardResponse getBoard(UUID roomId) {
+    @Transactional
+    public TaskBoardResponse getBoard(UUID roomId, UUID userId) {
+        requireRoomMembership(userId, roomId);
         var board = getOrCreateBoard(roomId);
         var columns = columnRepo.findByBoardIdOrderByPosition(board.getId());
         var tasks = taskRepo.findByBoardId(board.getId());
@@ -172,8 +176,10 @@ public class TaskService implements TasksModuleApi {
 
         if (request.title() != null && !request.title().isBlank()) task.setTitle(request.title());
         if (request.description() != null) task.setDescription(request.description());
-        if (request.assigneeId() != null) task.setAssigneeId(request.assigneeId());
-        if (request.dueDate() != null) task.setDueDate(request.dueDate());
+        if (Boolean.TRUE.equals(request.clearAssignee())) task.setAssigneeId(null);
+        else if (request.assigneeId() != null) task.setAssigneeId(request.assigneeId());
+        if (Boolean.TRUE.equals(request.clearDueDate())) task.setDueDate(null);
+        else if (request.dueDate() != null) task.setDueDate(request.dueDate());
         if (request.columnId() != null) {
             var column = columnRepo.findById(request.columnId())
                     .orElseThrow(() -> new ResourceNotFoundException("Column not found"));
@@ -379,14 +385,28 @@ public class TaskService implements TasksModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
     }
 
-    private boolean isSuperAdmin(UUID userId) {
-        return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * SUPERADMIN is always a global admin. SECTION_ADMIN only counts as admin for a room
+     * whose section the user actually administers (special role {@code SECTION_ADMIN:<sectionId>}).
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModule.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!isSuperAdmin(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }

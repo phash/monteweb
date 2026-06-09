@@ -230,10 +230,18 @@ public class UserService implements UserModuleApi {
     @Override
     @Transactional
     public UserInfo updateProfile(UUID userId, String firstName, String lastName, String phone) {
+        // First and last name are mandatory (US-025). Reject null/blank so the
+        // derived displayName can never become empty or " ".
+        if (firstName == null || firstName.isBlank()) {
+            throw new com.monteweb.shared.exception.BadRequestException("First name is required");
+        }
+        if (lastName == null || lastName.isBlank()) {
+            throw new com.monteweb.shared.exception.BadRequestException("Last name is required");
+        }
         var user = findEntityById(userId);
-        if (firstName != null) user.setFirstName(firstName);
-        if (lastName != null) user.setLastName(lastName);
-        if (phone != null) user.setPhone(phone);
+        user.setFirstName(firstName.trim());
+        user.setLastName(lastName.trim());
+        if (phone != null) user.setPhone(phone.trim());
         user.setDisplayName(user.getFirstName() + " " + user.getLastName());
         return toUserInfo(userRepository.save(user));
     }
@@ -306,9 +314,21 @@ public class UserService implements UserModuleApi {
             }
             user.setEmail(email.toLowerCase().trim());
         }
-        if (firstName != null) user.setFirstName(firstName);
-        if (lastName != null) user.setLastName(lastName);
-        if (phone != null) user.setPhone(phone);
+        // null = leave unchanged; an explicitly provided value must not be blank
+        // (US-025) so the derived displayName never becomes empty or " ".
+        if (firstName != null) {
+            if (firstName.isBlank()) {
+                throw new com.monteweb.shared.exception.BadRequestException("First name must not be blank");
+            }
+            user.setFirstName(firstName.trim());
+        }
+        if (lastName != null) {
+            if (lastName.isBlank()) {
+                throw new com.monteweb.shared.exception.BadRequestException("Last name must not be blank");
+            }
+            user.setLastName(lastName.trim());
+        }
+        if (phone != null) user.setPhone(phone.trim());
         user.setDisplayName(user.getFirstName() + " " + user.getLastName());
         return toUserInfo(userRepository.save(user));
     }

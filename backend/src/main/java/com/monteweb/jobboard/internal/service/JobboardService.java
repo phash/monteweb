@@ -31,6 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.monteweb.shared.util.FileValidationUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -970,6 +974,9 @@ public class JobboardService implements JobboardModuleApi {
     }
 
     public record CompleteAssignmentRequest(
+            @NotNull(message = "actualHours is required")
+            @DecimalMin(value = "0.0", message = "actualHours must be >= 0")
+            @DecimalMax(value = "24.0", message = "actualHours must be <= 24")
             BigDecimal actualHours,
             String notes
     ) {

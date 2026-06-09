@@ -47,8 +47,11 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 50MB
+      # Must be >= the largest per-service limit (FileService 100MB) so the
+      # service-level size checks are reachable and authoritative instead of
+      # being pre-empted by a framework MaxUploadSizeExceededException at 10MB.
+      max-file-size: 100MB
+      max-request-size: 110MB
 
   jackson:
     datetime:

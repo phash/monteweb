@@ -210,8 +210,11 @@ class JobboardServiceIntegrationTest {
     }
 
     @Test
-    void getReportPdf_authenticatedUser_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+    void getReportPdf_teacher_shouldSucceed() throws Exception {
+        // The family-hours export returns ALL families' billing data and is now
+        // restricted to SUPERADMIN/SECTION_ADMIN/TEACHER. A teacher must still get
+        // the PDF; non-admin (403) access is asserted in a separate test.
+        String token = loginAs("lehrer@monteweb.local");
 
         mockMvc.perform(get("/api/v1/jobs/report/pdf")
                         .header("Authorization", "Bearer " + token))

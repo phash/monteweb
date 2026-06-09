@@ -77,10 +77,15 @@ public class LinkPreviewService {
     private final HttpClient httpClient;
     private final ConcurrentHashMap<String, CachedPreview> cache = new ConcurrentHashMap<>();
 
+    private static final int MAX_REDIRECTS = 3;
+
     public LinkPreviewService() {
+        // NEVER: redirects are followed manually so each hop is re-validated against
+        // the SSRF allow-list. HttpClient.Redirect.NORMAL would follow 30x to internal
+        // hosts (cloud metadata, postgres/redis/minio/...) without re-validation.
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(FETCH_TIMEOUT)
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 
@@ -96,33 +101,54 @@ public class LinkPreviewService {
         }
 
         try {
-            // SSRF protection: block private/internal IPs and non-HTTP schemes
-            SsrfProtectionUtils.validateUrl(url);
+            String currentUrl = url;
+            for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+                // SSRF protection: re-validate EVERY hop (initial URL + each redirect target)
+                // to block private/internal IPs, cloud metadata and non-HTTP schemes.
+                SsrfProtectionUtils.validateUrl(currentUrl);
 
-            var uri = URI.create(url);
+                var uri = URI.create(currentUrl);
+                if (!isAllowedHost(uri)) {
+                    log.debug("Blocked link preview for internal/private host: {}", uri.getHost());
+                    return null;
+                }
 
-            if (!isAllowedHost(uri)) {
-                log.debug("Blocked link preview for internal/private host: {}", uri.getHost());
+                var request = HttpRequest.newBuilder()
+                        .uri(uri)
+                        .timeout(FETCH_TIMEOUT)
+                        .header("User-Agent", "MonteWeb/1.0 LinkPreview")
+                        .header("Accept", "text/html")
+                        .GET()
+                        .build();
+
+                var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                int status = response.statusCode();
+
+                // Handle redirects manually so the target is re-validated above
+                if (status >= 300 && status < 400) {
+                    var location = response.headers().firstValue("Location").orElse(null);
+                    if (location == null || location.isBlank()) {
+                        return null;
+                    }
+                    // Resolve relative redirects against the current URI
+                    URI nextUri = uri.resolve(location);
+                    currentUrl = nextUri.toString();
+                    continue;
+                }
+
+                if (status >= 200 && status < 300) {
+                    // Limit response body to prevent OOM
+                    var html = SsrfProtectionUtils.readLimited(response.body(), MAX_RESPONSE_BYTES);
+                    // Cache/return under the originally requested url
+                    var preview = parseOpenGraph(url, html);
+                    putCache(url, preview);
+                    return preview;
+                }
+
+                // Non-redirect, non-success status: give up
                 return null;
             }
-
-            var request = HttpRequest.newBuilder()
-                    .uri(uri)
-                    .timeout(FETCH_TIMEOUT)
-                    .header("User-Agent", "MonteWeb/1.0 LinkPreview")
-                    .header("Accept", "text/html")
-                    .GET()
-                    .build();
-
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-
-            if (response.statusCode() >= 200 && response.statusCode() < 400) {
-                // Limit response body to prevent OOM
-                var html = SsrfProtectionUtils.readLimited(response.body(), MAX_RESPONSE_BYTES);
-                var preview = parseOpenGraph(url, html);
-                putCache(url, preview);
-                return preview;
-            }
+            log.debug("Too many redirects fetching link preview for {}", url);
         } catch (IllegalArgumentException e) {
             log.debug("URL blocked by SSRF protection: {}: {}", url, e.getMessage());
         } catch (Exception e) {

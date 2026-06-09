@@ -46,7 +46,11 @@ public class DiscussionThreadService {
     }
 
     public Page<ThreadInfo> getThreads(UUID roomId, UUID userId, String statusFilter, Pageable pageable) {
-        requireRoomMember(roomId, userId);
+        // Membership gate: global admins and section admins scoped to this room's section
+        // may always list; otherwise the user must be a member.
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
+            throw new ForbiddenException("You are not a member of this room");
+        }
 
         var room = roomRepository.findById(roomId).orElse(null);
         var settings = room != null ? room.getSettings() : RoomSettings.defaults();
@@ -56,16 +60,11 @@ public class DiscussionThreadService {
             return Page.empty(pageable);
         }
 
-        // Determine which audiences the user can see
-        var user = userModuleApi.findById(userId);
-        var userRole = user.map(u -> u.role()).orElse(null);
-        var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId).orElse(null);
-
-        boolean canSeeAll = userRole == UserRole.TEACHER || userRole == UserRole.SUPERADMIN
-                || userRole == UserRole.SECTION_ADMIN || roomRole == RoomRole.LEADER;
+        // Determine which audiences the user can see (null => may see all audiences)
+        var allowedAudiences = allowedAudiencesFor(roomId, userId, settings);
 
         Page<DiscussionThread> threads;
-        if (canSeeAll) {
+        if (allowedAudiences == null) {
             if (statusFilter != null && !statusFilter.isBlank()) {
                 threads = threadRepository.findByRoomIdAndStatusOrderByCreatedAtDesc(
                         roomId, ThreadStatus.valueOf(statusFilter.toUpperCase()), pageable);
@@ -73,21 +72,6 @@ public class DiscussionThreadService {
                 threads = threadRepository.findByRoomIdOrderByCreatedAtDesc(roomId, pageable);
             }
         } else {
-            boolean isParent = roomRole == RoomRole.PARENT_MEMBER || userRole == UserRole.PARENT;
-            boolean isStudent = userRole == UserRole.STUDENT;
-
-            java.util.List<ThreadAudience> allowedAudiences;
-            if (isParent) {
-                allowedAudiences = java.util.List.of(ThreadAudience.ALLE, ThreadAudience.ELTERN);
-            } else if (isStudent && settings.childDiscussionEnabled()) {
-                allowedAudiences = java.util.List.of(ThreadAudience.ALLE, ThreadAudience.KINDER);
-            } else if (isStudent) {
-                // Child discussions not enabled: only see ALLE
-                allowedAudiences = java.util.List.of(ThreadAudience.ALLE);
-            } else {
-                allowedAudiences = java.util.List.of(ThreadAudience.ALLE);
-            }
-
             if (statusFilter != null && !statusFilter.isBlank()) {
                 threads = threadRepository.findByRoomIdAndStatusAndAudienceInOrderByCreatedAtDesc(
                         roomId, ThreadStatus.valueOf(statusFilter.toUpperCase()), allowedAudiences, pageable);
@@ -106,6 +90,7 @@ public class DiscussionThreadService {
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("Thread", threadId);
         }
+        requireCanViewThread(thread, userId);
         return toThreadInfo(thread);
     }
 
@@ -161,6 +146,7 @@ public class DiscussionThreadService {
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("Thread", threadId);
         }
+        requireCanViewThread(thread, userId);
         return replyRepository.findByThreadIdOrderByCreatedAtAsc(threadId, pageable)
                 .map(this::toReplyInfo);
     }
@@ -183,6 +169,7 @@ public class DiscussionThreadService {
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("Thread", threadId);
         }
+        requireCanViewThread(thread, userId);
         if (thread.getStatus() != ThreadStatus.ACTIVE) {
             throw new BusinessException("Cannot reply to an archived thread");
         }
@@ -201,14 +188,74 @@ public class DiscussionThreadService {
                 .orElseThrow(() -> new ResourceNotFoundException("Discussion thread", threadId));
     }
 
-    private boolean isSuperAdmin(UUID userId) {
-        return userModuleApi.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * Computes which thread audiences a user may see in a room.
+     * Returns {@code null} when the user may see ALL audiences (TEACHER, SUPERADMIN,
+     * SECTION_ADMIN, or room LEADER). Otherwise returns the explicit list of allowed audiences.
+     * Mirrors the audience logic used by {@link #getThreads}.
+     */
+    private java.util.List<ThreadAudience> allowedAudiencesFor(UUID roomId, UUID userId, RoomSettings settings) {
+        var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
+        var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId).orElse(null);
+
+        boolean canSeeAll = userRole == UserRole.TEACHER || userRole == UserRole.SUPERADMIN
+                || userRole == UserRole.SECTION_ADMIN || roomRole == RoomRole.LEADER;
+        if (canSeeAll) {
+            return null;
+        }
+
+        boolean isParent = roomRole == RoomRole.PARENT_MEMBER || userRole == UserRole.PARENT;
+        boolean isStudent = userRole == UserRole.STUDENT;
+
+        if (isParent) {
+            return java.util.List.of(ThreadAudience.ALLE, ThreadAudience.ELTERN);
+        } else if (isStudent && settings.childDiscussionEnabled()) {
+            return java.util.List.of(ThreadAudience.ALLE, ThreadAudience.KINDER);
+        } else {
+            // Students without child discussions enabled, or any other member: only ALLE
+            return java.util.List.of(ThreadAudience.ALLE);
+        }
+    }
+
+    /**
+     * Ensures the caller is allowed to view a thread based on its audience.
+     * Applies the SAME audience filter as {@link #getThreads} so that single-thread reads
+     * (and replies) cannot bypass the list-level audience restriction. Throws
+     * {@link ResourceNotFoundException} to avoid revealing the existence of hidden threads.
+     */
+    private void requireCanViewThread(DiscussionThread thread, UUID userId) {
+        var room = roomRepository.findById(thread.getRoomId()).orElse(null);
+        var settings = room != null ? room.getSettings() : RoomSettings.defaults();
+        var allowed = allowedAudiencesFor(thread.getRoomId(), userId, settings);
+        if (allowed != null && !allowed.contains(thread.getAudience())) {
+            throw new ResourceNotFoundException("Discussion thread", thread.getId());
+        }
+    }
+
+    /**
+     * Returns true if the user is a global SUPERADMIN, or a SECTION_ADMIN scoped to the
+     * section the given room belongs to. SECTION_ADMINs are NOT global admins: a section
+     * admin scoped to e.g. Krippe must not gain access to an Oberstufe room.
+     * Mirrors {@code RoomController.requireLeaderOrAdmin} / {@code isAdminForSection}.
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModuleApi.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModuleApi.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     private void requireRoomMember(UUID roomId, UUID userId) {
-        if (!isSuperAdmin(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("You are not a member of this room");
         }
     }
@@ -219,8 +266,8 @@ public class DiscussionThreadService {
      */
     private void requireThreadCreator(UUID roomId, UUID userId) {
         var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
-        // SUPERADMIN / SECTION_ADMIN can always create
-        if (userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN) return;
+        // SUPERADMIN (global) and SECTION_ADMIN scoped to this room's section can always create
+        if (hasAdminRoleForRoom(userId, roomId)) return;
 
         var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId)
                 .orElseThrow(() -> new ForbiddenException("You are not a member of this room"));
@@ -243,11 +290,11 @@ public class DiscussionThreadService {
     }
 
     /**
-     * Check if user can manage (archive/delete) threads: LEADER, TEACHER, SUPERADMIN.
+     * Check if user can manage (archive/delete) threads: LEADER, TEACHER, SUPERADMIN, SECTION_ADMIN.
      */
     private void requireThreadManager(UUID roomId, UUID userId) {
         var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
-        if (userRole == UserRole.SUPERADMIN || userRole == UserRole.SECTION_ADMIN) return;
+        if (hasAdminRoleForRoom(userId, roomId)) return;
 
         var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId)
                 .orElseThrow(() -> new ForbiddenException("You are not a member of this room"));

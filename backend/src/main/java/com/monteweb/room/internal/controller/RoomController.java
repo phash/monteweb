@@ -135,7 +135,7 @@ public class RoomController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<RoomInfo>> create(@Valid @RequestBody CreateRoomRequest request) {
-        UUID userId = SecurityUtils.requireCurrentUserId();
+        UUID userId = requireRoomCreator();
         var room = roomService.create(
                 request.name(), request.description(), request.type(), request.sectionId(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(room));
@@ -324,6 +324,27 @@ public class RoomController {
         if (user.isEmpty() || user.get().role() != UserRole.SUPERADMIN) {
             throw new ForbiddenException("Only administrators can perform this action");
         }
+    }
+
+    /**
+     * Room creation (US-050) is restricted to staff: SUPERADMIN, SECTION_ADMIN and
+     * TEACHER may create KLASSE/GRUPPE/PROJEKT rooms. PARENT and STUDENT are rejected
+     * with 403 (they may only create interest rooms via {@code POST /rooms/interest}).
+     *
+     * @return the current user's id (already resolved) for reuse by the caller
+     */
+    private UUID requireRoomCreator() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId);
+        if (user.isPresent()) {
+            var role = user.get().role();
+            if (role == UserRole.SUPERADMIN
+                    || role == UserRole.SECTION_ADMIN
+                    || role == UserRole.TEACHER) {
+                return userId;
+            }
+        }
+        throw new ForbiddenException("Only teachers or administrators can create rooms");
     }
 
     private void requireLeaderOrAdmin(UUID roomId) {

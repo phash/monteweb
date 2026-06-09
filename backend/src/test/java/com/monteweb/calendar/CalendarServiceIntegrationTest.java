@@ -141,6 +141,94 @@ class CalendarServiceIntegrationTest {
                 .andExpect(status().is4xxClientError());
     }
 
+    @Test
+    void getEventById_asRoomMember_shouldSucceed() throws Exception {
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
+                "cal-owner@example.com", "Calendar", "Owner");
+
+        // Create a room (creator becomes LEADER) and a ROOM-scoped event
+        var roomResult = mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "IDOR Room", "type": "GRUPPE"}
+                                """))
+                .andReturn();
+        String roomId = TestHelper.parseResponse(roomResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+
+        var eventResult = mockMvc.perform(post("/api/v1/calendar/events")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Private Room Event",
+                                    "allDay": false,
+                                    "startDate": "2026-06-20",
+                                    "startTime": "10:00",
+                                    "endDate": "2026-06-20",
+                                    "endTime": "11:00",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
+                                    "recurrence": "NONE"
+                                }
+                                """.formatted(roomId)))
+                .andReturn();
+        String eventId = TestHelper.parseResponse(eventResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+
+        // Member (the creator/leader) may read the event by id
+        mockMvc.perform(get("/api/v1/calendar/events/" + eventId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("Private Room Event"));
+    }
+
+    @Test
+    void getEventById_asNonMember_shouldBeDenied() throws Exception {
+        String ownerToken = TestHelper.registerTeacherAndGetToken(mockMvc,
+                "cal-idor-owner@example.com", "Calendar", "IdorOwner");
+
+        // Owner creates a private room and a ROOM-scoped event
+        var roomResult = mockMvc.perform(post("/api/v1/rooms")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Secret Room", "type": "GRUPPE"}
+                                """))
+                .andReturn();
+        String roomId = TestHelper.parseResponse(roomResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+
+        var eventResult = mockMvc.perform(post("/api/v1/calendar/events")
+                        .header("Authorization", "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Secret Event",
+                                    "allDay": false,
+                                    "startDate": "2026-06-20",
+                                    "startTime": "10:00",
+                                    "endDate": "2026-06-20",
+                                    "endTime": "11:00",
+                                    "scope": "ROOM",
+                                    "scopeId": "%s",
+                                    "recurrence": "NONE"
+                                }
+                                """.formatted(roomId)))
+                .andReturn();
+        String eventId = TestHelper.parseResponse(eventResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+
+        // A different, non-member user must NOT be able to read the event by id (IDOR)
+        String outsiderToken = TestHelper.registerAndGetToken(mockMvc,
+                "cal-idor-outsider@example.com", "Calendar", "Outsider");
+
+        mockMvc.perform(get("/api/v1/calendar/events/" + eventId)
+                        .header("Authorization", "Bearer " + outsiderToken))
+                .andExpect(status().is4xxClientError());
+    }
+
     // ── RSVP ─────────────────────────────────────────────────────────
 
     @Test
@@ -160,7 +248,7 @@ class CalendarServiceIntegrationTest {
 
     @Test
     void getRoomEvents_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create a room first
         var roomResult = mockMvc.perform(post("/api/v1/rooms")
@@ -181,9 +269,91 @@ class CalendarServiceIntegrationTest {
 
     // ── Create Room Event ────────────────────────────────────────────
 
+    // ── Manage permission: only creator or SUPERADMIN (US-105/106/107) ──
+
+    /**
+     * Helper: SUPERADMIN logs in and creates a SCHOOL-scoped event, returning its id.
+     * SCHOOL events are readable by every authenticated user, which lets us assert that
+     * a non-creator who CAN read the event still cannot manage it.
+     */
+    private String createSchoolEventAsAdmin() throws Exception {
+        String adminToken = TestHelper.loginAsAdmin(mockMvc);
+
+        var eventResult = mockMvc.perform(post("/api/v1/calendar/events")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Manage Permission Event",
+                                    "allDay": true,
+                                    "startDate": "2026-06-15",
+                                    "endDate": "2026-06-15",
+                                    "scope": "SCHOOL",
+                                    "recurrence": "NONE"
+                                }
+                                """))
+                .andReturn();
+        return TestHelper.parseResponse(eventResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+    }
+
+    @Test
+    void deleteEvent_byNonCreator_shouldBeForbidden() throws Exception {
+        String eventId = createSchoolEventAsAdmin();
+
+        String otherToken = TestHelper.registerAndGetToken(mockMvc,
+                "cal-mng-del@example.com", "Calendar", "NonCreatorDel");
+
+        mockMvc.perform(delete("/api/v1/calendar/events/" + eventId)
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cancelEvent_byNonCreator_shouldBeForbidden() throws Exception {
+        String eventId = createSchoolEventAsAdmin();
+
+        String otherToken = TestHelper.registerAndGetToken(mockMvc,
+                "cal-mng-cancel@example.com", "Calendar", "NonCreatorCancel");
+
+        mockMvc.perform(post("/api/v1/calendar/events/" + eventId + "/cancel")
+                        .header("Authorization", "Bearer " + otherToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void updateEvent_byNonCreator_shouldBeForbidden() throws Exception {
+        String eventId = createSchoolEventAsAdmin();
+
+        String otherToken = TestHelper.registerAndGetToken(mockMvc,
+                "cal-mng-update@example.com", "Calendar", "NonCreatorUpdate");
+
+        mockMvc.perform(put("/api/v1/calendar/events/" + eventId)
+                        .header("Authorization", "Bearer " + otherToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"title": "Hijacked Title"}
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    // ── Jitsi: rejected when module disabled (US-114) ────────────────
+
+    @Test
+    void generateJitsiRoom_whenModuleDisabled_shouldBeForbidden() throws Exception {
+        // jitsi DB toggle defaults to false; even the SUPERADMIN creator must be rejected
+        String adminToken = TestHelper.loginAsAdmin(mockMvc);
+
+        String eventId = createSchoolEventAsAdmin();
+
+        mockMvc.perform(post("/api/v1/calendar/events/" + eventId + "/jitsi")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+    }
+
     @Test
     void createRoomEvent_asLeader_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create a room (creator becomes LEADER)
         var roomResult = mockMvc.perform(post("/api/v1/rooms")

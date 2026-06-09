@@ -119,10 +119,17 @@ public class CleaningAdminController {
     }
 
     @DeleteMapping("/slots/{id}")
-    public ResponseEntity<ApiResponse<Void>> cancelSlot(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<Void>> cancelSlot(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String reason,
+            @RequestBody(required = false) CancelSlotRequest body) {
         requireCleaningAdminFromSlot(id);
-        cleaningService.cancelSlot(id);
+        String cancelReason = (body != null && body.reason() != null) ? body.reason() : reason;
+        cleaningService.cancelSlot(id, cancelReason);
         return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    public record CancelSlotRequest(String reason) {
     }
 
     // ── QR Code ─────────────────────────────────────────────────────────

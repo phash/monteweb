@@ -8,11 +8,10 @@ import com.monteweb.fotobox.internal.model.FotoboxThread;
 import com.monteweb.fotobox.internal.repository.FotoboxImageRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxRoomSettingsRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxThreadRepository;
-import com.monteweb.room.RoomModuleApi;
-import com.monteweb.room.RoomRole;
 import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.ClamAvService;
 import com.monteweb.user.UserModuleApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -39,9 +38,9 @@ public class FotoboxService implements FotoboxModuleApi {
     private final FotoboxRoomSettingsRepository settingsRepo;
     private final FotoboxPermissionService permissionService;
     private final FotoboxStorageService storageService;
-    private final RoomModuleApi roomModule;
     private final UserModuleApi userModule;
     private final ApplicationEventPublisher eventPublisher;
+    private final ClamAvService clamAvService;
 
     // --- Settings ---
 
@@ -110,6 +109,10 @@ public class FotoboxService implements FotoboxModuleApi {
         if (!thread.getRoomId().equals(roomId)) {
             throw new ResourceNotFoundException("FotoboxThread", threadId);
         }
+        // Enforce audience visibility (mirrors the filter in getThreads)
+        if (!getAllowedAudiences(userId, thread.getRoomId()).contains(thread.getAudience())) {
+            throw new ResourceNotFoundException("FotoboxThread", threadId);
+        }
         return toThreadInfo(thread);
     }
 
@@ -118,6 +121,10 @@ public class FotoboxService implements FotoboxModuleApi {
         var thread = threadRepo.findById(threadId)
                 .orElseThrow(() -> new ResourceNotFoundException("FotoboxThread", threadId));
         if (!thread.getRoomId().equals(roomId)) {
+            throw new ResourceNotFoundException("FotoboxThread", threadId);
+        }
+        // Enforce audience visibility (mirrors the filter in getThreads)
+        if (!getAllowedAudiences(userId, thread.getRoomId()).contains(thread.getAudience())) {
             throw new ResourceNotFoundException("FotoboxThread", threadId);
         }
         var images = imageRepo.findByThreadIdOrderBySortOrderAscCreatedAtAsc(threadId);
@@ -214,6 +221,17 @@ public class FotoboxService implements FotoboxModuleApi {
             }
 
             String contentType = storageService.validateAndDetectContentType(file);
+
+            // Virus scan before storing (no-op unless the 'clamav' module toggle is enabled).
+            try {
+                ClamAvService.ScanResult scan = clamAvService.scan(file.getBytes());
+                if (!scan.isClean()) {
+                    throw new BadRequestException("File rejected: malware detected (" + scan.virusName() + ")");
+                }
+            } catch (java.io.IOException e) {
+                throw new BadRequestException("Could not read the uploaded file for virus scanning");
+            }
+
             String extension = FotoboxStorageService.extensionFromContentType(contentType);
             UUID imageId = UUID.randomUUID();
 
@@ -289,6 +307,11 @@ public class FotoboxService implements FotoboxModuleApi {
         var thread = threadRepo.findById(image.getThreadId())
                 .orElseThrow(() -> new ResourceNotFoundException("FotoboxThread", image.getThreadId()));
         permissionService.requirePermission(userId, thread.getRoomId(), FotoboxPermissionLevel.VIEW_ONLY);
+        // Enforce audience visibility (mirrors the filter in getThreads) — return 404 to avoid
+        // confirming existence of images in an audience the user may not see.
+        if (!getAllowedAudiences(userId, thread.getRoomId()).contains(thread.getAudience())) {
+            throw new ResourceNotFoundException("FotoboxThread", thread.getId());
+        }
         return image;
     }
 
@@ -363,15 +386,13 @@ public class FotoboxService implements FotoboxModuleApi {
      * Same logic as FileService.getAllowedAudiences.
      */
     private Set<String> getAllowedAudiences(UUID userId, UUID roomId) {
-        var roomRole = roomModule.getUserRoleInRoom(userId, roomId).orElse(null);
         var userInfo = userModule.findById(userId).orElse(null);
         var userRole = userInfo != null ? userInfo.role() : null;
 
-        // Leaders, teachers, superadmins, section admins see everything
-        if (roomRole == RoomRole.LEADER
-                || userRole == UserRole.TEACHER
-                || userRole == UserRole.SUPERADMIN
-                || userRole == UserRole.SECTION_ADMIN) {
+        // Teachers see everything. Leaders, superadmins, and SECTION_ADMINs scoped to this
+        // room's section also see everything (section-scoping handled by isLeaderOrAdmin).
+        if (userRole == UserRole.TEACHER
+                || permissionService.isLeaderOrAdmin(userId, roomId)) {
             return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
         }
 

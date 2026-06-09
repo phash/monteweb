@@ -86,7 +86,7 @@ class CalendarControllerIntegrationTest {
 
     @Test
     void createRoomEvent_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "cal-room@example.com", "Calendar", "Room");
 
         // Create a room first
@@ -180,7 +180,7 @@ class CalendarControllerIntegrationTest {
 
     @Test
     void getRoomEvents_shouldReturnList() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "cal-roomev@example.com", "Calendar", "RoomEv");
 
         var roomResult = mockMvc.perform(post("/api/v1/rooms")

@@ -56,6 +56,14 @@ public class FeedPost {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
+    /** Optional click-through link for SYSTEM banners (US-081). */
+    @Column(length = 1000)
+    private String link;
+
+    /** Banner severity/type for SYSTEM banners: INFO, WARNING, ACTION_REQUIRED. */
+    @Column(name = "banner_type", length = 30)
+    private String bannerType;
+
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     private List<FeedPostAttachment> attachments = new ArrayList<>();

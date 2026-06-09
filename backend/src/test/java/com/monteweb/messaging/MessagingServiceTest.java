@@ -309,6 +309,93 @@ class MessagingServiceTest {
         }
     }
 
+    // ── Start Group Conversation ─────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Start User Group Conversation")
+    class StartUserGroupConversation {
+
+        private final UUID userC = UUID.randomUUID();
+
+        @Test
+        @DisplayName("Rejects group with fewer than 2 other participants")
+        void groupConversation_tooFewParticipants() {
+            assertThatThrownBy(() -> service.startUserGroupConversation(USER_A, "Group", List.of(USER_B)))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("at least 2 other participants");
+
+            verify(conversationRepository, never()).save(any(Conversation.class));
+        }
+
+        @Test
+        @DisplayName("Rejects group where duplicates collapse below 2 participants")
+        void groupConversation_duplicatesCollapse() {
+            assertThatThrownBy(() -> service.startUserGroupConversation(USER_A, "Group", List.of(USER_B, USER_B)))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("at least 2 other participants");
+
+            verify(conversationRepository, never()).save(any(Conversation.class));
+        }
+
+        @Test
+        @DisplayName("Parent cannot create group with parents when parent-to-parent disabled")
+        void groupConversation_parentToParentBlocked() {
+            when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.PARENT)));
+            when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.PARENT)));
+            when(adminModuleApi.getTenantConfig()).thenReturn(makeTenantConfig(false, false));
+
+            assertThatThrownBy(() -> service.startUserGroupConversation(USER_A, "Group", List.of(USER_B, userC)))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Parent-to-parent");
+
+            verify(conversationRepository, never()).save(any(Conversation.class));
+        }
+
+        @Test
+        @DisplayName("Student cannot create group with students when student-to-student disabled")
+        void groupConversation_studentToStudentBlocked() {
+            when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.STUDENT)));
+            when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.STUDENT)));
+            when(adminModuleApi.getTenantConfig()).thenReturn(makeTenantConfig(false, false));
+
+            assertThatThrownBy(() -> service.startUserGroupConversation(USER_A, "Group", List.of(USER_B, userC)))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Student-to-student");
+
+            verify(conversationRepository, never()).save(any(Conversation.class));
+        }
+
+        @Test
+        @DisplayName("Teacher can create a group with parents (staff bypasses comm rules)")
+        void groupConversation_staffCreatorSucceeds() {
+            when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.TEACHER)));
+            when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.PARENT)));
+            when(userModuleApi.findById(userC)).thenReturn(Optional.of(makeUser(userC, UserRole.PARENT)));
+
+            var savedConv = makeConversation(CONV_ID, true, USER_A);
+            when(conversationRepository.save(any(Conversation.class))).thenReturn(savedConv);
+
+            lenient().when(participantRepository.findByConversationId(CONV_ID))
+                    .thenReturn(List.of(
+                            makeParticipant(CONV_ID, USER_A),
+                            makeParticipant(CONV_ID, USER_B),
+                            makeParticipant(CONV_ID, userC)));
+            lenient().when(messageRepository.findFirstByConversationIdOrderByCreatedAtDesc(CONV_ID))
+                    .thenReturn(Optional.empty());
+            lenient().when(messageRepository.countUnreadMessages(eq(CONV_ID), any(UUID.class), any(Instant.class)))
+                    .thenReturn(0L);
+
+            var result = service.startUserGroupConversation(USER_A, "Group", List.of(USER_B, userC));
+
+            assertThat(result).isNotNull();
+            assertThat(result.id()).isEqualTo(CONV_ID);
+            verify(conversationRepository).save(any(Conversation.class));
+            // creator + 2 participants
+            verify(participantRepository, times(3)).save(any(ConversationParticipant.class));
+            verify(adminModuleApi, never()).getTenantConfig();
+        }
+    }
+
     // ── Send Message ─────────────────────────────────────────────────────
 
     @Nested
@@ -402,6 +489,96 @@ class MessagingServiceTest {
             assertThatThrownBy(() -> service.muteConversation(CONV_ID, USER_A))
                     .isInstanceOf(ForbiddenException.class)
                     .hasMessageContaining("not a participant");
+        }
+    }
+
+    // ── Message Reactions ────────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Message Reactions")
+    class MessageReactions {
+
+        @Test
+        @DisplayName("Non-participant cannot toggle a reaction (IDOR blocked)")
+        void toggleMessageReaction_nonParticipantThrows() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.toggleMessageReaction(msgId, USER_A, "👍"))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("not a participant");
+
+            verify(messageReactionRepository, never()).save(any(MessageReaction.class));
+        }
+
+        @Test
+        @DisplayName("Participant can add a reaction")
+        void toggleMessageReaction_participantAddsReaction() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(true);
+            when(messageReactionRepository.findByMessageIdAndUserIdAndEmoji(msgId, USER_A, "👍"))
+                    .thenReturn(Optional.empty());
+
+            service.toggleMessageReaction(msgId, USER_A, "👍");
+
+            verify(messageReactionRepository).save(any(MessageReaction.class));
+        }
+
+        @Test
+        @DisplayName("Non-participant cannot read reactions (IDOR blocked)")
+        void getMessageReactions_nonParticipantThrows() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.getMessageReactions(msgId, USER_A))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("not a participant");
+
+            verify(messageReactionRepository, never()).findByMessageId(any(UUID.class));
+        }
+
+        @Test
+        @DisplayName("getMessages returns pre-existing reactions with counts and own-highlight")
+        void getMessages_returnsExistingReactions() {
+            UUID msgId = UUID.randomUUID();
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Hello");
+
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(true);
+            when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(CONV_ID), any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(msg)));
+            when(messageImageRepository.findByMessageIdIn(anyList())).thenReturn(List.of());
+            when(messageAttachmentRepository.findByMessageIdIn(anyList())).thenReturn(List.of());
+
+            // Two reactions on the message: USER_A (current user) and USER_B both used 👍
+            var reactionA = new MessageReaction();
+            reactionA.setMessageId(msgId);
+            reactionA.setUserId(USER_A);
+            reactionA.setEmoji("👍");
+            var reactionB = new MessageReaction();
+            reactionB.setMessageId(msgId);
+            reactionB.setUserId(USER_B);
+            reactionB.setEmoji("👍");
+            when(messageReactionRepository.findByMessageIdIn(List.of(msgId)))
+                    .thenReturn(List.of(reactionA, reactionB));
+
+            when(messagePollRepository.findByMessageId(msgId)).thenReturn(Optional.empty());
+            when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.PARENT)));
+
+            var page = service.getMessages(CONV_ID, USER_A,
+                    org.springframework.data.domain.PageRequest.of(0, 50));
+
+            assertThat(page.getContent()).hasSize(1);
+            var reactions = page.getContent().get(0).reactions();
+            assertThat(reactions).hasSize(1);
+            assertThat(reactions.get(0).emoji()).isEqualTo("👍");
+            assertThat(reactions.get(0).count()).isEqualTo(2);
+            assertThat(reactions.get(0).userReacted()).isTrue();
         }
     }
 }

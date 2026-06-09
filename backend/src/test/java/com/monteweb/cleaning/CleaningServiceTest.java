@@ -9,6 +9,8 @@ import com.monteweb.cleaning.internal.repository.CleaningRegistrationRepository;
 import com.monteweb.cleaning.internal.repository.CleaningSlotRepository;
 import com.monteweb.cleaning.internal.service.CleaningService;
 import com.monteweb.cleaning.internal.service.QrTokenService;
+import com.monteweb.notification.NotificationModuleApi;
+import com.monteweb.notification.NotificationType;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.school.SchoolSectionInfo;
@@ -54,6 +56,7 @@ class CleaningServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private CalendarModuleApi calendarModuleApi;
     @Mock private RoomModuleApi roomModuleApi;
+    @Mock private NotificationModuleApi notificationModuleApi;
 
     private CleaningService service;
 
@@ -71,7 +74,7 @@ class CleaningServiceTest {
         service = new CleaningService(
                 configRepository, slotRepository, registrationRepository,
                 qrTokenService, schoolModuleApi, eventPublisher,
-                calendarModuleApi, roomModuleApi
+                calendarModuleApi, roomModuleApi, notificationModuleApi
         );
     }
 
@@ -481,6 +484,39 @@ class CleaningServiceTest {
         }
 
         @Test
+        @DisplayName("Forgotten check-out caps actualMinutes at scheduled duration + grace window")
+        void checkOut_forgottenCheckoutIsCapped() {
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "IN_PROGRESS");
+            // Config scheduled 14:00-16:00 => 120 scheduled minutes, +15 grace => cap at 135
+            CleaningConfig config = makeConfig(null, 5);
+
+            CleaningRegistration reg = makeRegistration(SLOT_ID, USER_ID, true, false);
+            // Checked in 25 hours ago (forgot to check out) -> raw 1500 minutes
+            reg.setCheckInAt(Instant.now().minusSeconds(25 * 3600));
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(registrationRepository.findBySlotIdAndUserId(SLOT_ID, USER_ID))
+                    .thenReturn(Optional.of(reg));
+            when(registrationRepository.save(any(CleaningRegistration.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            when(slotRepository.save(any(CleaningSlot.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            when(configRepository.findById(slot.getConfigId())).thenReturn(Optional.of(config));
+            when(registrationRepository.findBySlotId(SLOT_ID)).thenReturn(List.of(reg));
+            mockSectionLookup();
+
+            service.checkOut(SLOT_ID, USER_ID);
+
+            // Capped at scheduled (120) + grace (15) instead of the raw 1500 minutes
+            assertThat(reg.getActualMinutes()).isEqualTo(135);
+
+            ArgumentCaptor<CleaningCompletedEvent> eventCaptor =
+                    ArgumentCaptor.forClass(CleaningCompletedEvent.class);
+            verify(eventPublisher).publishEvent(eventCaptor.capture());
+            assertThat(eventCaptor.getValue().actualMinutes()).isEqualTo(135);
+        }
+
+        @Test
         @DisplayName("Check-out without prior check-in throws BusinessException")
         void checkOut_notCheckedIn() {
             CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "IN_PROGRESS");
@@ -493,6 +529,129 @@ class CleaningServiceTest {
             assertThatThrownBy(() -> service.checkOut(SLOT_ID, USER_ID))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Must check in before checking out");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Swap Take-Over (US-230)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("Swap Take-Over")
+    class SwapTakeOver {
+
+        @Test
+        @DisplayName("Take-over transfers the offered registration to the new user and clears the offer")
+        void takeOverSwap_transfersRegistration() {
+            UUID newUser = UUID.randomUUID();
+            UUID newFamily = UUID.randomUUID();
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "OPEN");
+            CleaningRegistration offered = makeRegistration(SLOT_ID, USER_ID, false, false);
+            offered.setSwapOffered(true);
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(registrationRepository.existsBySlotIdAndUserId(SLOT_ID, newUser)).thenReturn(false);
+            when(configRepository.findById(CONFIG_ID)).thenReturn(Optional.of(makeConfig(null, 5)));
+            when(registrationRepository.findSwapOffersForSlot(SLOT_ID)).thenReturn(List.of(offered));
+            when(registrationRepository.save(any(CleaningRegistration.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            mockSectionLookup();
+            when(registrationRepository.findBySlotId(SLOT_ID)).thenReturn(List.of(offered));
+
+            CleaningSlotInfo result = service.takeOverSwap(SLOT_ID, newUser, "Bea Bauer", newFamily);
+
+            assertThat(result).isNotNull();
+            assertThat(offered.getUserId()).isEqualTo(newUser);
+            assertThat(offered.getFamilyId()).isEqualTo(newFamily);
+            assertThat(offered.isSwapOffered()).isFalse();
+            // Original registrant should be notified
+            verify(notificationModuleApi).sendNotification(
+                    eq(USER_ID), eq(NotificationType.SYSTEM), any(), any(), any(), any(), eq(SLOT_ID));
+        }
+
+        @Test
+        @DisplayName("Take-over with no open offer throws BusinessException")
+        void takeOverSwap_noOffer() {
+            UUID newUser = UUID.randomUUID();
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "OPEN");
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(registrationRepository.existsBySlotIdAndUserId(SLOT_ID, newUser)).thenReturn(false);
+            when(configRepository.findById(CONFIG_ID)).thenReturn(Optional.of(makeConfig(null, 5)));
+            when(registrationRepository.findSwapOffersForSlot(SLOT_ID)).thenReturn(List.of());
+
+            assertThatThrownBy(() -> service.takeOverSwap(SLOT_ID, newUser, "Bea Bauer", UUID.randomUUID()))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("No open swap offer");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Admin Minutes Correction (US-232)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("Update Registration Minutes")
+    class UpdateMinutes {
+
+        @Test
+        @DisplayName("Admin can correct minutes for any checked-out registration")
+        void updateMinutes_correctsAnyParticipant() {
+            UUID otherUser = UUID.randomUUID();
+            CleaningRegistration reg = makeRegistration(SLOT_ID, otherUser, true, true);
+            UUID regId = reg.getId();
+
+            when(registrationRepository.findById(regId)).thenReturn(Optional.of(reg));
+            when(registrationRepository.save(any(CleaningRegistration.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+
+            var result = service.updateRegistrationMinutes(regId, 90);
+
+            assertThat(result).isNotNull();
+            assertThat(reg.getActualMinutes()).isEqualTo(90);
+            assertThat(reg.isDurationConfirmed()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Update minutes before checkout throws BusinessException")
+        void updateMinutes_notCheckedOut() {
+            CleaningRegistration reg = makeRegistration(SLOT_ID, USER_ID, true, false);
+            UUID regId = reg.getId();
+
+            when(registrationRepository.findById(regId)).thenReturn(Optional.of(reg));
+
+            assertThatThrownBy(() -> service.updateRegistrationMinutes(regId, 90))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Must check out");
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  Cancel Slot (US-233)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("Cancel Slot")
+    class CancelSlot {
+
+        @Test
+        @DisplayName("Cancel records reason and notifies registered participants")
+        void cancelSlot_recordsReasonAndNotifies() {
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "OPEN");
+            CleaningRegistration reg = makeRegistration(SLOT_ID, USER_ID, false, false);
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(slotRepository.save(any(CleaningSlot.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(configRepository.findById(CONFIG_ID)).thenReturn(Optional.of(makeConfig(null, 5)));
+            when(registrationRepository.findBySlotId(SLOT_ID)).thenReturn(List.of(reg));
+
+            service.cancelSlot(SLOT_ID, "Krankheit");
+
+            assertThat(slot.isCancelled()).isTrue();
+            assertThat(slot.getStatus()).isEqualTo("CANCELLED");
+            assertThat(slot.getCancelReason()).isEqualTo("Krankheit");
+            verify(notificationModuleApi).sendNotification(
+                    eq(USER_ID), eq(NotificationType.SYSTEM), any(), any(), any(), any(), eq(SLOT_ID));
         }
     }
 }

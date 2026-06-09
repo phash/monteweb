@@ -4,8 +4,12 @@ import com.monteweb.bookmark.BookmarkInfo;
 import com.monteweb.bookmark.BookmarkModuleApi;
 import com.monteweb.bookmark.internal.model.Bookmark;
 import com.monteweb.bookmark.internal.repository.BookmarkRepository;
+import com.monteweb.calendar.CalendarModuleApi;
+import com.monteweb.feed.FeedModuleApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
+@ConditionalOnProperty(prefix = "monteweb.modules", name = "bookmarks.enabled", havingValue = "true")
 @Transactional(readOnly = true)
 public class BookmarkService implements BookmarkModuleApi {
 
@@ -22,8 +27,21 @@ public class BookmarkService implements BookmarkModuleApi {
 
     private final BookmarkRepository bookmarkRepository;
 
-    public BookmarkService(BookmarkRepository bookmarkRepository) {
+    /**
+     * Optional source-module facades used to resolve a human-readable title for
+     * each bookmark. They are {@code @Autowired(required = false)} because the
+     * feed/calendar modules can be disabled independently. JOB and WIKI_PAGE
+     * titles are not resolved yet — see {@link #resolveTitle}.
+     */
+    private final FeedModuleApi feedModuleApi;
+    private final CalendarModuleApi calendarModuleApi;
+
+    public BookmarkService(BookmarkRepository bookmarkRepository,
+                           @Autowired(required = false) FeedModuleApi feedModuleApi,
+                           @Autowired(required = false) CalendarModuleApi calendarModuleApi) {
         this.bookmarkRepository = bookmarkRepository;
+        this.feedModuleApi = feedModuleApi;
+        this.calendarModuleApi = calendarModuleApi;
     }
 
     @Transactional
@@ -88,7 +106,33 @@ public class BookmarkService implements BookmarkModuleApi {
                 bookmark.getUserId(),
                 bookmark.getContentType(),
                 bookmark.getContentId(),
+                resolveTitle(bookmark.getContentType(), bookmark.getContentId()),
                 bookmark.getCreatedAt()
         );
+    }
+
+    /**
+     * Best-effort resolution of a display title from the source module.
+     *
+     * <p>Currently supports POST (feed) and EVENT (calendar), whose public
+     * facades expose a single-item lookup with a title. JOB and WIKI_PAGE
+     * return {@code null} because {@code JobboardModuleApi}/{@code WikiModuleApi}
+     * do not yet expose a by-id title lookup (cross-module API gap — see flags).
+     * Returns {@code null} on any failure so listing a bookmark never breaks
+     * because a source item is missing or its module is disabled.
+     */
+    private String resolveTitle(String contentType, UUID contentId) {
+        try {
+            return switch (contentType) {
+                case "POST" -> feedModuleApi == null ? null
+                        : feedModuleApi.findPostById(contentId).map(p -> p.title()).orElse(null);
+                case "EVENT" -> calendarModuleApi == null ? null
+                        : calendarModuleApi.findById(contentId).map(e -> e.title()).orElse(null);
+                default -> null; // JOB, WIKI_PAGE: no by-id title facade yet
+            };
+        } catch (RuntimeException ex) {
+            log.debug("Could not resolve title for {} {}: {}", contentType, contentId, ex.getMessage());
+            return null;
+        }
     }
 }

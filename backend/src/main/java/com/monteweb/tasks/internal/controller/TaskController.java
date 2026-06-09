@@ -21,8 +21,8 @@ public class TaskController {
 
     @GetMapping
     public ApiResponse<TaskBoardResponse> getBoard(@PathVariable UUID roomId) {
-        SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(taskService.getBoard(roomId));
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ApiResponse.ok(taskService.getBoard(roomId, userId));
     }
 
     @PostMapping

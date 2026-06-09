@@ -59,7 +59,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void createRoom_shouldHaveDefaultJoinPolicy() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-default-jp@example.com", "Default", "JP");
 
         var result = mockMvc.perform(post("/api/v1/rooms")
@@ -129,7 +129,7 @@ class RoleConceptIntegrationTest {
     @Test
     void joinRoom_requestPolicy_shouldFail() throws Exception {
         // User A creates a regular room (REQUEST policy by default)
-        String tokenA = TestHelper.registerAndGetToken(mockMvc,
+        String tokenA = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-joinreq-a@example.com", "Creator", "ReqA");
         String roomId = createRoomAndGetId(tokenA, "Request Only Room", "GRUPPE");
 
@@ -168,7 +168,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void muteRoom_asMember_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-mute@example.com", "Mute", "User");
         String roomId = createRoomAndGetId(token, "Mutable Room", "GRUPPE");
 
@@ -179,7 +179,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void unmuteRoom_afterMuting_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-unmute@example.com", "Unmute", "User");
         String roomId = createRoomAndGetId(token, "Unmutable Room", "GRUPPE");
 
@@ -204,7 +204,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void updateSettings_discussionMode_shouldPersist() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-discmode@example.com", "Disc", "Mode");
         String roomId = createRoomAndGetId(token, "Discussion Mode Room", "GRUPPE");
 
@@ -239,7 +239,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void updateSettings_disableDiscussions_shouldPersist() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-disableddisc@example.com", "Disabled", "Disc");
         String roomId = createRoomAndGetId(token, "No Discussions Room", "GRUPPE");
 
@@ -262,7 +262,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void updateSettings_allowMemberThreadCreation_shouldPersist() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-memberthreads@example.com", "Member", "Threads");
         String roomId = createRoomAndGetId(token, "Member Threads Room", "KLASSE");
 
@@ -299,7 +299,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void createThread_inDisabledMode_shouldStillWorkForLeader() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-thread-disabled@example.com", "Thread", "Disabled");
         String roomId = createRoomAndGetId(token, "Disabled Thread Room", "GRUPPE");
 
@@ -335,7 +335,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void createJoinRequest_requestPolicy_shouldSucceed() throws Exception {
-        String tokenA = TestHelper.registerAndGetToken(mockMvc,
+        String tokenA = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-jr-creator@example.com", "JR", "Creator");
         String roomId = createRoomAndGetId(tokenA, "Request Policy JR Room", "PROJEKT");
 
@@ -355,7 +355,7 @@ class RoleConceptIntegrationTest {
     @Test
     void approveJoinRequest_shouldAddMember() throws Exception {
         // Create room
-        String tokenA = TestHelper.registerAndGetToken(mockMvc,
+        String tokenA = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-approve-creator@example.com", "Approve", "Creator");
         String roomId = createRoomAndGetId(tokenA, "Approve JR Room", "GRUPPE");
 
@@ -389,7 +389,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void getRoom_asNonMember_shouldReturnPublicView() throws Exception {
-        String tokenA = TestHelper.registerAndGetToken(mockMvc,
+        String tokenA = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-public-creator@example.com", "Public", "Creator");
         String roomId = createRoomAndGetId(tokenA, "Public View Room", "GRUPPE");
 
@@ -410,7 +410,7 @@ class RoleConceptIntegrationTest {
 
     @Test
     void getRoom_asMember_shouldReturnDetailView() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "rc-detail-member@example.com", "Detail", "Member");
         String roomId = createRoomAndGetId(token, "Detail View Room", "GRUPPE");
 

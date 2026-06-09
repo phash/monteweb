@@ -12,6 +12,7 @@ import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
+import jakarta.validation.Valid;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Pageable;
@@ -172,7 +173,7 @@ public class JobboardController {
     @PutMapping("/assignments/{assignmentId}/complete")
     public ResponseEntity<ApiResponse<JobAssignmentInfo>> completeAssignment(
             @PathVariable UUID assignmentId,
-            @RequestBody CompleteAssignmentRequest request) {
+            @Valid @RequestBody CompleteAssignmentRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         return ResponseEntity.ok(ApiResponse.ok(
                 jobboardService.completeAssignment(assignmentId, userId, request.actualHours(), request.notes())));
@@ -182,6 +183,13 @@ public class JobboardController {
     public ResponseEntity<ApiResponse<JobAssignmentInfo>> confirmAssignment(
             @PathVariable UUID assignmentId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() != UserRole.TEACHER
+                && user.role() != UserRole.SECTION_ADMIN
+                && user.role() != UserRole.SUPERADMIN) {
+            throw new ForbiddenException("Not authorized");
+        }
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.confirmAssignment(assignmentId, userId)));
     }
 
