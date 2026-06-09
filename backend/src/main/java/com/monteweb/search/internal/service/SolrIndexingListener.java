@@ -14,8 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.event.EventListener;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -53,8 +52,7 @@ public class SolrIndexingListener {
         this.indexingService = indexingService;
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onFeedPostCreated(FeedPostCreatedEvent event) {
         log.debug("Indexing feed post: {}", event.postId());
         if (feedModuleApi == null) return;
@@ -62,8 +60,7 @@ public class SolrIndexingListener {
                 .ifPresent(indexingService::indexFeedPost);
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onFileUploaded(FileUploadedEvent event) {
         log.debug("Indexing uploaded file: {}", event.fileId());
 
@@ -89,38 +86,33 @@ public class SolrIndexingListener {
                 event.originalName(), event.contentType(), event.fileSize());
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onFileDeleted(FileDeletedEvent event) {
         log.debug("Removing file from index: {}", event.fileId());
         indexingService.deleteDocument("FILE", event.fileId());
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onWikiPageSaved(WikiPageSavedEvent event) {
         log.debug("Indexing wiki page: {}", event.pageId());
         indexingService.indexWikiPage(event.pageId(), event.roomId(),
                 event.title(), event.content(), event.slug());
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onWikiPageDeleted(WikiPageDeletedEvent event) {
         log.debug("Removing wiki page from index: {}", event.pageId());
         indexingService.deleteDocument("WIKI", event.pageId());
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onTaskSaved(TaskSavedEvent event) {
         log.debug("Indexing task: {}", event.taskId());
         indexingService.indexTask(event.taskId(), event.roomId(),
                 event.title(), event.description(), event.assigneeName());
     }
 
-    @Async
-    @EventListener
+    @ApplicationModuleListener
     public void onTaskDeleted(TaskDeletedEvent event) {
         log.debug("Removing task from index: {}", event.taskId());
         indexingService.deleteDocument("TASK", event.taskId());

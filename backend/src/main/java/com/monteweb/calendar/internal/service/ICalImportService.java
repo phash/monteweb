@@ -44,7 +44,10 @@ public class ICalImportService {
         this.eventRepository = eventRepository;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                // NEVER: redirects are followed manually so each hop is re-validated against
+                // the SSRF allow-list. NORMAL would follow a 30x to an internal host
+                // (cloud metadata, minio/postgres/redis, ...) without re-validation.
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 
@@ -72,6 +75,7 @@ public class ICalImportService {
     }
 
     private static final int MAX_RESPONSE_BYTES = 1024 * 1024; // 1 MB
+    private static final int MAX_REDIRECTS = 3;
 
     public void syncSubscription(UUID subId) {
         var subOpt = subscriptionRepository.findById(subId);
@@ -79,16 +83,37 @@ public class ICalImportService {
 
         var sub = subOpt.get();
         try {
-            // SSRF protection: block requests to private/internal networks
-            SsrfProtectionUtils.validateUrl(sub.getUrl());
-
-            var request = HttpRequest.newBuilder()
-                    .uri(URI.create(sub.getUrl()))
-                    .timeout(Duration.ofSeconds(10))
-                    .GET()
-                    .build();
-
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            // SSRF protection: follow redirects manually and re-validate EVERY hop
+            // (initial URL + each redirect target) so a public URL cannot 30x-redirect
+            // to a private/internal host (cloud metadata, minio/postgres/redis, ...).
+            HttpResponse<java.io.InputStream> response = null;
+            String currentUrl = sub.getUrl();
+            for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+                SsrfProtectionUtils.validateUrl(currentUrl);
+                var uri = URI.create(currentUrl);
+                var request = HttpRequest.newBuilder()
+                        .uri(uri)
+                        .timeout(Duration.ofSeconds(10))
+                        .GET()
+                        .build();
+                var resp = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+                int status = resp.statusCode();
+                if (status >= 300 && status < 400) {
+                    var location = resp.headers().firstValue("Location").orElse(null);
+                    if (location == null || location.isBlank()) {
+                        log.warn("iCal fetch from {} returned a redirect with no Location header", currentUrl);
+                        return;
+                    }
+                    currentUrl = uri.resolve(location).toString();
+                    continue;
+                }
+                response = resp;
+                break;
+            }
+            if (response == null) {
+                log.warn("Too many redirects fetching iCal from {}", sub.getUrl());
+                return;
+            }
             if (response.statusCode() != 200) {
                 log.warn("Failed to fetch iCal from {}: HTTP {}", sub.getUrl(), response.statusCode());
                 return;

@@ -123,6 +123,8 @@ public class FundgrubeService implements FundgrubeModuleApi {
 
     // ---- Images ----
 
+    private static final long MAX_IMAGE_BYTES = 20L * 1024 * 1024; // 20 MB per image
+
     @Transactional
     public List<FundgrubeImageInfo> uploadImages(UUID userId, UUID itemId, List<MultipartFile> files) {
         var item = requireItem(itemId);
@@ -131,6 +133,11 @@ public class FundgrubeService implements FundgrubeModuleApi {
 
         List<FundgrubeImageInfo> result = new ArrayList<>();
         for (MultipartFile file : files) {
+            // Explicit per-file bound (the global multipart limit is now 100MB).
+            if (file.getSize() > MAX_IMAGE_BYTES) {
+                throw new BadRequestException("Image too large: " + file.getOriginalFilename()
+                        + " (max " + (MAX_IMAGE_BYTES / (1024 * 1024)) + " MB)");
+            }
             String contentType = storageService.validateAndDetectContentType(file);
             String extension = FundgrubeStorageService.extensionFromContentType(contentType);
             UUID imageId = UUID.randomUUID();

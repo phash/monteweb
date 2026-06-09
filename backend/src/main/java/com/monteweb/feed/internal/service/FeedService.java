@@ -9,6 +9,7 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.ClamAvService;
 import com.monteweb.shared.util.FileValidationUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
@@ -44,6 +45,7 @@ public class FeedService implements FeedModuleApi {
     private final UserModuleApi userModuleApi;
     private final RoomModuleApi roomModuleApi;
     private final ApplicationEventPublisher eventPublisher;
+    private final ClamAvService clamAvService;
 
     public FeedService(FeedPostRepository postRepository,
                        FeedPostCommentRepository commentRepository,
@@ -54,7 +56,8 @@ public class FeedService implements FeedModuleApi {
                        FeedStorageService storageService,
                        UserModuleApi userModuleApi,
                        RoomModuleApi roomModuleApi,
-                       ApplicationEventPublisher eventPublisher) {
+                       ApplicationEventPublisher eventPublisher,
+                       ClamAvService clamAvService) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.attachmentRepository = attachmentRepository;
@@ -65,6 +68,7 @@ public class FeedService implements FeedModuleApi {
         this.userModuleApi = userModuleApi;
         this.roomModuleApi = roomModuleApi;
         this.eventPublisher = eventPublisher;
+        this.clamAvService = clamAvService;
     }
 
     // --- Helpers ---
@@ -404,6 +408,16 @@ public class FeedService implements FeedModuleApi {
             }
             // Detect actual content type via magic bytes instead of trusting client header
             String detectedContentType = FileValidationUtils.detectContentType(file);
+
+            // Virus scan before storing (no-op unless the 'clamav' module toggle is enabled).
+            try {
+                ClamAvService.ScanResult scan = clamAvService.scan(file.getBytes());
+                if (!scan.isClean()) {
+                    throw new BusinessException("File rejected: malware detected (" + scan.virusName() + ")");
+                }
+            } catch (java.io.IOException e) {
+                throw new BusinessException("Could not read the uploaded file for virus scanning");
+            }
 
             var attachment = new FeedPostAttachment();
             attachment.setPost(post);

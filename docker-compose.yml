@@ -257,7 +257,10 @@ services:
       - JWT_ENABLED=${ONLYOFFICE_JWT_ENABLED:-true}
       - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:?ONLYOFFICE_JWT_SECRET is required and must match the backend}
     ports:
-      - "8443:443"
+      # Loopback only — backend<->onlyoffice traffic stays on the internal Docker
+      # network. If browsers must reach the editor directly, proxy it via nginx/Caddy
+      # rather than exposing 8443 on all interfaces.
+      - "127.0.0.1:8443:443"
     volumes:
       - onlyoffice_data:/var/lib/onlyoffice
     networks:
