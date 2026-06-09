@@ -5,6 +5,7 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.search.SearchResult;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
+import org.apache.solr.client.solrj.SolrRequest;
 import org.apache.solr.client.solrj.response.QueryResponse;
 import org.apache.solr.common.SolrDocument;
 import org.slf4j.Logger;
@@ -65,7 +66,9 @@ public class SolrSearchService {
             solrQuery.addSort("score", SolrQuery.ORDER.desc);
             solrQuery.addSort("created_at", SolrQuery.ORDER.desc);
 
-            QueryResponse response = solrClient.query(solrQuery);
+            // Use POST: the room-access filter can list many room_ids, and a GET URI
+            // would exceed Solr/Jetty's max header size (HTTP 414) for users in many rooms.
+            QueryResponse response = solrClient.query(solrQuery, SolrRequest.METHOD.POST);
             Map<String, Map<String, List<String>>> highlighting = response.getHighlighting();
 
             List<SearchResult> results = new ArrayList<>();
