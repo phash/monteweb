@@ -136,6 +136,9 @@ services:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-}
       # Shared HMAC secret with the ONLYOFFICE document server (office profile).
       ONLYOFFICE_JWT_SECRET: ${ONLYOFFICE_JWT_SECRET:-}
+      # Signing secret for cleaning QR check-in tokens. Required: the backend fails
+      # closed on the built-in default (set CLEANING_QR_SECRET in .env).
+      MONTEWEB_CLEANING_QR_SECRET: ${CLEANING_QR_SECRET:-}
     networks:
       - backend
       - frontend
