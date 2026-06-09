@@ -24,6 +24,8 @@ public interface WikiPageRepository extends JpaRepository<WikiPage, UUID> {
 
     boolean existsByRoomIdAndSlug(UUID roomId, String slug);
 
+    boolean existsByRoomIdAndSlugAndIdNot(UUID roomId, String slug, UUID id);
+
     List<WikiPage> findByCreatedBy(UUID userId);
 
     List<WikiPage> findByLastEditedBy(UUID userId);

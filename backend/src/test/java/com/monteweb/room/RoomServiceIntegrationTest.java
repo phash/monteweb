@@ -28,7 +28,7 @@ class RoomServiceIntegrationTest {
 
     @Test
     void createRoom_shouldReturnCreatedRoom() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         mockMvc.perform(post("/api/v1/rooms")
                         .header("Authorization", "Bearer " + token)
@@ -93,7 +93,7 @@ class RoomServiceIntegrationTest {
 
     @Test
     void updateRoom_asCreator_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room
         var createResult = mockMvc.perform(post("/api/v1/rooms")
@@ -122,7 +122,7 @@ class RoomServiceIntegrationTest {
 
     @Test
     void getMembers_ofOwnRoom_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room
         var createResult = mockMvc.perform(post("/api/v1/rooms")
@@ -192,7 +192,7 @@ class RoomServiceIntegrationTest {
 
     @Test
     void getThreads_forOwnRoom_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room
         var createResult = mockMvc.perform(post("/api/v1/rooms")
@@ -214,7 +214,7 @@ class RoomServiceIntegrationTest {
 
     @Test
     void createThread_asLeader_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room (creator = LEADER)
         var createResult = mockMvc.perform(post("/api/v1/rooms")

@@ -41,7 +41,7 @@ class DiscussionThreadControllerIntegrationTest {
 
     @Test
     void getThreads_authenticated_shouldReturnPage() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "disc-list@example.com", "Disc", "List");
 
         String roomId = createRoomAndGetId(token);
@@ -54,7 +54,7 @@ class DiscussionThreadControllerIntegrationTest {
 
     @Test
     void createThread_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "disc-create@example.com", "Disc", "Creator");
 
         String roomId = createRoomAndGetId(token);
@@ -74,7 +74,7 @@ class DiscussionThreadControllerIntegrationTest {
 
     @Test
     void getThread_shouldReturnThread() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "disc-get@example.com", "Disc", "Getter");
 
         String roomId = createRoomAndGetId(token);
@@ -97,7 +97,7 @@ class DiscussionThreadControllerIntegrationTest {
 
     @Test
     void addReply_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "disc-reply@example.com", "Disc", "Replier");
 
         String roomId = createRoomAndGetId(token);
@@ -126,7 +126,7 @@ class DiscussionThreadControllerIntegrationTest {
     void getThread_leaderCanReadKinderAudienceThread() throws Exception {
         // Regression guard for the audience-filter refactor: a room LEADER (canSeeAll)
         // must still be able to read a thread restricted to the KINDER audience.
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "disc-kinder@example.com", "Disc", "Kinder");
 
         String roomId = createRoomAndGetId(token);
@@ -155,7 +155,7 @@ class DiscussionThreadControllerIntegrationTest {
 
     @Test
     void getReplies_shouldReturnPage() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "disc-replies@example.com", "Disc", "Replies");
 
         String roomId = createRoomAndGetId(token);

@@ -50,8 +50,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value?.specialRoles?.some((r: string) => r === 'PUTZORGA' || r.startsWith('PUTZORGA:')) ?? false
   )
   const isSectionAdmin = computed(() => user.value?.role === 'SECTION_ADMIN')
+  // US-040: Students do NOT get a "Familie" nav item (a family is created/managed by
+  // parents, not by the student themselves). Only PARENT and SUPERADMIN see it.
   const canHaveFamily = computed(() =>
-    user.value?.role === 'PARENT' || user.value?.role === 'STUDENT' || user.value?.role === 'SUPERADMIN'
+    user.value?.role === 'PARENT' || user.value?.role === 'SUPERADMIN'
   )
   const assignedRoles = computed(() => user.value?.assignedRoles ?? [])
   const canSwitchRole = computed(() => assignedRoles.value.length > 1)

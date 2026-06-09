@@ -1,7 +1,9 @@
 package com.monteweb.notification.internal.service;
 
 import com.monteweb.feed.FeedCommentCreatedEvent;
+import com.monteweb.feed.FeedModuleApi;
 import com.monteweb.feed.FeedPostCreatedEvent;
+import com.monteweb.feed.FeedPostInfo;
 import com.monteweb.messaging.MessageSentEvent;
 import com.monteweb.notification.NotificationType;
 import com.monteweb.shared.util.MentionParser;
@@ -14,14 +16,21 @@ import java.util.UUID;
 /**
  * Listens for content creation events (posts, comments, messages) and sends
  * MENTION notifications to users who are mentioned via the @[userId:displayName] syntax.
+ *
+ * <p>Additionally, when a comment is added to a post, the post's author receives a
+ * {@link NotificationType#COMMENT} notification (US-330), unless the commenter is the
+ * author themselves or the author was already notified via a mention in the same comment.
  */
 @Component
 public class MentionNotificationListener {
 
     private final NotificationService notificationService;
+    private final FeedModuleApi feedModuleApi;
 
-    public MentionNotificationListener(NotificationService notificationService) {
+    public MentionNotificationListener(NotificationService notificationService,
+                                       FeedModuleApi feedModuleApi) {
         this.notificationService = notificationService;
+        this.feedModuleApi = feedModuleApi;
     }
 
     @ApplicationModuleListener
@@ -49,7 +58,6 @@ public class MentionNotificationListener {
     @ApplicationModuleListener
     public void onFeedCommentCreated(FeedCommentCreatedEvent event) {
         Set<UUID> mentionedIds = MentionParser.extractMentionedUserIds(event.content());
-        if (mentionedIds.isEmpty()) return;
 
         String link = "/feed";
 
@@ -66,6 +74,26 @@ public class MentionNotificationListener {
                     event.commentId()
             );
         }
+
+        // Notify the post author about the new comment (US-330: COMMENT notification),
+        // unless they wrote the comment themselves or were already notified via a mention.
+        FeedPostInfo post = feedModuleApi.findPostById(event.postId()).orElse(null);
+        if (post == null) return;
+
+        UUID postAuthorId = post.authorId();
+        if (postAuthorId == null) return;
+        if (postAuthorId.equals(event.authorId())) return;
+        if (mentionedIds.contains(postAuthorId)) return;
+
+        notificationService.sendNotification(
+                postAuthorId,
+                NotificationType.COMMENT,
+                event.authorName() + " hat deinen Beitrag kommentiert",
+                truncate(event.content(), 100),
+                link,
+                "FEED_COMMENT",
+                event.commentId()
+        );
     }
 
     @ApplicationModuleListener

@@ -107,16 +107,24 @@ public class FileService implements FilesModuleApi {
         requireRoomMembership(userId, roomId);
 
         List<RoomFile> files;
+        String folderAudience = null;
         if (folderId == null) {
             files = fileRepository.findByRoomIdAndFolderIdIsNullOrderByCreatedAtDesc(roomId);
         } else {
             files = fileRepository.findByRoomIdAndFolderIdOrderByCreatedAtDesc(roomId, folderId);
+            folderAudience = folderRepository.findById(folderId)
+                    .filter(f -> f.getRoomId().equals(roomId))
+                    .map(RoomFolder::getAudience)
+                    .orElse(null);
         }
 
-        // Filter files by audience based on user's role
+        // Filter files by their EFFECTIVE audience (own audience inheriting the folder's
+        // visibility, US-143) so a broad file inside a restrictive folder is hidden from
+        // users who may not see the folder.
         Set<String> allowedAudiences = getAllowedAudiences(userId, roomId);
+        final String inheritedAudience = folderAudience;
         return files.stream()
-                .filter(f -> allowedAudiences.contains(f.getAudience()))
+                .filter(f -> allowedAudiences.contains(effectiveAudience(inheritedAudience, f.getAudience())))
                 .map(this::toFileInfo)
                 .toList();
     }
@@ -133,10 +141,12 @@ public class FileService implements FilesModuleApi {
             throw new BusinessException("File too large. Maximum size is 100 MB.");
         }
 
+        String folderAudience = null;
         if (folderId != null) {
-            folderRepository.findById(folderId)
+            var parentFolder = folderRepository.findById(folderId)
                     .filter(f -> f.getRoomId().equals(roomId))
                     .orElseThrow(() -> new ResourceNotFoundException("Folder", folderId));
+            folderAudience = parentFolder.getAudience();
         }
 
         // Validate audience value
@@ -147,6 +157,12 @@ public class FileService implements FilesModuleApi {
             }
             resolvedAudience = audience.toUpperCase();
         }
+
+        // Files inherit the visibility of their containing folder (US-143): a file may
+        // never be broader than the folder it lives in. A restrictive (non-ALL) folder
+        // forces its audience onto the file, so e.g. an "ALL" file placed inside a
+        // PARENTS_ONLY folder is stored — and later served — as PARENTS_ONLY.
+        resolvedAudience = effectiveAudience(folderAudience, resolvedAudience);
 
         // Detect actual content type via magic bytes instead of trusting client header
         String detectedContentType = FileValidationUtils.detectContentType(file);
@@ -191,7 +207,7 @@ public class FileService implements FilesModuleApi {
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("File", fileId));
 
-        requireAudienceAccess(userId, roomId, roomFile.getAudience());
+        requireAudienceAccess(userId, roomId, effectiveAudienceForFile(roomFile));
         return storageService.download(roomFile.getStoragePath());
     }
 
@@ -201,7 +217,7 @@ public class FileService implements FilesModuleApi {
         var roomFile = fileRepository.findById(fileId)
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("File", fileId));
-        requireAudienceAccess(userId, roomId, roomFile.getAudience());
+        requireAudienceAccess(userId, roomId, effectiveAudienceForFile(roomFile));
         return roomFile;
     }
 
@@ -210,8 +226,8 @@ public class FileService implements FilesModuleApi {
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("File", fileId));
 
-        // Only uploader, room leaders, or admins (SUPERADMIN/SECTION_ADMIN) can delete
-        if (!roomFile.getUploadedBy().equals(userId) && !hasAdminRole(userId)) {
+        // Only uploader, room leaders, or admins (SUPERADMIN / section-scoped SECTION_ADMIN) can delete
+        if (!roomFile.getUploadedBy().equals(userId) && !hasAdminRoleForRoom(userId, roomId)) {
             var role = roomModuleApi.getUserRoleInRoom(userId, roomId);
             if (role.isEmpty() || !"LEADER".equals(role.get().name())) {
                 throw new ForbiddenException("Only the uploader or room leaders can delete files");
@@ -278,17 +294,37 @@ public class FileService implements FilesModuleApi {
                 .filter(f -> f.getRoomId().equals(roomId))
                 .orElseThrow(() -> new ResourceNotFoundException("Folder", folderId));
 
+        // Only the folder creator, a room LEADER, or an admin (SUPERADMIN globally,
+        // SECTION_ADMIN scoped to this room's section) may delete a folder. Deletion
+        // cascades to all files and sub-folders, so this must not be open to any member.
+        boolean isCreator = userId.equals(folder.getCreatedBy());
+        boolean isLeader = roomModuleApi.getUserRoleInRoom(userId, roomId)
+                .map(r -> "LEADER".equals(r.name()))
+                .orElse(false);
+        if (!isCreator && !isLeader && !hasAdminRoleForRoom(userId, roomId)) {
+            throw new ForbiddenException("Only the folder creator, a room leader, or an admin can delete this folder");
+        }
+
+        deleteFolderRecursive(roomId, folder);
+    }
+
+    /**
+     * Recursively deletes a folder, its files (from MinIO + DB), and its sub-folders.
+     * Authorization is checked once by the public {@link #deleteFolder} entry point; the
+     * authorized actor's deletion cascades over the entire sub-tree.
+     */
+    private void deleteFolderRecursive(UUID roomId, RoomFolder folder) {
         // Delete all files in this folder from storage
-        var files = fileRepository.findByRoomIdAndFolderIdOrderByCreatedAtDesc(roomId, folderId);
+        var files = fileRepository.findByRoomIdAndFolderIdOrderByCreatedAtDesc(roomId, folder.getId());
         for (var file : files) {
             storageService.delete(file.getStoragePath());
         }
         fileRepository.deleteAll(files);
 
         // Delete sub-folders recursively
-        var subFolders = folderRepository.findByRoomIdAndParentIdOrderByNameAsc(roomId, folderId);
+        var subFolders = folderRepository.findByRoomIdAndParentIdOrderByNameAsc(roomId, folder.getId());
         for (var sub : subFolders) {
-            deleteFolder(roomId, sub.getId(), userId);
+            deleteFolderRecursive(roomId, sub);
         }
 
         folderRepository.delete(folder);
@@ -296,14 +332,30 @@ public class FileService implements FilesModuleApi {
 
     // ---- Helpers ----
 
-    private boolean hasAdminRole(UUID userId) {
-        return userModuleApi.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * Returns true if the user is a global SUPERADMIN, or a SECTION_ADMIN scoped to the
+     * section the given room belongs to. SECTION_ADMINs are NOT global admins: a section
+     * admin scoped to e.g. Krippe must not gain access to an Oberstufe room.
+     * Mirrors {@code DiscussionThreadService.hasAdminRoleForRoom} / {@code RoomController.isAdminForSection}.
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModuleApi.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModuleApi.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!hasAdminRole(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("You are not a member of this room");
         }
     }
@@ -314,6 +366,34 @@ public class FileService implements FilesModuleApi {
         if (!allowed.contains(audience)) {
             throw new ForbiddenException("You do not have access to this file");
         }
+    }
+
+    /**
+     * Resolves the EFFECTIVE audience of a file given its containing folder's audience
+     * (US-143 inheritance). A restrictive (non-ALL) folder forces its audience onto the
+     * file so the file can never be broader than the folder it lives in. When the folder
+     * is ALL (or the file is at the room root with no folder) the file keeps its own audience.
+     */
+    private String effectiveAudience(String folderAudience, String fileAudience) {
+        if (folderAudience != null && !"ALL".equals(folderAudience)) {
+            return folderAudience;
+        }
+        return fileAudience != null ? fileAudience : "ALL";
+    }
+
+    /**
+     * Looks up a file's containing folder (if any) and returns the file's effective,
+     * folder-inherited audience. Used by single-file access checks (download / metadata)
+     * so they cannot bypass the folder-level visibility restriction.
+     */
+    private String effectiveAudienceForFile(RoomFile roomFile) {
+        String folderAudience = null;
+        if (roomFile.getFolderId() != null) {
+            folderAudience = folderRepository.findById(roomFile.getFolderId())
+                    .map(RoomFolder::getAudience)
+                    .orElse(null);
+        }
+        return effectiveAudience(folderAudience, roomFile.getAudience());
     }
 
     /**
@@ -328,11 +408,11 @@ public class FileService implements FilesModuleApi {
         var userInfo = userModuleApi.findById(userId).orElse(null);
         var userRole = userInfo != null ? userInfo.role() : null;
 
-        // Leaders, teachers, superadmins, section admins see everything
+        // Leaders, teachers, and admins (SUPERADMIN globally, SECTION_ADMIN only for
+        // rooms in their own section) see everything.
         if (roomRole == RoomRole.LEADER
                 || userRole == UserRole.TEACHER
-                || userRole == UserRole.SUPERADMIN
-                || userRole == UserRole.SECTION_ADMIN) {
+                || hasAdminRoleForRoom(userId, roomId)) {
             return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
         }
 

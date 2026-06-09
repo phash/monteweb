@@ -126,6 +126,36 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    /**
+     * Self-service 2FA enrollment (step 1) for MANDATORY mode past the grace deadline.
+     * Authenticated by the 2FA temp token returned from /login (the user has no full
+     * session and no TOTP secret yet). Returns the QR URI to configure an authenticator.
+     */
+    @PostMapping("/2fa/setup-temp")
+    public ResponseEntity<ApiResponse<TwoFactorSetupResponse>> setup2faWithTempToken(
+            @Valid @RequestBody TwoFactorSetupTempRequest request) {
+        var response = authService.setup2faWithTempToken(request.tempToken());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
+     * Self-service 2FA enrollment (step 2) for MANDATORY mode past the grace deadline.
+     * Validates the temp token + code, enables 2FA, and logs the user in (sets auth cookies),
+     * returning recovery codes (shown once).
+     */
+    @PostMapping("/2fa/setup-temp/confirm")
+    public ResponseEntity<ApiResponse<TwoFactorEnrollmentResult>> confirm2faWithTempToken(
+            @Valid @RequestBody TwoFactorVerifyRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        var result = authService.confirm2faWithTempToken(request.tempToken(), request.code());
+        var login = result.login();
+        if (login.accessToken() != null && login.refreshToken() != null) {
+            setAuthCookies(httpResponse, login.accessToken(), login.refreshToken(), httpRequest);
+        }
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
     @GetMapping("/2fa/status")
     public ResponseEntity<ApiResponse<java.util.Map<String, Boolean>>> get2faStatus() {
         var userId = SecurityUtils.requireCurrentUserId();

@@ -40,12 +40,24 @@ public class FundgrubeService implements FundgrubeModuleApi {
 
     // ---- List ----
 
-    public List<FundgrubeItemInfo> listItems(UUID sectionId) {
+    /**
+     * Lists active fundgrube items.
+     *
+     * @param sectionId optional section filter; when set, items of that section AND
+     *                  school-wide items (sectionId == null) are returned.
+     * @param claimed   optional claim filter: {@code true} returns only already-claimed
+     *                  items, {@code false} returns only available (unclaimed) items,
+     *                  {@code null} returns all active items.
+     */
+    public List<FundgrubeItemInfo> listItems(UUID sectionId, Boolean claimed) {
         var now = Instant.now();
         List<FundgrubeItem> items = sectionId != null
                 ? itemRepo.findActiveBySectionId(sectionId, now)
                 : itemRepo.findAllActive(now);
-        return items.stream().map(this::toInfo).toList();
+        return items.stream()
+                .filter(item -> claimed == null || item.isClaimed() == claimed)
+                .map(this::toInfo)
+                .toList();
     }
 
     // ---- Get ----

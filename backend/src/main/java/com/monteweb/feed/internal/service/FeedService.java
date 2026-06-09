@@ -86,6 +86,22 @@ public class FeedService implements FeedModuleApi {
     }
 
     /**
+     * Staff = teaching/administrative roles. Parents and students are NOT staff.
+     * Used to gate feed-post creation (US-070/US-071: PARENT/STUDENT cannot author posts).
+     */
+    private boolean isStaff(UserInfo user) {
+        return user != null && (user.role() == UserRole.SUPERADMIN
+                || user.role() == UserRole.SECTION_ADMIN
+                || user.role() == UserRole.TEACHER);
+    }
+
+    private boolean isRoomLeader(UUID userId, UUID roomId) {
+        return roomModuleApi.getUserRoleInRoom(userId, roomId)
+                .map(role -> role == com.monteweb.room.RoomRole.LEADER)
+                .orElse(false);
+    }
+
+    /**
      * Verifies that the given user may read the given post.
      * Mirrors the personal-feed visibility rules: targetUserIds, parentOnly (students blocked),
      * and room membership. Author and admins always have access.
@@ -176,6 +192,26 @@ public class FeedService implements FeedModuleApi {
     }
 
     @Override
+    @Transactional
+    public FeedPostInfo createSystemBanner(String title, String content, String link, String bannerType,
+                                           Instant expiresAt, List<UUID> targetUserIds) {
+        var post = new FeedPost();
+        post.setAuthorId(UUID.fromString("00000000-0000-0000-0000-000000000000")); // system user
+        post.setTitle(title);
+        // Banners always carry a message; fall back to the title for content-less banners.
+        post.setContent(content != null && !content.isBlank() ? content : title);
+        post.setSourceType(SourceType.SYSTEM);
+        post.setPinned(true);
+        post.setLink(link);
+        post.setBannerType(bannerType != null ? bannerType : "INFO");
+        post.setExpiresAt(expiresAt);
+        if (targetUserIds != null && !targetUserIds.isEmpty()) {
+            post.setTargetUserIds(targetUserIds.toArray(new UUID[0]));
+        }
+        return toPostInfo(postRepository.save(post));
+    }
+
+    @Override
     public Optional<FeedPostInfo> findPostById(UUID postId) {
         return postRepository.findById(postId).map(this::toPostInfo);
     }
@@ -221,32 +257,57 @@ public class FeedService implements FeedModuleApi {
     @Transactional
     public FeedPostInfo createPost(UUID authorId, String title, String content,
                                    SourceType sourceType, UUID sourceId, boolean parentOnly) {
-        return createPost(authorId, title, content, sourceType, sourceId, parentOnly, null);
+        return createPost(authorId, title, content, sourceType, sourceId, parentOnly, null, null);
     }
 
     @Transactional
     public FeedPostInfo createPost(UUID authorId, String title, String content,
                                    SourceType sourceType, UUID sourceId, boolean parentOnly,
                                    CreatePollRequest pollRequest) {
-        // Validate: must have content, poll, or title (for attachment-only posts)
-        if ((content == null || content.isBlank()) && pollRequest == null && (title == null || title.isBlank())) {
-            throw new BusinessException("Post must have content, title, or a poll");
+        return createPost(authorId, title, content, sourceType, sourceId, parentOnly, pollRequest, null);
+    }
+
+    @Transactional
+    public FeedPostInfo createPost(UUID authorId, String title, String content,
+                                   SourceType sourceType, UUID sourceId, boolean parentOnly,
+                                   CreatePollRequest pollRequest, List<UUID> targetUserIds) {
+        // Validate: must have content or a poll. A title alone is NOT sufficient
+        // (US-086: "Titel allein reicht nicht aus"). Attachments are added after
+        // creation, so a content/poll requirement here does not block attachment-only
+        // posts — those are created with content and then enriched with files.
+        if ((content == null || content.isBlank()) && pollRequest == null) {
+            throw new BusinessException("Post must have content or a poll");
         }
+
+        var author = userModuleApi.findById(authorId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
 
         // Validate author can post to this source
         if (sourceType == SourceType.ROOM && sourceId != null) {
             if (!roomModuleApi.isUserInRoom(authorId, sourceId)) {
                 throw new ForbiddenException("Not a member of this room");
             }
+            // US-070/US-071: only staff (TEACHER/SECTION_ADMIN/SUPERADMIN) or the
+            // room's LEADER may author room feed posts. Plain PARENT/STUDENT members
+            // can read but not create posts.
+            if (!isStaff(author) && !isRoomLeader(authorId, sourceId)) {
+                throw new ForbiddenException("Only teachers, admins or room leaders can create room posts");
+            }
         }
-        if (sourceType == SourceType.SCHOOL || sourceType == SourceType.SECTION) {
-            var user = userModuleApi.findById(authorId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
-            boolean isStaff = user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN || user.role() == UserRole.TEACHER;
-            boolean isElternbeirat = user.specialRoles() != null && (user.specialRoles().contains("ELTERNBEIRAT")
-                    || (sourceId != null && user.specialRoles().contains("ELTERNBEIRAT:" + sourceId)));
-            if (!isStaff && !isElternbeirat) {
-                throw new ForbiddenException("Only staff or Elternbeirat can create school-wide or section posts");
+        if (sourceType == SourceType.SCHOOL) {
+            // US-087: school-wide posts are restricted to admins (SUPERADMIN/SECTION_ADMIN).
+            // Elternbeirat keeps its dedicated school-wide posting capability.
+            boolean isElternbeirat = author.specialRoles() != null && author.specialRoles().contains("ELTERNBEIRAT");
+            if (!hasAdminRole(author) && !isElternbeirat) {
+                throw new ForbiddenException("Only admins or Elternbeirat can create school-wide posts");
+            }
+        }
+        if (sourceType == SourceType.SECTION) {
+            // Section posts: staff or the section's Elternbeirat (mirrors calendar SECTION rule).
+            boolean isElternbeirat = author.specialRoles() != null && (author.specialRoles().contains("ELTERNBEIRAT")
+                    || (sourceId != null && author.specialRoles().contains("ELTERNBEIRAT:" + sourceId)));
+            if (!isStaff(author) && !isElternbeirat) {
+                throw new ForbiddenException("Only staff or Elternbeirat can create section posts");
             }
         }
 
@@ -257,6 +318,12 @@ public class FeedService implements FeedModuleApi {
         post.setSourceType(sourceType);
         post.setSourceId(sourceId);
         post.setParentOnly(parentOnly);
+        // US-080: optional per-user targeting. Only the listed users (plus author/admins)
+        // can read the post; visibility is enforced by the personal-feed query and
+        // verifyPostReadAccess/verifyPostAccess.
+        if (targetUserIds != null && !targetUserIds.isEmpty()) {
+            post.setTargetUserIds(targetUserIds.toArray(new UUID[0]));
+        }
 
         post = postRepository.save(post);
 
@@ -265,9 +332,10 @@ public class FeedService implements FeedModuleApi {
             createFeedPoll(post.getId(), pollRequest);
         }
 
-        String authorName = userModuleApi.findById(authorId).map(UserInfo::displayName).orElse("Unknown");
-        // Covers all three valid post shapes (content, poll, title-only) without NPE
-        String eventBody = content != null ? content : (pollRequest != null ? pollRequest.question() : title);
+        String authorName = author.displayName();
+        // A post always has content or a poll at this point (title-only is rejected above).
+        String eventBody = content != null && !content.isBlank() ? content
+                : (pollRequest != null ? pollRequest.question() : title);
         eventPublisher.publishEvent(new FeedPostCreatedEvent(
                 post.getId(), authorId, authorName, title,
                 eventBody,
@@ -555,10 +623,39 @@ public class FeedService implements FeedModuleApi {
                 .map(this::toPostInfo);
     }
 
-    public List<FeedPostInfo> getActiveSystemBanners() {
+    /**
+     * Returns active (non-expired, pinned) SYSTEM banners as banner DTOs that carry
+     * the optional click-through link, banner type and expiry (US-081).
+     *
+     * <p>Targeted banners (target_user_ids set) are only returned to the listed users,
+     * so a context-dependent banner (e.g. Putz reminder for affected parents) does not
+     * leak to everyone.
+     */
+    public List<com.monteweb.feed.internal.dto.SystemBannerResponse> getActiveSystemBanners(UUID userId) {
         return postRepository.findActiveSystemBanners().stream()
-                .map(this::toPostInfo)
+                .filter(p -> isBannerVisibleTo(p, userId))
+                .map(p -> new com.monteweb.feed.internal.dto.SystemBannerResponse(
+                        p.getId(),
+                        p.getTitle(),
+                        p.getContent(),
+                        p.getBannerType() != null ? p.getBannerType() : "INFO",
+                        p.getLink(),
+                        p.getExpiresAt()
+                ))
                 .toList();
+    }
+
+    private boolean isBannerVisibleTo(FeedPost banner, UUID userId) {
+        UUID[] targets = banner.getTargetUserIds();
+        if (targets == null || targets.length == 0) {
+            return true; // global banner
+        }
+        for (UUID target : targets) {
+            if (target.equals(userId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // --- Reactions ---

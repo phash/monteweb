@@ -81,6 +81,55 @@ public class SolrIndexingService {
         }
     }
 
+    public void indexUser(UserInfo user) {
+        try {
+            SolrInputDocument doc = new SolrInputDocument();
+            doc.addField("id", "USER:" + user.id());
+            doc.addField("doc_type", "USER");
+            doc.addField("entity_id", user.id().toString());
+            doc.addField("title", user.displayName());
+            doc.addField("content", user.email());
+            doc.addField("url", "/users/" + user.id());
+            solrClient.add(doc);
+            solrClient.commit();
+        } catch (SolrServerException | IOException e) {
+            log.error("Failed to index user {}: {}", user.id(), e.getMessage());
+        }
+    }
+
+    public void indexRoom(RoomInfo room) {
+        try {
+            SolrInputDocument doc = new SolrInputDocument();
+            doc.addField("id", "ROOM:" + room.id());
+            doc.addField("doc_type", "ROOM");
+            doc.addField("entity_id", room.id().toString());
+            doc.addField("title", room.name());
+            doc.addField("content", room.description());
+            doc.addField("url", "/rooms/" + room.id());
+            solrClient.add(doc);
+            solrClient.commit();
+        } catch (SolrServerException | IOException e) {
+            log.error("Failed to index room {}: {}", room.id(), e.getMessage());
+        }
+    }
+
+    public void indexEvent(EventInfo event) {
+        try {
+            SolrInputDocument doc = new SolrInputDocument();
+            doc.addField("id", "EVENT:" + event.id());
+            doc.addField("doc_type", "EVENT");
+            doc.addField("entity_id", event.id().toString());
+            doc.addField("title", event.title());
+            doc.addField("content", event.description());
+            doc.addField("url", "/calendar?event=" + event.id());
+            doc.addField("created_at", toDate(event.createdAt()));
+            solrClient.add(doc);
+            solrClient.commit();
+        } catch (SolrServerException | IOException e) {
+            log.error("Failed to index event {}: {}", event.id(), e.getMessage());
+        }
+    }
+
     public void indexWikiPage(UUID pageId, UUID roomId, String title, String content, String slug) {
         try {
             String roomName = roomModuleApi.findById(roomId).map(RoomInfo::name).orElse(null);

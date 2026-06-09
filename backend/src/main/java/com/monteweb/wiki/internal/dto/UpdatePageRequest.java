@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Size;
 
 public record UpdatePageRequest(
         @NotBlank @Size(max = 255) String title,
-        @NotBlank String content
+        @NotBlank String content,
+        @Size(max = 255) String slug
 ) {
 }

@@ -27,6 +27,7 @@ public record UpdateConfigRequest(
         @Size(max = 50) String termsVersion,
         @Min(1) @Max(3650) Integer dataRetentionDaysNotifications,
         @Min(1) @Max(3650) Integer dataRetentionDaysAudit,
+        @Min(1) @Max(1024) Integer maxUploadSizeMb,
         @Size(max = 255) String schoolFullName,
         @Size(max = 500) String schoolAddress,
         @Size(max = 255) String schoolPrincipal,

@@ -1,5 +1,6 @@
 package com.monteweb.calendar.internal.service;
 
+import com.monteweb.admin.AdminModuleApi;
 import com.monteweb.calendar.*;
 import com.monteweb.calendar.internal.model.CalendarEvent;
 import com.monteweb.calendar.internal.model.EventRsvp;
@@ -9,6 +10,7 @@ import com.monteweb.jobboard.JobboardModuleApi;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.school.SchoolModuleApi;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,7 @@ public class CalendarService implements CalendarModuleApi {
     private final UserModuleApi userModule;
     private final ApplicationEventPublisher eventPublisher;
     private final JobboardModuleApi jobboardModuleApi;
+    private final AdminModuleApi adminModule;
 
     public CalendarService(CalendarEventRepository eventRepository,
                            EventRsvpRepository rsvpRepository,
@@ -45,7 +48,8 @@ public class CalendarService implements CalendarModuleApi {
                            SchoolModuleApi schoolModule,
                            UserModuleApi userModule,
                            ApplicationEventPublisher eventPublisher,
-                           @Lazy @Autowired(required = false) JobboardModuleApi jobboardModuleApi) {
+                           @Lazy @Autowired(required = false) JobboardModuleApi jobboardModuleApi,
+                           AdminModuleApi adminModule) {
         this.eventRepository = eventRepository;
         this.rsvpRepository = rsvpRepository;
         this.roomModule = roomModule;
@@ -53,6 +57,7 @@ public class CalendarService implements CalendarModuleApi {
         this.userModule = userModule;
         this.eventPublisher = eventPublisher;
         this.jobboardModuleApi = jobboardModuleApi;
+        this.adminModule = adminModule;
     }
 
     public Page<EventInfo> getPersonalEvents(UUID userId, LocalDate from, LocalDate to, Pageable pageable) {
@@ -73,7 +78,7 @@ public class CalendarService implements CalendarModuleApi {
     }
 
     public Page<EventInfo> getRoomEvents(UUID roomId, UUID userId, LocalDate from, LocalDate to, Pageable pageable) {
-        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new IllegalArgumentException("User is not a member of this room");
         }
         return eventRepository.findByRoomId(roomId, from, to, pageable)
@@ -123,7 +128,7 @@ public class CalendarService implements CalendarModuleApi {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
-        checkCreatePermission(event.getScope(), event.getScopeId(), userId);
+        checkManagePermission(event, userId);
 
         if (request.title() != null) event.setTitle(request.title());
         if (request.description() != null) event.setDescription(request.description());
@@ -145,7 +150,7 @@ public class CalendarService implements CalendarModuleApi {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
-        checkCreatePermission(event.getScope(), event.getScopeId(), userId);
+        checkManagePermission(event, userId);
 
         event.setCancelled(true);
         event = eventRepository.save(event);
@@ -165,7 +170,7 @@ public class CalendarService implements CalendarModuleApi {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new IllegalArgumentException("Event not found"));
 
-        checkCreatePermission(event.getScope(), event.getScopeId(), userId);
+        checkManagePermission(event, userId);
 
         // Capture attending users before deletion for targeted feed post
         List<UUID> attendingUserIds = rsvpRepository.findUserIdsByEventIdAndStatus(eventId, RsvpStatus.ATTENDING);
@@ -239,7 +244,10 @@ public class CalendarService implements CalendarModuleApi {
     public EventInfo generateJitsiRoom(UUID eventId, UUID userId) {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Event not found"));
-        checkReadAccess(event, userId);
+        // US-114: reject Jitsi requests when the module is disabled (DB toggle)
+        requireJitsiEnabled();
+        // US-113: only the event creator or a SUPERADMIN may add a video conference
+        checkManagePermission(event, userId);
         String shortId = eventId.toString().substring(0, 8);
         event.setJitsiRoomName("monteweb-event-" + shortId);
         eventRepository.save(event);
@@ -250,10 +258,19 @@ public class CalendarService implements CalendarModuleApi {
     public EventInfo removeJitsiRoom(UUID eventId, UUID userId) {
         var event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new com.monteweb.shared.exception.ResourceNotFoundException("Event not found"));
-        checkReadAccess(event, userId);
+        // US-114: reject Jitsi requests when the module is disabled (DB toggle)
+        requireJitsiEnabled();
+        // US-113: only the event creator or a SUPERADMIN may remove a video conference
+        checkManagePermission(event, userId);
         event.setJitsiRoomName(null);
         eventRepository.save(event);
         return toEventInfo(event, userId);
+    }
+
+    private void requireJitsiEnabled() {
+        if (adminModule == null || !adminModule.isModuleEnabled("jitsi")) {
+            throw new ForbiddenException("Jitsi video conferencing is not enabled");
+        }
     }
 
     @Override
@@ -303,10 +320,59 @@ public class CalendarService implements CalendarModuleApi {
                 .stream().map(e -> toEventInfo(e, null)).toList();
     }
 
-    private boolean hasAdminRole(UUID userId) {
+    private boolean isSuperAdmin(UUID userId) {
         return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
+                .map(u -> u.role() == UserRole.SUPERADMIN)
                 .orElse(false);
+    }
+
+    /**
+     * Returns true if the user is a global SUPERADMIN, or a SECTION_ADMIN scoped to the
+     * section the given room belongs to. SECTION_ADMINs are NOT global admins: a section
+     * admin scoped to e.g. Krippe must not gain access to an Oberstufe room.
+     * Mirrors {@code DiscussionThreadService.hasAdminRoleForRoom} / {@code RoomController.isAdminForSection}.
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModule.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
+    }
+
+    /**
+     * Returns true if the user is a SECTION_ADMIN scoped to the given section.
+     */
+    private boolean administersSection(UUID userId, UUID sectionId) {
+        if (sectionId == null) return false;
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) return false;
+        return user.role() == UserRole.SECTION_ADMIN
+                && user.specialRoles() != null
+                && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+    }
+
+    /**
+     * US-105/106/107/113: managing an existing event (update, cancel, delete, add/remove a
+     * video conference) is restricted to the event's creator or a SUPERADMIN. Having mere
+     * create-rights for the scope (another room LEADER, a section TEACHER, an ELTERNBEIRAT,
+     * a SECTION_ADMIN) is NOT sufficient.
+     */
+    private void checkManagePermission(CalendarEvent event, UUID userId) {
+        if (userId == null) {
+            throw new ForbiddenException("Authentication required");
+        }
+        if (userId.equals(event.getCreatedBy())) return;
+        if (isSuperAdmin(userId)) return;
+        throw new ForbiddenException("Only the event creator or a SUPERADMIN can manage this event");
     }
 
     private void checkCreatePermission(EventScope scope, UUID scopeId, UUID userId) {
@@ -370,18 +436,22 @@ public class CalendarService implements CalendarModuleApi {
             // pass null userId; those paths are already gated by their own callers.
             return;
         }
-        if (hasAdminRole(userId)) return;
+        // SUPERADMIN is a global admin and may read any event. SECTION_ADMIN is NOT a
+        // global admin (see hasAdminRoleForRoom / checkCreatePermission section-scoping):
+        // their access is evaluated per scope below.
+        if (isSuperAdmin(userId)) return;
 
         switch (event.getScope()) {
             case ROOM -> {
-                if (!roomModule.isUserInRoom(userId, event.getScopeId())) {
+                if (!hasAdminRoleForRoom(userId, event.getScopeId())
+                        && !roomModule.isUserInRoom(userId, event.getScopeId())) {
                     throw new IllegalArgumentException("User is not a member of this room");
                 }
             }
             case SECTION -> {
                 boolean inSection = roomModule.findByUserId(userId).stream()
                         .anyMatch(r -> event.getScopeId() != null && event.getScopeId().equals(r.sectionId()));
-                if (!inSection) {
+                if (!inSection && !administersSection(userId, event.getScopeId())) {
                     throw new IllegalArgumentException("User does not belong to this section");
                 }
             }

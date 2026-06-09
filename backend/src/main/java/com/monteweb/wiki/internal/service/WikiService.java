@@ -182,6 +182,15 @@ public class WikiService implements WikiModuleApi {
         page.setTitle(request.title().trim());
         page.setContent(request.content());
         page.setLastEditedBy(userId);
+
+        // Slug may optionally be changed. When the client supplies a (non-blank) slug
+        // it is sanitized and made unique within the room (ignoring this page's own
+        // current slug). When omitted, the existing slug is preserved.
+        if (request.slug() != null && !request.slug().isBlank()) {
+            String newSlug = uniqueSlug(page.getRoomId(), slugify(request.slug()), page.getId());
+            page.setSlug(newSlug);
+        }
+
         pageRepo.save(page);
 
         // Create new version
@@ -355,14 +364,29 @@ public class WikiService implements WikiModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Wiki page not found: " + pageId));
     }
 
-    private boolean hasAdminRole(UUID userId) {
-        return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * Room-scoped admin check: SUPERADMIN is a global admin for every room,
+     * SECTION_ADMIN only counts as admin for rooms whose section the user actually
+     * administers (special role "SECTION_ADMIN:&lt;sectionId&gt;").
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModule.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }
@@ -381,8 +405,16 @@ public class WikiService implements WikiModuleApi {
      * Generate a URL-safe slug from the title. Ensures uniqueness within the room.
      */
     String generateSlug(UUID roomId, String title) {
+        return uniqueSlug(roomId, slugify(title), null);
+    }
+
+    /**
+     * Normalize an arbitrary input into a URL-safe slug (lowercase, hyphenated,
+     * special chars stripped). Never returns an empty string ("page" fallback).
+     */
+    private String slugify(String input) {
         // Normalize unicode, lowercase, replace spaces with hyphens, remove special chars
-        String normalized = Normalizer.normalize(title.trim().toLowerCase(), Normalizer.Form.NFD);
+        String normalized = Normalizer.normalize(input.trim().toLowerCase(), Normalizer.Form.NFD);
         // Replace umlauts
         normalized = normalized
                 .replaceAll("\\p{M}", "")
@@ -399,15 +431,28 @@ public class WikiService implements WikiModuleApi {
         if (slug.isEmpty()) {
             slug = "page";
         }
+        return slug;
+    }
 
-        // Ensure uniqueness
-        String baseSlug = slug;
+    /**
+     * Ensure the slug is unique within the room, appending -1, -2, ... on collision.
+     * When {@code excludePageId} is non-null, a collision with that page is ignored
+     * (used when updating a page's own slug).
+     */
+    private String uniqueSlug(UUID roomId, String baseSlug, UUID excludePageId) {
+        String slug = baseSlug;
         int counter = 1;
-        while (pageRepo.existsByRoomIdAndSlug(roomId, slug)) {
+        while (slugTaken(roomId, slug, excludePageId)) {
             slug = baseSlug + "-" + counter;
             counter++;
         }
-
         return slug;
+    }
+
+    private boolean slugTaken(UUID roomId, String slug, UUID excludePageId) {
+        if (excludePageId == null) {
+            return pageRepo.existsByRoomIdAndSlug(roomId, slug);
+        }
+        return pageRepo.existsByRoomIdAndSlugAndIdNot(roomId, slug, excludePageId);
     }
 }

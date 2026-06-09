@@ -196,4 +196,25 @@ class JobboardControllerIntegrationTest {
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    void confirmAssignment_nonAdmin_shouldBeForbidden() throws Exception {
+        // Newly registered users default to PARENT and must not be able to confirm
+        // assignments (which credits hours to a family). The role check runs in the
+        // controller before the service, so a random assignment id still yields 403.
+        String token = TestHelper.registerAndGetToken(mockMvc,
+                "job-confirm-parent@example.com", "Job", "ConfirmParent");
+
+        mockMvc.perform(put("/api/v1/jobs/assignments/"
+                        + java.util.UUID.randomUUID() + "/confirm")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void confirmAssignment_unauthenticated_shouldFail() throws Exception {
+        mockMvc.perform(put("/api/v1/jobs/assignments/"
+                        + java.util.UUID.randomUUID() + "/confirm"))
+                .andExpect(status().isUnauthorized());
+    }
 }

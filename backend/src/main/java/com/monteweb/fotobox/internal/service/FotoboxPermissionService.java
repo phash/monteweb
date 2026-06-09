@@ -5,6 +5,7 @@ import com.monteweb.fotobox.internal.model.FotoboxRoomSettings;
 import com.monteweb.fotobox.internal.repository.FotoboxImageRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxRoomSettingsRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxThreadRepository;
+import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.shared.exception.ForbiddenException;
@@ -28,7 +29,7 @@ public class FotoboxPermissionService {
     private final FotoboxImageRepository imageRepo;
 
     public FotoboxPermissionLevel getPermission(UUID userId, UUID roomId) {
-        boolean hasAdminRole = hasAdminRole(userId);
+        boolean hasAdminRole = hasAdminRole(userId, roomId);
         if (!hasAdminRole && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
@@ -54,23 +55,39 @@ public class FotoboxPermissionService {
     }
 
     public void requireRoomMember(UUID userId, UUID roomId) {
-        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRole(userId, roomId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }
 
     public boolean isLeaderOrAdmin(UUID userId, UUID roomId) {
-        if (hasAdminRole(userId)) {
+        if (hasAdminRole(userId, roomId)) {
             return true;
         }
         var role = roomModule.getUserRoleInRoom(userId, roomId).orElse(null);
         return role == RoomRole.LEADER;
     }
 
-    private boolean hasAdminRole(UUID userId) {
-        return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * Returns true if the user is a global SUPERADMIN, or a SECTION_ADMIN scoped to the
+     * section the given room belongs to. SECTION_ADMINs are NOT global admins: a section
+     * admin scoped to e.g. Krippe must not gain access to an Oberstufe room.
+     * Mirrors {@code DiscussionThreadService.hasAdminRoleForRoom} / {@code RoomController.isAdminForSection}.
+     */
+    public boolean hasAdminRole(UUID userId, UUID roomId) {
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModule.findById(roomId).map(RoomInfo::sectionId).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     public boolean isThreadOwnerOrLeader(UUID userId, UUID threadId) {

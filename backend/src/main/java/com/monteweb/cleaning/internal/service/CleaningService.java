@@ -11,6 +11,8 @@ import com.monteweb.cleaning.internal.repository.CleaningSlotRepository;
 import com.monteweb.calendar.CalendarModuleApi;
 import com.monteweb.calendar.CreateEventRequest;
 import com.monteweb.calendar.EventScope;
+import com.monteweb.notification.NotificationModuleApi;
+import com.monteweb.notification.NotificationType;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.school.SchoolModuleApi;
 import com.monteweb.school.SchoolSectionInfo;
@@ -58,6 +60,7 @@ public class CleaningService implements CleaningModuleApi {
     private final ApplicationEventPublisher eventPublisher;
     private final CalendarModuleApi calendarModuleApi;
     private final RoomModuleApi roomModuleApi;
+    private final NotificationModuleApi notificationModuleApi;
 
     public CleaningService(CleaningConfigRepository configRepository,
                            CleaningSlotRepository slotRepository,
@@ -66,7 +69,8 @@ public class CleaningService implements CleaningModuleApi {
                            SchoolModuleApi schoolModuleApi,
                            ApplicationEventPublisher eventPublisher,
                            @Autowired(required = false) CalendarModuleApi calendarModuleApi,
-                           @Autowired(required = false) RoomModuleApi roomModuleApi) {
+                           @Autowired(required = false) RoomModuleApi roomModuleApi,
+                           @Autowired(required = false) NotificationModuleApi notificationModuleApi) {
         this.configRepository = configRepository;
         this.slotRepository = slotRepository;
         this.registrationRepository = registrationRepository;
@@ -75,6 +79,7 @@ public class CleaningService implements CleaningModuleApi {
         this.eventPublisher = eventPublisher;
         this.calendarModuleApi = calendarModuleApi;
         this.roomModuleApi = roomModuleApi;
+        this.notificationModuleApi = notificationModuleApi;
     }
 
     // ── Config Management ───────────────────────────────────────────────
@@ -94,8 +99,16 @@ public class CleaningService implements CleaningModuleApi {
         config.setRoomId(request.roomId());
         if (request.participantCircle() != null) {
             config.setParticipantCircle(request.participantCircle());
+            config.setParticipantCircleId(request.participantCircleId());
+        } else if (request.roomId() != null) {
+            // Room-scoped config without an explicit circle: restrict registration to the
+            // room's members (US-235). Otherwise anyone in the section could register.
+            config.setParticipantCircle("ROOM");
+            config.setParticipantCircleId(request.participantCircleId() != null
+                    ? request.participantCircleId() : request.roomId());
+        } else {
+            config.setParticipantCircleId(request.participantCircleId());
         }
-        config.setParticipantCircleId(request.participantCircleId());
         if (request.specificDate() != null) {
             config.setSpecificDate(request.specificDate());
             config.setDayOfWeek(request.specificDate().getDayOfWeek().getValue());
@@ -362,11 +375,12 @@ public class CleaningService implements CleaningModuleApi {
         CleaningConfig config = configRepository.findById(slot.getConfigId())
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", slot.getConfigId()));
         String circle = config.getParticipantCircle();
-        if (circle != null && !"SECTION".equals(circle)) {
-            if ("ROOM".equals(circle) && config.getParticipantCircleId() != null) {
-                if (roomModuleApi != null && !roomModuleApi.isUserInRoom(userId, config.getParticipantCircleId())) {
-                    throw new BusinessException("Registration restricted to members of the assigned room");
-                }
+        if ("ROOM".equals(circle)) {
+            UUID roomScopeId = config.getParticipantCircleId() != null
+                    ? config.getParticipantCircleId() : config.getRoomId();
+            if (roomScopeId != null && roomModuleApi != null
+                    && !roomModuleApi.isUserInRoom(userId, roomScopeId)) {
+                throw new BusinessException("Registration restricted to members of the assigned room");
             }
         }
 
@@ -427,6 +441,95 @@ public class CleaningService implements CleaningModuleApi {
         return registrationRepository.findSwapOffersForSlot(slotId).stream()
                 .map(this::toRegistrationInfo)
                 .toList();
+    }
+
+    /**
+     * Section-wide list of slots that currently have an open swap offer, so that other
+     * parents can discover and take over an offered slot (US-230). When sectionId is null,
+     * all upcoming swap offers are returned.
+     */
+    @Transactional(readOnly = true)
+    public List<CleaningSlotInfo> getOpenSwapSlots(UUID sectionId) {
+        List<CleaningRegistration> offers = (sectionId != null)
+                ? registrationRepository.findUpcomingSwapOffersBySection(sectionId, LocalDate.now())
+                : registrationRepository.findAllSwapOffers();
+        return offers.stream()
+                .map(CleaningRegistration::getSlotId)
+                .distinct()
+                .map(id -> slotRepository.findById(id).orElse(null))
+                .filter(s -> s != null && !s.isCancelled())
+                .map(s -> toSlotInfo(s, getConfigTitle(s.getConfigId())))
+                .toList();
+    }
+
+    /**
+     * Takes over a slot that another participant has offered for swap (US-230 step 4).
+     * The offered registration is transferred to the new user: the original registrant is
+     * released and the new user takes the spot. Hours will be credited to the new user's
+     * family on check-out.
+     */
+    @Transactional
+    public CleaningSlotInfo takeOverSwap(UUID slotId, UUID newUserId, String newUserName, UUID newFamilyId) {
+        CleaningSlot slot = slotRepository.findById(slotId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
+
+        if (slot.isCancelled()) {
+            throw new BusinessException("Cannot take over a swap for a cancelled slot");
+        }
+        if ("COMPLETED".equals(slot.getStatus()) || "IN_PROGRESS".equals(slot.getStatus())) {
+            throw new BusinessException("Cannot take over a swap for a slot that is already in progress or completed");
+        }
+        if (registrationRepository.existsBySlotIdAndUserId(slotId, newUserId)) {
+            throw new BusinessException("Already registered for this slot");
+        }
+
+        // Participant circle restriction also applies to the taker
+        CleaningConfig config = configRepository.findById(slot.getConfigId())
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningConfig", slot.getConfigId()));
+        if ("ROOM".equals(config.getParticipantCircle())) {
+            UUID roomScopeId = config.getParticipantCircleId() != null
+                    ? config.getParticipantCircleId() : config.getRoomId();
+            if (roomScopeId != null && roomModuleApi != null
+                    && !roomModuleApi.isUserInRoom(newUserId, roomScopeId)) {
+                throw new BusinessException("Swap take-over restricted to members of the assigned room");
+            }
+        }
+
+        // Find the oldest open swap offer on this slot
+        CleaningRegistration offered = registrationRepository.findSwapOffersForSlot(slotId).stream()
+                .filter(r -> !r.isCheckedIn())
+                .findFirst()
+                .orElseThrow(() -> new BusinessException("No open swap offer for this slot"));
+
+        if (offered.getUserId().equals(newUserId)) {
+            throw new BusinessException("Cannot take over your own swap offer");
+        }
+
+        UUID previousUserId = offered.getUserId();
+        offered.setUserId(newUserId);
+        offered.setUserName(newUserName);
+        offered.setFamilyId(newFamilyId);
+        offered.setSwapOffered(false);
+        registrationRepository.save(offered);
+
+        // Notify the original registrant that their slot has been taken over
+        if (notificationModuleApi != null) {
+            try {
+                notificationModuleApi.sendNotification(
+                        previousUserId,
+                        NotificationType.SYSTEM,
+                        "Putzdienst übernommen",
+                        newUserName + " hat deinen angebotenen Putzdienst am "
+                                + slot.getSlotDate() + " übernommen.",
+                        "/cleaning",
+                        "CLEANING_SLOT",
+                        slotId);
+            } catch (Exception e) {
+                log.warn("Failed to notify user {} about swap take-over: {}", previousUserId, e.getMessage());
+            }
+        }
+
+        return toSlotInfo(slot, config.getTitle());
     }
 
     // ── Check-in / Check-out ────────────────────────────────────────────
@@ -536,16 +639,16 @@ public class CleaningService implements CleaningModuleApi {
     }
 
     /**
-     * Update actual minutes and confirm duration after checkout.
+     * Correct the recorded actual minutes for a participant and confirm the duration
+     * after check-out. Restricted to cleaning admins (US-232): the authorization check
+     * is enforced by the controller, so a Putz-Admin can correct another participant's
+     * minutes.
      */
     @Transactional
-    public CleaningSlotInfo.RegistrationInfo updateRegistrationMinutes(UUID registrationId, int actualMinutes, UUID userId) {
+    public CleaningSlotInfo.RegistrationInfo updateRegistrationMinutes(UUID registrationId, int actualMinutes) {
         CleaningRegistration reg = registrationRepository.findById(registrationId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
 
-        if (!reg.getUserId().equals(userId)) {
-            throw new BusinessException("Can only update own registration");
-        }
         if (!reg.isCheckedOut()) {
             throw new BusinessException("Must check out before confirming duration");
         }
@@ -623,11 +726,48 @@ public class CleaningService implements CleaningModuleApi {
 
     @Transactional
     public void cancelSlot(UUID slotId) {
+        cancelSlot(slotId, null);
+    }
+
+    /**
+     * Cancels a slot, records the cancellation reason, and notifies all registered
+     * participants (US-233).
+     */
+    @Transactional
+    public void cancelSlot(UUID slotId, String cancelReason) {
         CleaningSlot slot = slotRepository.findById(slotId)
                 .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", slotId));
+
+        boolean alreadyCancelled = slot.isCancelled();
         slot.setCancelled(true);
         slot.setStatus("CANCELLED");
+        if (cancelReason != null && !cancelReason.isBlank()) {
+            slot.setCancelReason(cancelReason.length() > 500 ? cancelReason.substring(0, 500) : cancelReason);
+        }
         slotRepository.save(slot);
+
+        // Notify registered participants once (not on repeated cancel calls)
+        if (!alreadyCancelled && notificationModuleApi != null) {
+            String configTitle = getConfigTitle(slot.getConfigId());
+            String message = "Der Putzdienst \"" + configTitle + "\" am " + slot.getSlotDate()
+                    + " wurde abgesagt."
+                    + (cancelReason != null && !cancelReason.isBlank() ? " Grund: " + cancelReason : "");
+            for (CleaningRegistration reg : registrationRepository.findBySlotId(slotId)) {
+                try {
+                    notificationModuleApi.sendNotification(
+                            reg.getUserId(),
+                            NotificationType.SYSTEM,
+                            "Putzdienst abgesagt",
+                            message,
+                            "/cleaning",
+                            "CLEANING_SLOT",
+                            slotId);
+                } catch (Exception e) {
+                    log.warn("Failed to notify user {} about slot cancellation: {}",
+                            reg.getUserId(), e.getMessage());
+                }
+            }
+        }
     }
 
     // ── Family Hours ────────────────────────────────────────────────────

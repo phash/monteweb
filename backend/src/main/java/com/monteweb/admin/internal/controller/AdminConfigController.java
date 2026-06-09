@@ -12,6 +12,7 @@ import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +21,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.Map;
 
 @RestController
@@ -53,6 +55,7 @@ public class AdminConfigController {
                 request.privacyPolicyText(), request.privacyPolicyVersion(),
                 request.termsText(), request.termsVersion(),
                 request.dataRetentionDaysNotifications(), request.dataRetentionDaysAudit(),
+                request.maxUploadSizeMb(),
                 request.schoolFullName(), request.schoolAddress(), request.schoolPrincipal(),
                 request.techContactName(), request.techContactEmail(),
                 request.twoFactorMode(),
@@ -130,8 +133,12 @@ public class AdminConfigController {
 
     @GetMapping("/audit-log")
     public ResponseEntity<ApiResponse<PageResponse<AuditLogEntry>>> getAuditLog(
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @PageableDefault(size = 50) Pageable pageable) {
-        return ResponseEntity.ok(ApiResponse.ok(PageResponse.from(auditService.findAll(pageable))));
+        return ResponseEntity.ok(ApiResponse.ok(
+                PageResponse.from(auditService.find(action, from, to, pageable))));
     }
 
     // --- CSV Import ---

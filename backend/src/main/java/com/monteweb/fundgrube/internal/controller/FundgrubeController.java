@@ -35,9 +35,10 @@ public class FundgrubeController {
 
     @GetMapping("/items")
     public ApiResponse<List<FundgrubeItemInfo>> listItems(
-            @RequestParam(required = false) UUID sectionId) {
+            @RequestParam(required = false) UUID sectionId,
+            @RequestParam(required = false) Boolean claimed) {
         SecurityUtils.requireCurrentUserId();
-        return ApiResponse.ok(fundgrubeService.listItems(sectionId));
+        return ApiResponse.ok(fundgrubeService.listItems(sectionId, claimed));
     }
 
     @GetMapping("/items/{itemId}")

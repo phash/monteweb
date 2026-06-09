@@ -138,6 +138,34 @@ public class MessagingService implements MessagingModuleApi {
         return toConversationInfo(conversation, userId);
     }
 
+    /**
+     * User-initiated group conversation creation (via REST controller).
+     * <p>Unlike {@link #startGroupConversation} (used internally / cross-module for room chats),
+     * this entry point enforces the minimum-participant rule and communication rules so that
+     * parent-to-parent / student-to-student restrictions cannot be bypassed via group chats.
+     */
+    public ConversationInfo startUserGroupConversation(UUID userId, String title, List<UUID> participantIds) {
+        // Distinct participants excluding the creator
+        var otherParticipantIds = participantIds == null ? List.<UUID>of() : participantIds.stream()
+                .filter(Objects::nonNull)
+                .filter(id -> !id.equals(userId))
+                .distinct()
+                .toList();
+
+        // A group conversation requires at least 2 other participants (besides the creator)
+        if (otherParticipantIds.size() < 2) {
+            throw new BusinessException("A group conversation requires at least 2 other participants");
+        }
+
+        // Enforce communication rules between the creator and every other participant
+        // (prevents bypassing parent-to-parent / student-to-student rules via group conversations)
+        for (UUID participantId : otherParticipantIds) {
+            enforceCommRules(userId, participantId);
+        }
+
+        return startGroupConversation(userId, title, otherParticipantIds);
+    }
+
     public ConversationInfo startGroupConversation(UUID userId, String title, List<UUID> participantIds) {
         var conversation = new Conversation();
         conversation.setTitle(title);
@@ -171,6 +199,13 @@ public class MessagingService implements MessagingModuleApi {
         var attachmentsByMessageId = allAttachments.stream()
                 .collect(java.util.stream.Collectors.groupingBy(MessageAttachment::getMessageId));
 
+        // Batch-load reactions so pre-existing reactions are returned on load (not only after toggle)
+        var allReactions = messageIds.isEmpty()
+                ? List.<MessageReaction>of()
+                : messageReactionRepository.findByMessageIdIn(messageIds);
+        var reactionsByMessageId = allReactions.stream()
+                .collect(java.util.stream.Collectors.groupingBy(MessageReaction::getMessageId));
+
         // Collect reply-to IDs
         var replyToIds = page.getContent().stream()
                 .map(Message::getReplyToId)
@@ -195,7 +230,8 @@ public class MessagingService implements MessagingModuleApi {
         return page.map(m -> toMessageInfo(m,
                 imagesByMessageId.getOrDefault(m.getId(), List.of()),
                 attachmentsByMessageId.getOrDefault(m.getId(), List.of()),
-                replyMessages, replyImagesByMsgId, replyAttachmentsByMsgId, userId));
+                replyMessages, replyImagesByMsgId, replyAttachmentsByMsgId,
+                reactionsByMessageId.getOrDefault(m.getId(), List.of()), userId));
     }
 
     public MessageInfo sendPollMessage(UUID conversationId, UUID senderId, CreateMessagePollRequest pollRequest) {
@@ -621,13 +657,15 @@ public class MessagingService implements MessagingModuleApi {
                                        Map<UUID, Message> replyMessages,
                                        Map<UUID, List<MessageImage>> replyImagesByMsgId,
                                        Map<UUID, List<MessageAttachment>> replyAttachmentsByMsgId) {
-        return toMessageInfo(m, images, attachments, replyMessages, replyImagesByMsgId, replyAttachmentsByMsgId, null);
+        return toMessageInfo(m, images, attachments, replyMessages, replyImagesByMsgId, replyAttachmentsByMsgId,
+                List.of(), null);
     }
 
     private MessageInfo toMessageInfo(Message m, List<MessageImage> images, List<MessageAttachment> attachments,
                                        Map<UUID, Message> replyMessages,
                                        Map<UUID, List<MessageImage>> replyImagesByMsgId,
                                        Map<UUID, List<MessageAttachment>> replyAttachmentsByMsgId,
+                                       List<MessageReaction> reactions,
                                        UUID currentUserId) {
         String senderName = m.getSenderId() != null
                 ? userModuleApi.findById(m.getSenderId())
@@ -677,6 +715,8 @@ public class MessagingService implements MessagingModuleApi {
                 .map(poll -> toMessagePollInfo(poll, currentUserId))
                 .orElse(null);
 
+        List<MessageInfo.ReactionSummary> reactionSummaries = summarizeReactions(reactions, currentUserId);
+
         return new MessageInfo(
                 m.getId(),
                 m.getConversationId(),
@@ -687,9 +727,25 @@ public class MessagingService implements MessagingModuleApi {
                 imageInfos,
                 attachmentInfos,
                 replyInfo,
-                List.of(),
+                reactionSummaries,
                 pollInfo
         );
+    }
+
+    /**
+     * Aggregate raw reactions into per-emoji summaries (count + whether the current user reacted).
+     */
+    private List<MessageInfo.ReactionSummary> summarizeReactions(List<MessageReaction> reactions, UUID currentUserId) {
+        return reactions.stream()
+                .collect(Collectors.groupingBy(MessageReaction::getEmoji))
+                .entrySet().stream()
+                .map(e -> new MessageInfo.ReactionSummary(
+                        e.getKey(),
+                        e.getValue().size(),
+                        currentUserId != null && e.getValue().stream().anyMatch(r -> r.getUserId().equals(currentUserId))
+                ))
+                .sorted(Comparator.comparingLong(MessageInfo.ReactionSummary::count).reversed())
+                .toList();
     }
 
     private PollInfo toMessagePollInfo(MessagePoll poll, UUID currentUserId) {
@@ -812,16 +868,7 @@ public class MessagingService implements MessagingModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
         requireParticipant(message.getConversationId(), currentUserId);
         var reactions = messageReactionRepository.findByMessageId(messageId);
-        return reactions.stream()
-                .collect(Collectors.groupingBy(MessageReaction::getEmoji))
-                .entrySet().stream()
-                .map(e -> new MessageInfo.ReactionSummary(
-                        e.getKey(),
-                        e.getValue().size(),
-                        e.getValue().stream().anyMatch(r -> r.getUserId().equals(currentUserId))
-                ))
-                .sorted(Comparator.comparingLong(MessageInfo.ReactionSummary::count).reversed())
-                .toList();
+        return summarizeReactions(reactions, currentUserId);
     }
 
     /**

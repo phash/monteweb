@@ -41,7 +41,7 @@ class FeedControllerIntegrationTest {
 
     @Test
     void createPost_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "feed-post@example.com", "Feed", "Poster");
 
         // Create a room first to use as source
@@ -113,7 +113,7 @@ class FeedControllerIntegrationTest {
 
     @Test
     void addComment_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "feed-comment@example.com", "Feed", "Commenter");
 
         // Create room and post

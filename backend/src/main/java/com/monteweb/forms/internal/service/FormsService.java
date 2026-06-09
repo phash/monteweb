@@ -632,6 +632,7 @@ public class FormsService implements FormsModuleApi {
         var saved = new ArrayList<FormQuestion>();
         for (int i = 0; i < requests.size(); i++) {
             var req = requests.get(i);
+            validateQuestion(req);
             var question = new FormQuestion();
             question.setFormId(formId);
             question.setType(req.type());
@@ -655,6 +656,28 @@ public class FormsService implements FormsModuleApi {
             saved.add(questionRepository.save(question));
         }
         return saved;
+    }
+
+    /**
+     * US-160 / US-181: Single-/multiple-choice questions require options.
+     * At least two distinct, non-blank options are mandatory so that the
+     * respondent actually has a choice to make. A choice question with zero
+     * or one option can be neither saved nor published.
+     */
+    private void validateQuestion(QuestionRequest req) {
+        if (req.type() == QuestionType.SINGLE_CHOICE || req.type() == QuestionType.MULTIPLE_CHOICE) {
+            var options = req.options();
+            long distinctNonBlank = options == null ? 0 : options.stream()
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(o -> !o.isEmpty())
+                    .distinct()
+                    .count();
+            if (distinctNonBlank < 2) {
+                throw new IllegalArgumentException(
+                        "Choice questions require at least two distinct options: " + req.label());
+            }
+        }
     }
 
     private void checkCreatePermission(FormScope scope, UUID scopeId, UUID userId) {
@@ -721,10 +744,38 @@ public class FormsService implements FormsModuleApi {
     }
 
     private int calculateTargetCount(Form form) {
-        if (form.getScope() == FormScope.ROOM && form.getScopeId() != null) {
-            return roomModule.getMemberUserIds(form.getScopeId()).size();
+        return switch (form.getScope()) {
+            case ROOM -> form.getScopeId() != null
+                    ? roomModule.getMemberUserIds(form.getScopeId()).size()
+                    : 0;
+            case SECTION -> sectionTargetUserIds(form).size();
+            // US-172: A true school-wide target count is the total number of
+            // active users. The user module currently exposes no count API, so
+            // we cannot compute it without a cross-module API addition. Returning
+            // 0 keeps the response-rate denominator hidden rather than wrong.
+            // TODO(cross-module): add UserModuleApi.countActiveUsers() and use it here.
+            case SCHOOL -> 0;
+        };
+    }
+
+    /**
+     * US-167: The target group of a section-scoped form is the union of all
+     * members across every (non-archived) room belonging to the targeted
+     * sections. Counted distinctly so a user in two rooms of the same section
+     * is not double-counted.
+     */
+    private Set<UUID> sectionTargetUserIds(Form form) {
+        List<UUID> sectionIds = form.getSectionIds() != null && form.getSectionIds().length > 0
+                ? List.of(form.getSectionIds())
+                : (form.getScopeId() != null ? List.of(form.getScopeId()) : List.of());
+
+        var userIds = new HashSet<UUID>();
+        for (var sectionId : sectionIds) {
+            for (var room : roomModule.findBySectionId(sectionId)) {
+                userIds.addAll(roomModule.getMemberUserIds(room.id()));
+            }
         }
-        return 0;
+        return userIds;
     }
 
     private FormInfo toFormInfo(Form form, UUID currentUserId) {

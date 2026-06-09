@@ -1,13 +1,19 @@
 package com.monteweb.search.internal.service;
 
-import com.monteweb.feed.FeedCommentCreatedEvent;
+import com.monteweb.calendar.CalendarModuleApi;
+import com.monteweb.calendar.EventCreatedEvent;
+import com.monteweb.calendar.EventDeletedEvent;
 import com.monteweb.feed.FeedModuleApi;
 import com.monteweb.feed.FeedPostCreatedEvent;
 import com.monteweb.files.FileDeletedEvent;
 import com.monteweb.files.FileUploadedEvent;
 import com.monteweb.files.FilesModuleApi;
+import com.monteweb.room.RoomCreatedEvent;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.tasks.TaskDeletedEvent;
 import com.monteweb.tasks.TaskSavedEvent;
+import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRegisteredEvent;
 import com.monteweb.wiki.WikiPageDeletedEvent;
 import com.monteweb.wiki.WikiPageSavedEvent;
 import org.slf4j.Logger;
@@ -17,7 +23,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
-import java.io.InputStream;
 import java.util.Set;
 
 @Component
@@ -41,6 +46,8 @@ public class SolrIndexingListener {
     );
 
     private final SolrIndexingService indexingService;
+    private final UserModuleApi userModuleApi;
+    private final RoomModuleApi roomModuleApi;
 
     @Autowired(required = false)
     private FeedModuleApi feedModuleApi;
@@ -48,8 +55,15 @@ public class SolrIndexingListener {
     @Autowired(required = false)
     private FilesModuleApi filesModuleApi;
 
-    public SolrIndexingListener(SolrIndexingService indexingService) {
+    @Autowired(required = false)
+    private CalendarModuleApi calendarModuleApi;
+
+    public SolrIndexingListener(SolrIndexingService indexingService,
+                                UserModuleApi userModuleApi,
+                                RoomModuleApi roomModuleApi) {
         this.indexingService = indexingService;
+        this.userModuleApi = userModuleApi;
+        this.roomModuleApi = roomModuleApi;
     }
 
     @ApplicationModuleListener
@@ -61,27 +75,49 @@ public class SolrIndexingListener {
     }
 
     @ApplicationModuleListener
+    public void onUserRegistered(UserRegisteredEvent event) {
+        log.debug("Indexing user: {}", event.userId());
+        userModuleApi.findById(event.userId())
+                .ifPresent(indexingService::indexUser);
+    }
+
+    @ApplicationModuleListener
+    public void onRoomCreated(RoomCreatedEvent event) {
+        log.debug("Indexing room: {}", event.roomId());
+        roomModuleApi.findById(event.roomId())
+                .ifPresent(indexingService::indexRoom);
+    }
+
+    @ApplicationModuleListener
+    public void onEventCreated(EventCreatedEvent event) {
+        log.debug("Indexing calendar event: {}", event.eventId());
+        if (calendarModuleApi == null) return;
+        calendarModuleApi.findById(event.eventId())
+                .ifPresent(indexingService::indexEvent);
+    }
+
+    @ApplicationModuleListener
+    public void onEventDeleted(EventDeletedEvent event) {
+        log.debug("Removing calendar event from index: {}", event.eventId());
+        indexingService.deleteDocument("EVENT", event.eventId());
+    }
+
+    @ApplicationModuleListener
     public void onFileUploaded(FileUploadedEvent event) {
         log.debug("Indexing uploaded file: {}", event.fileId());
 
-        // Try content extraction for supported types
+        // Tika full-text extraction (indexFileWithContent) requires streaming the
+        // file's bytes to Solr's /update/extract handler. The files module currently
+        // only exposes getStoragePath(fileId) via FilesModuleApi, not an InputStream,
+        // and the search module has no MinIO client of its own — so we cannot obtain
+        // the content here. We index metadata only until FilesModuleApi exposes a
+        // content-stream accessor (see FLAG in the audit changelog).
         if (filesModuleApi != null && event.contentType() != null && isExtractable(event.contentType())) {
-            String storagePath = filesModuleApi.getStoragePath(event.fileId());
-            if (storagePath != null) {
-                try {
-                    // Download from MinIO for extraction
-                    // We'll index with metadata only — content extraction happens in Solr
-                    // File is streamed directly to Solr's ExtractingRequestHandler
-                    indexingService.indexFile(event.fileId(), event.roomId(),
-                            event.originalName(), event.contentType(), event.fileSize());
-                    return;
-                } catch (Exception e) {
-                    log.warn("Could not extract file content for {}: {}", event.fileId(), e.getMessage());
-                }
-            }
+            log.debug("File {} is an extractable type ({}); indexing metadata only "
+                    + "(Tika extraction needs a content stream from the files module)",
+                    event.fileId(), event.contentType());
         }
 
-        // Fallback: index metadata only
         indexingService.indexFile(event.fileId(), event.roomId(),
                 event.originalName(), event.contentType(), event.fileSize());
     }

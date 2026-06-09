@@ -45,11 +45,14 @@ public class MessagingController {
     public ResponseEntity<ApiResponse<ConversationInfo>> startConversation(
             @RequestBody StartConversationRequest request) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        if (request.participantIds() == null || request.participantIds().isEmpty()) {
+            throw new BadRequestException("At least one participant is required");
+        }
         ConversationInfo conversation;
         if (request.participantIds().size() == 1 && !request.isGroup()) {
             conversation = messagingService.startDirectConversation(userId, request.participantIds().get(0));
         } else {
-            conversation = messagingService.startGroupConversation(userId, request.title(), request.participantIds());
+            conversation = messagingService.startUserGroupConversation(userId, request.title(), request.participantIds());
         }
         return ResponseEntity.ok(ApiResponse.ok(conversation));
     }

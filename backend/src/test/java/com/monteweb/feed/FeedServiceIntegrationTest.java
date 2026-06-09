@@ -45,7 +45,7 @@ class FeedServiceIntegrationTest {
 
     @Test
     void createPost_shouldReturnCreatedPost() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room first
         String roomId = createRoom(token, "Feed Post Room");
@@ -89,6 +89,81 @@ class FeedServiceIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void createPost_titleOnly_shouldBeRejected() throws Exception {
+        // US-086: a title alone is not enough — content or a poll is required.
+        // A title-only post is rejected by the business validation (422).
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
+        String roomId = createRoom(token, "Title Only Room");
+
+        mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "title": "Just a title",
+                                    "sourceType": "ROOM",
+                                    "sourceId": "%s",
+                                    "parentOnly": false
+                                }
+                                """.formatted(roomId)))
+                .andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void createRoomPost_byPlainParentMember_shouldReturn403() throws Exception {
+        // US-070/US-071: a PARENT who is only a member (not LEADER) of a room
+        // must not be able to create a room feed post.
+        String leaderToken = TestHelper.registerTeacherAndGetToken(mockMvc);
+        String roomId = createRoom(leaderToken, "Members Cannot Post Room");
+
+        // Register a second user (defaults to PARENT) and add them as a plain MEMBER.
+        var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
+                "feed-member" + System.nanoTime() + "@example.com", "Plain", "Member");
+        String memberToken = memberResponse.path("data").path("accessToken").asText();
+        String memberUserId = memberResponse.path("data").path("userId").asText();
+
+        mockMvc.perform(post("/api/v1/rooms/" + roomId + "/members")
+                        .header("Authorization", "Bearer " + leaderToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"userId": "%s", "role": "MEMBER"}
+                                """.formatted(memberUserId)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "I should not be allowed to post here",
+                                    "sourceType": "ROOM",
+                                    "sourceId": "%s",
+                                    "parentOnly": false
+                                }
+                                """.formatted(roomId)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createSchoolPost_byParent_shouldReturn403() throws Exception {
+        // US-087: school-wide posts are restricted to admins (or Elternbeirat).
+        // A plain PARENT must be rejected.
+        String token = TestHelper.registerAndGetToken(mockMvc);
+
+        mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "School-wide announcement from a parent",
+                                    "sourceType": "SCHOOL",
+                                    "parentOnly": false
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
     // ── Post Detail ──────────────────────────────────────────────────
 
     @Test
@@ -102,7 +177,7 @@ class FeedServiceIntegrationTest {
 
     @Test
     void getPost_existing_shouldReturnPost() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room and post
         String roomId = createRoom(token, "Detail Room");
@@ -116,8 +191,8 @@ class FeedServiceIntegrationTest {
 
     @Test
     void getPost_nonMemberOfRoom_shouldReturn403() throws Exception {
-        // Author (PARENT) creates a room-scoped post
-        String authorToken = TestHelper.registerAndGetToken(mockMvc);
+        // Author (teacher/leader) creates a room-scoped post
+        String authorToken = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(authorToken, "Private Detail Room");
         String postId = createPost(authorToken, roomId, "Members only");
 
@@ -130,8 +205,8 @@ class FeedServiceIntegrationTest {
 
     @Test
     void getRoomPosts_nonMember_shouldReturn403() throws Exception {
-        // Author (PARENT) creates a room
-        String authorToken = TestHelper.registerAndGetToken(mockMvc);
+        // Author (teacher/leader) creates a room
+        String authorToken = TestHelper.registerTeacherAndGetToken(mockMvc);
         String roomId = createRoom(authorToken, "Private Room Posts");
         createPost(authorToken, roomId, "Room content");
 
@@ -146,7 +221,7 @@ class FeedServiceIntegrationTest {
 
     @Test
     void updatePost_asAuthor_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room and post
         String roomId = createRoom(token, "Update Room");
@@ -167,7 +242,7 @@ class FeedServiceIntegrationTest {
 
     @Test
     void deletePost_asAuthor_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room and post
         String roomId = createRoom(token, "Delete Room");
@@ -191,7 +266,7 @@ class FeedServiceIntegrationTest {
 
     @Test
     void addComment_shouldWork() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc);
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc);
 
         // Create room and post
         String roomId = createRoom(token, "Comment Room");

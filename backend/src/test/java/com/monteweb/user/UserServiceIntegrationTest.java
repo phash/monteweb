@@ -97,4 +97,40 @@ class UserServiceIntegrationTest {
         assertThat(found).isPresent();
         assertThat(found.get().id()).isEqualTo(user.id());
     }
+
+    @Test
+    void updateProfile_shouldTrimAndDeriveDisplayName() {
+        var user = userModuleApi.createUser(
+                "update-profile@example.com", "hash",
+                "Old", "Name", null, UserRole.PARENT);
+
+        var updated = userModuleApi.updateProfile(user.id(), "  New  ", "  Surname  ", "  123  ");
+
+        assertThat(updated.firstName()).isEqualTo("New");
+        assertThat(updated.lastName()).isEqualTo("Surname");
+        assertThat(updated.displayName()).isEqualTo("New Surname");
+        assertThat(updated.phone()).isEqualTo("123");
+    }
+
+    @Test
+    void updateProfile_blankFirstName_shouldThrow() {
+        var user = userModuleApi.createUser(
+                "update-blank-first-svc@example.com", "hash",
+                "Old", "Name", null, UserRole.PARENT);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> userModuleApi.updateProfile(user.id(), "   ", "Surname", null))
+                .isInstanceOf(com.monteweb.shared.exception.BadRequestException.class);
+    }
+
+    @Test
+    void updateProfile_nullLastName_shouldThrow() {
+        var user = userModuleApi.createUser(
+                "update-null-last-svc@example.com", "hash",
+                "Old", "Name", null, UserRole.PARENT);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                        () -> userModuleApi.updateProfile(user.id(), "First", null, null))
+                .isInstanceOf(com.monteweb.shared.exception.BadRequestException.class);
+    }
 }

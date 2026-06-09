@@ -385,14 +385,28 @@ public class TaskService implements TasksModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found: " + taskId));
     }
 
-    private boolean hasAdminRole(UUID userId) {
-        return userModule.findById(userId)
-                .map(u -> u.role() == UserRole.SUPERADMIN || u.role() == UserRole.SECTION_ADMIN)
-                .orElse(false);
+    /**
+     * SUPERADMIN is always a global admin. SECTION_ADMIN only counts as admin for a room
+     * whose section the user actually administers (special role {@code SECTION_ADMIN:<sectionId>}).
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModule.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModule.findById(roomId).map(r -> r.sectionId()).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
     }
 
     private void requireRoomMembership(UUID userId, UUID roomId) {
-        if (!hasAdminRole(userId) && !roomModule.isUserInRoom(userId, roomId)) {
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModule.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }

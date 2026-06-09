@@ -48,8 +48,9 @@ public class FeedController {
     }
 
     @GetMapping("/banners")
-    public ResponseEntity<ApiResponse<List<FeedPostInfo>>> getActiveBanners() {
-        return ResponseEntity.ok(ApiResponse.ok(feedService.getActiveSystemBanners()));
+    public ResponseEntity<ApiResponse<List<SystemBannerResponse>>> getActiveBanners() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(feedService.getActiveSystemBanners(userId)));
     }
 
     @PostMapping("/posts")
@@ -58,7 +59,7 @@ public class FeedController {
         var post = feedService.createPost(
                 userId, request.title(), request.content(),
                 request.sourceType(), request.sourceId(), request.parentOnly(),
-                request.poll()
+                request.poll(), request.targetUserIds()
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(post));
     }

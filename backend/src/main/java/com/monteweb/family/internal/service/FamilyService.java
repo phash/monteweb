@@ -125,6 +125,10 @@ public class FamilyService implements FamilyModuleApi {
             throw new BusinessException("Already a member of this family");
         }
 
+        // US-333: a parent may belong to only one Familienverbund. Joining via
+        // invite code always adds the user as a PARENT, so enforce the invariant here.
+        assertParentNotAlreadyInAnotherFamily(userId, family.getId());
+
         var member = new FamilyMember(family, userId, FamilyMemberRole.PARENT);
         family.getMembers().add(member);
         familyRepository.save(family);
@@ -265,7 +269,8 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInfo setActive(UUID familyId, boolean active, UUID requestingUserId) {
-        assertAdminOrSectionAdmin(requestingUserId);
+        // US-337: only SUPERADMIN may toggle a family's active state.
+        assertSuperAdmin(requestingUserId);
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         family.setActive(active);
@@ -332,6 +337,12 @@ public class FamilyService implements FamilyModuleApi {
             throw new BusinessException("Invitation is not pending");
         }
 
+        // US-333: a parent may belong to only one Familienverbund. Block accepting a
+        // PARENT-role invitation while the user is already a member of another family.
+        if (invitation.getRole() == FamilyMemberRole.PARENT) {
+            assertParentNotAlreadyInAnotherFamily(userId, invitation.getFamilyId());
+        }
+
         invitation.setStatus(FamilyInvitationStatus.ACCEPTED);
         invitation.setResolvedAt(Instant.now());
         invitationRepository.save(invitation);
@@ -383,6 +394,21 @@ public class FamilyService implements FamilyModuleApi {
         }
     }
 
+    /**
+     * US-333: A parent can belong to only one Familienverbund. This invariant is
+     * enforced on create() and must equally hold when a user joins another family
+     * as a PARENT (via invite code or by accepting a PARENT-role invitation).
+     * The target family is excluded so that the caller's own "already a member of
+     * this family" check remains the authority for re-joins.
+     */
+    private void assertParentNotAlreadyInAnotherFamily(UUID userId, UUID targetFamilyId) {
+        boolean inOtherFamily = familyRepository.findByMemberUserId(userId).stream()
+                .anyMatch(f -> !f.getId().equals(targetFamilyId));
+        if (inOtherFamily) {
+            throw new BusinessException("A parent can only belong to one family");
+        }
+    }
+
     private FamilyInvitationInfo toInvitationInfo(FamilyInvitation invitation) {
         String familyName = familyRepository.findById(invitation.getFamilyId())
                 .map(Family::getName).orElse("Unknown");
@@ -400,7 +426,8 @@ public class FamilyService implements FamilyModuleApi {
 
     @Transactional
     public FamilyInfo setHoursExempt(UUID familyId, boolean exempt, UUID requestingUserId) {
-        assertAdminOrSectionAdmin(requestingUserId);
+        // US-337: only SUPERADMIN may toggle a family's hours-exempt flag.
+        assertSuperAdmin(requestingUserId);
         var family = familyRepository.findById(familyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         family.setHoursExempt(exempt);
@@ -414,6 +441,17 @@ public class FamilyService implements FamilyModuleApi {
         if (user.role() != com.monteweb.user.UserRole.SUPERADMIN
                 && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN) {
             throw new BusinessException("Only SUPERADMIN or SECTION_ADMIN can manage families");
+        }
+    }
+
+    /**
+     * US-337: hours-exempt and active toggles are reserved for SUPERADMIN only.
+     */
+    private void assertSuperAdmin(UUID userId) {
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        if (user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
+            throw new BusinessException("Only SUPERADMIN can perform this action");
         }
     }
 

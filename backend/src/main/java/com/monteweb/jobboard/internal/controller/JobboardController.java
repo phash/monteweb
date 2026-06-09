@@ -183,6 +183,13 @@ public class JobboardController {
     public ResponseEntity<ApiResponse<JobAssignmentInfo>> confirmAssignment(
             @PathVariable UUID assignmentId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
+        var user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() != UserRole.TEACHER
+                && user.role() != UserRole.SECTION_ADMIN
+                && user.role() != UserRole.SUPERADMIN) {
+            throw new ForbiddenException("Not authorized");
+        }
         return ResponseEntity.ok(ApiResponse.ok(jobboardService.confirmAssignment(assignmentId, userId)));
     }
 

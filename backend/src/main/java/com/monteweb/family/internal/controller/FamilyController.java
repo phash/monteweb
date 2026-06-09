@@ -75,7 +75,7 @@ public class FamilyController {
     }
 
     @PutMapping("/{id}/active")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<ApiResponse<FamilyInfo>> setActive(
             @PathVariable UUID id,
             @RequestBody Map<String, Boolean> body) {
@@ -86,7 +86,7 @@ public class FamilyController {
     }
 
     @PutMapping("/{id}/hours-exempt")
-    @PreAuthorize("hasAnyRole('SUPERADMIN', 'SECTION_ADMIN')")
+    @PreAuthorize("hasRole('SUPERADMIN')")
     public ResponseEntity<ApiResponse<FamilyInfo>> setHoursExempt(
             @PathVariable UUID id,
             @RequestBody Map<String, Boolean> body) {

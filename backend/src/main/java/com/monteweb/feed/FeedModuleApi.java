@@ -24,6 +24,15 @@ public interface FeedModuleApi {
      */
     FeedPostInfo createTargetedSystemPost(String title, String content, SourceType sourceType, UUID sourceId, List<UUID> targetUserIds);
 
+    /**
+     * Creates a pinned SYSTEM banner that may carry an optional click-through link,
+     * a banner type (INFO/WARNING/ACTION_REQUIRED) and an expiry. When {@code targetUserIds}
+     * is non-empty the banner is only shown to those users (e.g. context-dependent Putz-Banner
+     * for affected parents — US-081). Surfaced via GET /api/v1/feed/banners.
+     */
+    FeedPostInfo createSystemBanner(String title, String content, String link, String bannerType,
+                                    java.time.Instant expiresAt, List<UUID> targetUserIds);
+
     Optional<FeedPostInfo> findPostById(UUID postId);
 
     /**

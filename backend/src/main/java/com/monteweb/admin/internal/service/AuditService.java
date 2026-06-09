@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 
@@ -28,5 +29,17 @@ public class AuditService {
 
     public Page<AuditLogEntry> findAll(Pageable pageable) {
         return repository.findAllByOrderByCreatedAtDesc(pageable);
+    }
+
+    /**
+     * Returns audit-log entries optionally filtered by action and/or time range
+     * (AC US-348: "Filtern nach Zeitraum oder Aktion"). Null filters are ignored.
+     */
+    public Page<AuditLogEntry> find(String action, Instant from, Instant to, Pageable pageable) {
+        String normalizedAction = (action != null && !action.isBlank()) ? action : null;
+        if (normalizedAction == null && from == null && to == null) {
+            return repository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+        return repository.findFiltered(normalizedAction, from, to, pageable);
     }
 }

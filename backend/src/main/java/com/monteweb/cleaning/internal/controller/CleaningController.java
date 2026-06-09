@@ -8,9 +8,11 @@ import com.monteweb.shared.dto.ApiResponse;
 import com.monteweb.shared.dto.PageResponse;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.shared.exception.BusinessException;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -92,6 +94,39 @@ public class CleaningController {
         return ResponseEntity.ok(ApiResponse.ok(cleaningService.getSwapOffers(id)));
     }
 
+    /**
+     * Section-wide (or, with no sectionId, global) list of upcoming slots that have an
+     * open swap offer, so other parents can discover slots to take over (US-230).
+     */
+    @GetMapping("/slots/swaps")
+    public ResponseEntity<ApiResponse<List<CleaningSlotInfo>>> getOpenSwapSlots(
+            @RequestParam(required = false) UUID sectionId) {
+        return ResponseEntity.ok(ApiResponse.ok(cleaningService.getOpenSwapSlots(sectionId)));
+    }
+
+    /**
+     * Take over a slot offered for swap by another participant (US-230 step 4).
+     */
+    @PostMapping("/slots/{id}/swap/take")
+    public ResponseEntity<ApiResponse<CleaningSlotInfo>> takeOverSwap(@PathVariable UUID id) {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+        // SUPERADMIN, SECTION_ADMIN, TEACHER do not perform cleaning hours
+        if (user.role() == UserRole.SUPERADMIN
+                || user.role() == UserRole.SECTION_ADMIN
+                || user.role() == UserRole.TEACHER) {
+            throw new BusinessException("This role does not perform cleaning hours");
+        }
+        List<FamilyInfo> families = familyModuleApi.findByUserId(userId);
+        if (families.isEmpty()) {
+            throw new BusinessException("User must belong to a family to take over cleaning");
+        }
+        UUID familyId = families.get(0).id();
+        return ResponseEntity.ok(ApiResponse.ok(
+                cleaningService.takeOverSwap(id, userId, user.displayName(), familyId)));
+    }
+
     @PostMapping("/slots/{id}/checkin")
     public ResponseEntity<ApiResponse<CleaningSlotInfo>> checkIn(
             @PathVariable UUID id, @RequestBody CheckInRequest request) {
@@ -111,42 +146,21 @@ public class CleaningController {
 
     @GetMapping("/registrations/pending-confirmation")
     public ResponseEntity<ApiResponse<List<CleaningSlotInfo.RegistrationInfo>>> getPendingConfirmations() {
-        UUID userId = SecurityUtils.requireCurrentUserId();
-        var user = userModuleApi.findById(userId)
-                .orElseThrow(() -> new com.monteweb.shared.exception.ForbiddenException("User not found"));
-        if (user.role() != com.monteweb.user.UserRole.TEACHER
-                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN
-                && user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
-            throw new com.monteweb.shared.exception.ForbiddenException("Not authorized");
-        }
+        requireCleaningAdmin();
         return ResponseEntity.ok(ApiResponse.ok(cleaningService.getPendingCleaningConfirmations()));
     }
 
     @PutMapping("/registrations/{registrationId}/confirm")
     public ResponseEntity<ApiResponse<CleaningSlotInfo.RegistrationInfo>> confirmRegistration(
             @PathVariable UUID registrationId) {
-        UUID userId = SecurityUtils.requireCurrentUserId();
-        var user = userModuleApi.findById(userId)
-                .orElseThrow(() -> new com.monteweb.shared.exception.ForbiddenException("User not found"));
-        if (user.role() != com.monteweb.user.UserRole.TEACHER
-                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN
-                && user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
-            throw new com.monteweb.shared.exception.ForbiddenException("Not authorized");
-        }
+        UUID userId = requireCleaningAdmin();
         return ResponseEntity.ok(ApiResponse.ok(cleaningService.confirmCleaningRegistration(registrationId, userId)));
     }
 
     @PutMapping("/registrations/{registrationId}/reject")
     public ResponseEntity<ApiResponse<Void>> rejectRegistration(
             @PathVariable UUID registrationId) {
-        UUID userId = SecurityUtils.requireCurrentUserId();
-        var user = userModuleApi.findById(userId)
-                .orElseThrow(() -> new com.monteweb.shared.exception.ForbiddenException("User not found"));
-        if (user.role() != com.monteweb.user.UserRole.TEACHER
-                && user.role() != com.monteweb.user.UserRole.SECTION_ADMIN
-                && user.role() != com.monteweb.user.UserRole.SUPERADMIN) {
-            throw new com.monteweb.shared.exception.ForbiddenException("Not authorized");
-        }
+        requireCleaningAdmin();
         cleaningService.rejectCleaningRegistration(registrationId);
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
@@ -155,10 +169,37 @@ public class CleaningController {
     public ResponseEntity<ApiResponse<CleaningSlotInfo.RegistrationInfo>> updateRegistrationMinutes(
             @PathVariable UUID registrationId,
             @Valid @RequestBody UpdateMinutesRequest request) {
-        UUID userId = SecurityUtils.requireCurrentUserId();
-        var result = cleaningService.updateRegistrationMinutes(registrationId, request.actualMinutes(), userId);
+        requireCleaningAdmin();
+        var result = cleaningService.updateRegistrationMinutes(registrationId, request.actualMinutes());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     public record UpdateMinutesRequest(@Min(0) @Max(1440) int actualMinutes) {}
+
+    /**
+     * Authorizes the current user as a cleaning administrator. Accepts SUPERADMIN and
+     * SECTION_ADMIN role holders as well as the PUTZORGA / ELTERNBEIRAT / SECTION_ADMIN
+     * special roles (global or section-scoped). These registration-level actions are not
+     * tied to a single section, so any cleaning-admin scope is sufficient (US-231).
+     *
+     * @return the current user's id
+     */
+    private UUID requireCleaningAdmin() {
+        UUID userId = SecurityUtils.requireCurrentUserId();
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new ForbiddenException("User not found"));
+        if (user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN) {
+            return userId;
+        }
+        if (user.specialRoles() != null) {
+            for (String role : user.specialRoles()) {
+                if (role.equals("PUTZORGA") || role.equals("ELTERNBEIRAT")
+                        || role.startsWith("PUTZORGA:") || role.startsWith("ELTERNBEIRAT:")
+                        || role.startsWith("SECTION_ADMIN:")) {
+                    return userId;
+                }
+            }
+        }
+        throw new ForbiddenException("Not authorized to confirm cleaning hours");
+    }
 }

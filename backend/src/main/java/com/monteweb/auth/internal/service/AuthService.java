@@ -343,6 +343,76 @@ public class AuthService implements AuthModuleApi {
     }
 
     /**
+     * Self-service 2FA enrollment (step 1) during a MANDATORY-mode login after the grace
+     * deadline. The login endpoint hands the client a 2FA temp token instead of a full
+     * session; here we authenticate with that temp token (the user has no full session and
+     * no TOTP secret yet) and generate + store a fresh TOTP secret, returning the QR URI.
+     * Does NOT consume the temp token — that happens on successful {@link #confirm2faWithTempToken}.
+     */
+    @Transactional
+    public TwoFactorSetupResponse setup2faWithTempToken(String tempToken) {
+        var claims = jwtService.validateTempToken(tempToken)
+                .orElseThrow(() -> new BadRequestException("Invalid or expired temp token"));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        // Users who already have 2FA enabled must use the normal verify flow, not re-enroll.
+        if (userModuleApi.isTotpEnabled(userId)) {
+            throw new BadRequestException("2FA is already enabled");
+        }
+
+        String secret = totpService.generateSecret();
+        userModuleApi.setTotpSecret(userId, aesEncryptionService.encrypt(secret));
+
+        String qrUri = totpService.generateTotpUri(secret, user.email());
+        return new TwoFactorSetupResponse(secret, qrUri);
+    }
+
+    /**
+     * Self-service 2FA enrollment (step 2) during a MANDATORY-mode login. Validates the
+     * 2FA temp token + the code from the freshly configured authenticator, enables 2FA,
+     * single-use-consumes the temp token, and returns a real session plus the one-time
+     * recovery codes. This closes the lock-out where a user without 2FA past the grace
+     * deadline could neither log in nor enroll.
+     */
+    @Transactional
+    public TwoFactorEnrollmentResult confirm2faWithTempToken(String tempToken, String code) {
+        var claims = jwtService.validateTempToken(tempToken)
+                .orElseThrow(() -> new BadRequestException("Invalid or expired temp token"));
+        java.util.UUID userId = java.util.UUID.fromString(claims.getSubject());
+        String jti = claims.getId();
+
+        UserInfo user = userModuleApi.findById(userId)
+                .orElseThrow(() -> new BusinessException("User not found"));
+
+        if (userModuleApi.isTotpEnabled(userId)) {
+            throw new BadRequestException("2FA is already enabled");
+        }
+
+        String secret = userModuleApi.getTotpSecret(userId)
+                .map(aesEncryptionService::decrypt)
+                .orElseThrow(() -> new BadRequestException("2FA not set up. Call setup first."));
+
+        if (!totpService.verifyCode(secret, code, userId)) {
+            throw new BusinessException("Invalid 2FA code");
+        }
+
+        var recoveryCodes = totpService.generateRecoveryCodes();
+        var hashedCodes = recoveryCodes.stream()
+                .map(totpService::hashRecoveryCode)
+                .toArray(String[]::new);
+        userModuleApi.enableTotp(userId, hashedCodes);
+
+        // Only consume the temp token once enrollment fully succeeds, so a wrong code can be retried.
+        consumeTempToken(jti, userId);
+        userModuleApi.updateLastLogin(userId);
+
+        return new TwoFactorEnrollmentResult(generateTokenResponse(user), recoveryCodes);
+    }
+
+    /**
      * Returns whether TOTP is enabled for the given user.
      */
     public boolean is2faEnabled(java.util.UUID userId) {

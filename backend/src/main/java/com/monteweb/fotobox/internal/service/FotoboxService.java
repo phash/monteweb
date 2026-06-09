@@ -8,8 +8,6 @@ import com.monteweb.fotobox.internal.model.FotoboxThread;
 import com.monteweb.fotobox.internal.repository.FotoboxImageRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxRoomSettingsRepository;
 import com.monteweb.fotobox.internal.repository.FotoboxThreadRepository;
-import com.monteweb.room.RoomModuleApi;
-import com.monteweb.room.RoomRole;
 import com.monteweb.shared.exception.BadRequestException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
@@ -40,7 +38,6 @@ public class FotoboxService implements FotoboxModuleApi {
     private final FotoboxRoomSettingsRepository settingsRepo;
     private final FotoboxPermissionService permissionService;
     private final FotoboxStorageService storageService;
-    private final RoomModuleApi roomModule;
     private final UserModuleApi userModule;
     private final ApplicationEventPublisher eventPublisher;
     private final ClamAvService clamAvService;
@@ -389,15 +386,13 @@ public class FotoboxService implements FotoboxModuleApi {
      * Same logic as FileService.getAllowedAudiences.
      */
     private Set<String> getAllowedAudiences(UUID userId, UUID roomId) {
-        var roomRole = roomModule.getUserRoleInRoom(userId, roomId).orElse(null);
         var userInfo = userModule.findById(userId).orElse(null);
         var userRole = userInfo != null ? userInfo.role() : null;
 
-        // Leaders, teachers, superadmins, section admins see everything
-        if (roomRole == RoomRole.LEADER
-                || userRole == UserRole.TEACHER
-                || userRole == UserRole.SUPERADMIN
-                || userRole == UserRole.SECTION_ADMIN) {
+        // Teachers see everything. Leaders, superadmins, and SECTION_ADMINs scoped to this
+        // room's section also see everything (section-scoping handled by isLeaderOrAdmin).
+        if (userRole == UserRole.TEACHER
+                || permissionService.isLeaderOrAdmin(userId, roomId)) {
             return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
         }
 

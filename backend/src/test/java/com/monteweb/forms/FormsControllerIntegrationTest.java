@@ -52,7 +52,7 @@ class FormsControllerIntegrationTest {
 
     @Test
     void createForm_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "forms-create@example.com", "Forms", "Creator");
 
         // Create a room first (user becomes LEADER, which grants create permission for ROOM scope)
@@ -101,7 +101,7 @@ class FormsControllerIntegrationTest {
 
     @Test
     void createAndGetForm_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "forms-getone@example.com", "Forms", "GetOne");
 
         // Create room first
@@ -138,7 +138,7 @@ class FormsControllerIntegrationTest {
 
     @Test
     void publishForm_shouldSucceed() throws Exception {
-        String token = TestHelper.registerAndGetToken(mockMvc,
+        String token = TestHelper.registerTeacherAndGetToken(mockMvc,
                 "forms-publish@example.com", "Forms", "Publisher");
 
         // Create room first

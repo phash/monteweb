@@ -245,6 +245,28 @@ class FamilyServiceTest {
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Already a member");
         }
+
+        @Test
+        @DisplayName("US-333: parent already in another family cannot join a second one")
+        void joinByInviteCode_parentAlreadyInAnotherFamily_blocked() {
+            var targetFamily = makeFamily(FAMILY_ID, "Target Family");
+            targetFamily.setInviteCode("VALID");
+            targetFamily.setInviteExpires(Instant.now().plus(1, ChronoUnit.DAYS));
+
+            var existingFamily = makeFamily(OTHER_USER_ID, "Existing Family");
+
+            stubUserLookup(USER_ID, UserRole.PARENT);
+            when(familyRepository.findByInviteCode("VALID")).thenReturn(Optional.of(targetFamily));
+            when(familyRepository.isMember(USER_ID, FAMILY_ID)).thenReturn(false);
+            when(familyRepository.findByMemberUserId(USER_ID)).thenReturn(List.of(existingFamily));
+
+            assertThatThrownBy(() -> service.joinByInviteCode("VALID", USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("only belong to one family");
+
+            assertThat(targetFamily.getMembers()).isEmpty();
+            verify(familyRepository, never()).save(any());
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -304,6 +326,30 @@ class FamilyServiceTest {
             assertThatThrownBy(() -> service.acceptInvitation(invitationId, USER_ID))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("not pending");
+        }
+
+        @Test
+        @DisplayName("US-333: PARENT invitation blocked when invitee already in another family")
+        void acceptInvitation_parentInvitationWhileInAnotherFamily_blocked() {
+            UUID invitationId = UUID.randomUUID();
+            UUID inviterId = UUID.randomUUID();
+
+            var invitation = new FamilyInvitation(FAMILY_ID, inviterId, USER_ID, FamilyMemberRole.PARENT);
+            invitation.setId(invitationId);
+            invitation.setStatus(FamilyInvitationStatus.PENDING);
+
+            var existingFamily = makeFamily(OTHER_USER_ID, "Existing Family");
+
+            stubUserLookup(USER_ID, UserRole.PARENT);
+            when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
+            when(familyRepository.findByMemberUserId(USER_ID)).thenReturn(List.of(existingFamily));
+
+            assertThatThrownBy(() -> service.acceptInvitation(invitationId, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("only belong to one family");
+
+            assertThat(invitation.getStatus()).isEqualTo(FamilyInvitationStatus.PENDING);
+            verify(invitationRepository, never()).save(any());
         }
 
         @Test
@@ -442,6 +488,71 @@ class FamilyServiceTest {
 
             assertThat(code).isEqualTo("NEWCODE");
             assertThat(family.getInviteCode()).isEqualTo("NEWCODE");
+            verify(familyRepository).save(family);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    //  US-337: SUPERADMIN-only toggles (active / hours-exempt)
+    // ═══════════════════════════════════════════════════════════════════
+
+    @Nested
+    @DisplayName("SUPERADMIN-only toggles")
+    class SuperAdminToggles {
+
+        @Test
+        @DisplayName("SECTION_ADMIN cannot set active state")
+        void setActive_sectionAdminBlocked() {
+            stubUserLookup(USER_ID, UserRole.SECTION_ADMIN);
+
+            assertThatThrownBy(() -> service.setActive(FAMILY_ID, false, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Only SUPERADMIN");
+
+            verify(familyRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("SUPERADMIN can set active state")
+        void setActive_superAdminSuccess() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+
+            stubUserLookup(USER_ID, UserRole.SUPERADMIN);
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            stubFamilySave();
+
+            var result = service.setActive(FAMILY_ID, false, USER_ID);
+
+            assertThat(result).isNotNull();
+            assertThat(family.isActive()).isFalse();
+            verify(familyRepository).save(family);
+        }
+
+        @Test
+        @DisplayName("SECTION_ADMIN cannot set hours-exempt flag")
+        void setHoursExempt_sectionAdminBlocked() {
+            stubUserLookup(USER_ID, UserRole.SECTION_ADMIN);
+
+            assertThatThrownBy(() -> service.setHoursExempt(FAMILY_ID, true, USER_ID))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("Only SUPERADMIN");
+
+            verify(familyRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("SUPERADMIN can set hours-exempt flag")
+        void setHoursExempt_superAdminSuccess() {
+            var family = makeFamily(FAMILY_ID, "Test Family");
+
+            stubUserLookup(USER_ID, UserRole.SUPERADMIN);
+            when(familyRepository.findById(FAMILY_ID)).thenReturn(Optional.of(family));
+            stubFamilySave();
+
+            var result = service.setHoursExempt(FAMILY_ID, true, USER_ID);
+
+            assertThat(result).isNotNull();
+            assertThat(family.isHoursExempt()).isTrue();
             verify(familyRepository).save(family);
         }
     }
