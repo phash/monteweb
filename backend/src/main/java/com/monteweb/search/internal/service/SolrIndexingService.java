@@ -62,6 +62,13 @@ public class SolrIndexingService {
     // ---- Single document indexing ----
 
     public void indexFeedPost(FeedPostInfo post) {
+        // Per-user targeted posts are visible only to their explicit recipients, which the
+        // Solr access filter cannot express (no per-user clause). Skip indexing them entirely
+        // — consistent with the full re-index, which also excludes targeted posts — so they
+        // never leak to non-recipients via global search.
+        if (post.targeted()) {
+            return;
+        }
         try {
             SolrInputDocument doc = new SolrInputDocument();
             addPostFields(doc, post);

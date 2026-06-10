@@ -18,6 +18,7 @@ public record FeedPostInfo(
         String sourceName,
         boolean pinned,
         boolean parentOnly,
+        boolean targeted,
         int commentCount,
         List<AttachmentInfo> attachments,
         List<ReactionSummary> reactions,

@@ -867,6 +867,7 @@ public class FeedService implements FeedModuleApi {
                 sourceName,
                 post.isPinned(),
                 post.isParentOnly(),
+                post.getTargetUserIds() != null && post.getTargetUserIds().length > 0,
                 post.getComments().size(),
                 attachments,
                 List.of(),
