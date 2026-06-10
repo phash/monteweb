@@ -12,6 +12,7 @@ import com.monteweb.messaging.internal.repository.*;
 import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -161,6 +162,31 @@ public class MessagingService implements MessagingModuleApi {
         // (prevents bypassing parent-to-parent / student-to-student rules via group conversations)
         for (UUID participantId : otherParticipantIds) {
             enforceCommRules(userId, participantId);
+        }
+
+        // Additionally enforce communication rules pairwise across all NON-STAFF participants.
+        // enforceCommRules short-circuits whenever either party is staff, so the creator-vs-each
+        // loop above never evaluates parent-to-parent / student-to-student restrictions when a
+        // staff member seeds a group of parents/students. Without this, a teacher could create a
+        // group with [PARENT_X, PARENT_Y] (or [STUDENT_X, STUDENT_Y]) and make them co-members,
+        // bypassing the comm-rule toggle (BUSINESS-RULES rule 6, US-127/128).
+        // Batch-load roles to avoid N extra DB calls.
+        var rolesById = new HashMap<UUID, UserRole>();
+        for (UserInfo info : userModuleApi.findByIds(otherParticipantIds)) {
+            rolesById.put(info.id(), info.role());
+        }
+        var nonStaffIds = otherParticipantIds.stream()
+                .filter(id -> {
+                    var role = rolesById.get(id);
+                    // Unknown role (e.g. participant not found) is treated as non-staff so the
+                    // pairwise check still runs; enforceCommRules will surface the not-found error.
+                    return role == null || !isStaffRole(role);
+                })
+                .toList();
+        for (int i = 0; i < nonStaffIds.size(); i++) {
+            for (int j = i + 1; j < nonStaffIds.size(); j++) {
+                enforceCommRules(nonStaffIds.get(i), nonStaffIds.get(j));
+            }
         }
 
         return startGroupConversation(userId, title, otherParticipantIds);
@@ -824,6 +850,12 @@ public class MessagingService implements MessagingModuleApi {
     public PollInfo closeMessagePoll(UUID messageId, UUID userId) {
         var message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new ResourceNotFoundException("Message", messageId));
+
+        // Must be a participant of the conversation (mirrors voteMessagePoll / getMessageReactions).
+        // Without this guard, isStaffRole() is a GLOBAL role check, so any teacher in the tenant
+        // could force-close a poll in a private conversation they are not a member of (cross-conversation IDOR).
+        // The poll-creator / staff escape hatch below is intentionally scoped to participants only.
+        requireParticipant(message.getConversationId(), userId);
 
         if (!message.getSenderId().equals(userId)) {
             var user = userModuleApi.findById(userId)

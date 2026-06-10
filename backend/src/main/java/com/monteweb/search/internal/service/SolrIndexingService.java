@@ -64,21 +64,43 @@ public class SolrIndexingService {
     public void indexFeedPost(FeedPostInfo post) {
         try {
             SolrInputDocument doc = new SolrInputDocument();
-            doc.addField("id", "POST:" + post.id());
-            doc.addField("doc_type", "POST");
-            doc.addField("entity_id", post.id().toString());
-            doc.addField("title", post.title());
-            doc.addField("content", post.content());
-            doc.addField("author_name", post.authorName());
-            doc.addField("source_type", post.sourceType() != null ? post.sourceType().name() : null);
-            doc.addField("source_id", post.sourceId() != null ? post.sourceId().toString() : null);
-            doc.addField("url", "/feed?post=" + post.id());
-            doc.addField("created_at", toDate(post.publishedAt() != null ? post.publishedAt() : post.createdAt()));
+            addPostFields(doc, post);
             solrClient.add(doc);
             solrClient.commit();
         } catch (SolrServerException | IOException e) {
             log.error("Failed to index feed post {}: {}", post.id(), e.getMessage());
         }
+    }
+
+    /**
+     * Populates the access-control and content fields shared by single-post indexing and the
+     * full re-index. ROOM-scoped posts carry {@code room_id} so the room-membership access filter
+     * applies; {@code parent_only} lets the filter exclude students from parent-only posts.
+     *
+     * <p>NOTE: per-user targeted posts (target_user_ids) cannot be constrained here because
+     * {@link FeedPostInfo} does not expose the target user IDs (see FLAG in the changelog). The
+     * full re-index avoids the leak by querying the feed with a {@code null} user, which excludes
+     * targeted posts from the index entirely; only the incremental event path can still index a
+     * targeted post without a target_user_ids field.</p>
+     */
+    private void addPostFields(SolrInputDocument doc, FeedPostInfo post) {
+        doc.addField("id", "POST:" + post.id());
+        doc.addField("doc_type", "POST");
+        doc.addField("entity_id", post.id().toString());
+        doc.addField("title", post.title());
+        doc.addField("content", post.content());
+        doc.addField("author_name", post.authorName());
+        doc.addField("source_type", post.sourceType() != null ? post.sourceType().name() : null);
+        doc.addField("source_id", post.sourceId() != null ? post.sourceId().toString() : null);
+        // ROOM-scoped posts are only visible to room members: store the source room as room_id
+        // so SolrSearchService.buildAccessFilter constrains them to the user's rooms.
+        if (post.sourceType() == com.monteweb.feed.SourceType.ROOM && post.sourceId() != null) {
+            doc.addField("room_id", post.sourceId().toString());
+        }
+        // parentOnly posts must never be returned to students.
+        doc.addField("parent_only", post.parentOnly());
+        doc.addField("url", "/feed?post=" + post.id());
+        doc.addField("created_at", toDate(post.publishedAt() != null ? post.publishedAt() : post.createdAt()));
     }
 
     public void indexUser(UserInfo user) {
@@ -116,18 +138,36 @@ public class SolrIndexingService {
     public void indexEvent(EventInfo event) {
         try {
             SolrInputDocument doc = new SolrInputDocument();
-            doc.addField("id", "EVENT:" + event.id());
-            doc.addField("doc_type", "EVENT");
-            doc.addField("entity_id", event.id().toString());
-            doc.addField("title", event.title());
-            doc.addField("content", event.description());
-            doc.addField("url", "/calendar?event=" + event.id());
-            doc.addField("created_at", toDate(event.createdAt()));
+            addEventFields(doc, event);
             solrClient.add(doc);
             solrClient.commit();
         } catch (SolrServerException | IOException e) {
             log.error("Failed to index event {}: {}", event.id(), e.getMessage());
         }
+    }
+
+    /**
+     * Populates the access-control and content fields for a calendar event. ROOM-scoped events
+     * carry {@code room_id} (constrained by room membership) and SECTION-scoped events carry
+     * {@code section_id} (constrained by the user's sections); SCHOOL events carry neither and are
+     * visible to all. The {@code scope} field lets the access filter distinguish these cases.
+     */
+    private void addEventFields(SolrInputDocument doc, EventInfo event) {
+        doc.addField("id", "EVENT:" + event.id());
+        doc.addField("doc_type", "EVENT");
+        doc.addField("entity_id", event.id().toString());
+        doc.addField("title", event.title());
+        doc.addField("content", event.description());
+        if (event.scope() != null) {
+            doc.addField("scope", event.scope().name());
+        }
+        if (event.scope() == com.monteweb.calendar.EventScope.ROOM && event.scopeId() != null) {
+            doc.addField("room_id", event.scopeId().toString());
+        } else if (event.scope() == com.monteweb.calendar.EventScope.SECTION && event.scopeId() != null) {
+            doc.addField("section_id", event.scopeId().toString());
+        }
+        doc.addField("url", "/calendar?event=" + event.id());
+        doc.addField("created_at", toDate(event.createdAt()));
     }
 
     public void indexWikiPage(UUID pageId, UUID roomId, String title, String content, String slug) {
@@ -171,7 +211,8 @@ public class SolrIndexingService {
         }
     }
 
-    public void indexFile(UUID fileId, UUID roomId, String originalName, String contentType, long fileSize) {
+    public void indexFile(UUID fileId, UUID roomId, String originalName, String contentType,
+                          long fileSize, String audience) {
         try {
             String roomName = roomModuleApi.findById(roomId).map(RoomInfo::name).orElse(null);
             SolrInputDocument doc = new SolrInputDocument();
@@ -183,6 +224,9 @@ public class SolrIndexingService {
             doc.addField("room_name", roomName);
             doc.addField("content_type", contentType);
             doc.addField("file_size", fileSize);
+            // Per-file audience (ALL | PARENTS_ONLY | STUDENTS_ONLY) so the access filter can
+            // hide restricted files from roles that may not see them within a room.
+            doc.addField("audience", normalizeAudience(audience));
             doc.addField("url", "/rooms/" + roomId + "/files");
             doc.addField("created_at", toDate(Instant.now()));
             solrClient.add(doc);
@@ -193,7 +237,7 @@ public class SolrIndexingService {
     }
 
     public void indexFileWithContent(UUID fileId, UUID roomId, String originalName,
-                                      String contentType, long fileSize,
+                                      String contentType, long fileSize, String audience,
                                       InputStream contentStream) {
         try {
             String roomName = roomModuleApi.findById(roomId).map(RoomInfo::name).orElse(null);
@@ -216,6 +260,7 @@ public class SolrIndexingService {
             if (roomName != null) request.setParam("literal.room_name", roomName);
             request.setParam("literal.content_type", contentType);
             request.setParam("literal.file_size", String.valueOf(fileSize));
+            request.setParam("literal.audience", normalizeAudience(audience));
             request.setParam("literal.url", "/rooms/" + roomId + "/files");
             request.setParam("literal.created_at", Instant.now().toString());
 
@@ -224,8 +269,13 @@ public class SolrIndexingService {
             log.info("Indexed file {} with content extraction", fileId);
         } catch (Exception e) {
             log.warn("Content extraction failed for file {}, indexing metadata only: {}", fileId, e.getMessage());
-            indexFile(fileId, roomId, originalName, contentType, fileSize);
+            indexFile(fileId, roomId, originalName, contentType, fileSize, audience);
         }
+    }
+
+    /** Defaults a missing/blank audience to ALL (the broadest visibility). */
+    private String normalizeAudience(String audience) {
+        return (audience == null || audience.isBlank()) ? "ALL" : audience;
     }
 
     public void deleteDocument(String docType, UUID entityId) {
@@ -311,19 +361,14 @@ public class SolrIndexingService {
         if (feedModuleApi == null) return 0;
         // Use personal feed for system user (null safe via empty feed)
         // Instead, search with empty query to get all posts
+        // Querying with a null user excludes per-user targeted posts (target_user_ids) from the
+        // re-index, so they never enter the global index. ROOM-scoped and parentOnly posts are
+        // indexed but carry room_id / parent_only so the access filter constrains them.
         var posts = feedModuleApi.searchPosts("", 10000, null);
         int count = 0;
         for (FeedPostInfo post : posts) {
             SolrInputDocument doc = new SolrInputDocument();
-            doc.addField("id", "POST:" + post.id());
-            doc.addField("doc_type", "POST");
-            doc.addField("entity_id", post.id().toString());
-            doc.addField("title", post.title());
-            doc.addField("content", post.content());
-            doc.addField("author_name", post.authorName());
-            doc.addField("source_type", post.sourceType() != null ? post.sourceType().name() : null);
-            doc.addField("url", "/feed?post=" + post.id());
-            doc.addField("created_at", toDate(post.publishedAt() != null ? post.publishedAt() : post.createdAt()));
+            addPostFields(doc, post);
             solrClient.add(doc);
             count++;
         }
@@ -336,13 +381,7 @@ public class SolrIndexingService {
         int count = 0;
         for (EventInfo event : events) {
             SolrInputDocument doc = new SolrInputDocument();
-            doc.addField("id", "EVENT:" + event.id());
-            doc.addField("doc_type", "EVENT");
-            doc.addField("entity_id", event.id().toString());
-            doc.addField("title", event.title());
-            doc.addField("content", event.description());
-            doc.addField("url", "/calendar?event=" + event.id());
-            doc.addField("created_at", toDate(event.createdAt()));
+            addEventFields(doc, event);
             solrClient.add(doc);
             count++;
         }
@@ -364,6 +403,7 @@ public class SolrIndexingService {
             doc.addField("room_name", roomName);
             doc.addField("content_type", file.contentType());
             doc.addField("file_size", file.fileSize());
+            doc.addField("audience", normalizeAudience(file.audience()));
             doc.addField("url", "/rooms/" + file.roomId() + "/files");
             doc.addField("created_at", toDate(file.createdAt()));
             solrClient.add(doc);

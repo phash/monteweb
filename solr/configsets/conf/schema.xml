@@ -15,6 +15,12 @@
   <field name="room_name"   type="text_de"  indexed="true" stored="true" />
   <field name="source_type" type="string"   indexed="true" stored="true" />
   <field name="source_id"   type="string"   indexed="true" stored="true" />
+  <!-- Access-control fields used by the search access filter (SolrSearchService.buildAccessFilter) -->
+  <field name="parent_only"     type="boolean" indexed="true" stored="true" />
+  <field name="target_user_ids" type="string"  indexed="true" stored="true" multiValued="true" />
+  <field name="scope"           type="string"  indexed="true" stored="true" />
+  <field name="section_id"      type="string"  indexed="true" stored="true" />
+  <field name="audience"        type="string"  indexed="true" stored="true" />
   <field name="url"         type="string"   indexed="false" stored="true" />
   <field name="content_type" type="string"  indexed="true" stored="true" />
   <field name="file_size"   type="plong"    indexed="true" stored="true" />
@@ -35,6 +41,7 @@
   <!-- ==================== Field Types ==================== -->
 
   <fieldType name="string" class="solr.StrField" sortMissingLast="true" />
+  <fieldType name="boolean" class="solr.BoolField" sortMissingLast="true" />
   <fieldType name="plong"  class="solr.LongPointField" docValues="true" />
   <fieldType name="pdate"  class="solr.DatePointField" docValues="true" />
 

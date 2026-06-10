@@ -6,6 +6,7 @@ import com.monteweb.forms.internal.repository.*;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.room.RoomRole;
 import com.monteweb.school.SchoolModuleApi;
+import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
 import org.springframework.context.ApplicationEventPublisher;
@@ -67,17 +68,18 @@ public class FormsService implements FormsModuleApi {
         if (sectionIds.isEmpty()) sectionIds = List.of(UUID.fromString("00000000-0000-0000-0000-000000000000"));
 
         return formRepository.findAvailableForms(roomIds, sectionIds, pageable)
-                .map(f -> toFormInfo(f, userId));
+                .map(f -> toFormInfo(f, userId, false));
     }
 
     public Page<FormInfo> getMyForms(UUID userId, Pageable pageable) {
         return formRepository.findByCreatedByOrderByCreatedAtDesc(userId, pageable)
-                .map(f -> toFormInfo(f, userId));
+                .map(f -> toFormInfo(f, userId, false));
     }
 
     public FormDetailInfo getForm(UUID formId, UUID userId) {
         var form = formRepository.findById(formId)
                 .orElseThrow(() -> new IllegalArgumentException("Form not found"));
+        checkResponderAccess(form, userId);
         var questions = questionRepository.findByFormIdOrderBySortOrder(formId);
         return new FormDetailInfo(
                 toFormInfo(form, userId),
@@ -234,6 +236,8 @@ public class FormsService implements FormsModuleApi {
         var form = formRepository.findById(formId)
                 .orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
+        checkResponderAccess(form, userId);
+
         if (form.getStatus() != FormStatus.PUBLISHED) {
             throw new IllegalStateException("Form is not accepting responses");
         }
@@ -308,6 +312,8 @@ public class FormsService implements FormsModuleApi {
         var form = formRepository.findById(formId)
                 .orElseThrow(() -> new IllegalArgumentException("Form not found"));
 
+        checkResponderAccess(form, userId);
+
         if (form.getStatus() != FormStatus.PUBLISHED) {
             throw new IllegalStateException("Form is not accepting responses");
         }
@@ -359,6 +365,8 @@ public class FormsService implements FormsModuleApi {
     public MyResponseInfo getMyResponse(UUID formId, UUID userId) {
         var form = formRepository.findById(formId)
                 .orElseThrow(() -> new IllegalArgumentException("Form not found"));
+
+        checkResponderAccess(form, userId);
 
         if (form.isAnonymous()) {
             return null;
@@ -457,21 +465,21 @@ public class FormsService implements FormsModuleApi {
     @Transactional(readOnly = true)
     public List<FormInfo> getPublishedFormsForRoom(UUID roomId) {
         return formRepository.findByScopeAndScopeIdAndStatus(FormScope.ROOM, roomId, FormStatus.PUBLISHED)
-                .stream().map(f -> toFormInfo(f, null)).toList();
+                .stream().map(f -> toFormInfo(f, null, false)).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FormInfo> getPublishedFormsForSection(UUID sectionId) {
         return formRepository.findPublishedForSection(sectionId)
-                .stream().map(f -> toFormInfo(f, null)).toList();
+                .stream().map(f -> toFormInfo(f, null, false)).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<FormInfo> getPublishedSchoolForms() {
         return formRepository.findByScopeAndStatus(FormScope.SCHOOL, FormStatus.PUBLISHED)
-                .stream().map(f -> toFormInfo(f, null)).toList();
+                .stream().map(f -> toFormInfo(f, null, false)).toList();
     }
 
     @Override
@@ -743,12 +751,76 @@ public class FormsService implements FormsModuleApi {
         throw new IllegalArgumentException("Only the form creator or an admin can view results");
     }
 
-    private int calculateTargetCount(Form form) {
+    /**
+     * US-163: A user may only read or answer a form if they belong to its target
+     * group. The form list endpoint already scopes via {@link FormRepository#findAvailableForms}
+     * (room/section membership), but the per-form read/answer paths must apply the
+     * same gate so a non-targeted user cannot enumerate a form UUID to read its
+     * questions or pollute its results.
+     *
+     * <p>SUPERADMIN and the form creator always pass (they manage the form).</p>
+     *
+     * @throws ForbiddenException (HTTP 403) if the caller is not in the target group
+     */
+    private void checkResponderAccess(Form form, UUID userId) {
+        var user = userModule.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // Form managers (admin / creator) always have access.
+        if (user.role() == UserRole.SUPERADMIN) return;
+        if (form.getCreatedBy() != null && form.getCreatedBy().equals(userId)) return;
+
+        switch (form.getScope()) {
+            case ROOM -> {
+                if (form.getScopeId() == null
+                        || roomModule.getUserRoleInRoom(userId, form.getScopeId()).isEmpty()) {
+                    throw new ForbiddenException("You are not part of this form's target group");
+                }
+            }
+            case SECTION -> {
+                // Targeted sections: explicit sectionIds array, falling back to scopeId.
+                Set<UUID> targetSectionIds = new HashSet<>();
+                if (form.getSectionIds() != null) {
+                    targetSectionIds.addAll(List.of(form.getSectionIds()));
+                }
+                if (form.getScopeId() != null) {
+                    targetSectionIds.add(form.getScopeId());
+                }
+                boolean inTargetSection = roomModule.findByUserId(userId).stream()
+                        .map(r -> r.sectionId())
+                        .filter(Objects::nonNull)
+                        .anyMatch(targetSectionIds::contains);
+                if (!inTargetSection) {
+                    throw new ForbiddenException("You are not part of this form's target group");
+                }
+            }
+            case SCHOOL -> {
+                // School-wide forms target every active user.
+                if (!user.active()) {
+                    throw new ForbiddenException("You are not part of this form's target group");
+                }
+            }
+        }
+    }
+
+    /**
+     * @param includeSectionTargetCount when {@code false} the (expensive) SECTION
+     *        target-count computation is skipped and 0 is returned for SECTION
+     *        forms. This avoids an O(forms x sections x rooms) DB round-trip
+     *        explosion on list endpoints (getAvailableForms / getMyForms), which
+     *        render up to a page of forms at once. The precise denominator is
+     *        only needed on the single-form / results views.
+     *        <p>TODO(cross-module): once RoomModuleApi exposes a batched member
+     *        lookup (e.g. {@code getMemberUserIdsByRoomIds} or
+     *        {@code countDistinctMembersBySectionIds}), the SECTION count can be
+     *        computed cheaply on lists too and this flag removed.</p>
+     */
+    private int calculateTargetCount(Form form, boolean includeSectionTargetCount) {
         return switch (form.getScope()) {
             case ROOM -> form.getScopeId() != null
                     ? roomModule.getMemberUserIds(form.getScopeId()).size()
                     : 0;
-            case SECTION -> sectionTargetUserIds(form).size();
+            case SECTION -> includeSectionTargetCount ? sectionTargetUserIds(form).size() : 0;
             // US-172: A true school-wide target count is the total number of
             // active users. The user module currently exposes no count API, so
             // we cannot compute it without a cross-module API addition. Returning
@@ -779,6 +851,15 @@ public class FormsService implements FormsModuleApi {
     }
 
     private FormInfo toFormInfo(Form form, UUID currentUserId) {
+        return toFormInfo(form, currentUserId, true);
+    }
+
+    /**
+     * @param includeSectionTargetCount pass {@code false} from list endpoints to
+     *        avoid the N+1 SECTION target-count computation per form (see
+     *        {@link #calculateTargetCount(Form, boolean)}).
+     */
+    private FormInfo toFormInfo(Form form, UUID currentUserId, boolean includeSectionTargetCount) {
         var creator = userModule.findById(form.getCreatedBy()).orElse(null);
         String creatorName = creator != null ? creator.displayName() : "Unknown";
         String scopeName = resolveScopeName(form.getScope(), form.getScopeId());
@@ -791,7 +872,7 @@ public class FormsService implements FormsModuleApi {
 
         int questionCount = questionRepository.countByFormId(form.getId());
         int responseCount = responseRepository.countByFormId(form.getId());
-        int targetCount = calculateTargetCount(form);
+        int targetCount = calculateTargetCount(form, includeSectionTargetCount);
 
         boolean hasResponded = false;
         if (currentUserId != null) {

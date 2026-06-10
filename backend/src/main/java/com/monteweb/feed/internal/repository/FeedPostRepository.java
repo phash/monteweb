@@ -74,7 +74,9 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
 
     /**
      * Global search: search posts by title or content that the user can see.
-     * Respects targeted posts (target_user_ids).
+     * Respects targeted posts (target_user_ids), parent-only visibility (students never
+     * see parent-only posts), and room membership (ROOM posts are only returned for rooms
+     * the user belongs to). Mirrors the visibility predicates of {@link #findPersonalFeed}.
      */
     @Query(value = """
         SELECT p.* FROM feed_posts p
@@ -82,8 +84,29 @@ public interface FeedPostRepository extends JpaRepository<FeedPost, UUID> {
                OR LOWER(COALESCE(p.title, '')) LIKE LOWER(CONCAT('%', :query, '%')))
         AND (p.expires_at IS NULL OR p.expires_at > NOW())
         AND (p.target_user_ids IS NULL OR CAST(:userId AS UUID) = ANY(p.target_user_ids))
+        AND (p.is_parent_only = false OR :isParent = true)
+        AND (p.source_type != 'ROOM' OR p.source_id IN (:roomIds))
         ORDER BY p.published_at DESC
         LIMIT :limit
         """, nativeQuery = true)
-    List<FeedPost> searchPosts(@Param("query") String query, @Param("userId") UUID userId, @Param("limit") int limit);
+    List<FeedPost> searchPosts(@Param("query") String query,
+                               @Param("userId") UUID userId,
+                               @Param("roomIds") Collection<UUID> roomIds,
+                               @Param("isParent") boolean isParent,
+                               @Param("limit") int limit);
+
+    /**
+     * Indexing variant for the trusted Solr full-text reindex path (system user, no
+     * per-user visibility filtering — visibility is enforced at Solr query time via the
+     * room-access filter). Returns every matching post regardless of room/parent-only.
+     */
+    @Query(value = """
+        SELECT p.* FROM feed_posts p
+        WHERE (LOWER(p.content) LIKE LOWER(CONCAT('%', :query, '%'))
+               OR LOWER(COALESCE(p.title, '')) LIKE LOWER(CONCAT('%', :query, '%')))
+        AND (p.expires_at IS NULL OR p.expires_at > NOW())
+        ORDER BY p.published_at DESC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<FeedPost> searchPostsForIndexing(@Param("query") String query, @Param("limit") int limit);
 }

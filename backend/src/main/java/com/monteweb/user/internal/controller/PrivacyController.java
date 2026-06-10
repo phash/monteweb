@@ -45,11 +45,16 @@ public class PrivacyController {
 
     /**
      * Authenticated: Accept current terms version.
+     *
+     * <p>The IP recorded against the consent (DSGVO Art. 7 proof-of-consent) is derived
+     * server-side via {@link SecurityUtils#getClientIpAddress()} and never taken from the
+     * client-supplied request body, which is spoofable and would destroy the evidentiary
+     * value of the consent log.
      */
     @PostMapping("/terms/accept")
-    public ResponseEntity<ApiResponse<Void>> acceptTerms(@RequestBody(required = false) Map<String, String> body) {
+    public ResponseEntity<ApiResponse<Void>> acceptTerms() {
         UUID userId = SecurityUtils.requireCurrentUserId();
-        String ipAddress = body != null ? body.get("ipAddress") : null;
+        String ipAddress = SecurityUtils.getClientIpAddress();
         String message = privacyService.acceptTerms(userId, ipAddress);
         return ResponseEntity.ok(ApiResponse.ok(null, message));
     }

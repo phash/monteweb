@@ -3,6 +3,9 @@ package com.monteweb.search.internal.service;
 import com.monteweb.room.RoomInfo;
 import com.monteweb.room.RoomModuleApi;
 import com.monteweb.search.SearchResult;
+import com.monteweb.user.UserInfo;
+import com.monteweb.user.UserModuleApi;
+import com.monteweb.user.UserRole;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrRequest;
@@ -28,10 +31,13 @@ public class SolrSearchService {
 
     private final SolrClient solrClient;
     private final RoomModuleApi roomModuleApi;
+    private final UserModuleApi userModuleApi;
 
-    public SolrSearchService(SolrClient solrClient, RoomModuleApi roomModuleApi) {
+    public SolrSearchService(SolrClient solrClient, RoomModuleApi roomModuleApi,
+                             UserModuleApi userModuleApi) {
         this.solrClient = solrClient;
         this.roomModuleApi = roomModuleApi;
+        this.userModuleApi = userModuleApi;
     }
 
     public List<SearchResult> search(String query, String type, int limit, UUID userId) {
@@ -49,9 +55,10 @@ public class SolrSearchService {
                 solrQuery.addFilterQuery("doc_type:" + upperType);
             }
 
-            // Access control: room-scoped documents (FILE, WIKI, TASK) must be
-            // constrained to the rooms the requesting user is a member of.
-            // Documents without a room_id (USER, ROOM, POST, EVENT) always pass.
+            // Access control: each doc_type is constrained by its own visibility rules.
+            // USER/ROOM are public; POST docs are constrained by room membership and
+            // parent_only; EVENT docs by their scope (ROOM/SECTION/SCHOOL); FILE docs by
+            // room membership AND audience; WIKI/TASK by room membership. See buildAccessFilter.
             solrQuery.addFilterQuery(buildAccessFilter(userId));
 
             // Highlighting
@@ -114,43 +121,152 @@ public class SolrSearchService {
     }
 
     /**
-     * Builds a Solr filter query that restricts room-scoped documents to the
-     * rooms the user is a member of, while always allowing documents that have
-     * no room_id (USER, ROOM, POST, EVENT).
+     * Builds a per-doc-type Solr access filter. The previous implementation let every document
+     * without a {@code room_id} pass unconditionally, which leaked ROOM-scoped / parentOnly feed
+     * posts, ROOM/SECTION calendar events, and restricted files. Each doc_type now carries its
+     * own constraint:
      *
-     * <p>Resulting filter: {@code (*:* -room_id:[* TO *]) OR room_id:(id1 OR id2 ...)}.
-     * If the user is a member of no rooms, the filter collapses to
-     * {@code (*:* -room_id:[* TO *])}, hiding all room-scoped documents.</p>
+     * <ul>
+     *   <li><b>USER, ROOM</b> — public, always visible.</li>
+     *   <li><b>POST</b> — ROOM-scoped posts (room_id set) require room membership; parentOnly posts
+     *       are hidden from students. (Per-user targeted posts are excluded at index time —
+     *       they carry no target_user_ids field; see FLAG.)</li>
+     *   <li><b>EVENT</b> — SCHOOL events are visible to all; ROOM events require room membership;
+     *       SECTION events require the user to belong to that section.</li>
+     *   <li><b>FILE</b> — requires room membership AND an audience the user may see
+     *       (mirrors {@code FileService.getAllowedAudiences}).</li>
+     *   <li><b>WIKI, TASK</b> — require room membership.</li>
+     * </ul>
+     *
+     * <p>Fails closed: an anonymous user or a lookup failure restricts results to public
+     * (USER/ROOM) and SCHOOL-scoped EVENT documents only.</p>
      */
     private String buildAccessFilter(UUID userId) {
-        // Documents without a room_id are never room-scoped and always allowed.
-        String noRoomClause = "(*:* -room_id:[* TO *])";
+        List<UUID> accessibleRoomIds = List.of();
+        Set<UUID> accessibleSectionIds = Set.of();
+        Set<String> allowedAudiences = Set.of("ALL");
 
-        if (userId == null) {
-            return noRoomClause;
+        if (userId != null) {
+            try {
+                List<RoomInfo> rooms = roomModuleApi.findByUserId(userId);
+                accessibleRoomIds = rooms.stream().map(RoomInfo::id).toList();
+                accessibleSectionIds = rooms.stream()
+                        .map(RoomInfo::sectionId)
+                        .filter(Objects::nonNull)
+                        .collect(java.util.stream.Collectors.toSet());
+            } catch (Exception e) {
+                log.error("Failed to resolve accessible rooms for user {}: {}", userId, e.getMessage());
+                // Fall through with empty room/section sets (fail closed).
+            }
+            allowedAudiences = allowedAudiencesForUser(userId);
         }
 
-        List<UUID> accessibleRoomIds;
-        try {
-            accessibleRoomIds = roomModuleApi.findByUserId(userId).stream()
-                    .map(RoomInfo::id)
-                    .toList();
-        } catch (Exception e) {
-            log.error("Failed to resolve accessible rooms for user {}: {}", userId, e.getMessage());
-            // Fail closed: only non-room-scoped documents are returned.
-            return noRoomClause;
+        boolean isStudent = isStudent(userId);
+        String roomIn = roomIdInClause(accessibleRoomIds);   // null when no accessible rooms
+        String sectionIn = sectionIdInClause(accessibleSectionIds);
+
+        // POST: ROOM-scoped posts (room_id set) need membership; non-room posts pass. parentOnly
+        // posts are hidden from students regardless of source.
+        StringBuilder postClause = new StringBuilder("doc_type:POST");
+        // Use the (*:* -room_id:...) form so the negative sub-clause is not a pure-negative query
+        // (a parenthesized pure-negative matches nothing in Lucene).
+        String roomScopeForPost = roomIn != null
+                ? "((*:* -room_id:[* TO *]) OR room_id:(" + roomIn + "))"
+                : "(*:* -room_id:[* TO *])";
+        postClause.append(" AND ").append(roomScopeForPost);
+        if (isStudent) {
+            postClause.append(" AND -parent_only:true");
         }
 
-        if (accessibleRoomIds.isEmpty()) {
-            return noRoomClause;
+        // EVENT: SCHOOL always; ROOM needs membership; SECTION needs section membership.
+        StringBuilder eventClause = new StringBuilder("doc_type:EVENT AND (scope:SCHOOL");
+        if (roomIn != null) {
+            eventClause.append(" OR (scope:ROOM AND room_id:(").append(roomIn).append("))");
+        }
+        if (sectionIn != null) {
+            eventClause.append(" OR (scope:SECTION AND section_id:(").append(sectionIn).append("))");
+        }
+        eventClause.append(")");
+
+        // FILE: room membership AND an audience the user may see.
+        String fileClause;
+        if (roomIn != null) {
+            String audienceIn = allowedAudiences.stream()
+                    .reduce((a, b) -> a + " OR " + b)
+                    .orElse("ALL");
+            fileClause = "doc_type:FILE AND room_id:(" + roomIn + ") AND audience:(" + audienceIn + ")";
+        } else {
+            fileClause = "doc_type:FILE AND id:__none__"; // no accessible rooms -> no files
         }
 
-        String roomIdsOr = accessibleRoomIds.stream()
+        // WIKI / TASK: room membership.
+        String roomScopedClause = roomIn != null
+                ? "(doc_type:WIKI OR doc_type:TASK) AND room_id:(" + roomIn + ")"
+                : "(doc_type:WIKI OR doc_type:TASK) AND id:__none__";
+
+        return "("
+                + "doc_type:USER OR doc_type:ROOM"
+                + " OR (" + postClause + ")"
+                + " OR (" + eventClause + ")"
+                + " OR (" + fileClause + ")"
+                + " OR (" + roomScopedClause + ")"
+                + ")";
+    }
+
+    /** Returns a quoted {@code OR}-joined list of room IDs, or {@code null} if the set is empty. */
+    private String roomIdInClause(List<UUID> roomIds) {
+        if (roomIds == null || roomIds.isEmpty()) return null;
+        return roomIds.stream()
                 .map(id -> "\"" + id + "\"")
                 .reduce((a, b) -> a + " OR " + b)
-                .orElse("");
+                .orElse(null);
+    }
 
-        return noRoomClause + " OR room_id:(" + roomIdsOr + ")";
+    private String sectionIdInClause(Set<UUID> sectionIds) {
+        if (sectionIds == null || sectionIds.isEmpty()) return null;
+        return sectionIds.stream()
+                .map(id -> "\"" + id + "\"")
+                .reduce((a, b) -> a + " OR " + b)
+                .orElse(null);
+    }
+
+    private boolean isStudent(UUID userId) {
+        if (userId == null) return false;
+        try {
+            return userModuleApi.findById(userId)
+                    .map(UserInfo::role)
+                    .map(r -> r == UserRole.STUDENT)
+                    .orElse(false);
+        } catch (Exception e) {
+            // Fail closed: treat as student (most restrictive) so parentOnly posts stay hidden.
+            return true;
+        }
+    }
+
+    /**
+     * Resolves the set of file audiences a user may see, mirroring
+     * {@code FileService.getAllowedAudiences} but using only the global role (per-room LEADER /
+     * PARENT_MEMBER room roles are not resolved here — see FLAG). TEACHER / SUPERADMIN /
+     * SECTION_ADMIN see everything; PARENT sees ALL + PARENTS_ONLY; STUDENT sees ALL +
+     * STUDENTS_ONLY; everyone else sees ALL only.
+     */
+    private Set<String> allowedAudiencesForUser(UUID userId) {
+        UserRole role;
+        try {
+            role = userModuleApi.findById(userId).map(UserInfo::role).orElse(null);
+        } catch (Exception e) {
+            return Set.of("ALL");
+        }
+        if (role == UserRole.TEACHER || role == UserRole.SUPERADMIN || role == UserRole.SECTION_ADMIN) {
+            return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
+        }
+        if (role == UserRole.PARENT) {
+            return Set.of("ALL", "PARENTS_ONLY");
+        }
+        if (role == UserRole.STUDENT) {
+            return Set.of("ALL", "STUDENTS_ONLY");
+        }
+        return Set.of("ALL");
     }
 
     private String buildSubtitle(String docType, String roomName, String contentType, SolrDocument doc) {

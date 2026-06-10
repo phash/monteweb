@@ -369,6 +369,49 @@ class CleaningServiceTest {
         }
 
         @Test
+        @DisplayName("Stored-token fallback is accepted on the slot date (HMAC expired but in-window)")
+        void checkIn_storedTokenFallbackOnSlotDate() {
+            // validateToken returns null (HMAC expired), but the stored slot token matches and
+            // the slot date is today -> the date-proximity gate accepts the fallback.
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.now(), "OPEN");
+            slot.setQrToken("stored-token");
+            CleaningRegistration reg = makeRegistration(SLOT_ID, USER_ID, false, false);
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(qrTokenService.validateToken("stored-token")).thenReturn(null);
+            when(registrationRepository.findBySlotIdAndUserId(SLOT_ID, USER_ID))
+                    .thenReturn(Optional.of(reg));
+            when(registrationRepository.save(any(CleaningRegistration.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            when(slotRepository.save(any(CleaningSlot.class)))
+                    .thenAnswer(inv -> inv.getArgument(0));
+            mockSectionLookup();
+            mockConfigLookup();
+            when(registrationRepository.findBySlotId(SLOT_ID)).thenReturn(List.of(reg));
+
+            CleaningSlotInfo result = service.checkIn(SLOT_ID, USER_ID, "stored-token");
+
+            assertThat(result).isNotNull();
+            assertThat(reg.isCheckedIn()).isTrue();
+        }
+
+        @Test
+        @DisplayName("Stored-token fallback is rejected for a slot far from its date (no indefinite replay)")
+        void checkIn_storedTokenFallbackRejectedWhenSlotOld() {
+            // validateToken returns null (HMAC expired) and the slot date is far in the past:
+            // the printed/stored token must NOT be replayable indefinitely.
+            CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.now().minusMonths(2), "OPEN");
+            slot.setQrToken("stored-token");
+
+            when(slotRepository.findById(SLOT_ID)).thenReturn(Optional.of(slot));
+            when(qrTokenService.validateToken("stored-token")).thenReturn(null);
+
+            assertThatThrownBy(() -> service.checkIn(SLOT_ID, USER_ID, "stored-token"))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("no longer valid");
+        }
+
+        @Test
         @DisplayName("Already checked-in user throws BusinessException")
         void checkIn_alreadyCheckedIn() {
             CleaningSlot slot = makeSlot(SLOT_ID, LocalDate.of(2026, 3, 6), "IN_PROGRESS");
@@ -623,6 +666,23 @@ class CleaningServiceTest {
             assertThatThrownBy(() -> service.updateRegistrationMinutes(regId, 90))
                     .isInstanceOf(BusinessException.class)
                     .hasMessageContaining("Must check out");
+        }
+
+        @Test
+        @DisplayName("Update minutes on an already-confirmed (billed) registration is blocked")
+        void updateMinutes_alreadyConfirmedIsBlocked() {
+            CleaningRegistration reg = makeRegistration(SLOT_ID, USER_ID, true, true);
+            reg.setConfirmed(true);
+            UUID regId = reg.getId();
+
+            when(registrationRepository.findById(regId)).thenReturn(Optional.of(reg));
+
+            assertThatThrownBy(() -> service.updateRegistrationMinutes(regId, 90))
+                    .isInstanceOf(BusinessException.class)
+                    .hasMessageContaining("already-confirmed");
+            // Confirmed minutes are unchanged (makeRegistration sets 60 on a checked-out reg)
+            assertThat(reg.getActualMinutes()).isEqualTo(60);
+            verify(registrationRepository, never()).save(any(CleaningRegistration.class));
         }
     }
 

@@ -118,8 +118,34 @@ public class SolrIndexingListener {
                     event.fileId(), event.contentType());
         }
 
+        // Resolve the file's audience (ALL | PARENTS_ONLY | STUDENTS_ONLY) so the access filter
+        // can hide restricted files. FileUploadedEvent does not carry the audience, so we look it
+        // up via the files facade; default to ALL when it cannot be resolved.
+        String audience = resolveFileAudience(event.fileId(), event.roomId());
+
         indexingService.indexFile(event.fileId(), event.roomId(),
-                event.originalName(), event.contentType(), event.fileSize());
+                event.originalName(), event.contentType(), event.fileSize(), audience);
+    }
+
+    /**
+     * Looks up the raw per-file audience via the files facade. Returns "ALL" when the files
+     * module is unavailable or the file cannot be found. NOTE: this is the file's own audience,
+     * not the folder-inherited effective audience (US-143); a restrictive folder containing an
+     * ALL file is not reflected here — see FLAG in the changelog.
+     */
+    private String resolveFileAudience(java.util.UUID fileId, java.util.UUID roomId) {
+        if (filesModuleApi == null || roomId == null) return "ALL";
+        try {
+            return filesModuleApi.findByRoom(roomId).stream()
+                    .filter(f -> fileId.equals(f.id()))
+                    .map(com.monteweb.files.FileInfo::audience)
+                    .findFirst()
+                    .filter(a -> a != null && !a.isBlank())
+                    .orElse("ALL");
+        } catch (Exception e) {
+            log.warn("Failed to resolve audience for file {}: {}", fileId, e.getMessage());
+            return "ALL";
+        }
     }
 
     @ApplicationModuleListener

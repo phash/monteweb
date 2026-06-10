@@ -444,9 +444,15 @@ public class CleaningService implements CleaningModuleApi {
     }
 
     /**
-     * Section-wide list of slots that currently have an open swap offer, so that other
-     * parents can discover and take over an offered slot (US-230). When sectionId is null,
-     * all upcoming swap offers are returned.
+     * Section-scoped list of slots that currently have an open swap offer, so that other
+     * parents can discover and take over an offered slot (US-230).
+     *
+     * <p>This is a swap-discovery view shown to ordinary participants, so it must NOT leak
+     * the full registrant list (names + family IDs) of every slot school-wide. It therefore
+     * returns a slim projection ({@link #toSwapSlotInfo}) that omits the registrations list
+     * and only carries the slot/section metadata and the current registration count. The
+     * controller requires non-admin callers to pass an explicit {@code sectionId} (the
+     * school-wide {@code findAllSwapOffers()} fan-out is reachable only for cleaning admins).
      */
     @Transactional(readOnly = true)
     public List<CleaningSlotInfo> getOpenSwapSlots(UUID sectionId) {
@@ -458,8 +464,23 @@ public class CleaningService implements CleaningModuleApi {
                 .distinct()
                 .map(id -> slotRepository.findById(id).orElse(null))
                 .filter(s -> s != null && !s.isCancelled())
-                .map(s -> toSlotInfo(s, getConfigTitle(s.getConfigId())))
+                .map(s -> toSwapSlotInfo(s, getConfigTitle(s.getConfigId())))
                 .toList();
+    }
+
+    /**
+     * Resolves the school section a registration belongs to (via its slot). Used by the
+     * controller to apply section-scoped authorization to registration-level admin actions
+     * (confirm / reject / minute-correction) so an admin scoped to section A cannot act on a
+     * registration that belongs to section B.
+     */
+    @Transactional(readOnly = true)
+    public UUID getRegistrationSectionId(UUID registrationId) {
+        CleaningRegistration reg = registrationRepository.findById(registrationId)
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningRegistration", registrationId));
+        CleaningSlot slot = slotRepository.findById(reg.getSlotId())
+                .orElseThrow(() -> new ResourceNotFoundException("CleaningSlot", reg.getSlotId()));
+        return slot.getSectionId();
     }
 
     /**
@@ -545,9 +566,22 @@ public class CleaningService implements CleaningModuleApi {
         // Validate QR token
         UUID tokenSlotId = qrTokenService.validateToken(qrToken);
         if (tokenSlotId == null || !tokenSlotId.equals(slotId)) {
-            // Also accept if the slot's stored token matches
+            // Also accept if the slot's stored token matches. The stored token is generated
+            // once at slot creation (up to 6 months ahead), so it is always older than the
+            // configurable HMAC expiry by the time the slot is cleaned — i.e. validateToken()
+            // returns null for it on the real-world path. To avoid the HMAC 24h expiry becoming
+            // dead code (indefinite replay of a leaked/printed QR), gate the stored-token
+            // fallback by slot-date proximity: only accept it on the slot's day (+/- 1 day).
             if (slot.getQrToken() == null || !slot.getQrToken().equals(qrToken)) {
                 throw new BusinessException("Invalid QR token");
+            }
+            LocalDate today = LocalDate.now();
+            LocalDate slotDate = slot.getSlotDate();
+            if (slotDate == null
+                    || (!today.isEqual(slotDate)
+                        && !today.isEqual(slotDate.minusDays(1))
+                        && !today.isEqual(slotDate.plusDays(1)))) {
+                throw new BusinessException("QR token no longer valid for this slot date");
             }
         }
 
@@ -651,6 +685,13 @@ public class CleaningService implements CleaningModuleApi {
 
         if (!reg.isCheckedOut()) {
             throw new BusinessException("Must check out before confirming duration");
+        }
+        // A confirmed registration is billed (sumActualMinutesByFamilyInRange only counts
+        // confirmed=true). Silently rewriting its minutes would change billed hours after
+        // the fact with no re-review or audit. Block it: corrections must happen before
+        // confirmation (or the registration must be rejected and re-confirmed).
+        if (reg.isConfirmed()) {
+            throw new BusinessException("Cannot edit minutes on an already-confirmed registration");
         }
 
         reg.setActualMinutes(actualMinutes);
@@ -883,6 +924,28 @@ public class CleaningService implements CleaningModuleApi {
                 slot.getMinParticipants(), slot.getMaxParticipants(),
                 regs.size(), CleaningSlotStatus.valueOf(slot.getStatus()),
                 slot.isCancelled(), jobId, regInfos);
+    }
+
+    /**
+     * Slim projection for the public swap-discovery list. Carries the same slot/section
+     * metadata and registration count as {@link #toSlotInfo} but deliberately OMITS the
+     * per-registration details (user names, family IDs) so the open-swap endpoint cannot be
+     * used to enumerate cleaning participants' PII across the school (DSGVO data minimisation).
+     */
+    private CleaningSlotInfo toSwapSlotInfo(CleaningSlot slot, String configTitle) {
+        String sectionName = getSectionName(slot.getSectionId());
+        long regCount = registrationRepository.countBySlotId(slot.getId());
+
+        UUID jobId = configRepository.findById(slot.getConfigId())
+                .map(CleaningConfig::getJobId)
+                .orElse(null);
+
+        return new CleaningSlotInfo(
+                slot.getId(), slot.getConfigId(), slot.getSectionId(), sectionName,
+                configTitle, slot.getSlotDate(), slot.getStartTime(), slot.getEndTime(),
+                slot.getMinParticipants(), slot.getMaxParticipants(),
+                (int) regCount, CleaningSlotStatus.valueOf(slot.getStatus()),
+                slot.isCancelled(), jobId, List.of());
     }
 
     private CleaningSlotInfo.RegistrationInfo toRegistrationInfo(CleaningRegistration reg) {

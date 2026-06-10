@@ -157,7 +157,15 @@ public class RoomController {
     public ResponseEntity<ApiResponse<Object>> getRoom(@PathVariable UUID id) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         var user = userModuleApi.findById(userId);
-        boolean isAdmin = user.isPresent() && (user.get().role() == UserRole.SUPERADMIN || user.get().role() == UserRole.SECTION_ADMIN);
+        var room = roomService.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Room", id));
+        // SUPERADMIN is a global admin; SECTION_ADMIN only counts as admin for rooms in
+        // the section they administer. A bare SECTION_ADMIN of another section must NOT see
+        // the full detail roster (member family data) of a foreign-section room.
+        boolean isAdmin = user.isPresent() && (user.get().role() == UserRole.SUPERADMIN
+                || (user.get().role() == UserRole.SECTION_ADMIN
+                        && room.sectionId() != null
+                        && isAdminForSection(user.get(), room.sectionId())));
         boolean isMember = roomService.isUserInRoom(userId, id);
 
         if (isAdmin || isMember) {

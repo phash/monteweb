@@ -3,6 +3,7 @@ package com.monteweb.auth;
 import tools.jackson.databind.JsonNode;
 import com.monteweb.TestContainerConfig;
 import com.monteweb.TestHelper;
+import com.monteweb.user.UserModuleApi;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -10,6 +11,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -21,6 +24,9 @@ class AuthServiceIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private UserModuleApi userModuleApi;
 
     // ── Registration Validation ──────────────────────────────────────
 
@@ -337,5 +343,45 @@ class AuthServiceIntegrationTest {
                         .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").isNotEmpty());
+    }
+
+    // ── Active-Account Gate on Session Minting ───────────────────────
+
+    /**
+     * Finding [2]: a user who is deactivated after obtaining a valid refresh token
+     * must NOT be able to mint a fresh full session via refresh. The active-account
+     * gate is centralised in generateTokenResponse(), so refresh() (which has no
+     * inline active-check of its own) is now covered.
+     */
+    @Test
+    void refresh_afterAccountDeactivated_shouldFail() throws Exception {
+        String email = "deactivated-refresh@example.com";
+
+        // Register → returns a full session including a valid refresh token
+        var registerResult = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "email": "%s",
+                                    "password": "SecurePass123!",
+                                    "firstName": "Deact",
+                                    "lastName": "Refresh"
+                                }
+                                """.formatted(email)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode json = TestHelper.parseResponse(registerResult.getResponse().getContentAsString());
+        String refreshToken = json.path("data").path("refreshToken").asText();
+        UUID userId = UUID.fromString(json.path("data").path("userId").asText());
+
+        // Admin deactivates the account while the refresh token is still valid
+        userModuleApi.setActive(userId, false);
+
+        // Refresh must now be rejected (no new session for an inactive account)
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\":\"" + refreshToken + "\"}"))
+                .andExpect(status().is4xxClientError());
     }
 }

@@ -164,6 +164,85 @@ class FeedServiceIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void createBoardPost_byParent_shouldReturn403() throws Exception {
+        // BOARD posts are school-wide (delivered to every user); a plain PARENT must not
+        // be able to broadcast school-wide via sourceType=BOARD.
+        String token = TestHelper.registerAndGetToken(mockMvc);
+
+        mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "Board announcement from a parent",
+                                    "sourceType": "BOARD",
+                                    "parentOnly": false
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createSystemPost_byUser_shouldReturn403() throws Exception {
+        // SYSTEM posts must be authored by the system itself (createSystemPost/-Banner),
+        // never by an end user through the public endpoint — even an admin gets 403.
+        String token = TestHelper.registerAndGetToken(mockMvc);
+
+        mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "Fake system message",
+                                    "sourceType": "SYSTEM",
+                                    "parentOnly": false
+                                }
+                                """))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void createInterestRoomPost_byPlainMember_shouldSucceed() throws Exception {
+        // Interest rooms are open to all members by design: a plain PARENT member (not
+        // staff, not LEADER) MUST be able to create a post there. Regression guard for the
+        // room-post create gate which otherwise requires staff/LEADER.
+        String creatorToken = TestHelper.registerTeacherAndGetToken(mockMvc);
+
+        var roomResult = mockMvc.perform(post("/api/v1/rooms/interest")
+                        .header("Authorization", "Bearer " + creatorToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name": "Open Interest Room %s"}
+                                """.formatted(System.nanoTime())))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String roomId = TestHelper.parseResponse(roomResult.getResponse().getContentAsString())
+                .path("data").path("id").asText();
+
+        // A second user (defaults to PARENT) self-joins the OPEN interest room as MEMBER.
+        var memberResponse = TestHelper.registerAndGetResponse(mockMvc,
+                "feed-interest" + System.nanoTime() + "@example.com", "Interest", "Member");
+        String memberToken = memberResponse.path("data").path("accessToken").asText();
+
+        mockMvc.perform(post("/api/v1/rooms/" + roomId + "/join")
+                        .header("Authorization", "Bearer " + memberToken))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/feed/posts")
+                        .header("Authorization", "Bearer " + memberToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "content": "Hello from a plain interest-room member",
+                                    "sourceType": "ROOM",
+                                    "sourceId": "%s",
+                                    "parentOnly": false
+                                }
+                                """.formatted(roomId)))
+                .andExpect(status().isCreated());
+    }
+
     // ── Post Detail ──────────────────────────────────────────────────
 
     @Test
