@@ -13,10 +13,82 @@ import { reportError } from './composables/useErrorReporting'
 import 'primeicons/primeicons.css'
 import './assets/styles/global.css'
 
-// MonteWeb golden-yellow theme. Yellow is light, so the primary contrast colour
-// is BLACK (#111) in both light and dark mode — white text on yellow is
-// unreadable (~2:1). The focus ring uses a dark amber so it stays visible
-// against both yellow controls and white surfaces (≥3:1, WCAG 2.4.7 / 1.4.11).
+// MonteWeb golden-yellow theme. Every PrimeVue colour token points at the
+// --mw-* CSS variables, so the WHOLE UI (PrimeVue + custom) follows ONE source
+// of truth: the admin-editable theme. This is applied to BOTH colour schemes so
+// PrimeVue can never render its own dark surfaces on the light app, and so an
+// admin can recolour every element type. Yellow is light → primary contrast is
+// BLACK; the focus ring is dark so it stays visible on yellow + white.
+const mwScheme = {
+  primary: {
+    color: 'var(--mw-primary)',
+    contrastColor: 'var(--mw-primary-contrast)',
+    hoverColor: 'var(--mw-primary-hover)',
+    activeColor: 'var(--mw-primary-active)',
+  },
+  text: {
+    color: 'var(--mw-text)',
+    hoverColor: 'var(--mw-text)',
+    mutedColor: 'var(--mw-text-muted)',
+    hoverMutedColor: 'var(--mw-text-secondary)',
+  },
+  content: {
+    background: 'var(--mw-bg-card)',
+    hoverBackground: 'var(--mw-bg-hover)',
+    borderColor: 'var(--mw-border)',
+    color: 'var(--mw-text)',
+    hoverColor: 'var(--mw-text)',
+  },
+  formField: {
+    background: 'var(--mw-bg-card)',
+    disabledBackground: 'var(--mw-bg-hover)',
+    filledBackground: 'var(--mw-bg-hover)',
+    filledHoverBackground: 'var(--mw-bg-hover)',
+    filledFocusBackground: 'var(--mw-bg-card)',
+    borderColor: 'var(--mw-border)',
+    hoverBorderColor: 'var(--mw-primary-dark)',
+    focusBorderColor: 'var(--mw-primary)',
+    invalidBorderColor: 'var(--mw-danger)',
+    color: 'var(--mw-text)',
+    disabledColor: 'var(--mw-text-muted)',
+    placeholderColor: 'var(--mw-text-muted)',
+    iconColor: 'var(--mw-text-muted)',
+    floatLabelColor: 'var(--mw-text-muted)',
+    floatLabelActiveColor: 'var(--mw-text-secondary)',
+    floatLabelFocusColor: 'var(--mw-primary-dark)',
+  },
+  overlay: {
+    select: { background: 'var(--mw-bg-card)', borderColor: 'var(--mw-border)', color: 'var(--mw-text)' },
+    popover: { background: 'var(--mw-bg-card)', borderColor: 'var(--mw-border)', color: 'var(--mw-text)' },
+    modal: { background: 'var(--mw-bg-card)', borderColor: 'var(--mw-border)', color: 'var(--mw-text)' },
+  },
+  list: {
+    option: {
+      color: 'var(--mw-text)',
+      focusColor: 'var(--mw-text)',
+      selectedColor: 'var(--mw-primary-contrast)',
+      focusBackground: 'var(--mw-bg-hover)',
+      selectedBackground: 'var(--mw-primary)',
+      selectedFocusBackground: 'var(--mw-primary-hover)',
+      selectedFocusColor: 'var(--mw-primary-contrast)',
+    },
+  },
+  navigation: {
+    item: {
+      color: 'var(--mw-text)',
+      focusColor: 'var(--mw-text)',
+      activeColor: 'var(--mw-text)',
+      focusBackground: 'var(--mw-bg-hover)',
+      activeBackground: 'var(--mw-bg-active)',
+      icon: {
+        color: 'var(--mw-text-muted)',
+        focusColor: 'var(--mw-text)',
+        activeColor: 'var(--mw-text)',
+      },
+    },
+  },
+}
+
 const MontePreset = definePreset(Aura, {
   semantic: {
     primary: {
@@ -26,26 +98,12 @@ const MontePreset = definePreset(Aura, {
     focusRing: {
       width: '2px',
       style: 'solid',
-      color: '{primary.700}',
+      color: 'var(--mw-focus-ring)',
       offset: '2px',
     },
     colorScheme: {
-      light: {
-        primary: {
-          color: '{primary.500}',
-          contrastColor: '#111111',
-          hoverColor: '{primary.600}',
-          activeColor: '{primary.700}',
-        },
-      },
-      dark: {
-        primary: {
-          color: '{primary.400}',
-          contrastColor: '#111111',
-          hoverColor: '{primary.300}',
-          activeColor: '{primary.200}',
-        },
-      },
+      light: { ...mwScheme },
+      dark: { ...mwScheme },
     },
   },
 })

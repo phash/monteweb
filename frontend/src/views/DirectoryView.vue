@@ -485,7 +485,7 @@ onMounted(async () => {
 
 .user-avatar-initials {
   background-color: var(--mw-primary);
-  color: white;
+  color: var(--mw-primary-contrast);
 }
 
 .user-info {
