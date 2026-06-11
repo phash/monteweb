@@ -3,6 +3,7 @@ package com.monteweb.user;
 import com.monteweb.TestContainerConfig;
 import com.monteweb.user.internal.repository.UserRepository;
 import com.monteweb.user.internal.service.UserService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +27,26 @@ class UserServiceIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    /**
+     * The SUPERADMIN-availability tests (makeLastActiveSuperadmin) drive the global active
+     * count down by deactivating every active SUPERADMIN directly via the repository —
+     * including the seed {@code admin@monteweb.local}. The backend integration suite shares
+     * ONE database (a single Postgres service container in CI), so that committed
+     * deactivation would otherwise leak into every later test class and break
+     * {@code admin@monteweb.local} login (e.g. TestHelper.loginAsAdmin → promoteToTeacher),
+     * causing whole controller-test classes to error. Restore all SUPERADMINs to active
+     * after each test so the seed admin stays usable for subsequent classes.
+     */
+    @AfterEach
+    void reactivateAllSuperadmins() {
+        userRepository.findAll().stream()
+                .filter(u -> u.getRole() == UserRole.SUPERADMIN && !u.isActive())
+                .forEach(u -> {
+                    u.setActive(true);
+                    userRepository.save(u);
+                });
+    }
 
     @Test
     void createUser_shouldPersistAndReturn() {
