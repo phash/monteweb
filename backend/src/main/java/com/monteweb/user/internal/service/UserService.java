@@ -17,6 +17,7 @@ import com.monteweb.room.RoomModuleApi;
 import com.monteweb.tasks.TasksModuleApi;
 import com.monteweb.wiki.WikiModuleApi;
 import com.monteweb.shared.exception.ResourceNotFoundException;
+import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.*;
 import com.monteweb.user.internal.model.DataAccessLog;
 import com.monteweb.user.internal.model.User;
@@ -371,6 +372,15 @@ public class UserService implements UserModuleApi {
     @Transactional
     public UserInfo updateRole(UUID userId, UserRole role) {
         var user = findEntityById(userId);
+        // US-341: availability safeguard — the last remaining active SUPERADMIN must
+        // never be demoted, otherwise the entire installation would be locked out of
+        // all SUPERADMIN-gated administration (impersonation, audit log, module config).
+        if (user.getRole() == UserRole.SUPERADMIN
+                && role != UserRole.SUPERADMIN
+                && userRepository.countByRoleAndActive(UserRole.SUPERADMIN, true) <= 1) {
+            throw new com.monteweb.shared.exception.BusinessException(
+                    "Cannot demote the last active SUPERADMIN");
+        }
         user.setRole(role);
         return toUserInfo(userRepository.save(user));
     }
@@ -379,6 +389,23 @@ public class UserService implements UserModuleApi {
     @Transactional
     public UserInfo setActive(UUID userId, boolean active) {
         var user = findEntityById(userId);
+        // US-342: an admin must not be able to lock themselves out by deactivating
+        // their own account, nor deactivate the last remaining active SUPERADMIN.
+        // Use the optional accessor so system/unauthenticated flows (e.g. self-
+        // registration with admin approval, which deactivates the brand-new user)
+        // are not blocked — those never act on the current admin's own account.
+        if (!active) {
+            if (SecurityUtils.getCurrentUserId().map(userId::equals).orElse(false)) {
+                throw new com.monteweb.shared.exception.BusinessException(
+                        "Cannot deactivate your own account");
+            }
+            if (user.getRole() == UserRole.SUPERADMIN
+                    && user.isActive()
+                    && userRepository.countByRoleAndActive(UserRole.SUPERADMIN, true) <= 1) {
+                throw new com.monteweb.shared.exception.BusinessException(
+                        "Cannot deactivate the last active SUPERADMIN");
+            }
+        }
         user.setActive(active);
         return toUserInfo(userRepository.save(user));
     }

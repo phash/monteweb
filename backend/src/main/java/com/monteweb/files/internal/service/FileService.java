@@ -112,9 +112,13 @@ public class FileService implements FilesModuleApi {
             files = fileRepository.findByRoomIdAndFolderIdIsNullOrderByCreatedAtDesc(roomId);
         } else {
             files = fileRepository.findByRoomIdAndFolderIdOrderByCreatedAtDesc(roomId, folderId);
+            // Effective audience of the containing folder, clamped over the FULL ancestor
+            // chain (US-143). A restrictive ancestor anywhere up the tree (e.g. a
+            // PARENTS_ONLY parent of an ALL sub-folder) forces its visibility down, so a
+            // broad sub-folder cannot re-open files hidden by a restrictive ancestor.
             folderAudience = folderRepository.findById(folderId)
                     .filter(f -> f.getRoomId().equals(roomId))
-                    .map(RoomFolder::getAudience)
+                    .map(f -> effectiveFolderAudience(roomId, f))
                     .orElse(null);
         }
 
@@ -146,7 +150,10 @@ public class FileService implements FilesModuleApi {
             var parentFolder = folderRepository.findById(folderId)
                     .filter(f -> f.getRoomId().equals(roomId))
                     .orElseThrow(() -> new ResourceNotFoundException("Folder", folderId));
-            folderAudience = parentFolder.getAudience();
+            // Use the folder's EFFECTIVE audience (clamped over its full ancestor chain),
+            // not just its own column, so an ALL sub-folder under a PARENTS_ONLY parent
+            // still forces uploads to PARENTS_ONLY (US-143).
+            folderAudience = effectiveFolderAudience(roomId, parentFolder);
         }
 
         // Validate audience value
@@ -253,10 +260,14 @@ public class FileService implements FilesModuleApi {
             folders = folderRepository.findByRoomIdAndParentIdOrderByNameAsc(roomId, parentId);
         }
 
-        // Filter folders by audience based on user's role
+        // Filter folders by their EFFECTIVE audience: the most-restrictive audience
+        // accumulated along the parent->root chain (US-143). A sub-folder declared ALL
+        // inside a PARENTS_ONLY ancestor is effectively PARENTS_ONLY and must be hidden
+        // from users who cannot see that ancestor — folders no longer leak via their own
+        // (broader) audience column.
         Set<String> allowedAudiences = getAllowedAudiences(userId, roomId);
         return folders.stream()
-                .filter(f -> allowedAudiences.contains(f.getAudience()))
+                .filter(f -> allowedAudiences.contains(effectiveFolderAudience(roomId, f)))
                 .map(this::toFolderInfo)
                 .toList();
     }
@@ -268,14 +279,22 @@ public class FileService implements FilesModuleApi {
             throw new BusinessException("A folder with this name already exists in this location");
         }
 
+        String parentEffectiveAudience = null;
         if (parentId != null) {
-            folderRepository.findById(parentId)
+            var parentFolder = folderRepository.findById(parentId)
                     .filter(f -> f.getRoomId().equals(roomId))
                     .orElseThrow(() -> new ResourceNotFoundException("Parent folder", parentId));
+            parentEffectiveAudience = effectiveFolderAudience(roomId, parentFolder);
         }
 
         // Resolve audience: Parents always get PARENTS_ONLY, others can choose
         String resolvedAudience = resolveAudience(audience, userId);
+
+        // Clamp the new folder's audience to its parent chain (US-143): a folder may never
+        // be broader than the folder it lives in. This persists the inherited restriction
+        // on the row itself so it can't be widened by creating an ALL sub-folder under a
+        // restrictive parent (which would otherwise re-expose its contents).
+        resolvedAudience = effectiveAudience(parentEffectiveAudience, resolvedAudience);
 
         var folder = new RoomFolder();
         folder.setRoomId(roomId);
@@ -390,10 +409,47 @@ public class FileService implements FilesModuleApi {
         String folderAudience = null;
         if (roomFile.getFolderId() != null) {
             folderAudience = folderRepository.findById(roomFile.getFolderId())
-                    .map(RoomFolder::getAudience)
+                    .filter(f -> f.getRoomId().equals(roomFile.getRoomId()))
+                    // Resolve the containing folder's audience over its FULL ancestor
+                    // chain so a file inside an ALL sub-folder of a PARENTS_ONLY parent
+                    // still inherits PARENTS_ONLY (US-143).
+                    .map(f -> effectiveFolderAudience(roomFile.getRoomId(), f))
                     .orElse(null);
         }
         return effectiveAudience(folderAudience, roomFile.getAudience());
+    }
+
+    /**
+     * Resolves a folder's EFFECTIVE audience by clamping its own audience against every
+     * ancestor up to the room root (US-143). Walking child->root and applying
+     * {@link #effectiveAudience} at each step makes the highest restrictive ancestor win
+     * (a non-ALL ancestor overrides everything below it), so a broad sub-folder can never
+     * re-open the visibility of a restrictive ancestor — and a restrictive ancestor of a
+     * differently-restricted sub-folder (e.g. PARENTS_ONLY over STUDENTS_ONLY) still
+     * hides that subtree from the non-matching audience. A visited-set / iteration guard
+     * caps the walk so a corrupted parent chain cannot loop forever.
+     */
+    private String effectiveFolderAudience(UUID roomId, RoomFolder folder) {
+        String effective = folder.getAudience() != null ? folder.getAudience() : "ALL";
+        UUID parentId = folder.getParentId();
+        Set<UUID> visited = new java.util.HashSet<>();
+        visited.add(folder.getId());
+        int guard = 0;
+        while (parentId != null && guard++ < 1000) {
+            if (!visited.add(parentId)) {
+                break; // defensive: broken parent chain forms a cycle
+            }
+            final UUID lookupId = parentId;
+            var parent = folderRepository.findById(lookupId)
+                    .filter(f -> f.getRoomId().equals(roomId))
+                    .orElse(null);
+            if (parent == null) {
+                break;
+            }
+            effective = effectiveAudience(parent.getAudience(), effective);
+            parentId = parent.getParentId();
+        }
+        return effective;
     }
 
     /**

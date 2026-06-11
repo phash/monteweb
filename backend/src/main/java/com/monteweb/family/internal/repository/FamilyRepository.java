@@ -15,6 +15,14 @@ public interface FamilyRepository extends JpaRepository<Family, UUID> {
     @Query("SELECT f FROM Family f JOIN f.members m WHERE m.userId = :userId")
     List<Family> findByMemberUserId(UUID userId);
 
+    /**
+     * US-333: families in which the user is a PARENT. Used to enforce the
+     * "a parent may belong to only one Familienverbund" invariant — a CHILD
+     * membership in another family must not block the user from being a PARENT.
+     */
+    @Query("SELECT f FROM Family f JOIN f.members m WHERE m.userId = :userId AND m.role = com.monteweb.family.internal.model.FamilyMemberRole.PARENT")
+    List<Family> findByParentUserId(UUID userId);
+
     @Query("SELECT COUNT(m) > 0 FROM FamilyMember m WHERE m.family.id = :familyId AND m.userId = :userId")
     boolean isMember(UUID userId, UUID familyId);
 

@@ -74,15 +74,59 @@ public class FeedService implements FeedModuleApi {
     // --- Helpers ---
 
     /**
-     * Treats both SUPERADMIN and SECTION_ADMIN as administrators, matching the
-     * convention used across the codebase (e.g. RoomChatService, DiscussionThreadService).
+     * Global admin check: only SUPERADMIN is a global administrator. SECTION_ADMIN is
+     * <strong>not</strong> global — for room-scoped authorization use
+     * {@link #hasAdminRoleForRoom(UUID, UUID)}, which restricts a SECTION_ADMIN to the
+     * section the room belongs to (mirrors DiscussionThreadService / RoomController.isAdminForSection).
+     */
+    private boolean hasGlobalAdminRole(UserInfo user) {
+        return user != null && user.role() == UserRole.SUPERADMIN;
+    }
+
+    /**
+     * Treats both SUPERADMIN and SECTION_ADMIN as administrators. Used ONLY to gate
+     * <em>creation</em> of SCHOOL/SECTION/BOARD posts (a SECTION_ADMIN may publish to
+     * their section / school-wide). It must NOT be used for room-scoped read/edit/delete
+     * authorization — see {@link #hasAdminRoleForRoom(UUID, UUID)} for that.
      */
     private boolean hasAdminRole(UserInfo user) {
         return user != null && (user.role() == UserRole.SUPERADMIN || user.role() == UserRole.SECTION_ADMIN);
     }
 
-    private boolean hasAdminRole(UUID userId) {
-        return userModuleApi.findById(userId).map(this::hasAdminRole).orElse(false);
+    /**
+     * Returns true if the user is a global SUPERADMIN, or a SECTION_ADMIN scoped to the
+     * section the given room belongs to. SECTION_ADMINs are NOT global admins: a section
+     * admin scoped to e.g. Krippe must not gain access to an Oberstufe room.
+     * Mirrors {@code DiscussionThreadService.hasAdminRoleForRoom} /
+     * {@code RoomController.isAdminForSection}.
+     */
+    private boolean hasAdminRoleForRoom(UUID userId, UUID roomId) {
+        var user = userModuleApi.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        if (user.role() == UserRole.SUPERADMIN) {
+            return true;
+        }
+        if (user.role() == UserRole.SECTION_ADMIN) {
+            var sectionId = roomModuleApi.findById(roomId).map(RoomInfo::sectionId).orElse(null);
+            return sectionId != null && user.specialRoles() != null
+                    && user.specialRoles().contains("SECTION_ADMIN:" + sectionId);
+        }
+        return false;
+    }
+
+    /**
+     * Admin check for a post: SUPERADMIN is always an admin. A SECTION_ADMIN only counts
+     * for room-scoped posts whose room is in the section they administer. For non-room posts
+     * (SECTION/SCHOOL/BOARD/SYSTEM) only SUPERADMIN qualifies here — section-admins do not
+     * get blanket edit/delete rights over school-wide content they did not author.
+     */
+    private boolean hasAdminRoleForPost(FeedPost post, UUID userId) {
+        if (post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
+            return hasAdminRoleForRoom(userId, post.getSourceId());
+        }
+        return userModuleApi.findById(userId).map(this::hasGlobalAdminRole).orElse(false);
     }
 
     /**
@@ -109,8 +153,9 @@ public class FeedService implements FeedModuleApi {
     public void verifyPostReadAccess(FeedPost post, UUID userId) {
         var user = userModuleApi.findById(userId).orElse(null);
 
-        // Author and admins always have access
-        if (post.getAuthorId().equals(userId) || hasAdminRole(user)) {
+        // Author and admins always have access. SECTION_ADMIN only counts for posts whose
+        // room is in the section they administer (hasAdminRoleForPost); SUPERADMIN is global.
+        if (post.getAuthorId().equals(userId) || hasAdminRoleForPost(post, userId)) {
             return;
         }
 
@@ -155,7 +200,9 @@ public class FeedService implements FeedModuleApi {
      * Verifies the given user may read posts of the given room (membership or admin).
      */
     public void verifyRoomReadAccess(UUID roomId, UUID userId) {
-        if (!hasAdminRole(userId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
+        // SUPERADMIN (global) or a SECTION_ADMIN scoped to this room's section pass; a
+        // SECTION_ADMIN of a different section must be a member like anyone else.
+        if (!hasAdminRoleForRoom(userId, roomId) && !roomModuleApi.isUserInRoom(userId, roomId)) {
             throw new ForbiddenException("Not a member of this room");
         }
     }
@@ -247,7 +294,30 @@ public class FeedService implements FeedModuleApi {
 
     @Override
     public List<FeedPostInfo> searchPosts(String query, int limit, UUID userId) {
-        return postRepository.searchPosts(query, userId, limit).stream()
+        // Trusted indexing path (Solr full reindex passes userId == null): return all
+        // matching posts without per-user visibility filtering — Solr applies the
+        // room-access filter at query time. This must NOT be reachable from a user request.
+        if (userId == null) {
+            return postRepository.searchPostsForIndexing(query, limit).stream()
+                    .map(this::toPostInfo)
+                    .toList();
+        }
+
+        // User-facing DB fallback (Solr disabled): enforce the same visibility rules as the
+        // personal feed — parent-only posts are hidden from non-parents, and ROOM posts are
+        // restricted to the user's rooms. (Targeting/expiry are handled in the query.)
+        var userInfo = userModuleApi.findById(userId).orElse(null);
+        boolean isParent = userInfo != null && userInfo.role() == UserRole.PARENT;
+
+        var roomIds = roomModuleApi.findByUserId(userId).stream()
+                .map(RoomInfo::id)
+                .collect(Collectors.toSet());
+        // Ensure a non-empty collection for the IN clause (a sentinel UUID matches no room).
+        if (roomIds.isEmpty()) {
+            roomIds.add(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+        }
+
+        return postRepository.searchPosts(query, userId, roomIds, isParent, limit).stream()
                 .map(this::toPostInfo)
                 .toList();
     }
@@ -282,33 +352,65 @@ public class FeedService implements FeedModuleApi {
         var author = userModuleApi.findById(authorId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", authorId));
 
-        // Validate author can post to this source
-        if (sourceType == SourceType.ROOM && sourceId != null) {
-            if (!roomModuleApi.isUserInRoom(authorId, sourceId)) {
-                throw new ForbiddenException("Not a member of this room");
-            }
-            // US-070/US-071: only staff (TEACHER/SECTION_ADMIN/SUPERADMIN) or the
-            // room's LEADER may author room feed posts. Plain PARENT/STUDENT members
-            // can read but not create posts.
-            if (!isStaff(author) && !isRoomLeader(authorId, sourceId)) {
-                throw new ForbiddenException("Only teachers, admins or room leaders can create room posts");
-            }
+        // Validate author can post to this source. Default-deny: every SourceType is handled
+        // explicitly below and the `default` arm rejects anything unhandled, so a new
+        // SourceType added to the enum is denied (not silently allowed) until gated here.
+        if (sourceType == null) {
+            throw new ForbiddenException("A post source type is required");
         }
-        if (sourceType == SourceType.SCHOOL) {
-            // US-087: school-wide posts are restricted to admins (SUPERADMIN/SECTION_ADMIN).
-            // Elternbeirat keeps its dedicated school-wide posting capability.
-            boolean isElternbeirat = author.specialRoles() != null && author.specialRoles().contains("ELTERNBEIRAT");
-            if (!hasAdminRole(author) && !isElternbeirat) {
-                throw new ForbiddenException("Only admins or Elternbeirat can create school-wide posts");
+        switch (sourceType) {
+            case ROOM -> {
+                // A room post must name a room; a ROOM post with sourceId == null is invalid.
+                if (sourceId == null) {
+                    throw new ForbiddenException("A room post must reference a room");
+                }
+                if (!roomModuleApi.isUserInRoom(authorId, sourceId)) {
+                    throw new ForbiddenException("Not a member of this room");
+                }
+                // US-070/US-071: only staff (TEACHER/SECTION_ADMIN/SUPERADMIN) or the
+                // room's LEADER may author room feed posts. Plain PARENT/STUDENT members
+                // can read but not create posts — EXCEPT in INTEREST rooms, which are
+                // open to all members by design (90aa297).
+                boolean isInterestRoom = roomModuleApi.findById(sourceId)
+                        .map(r -> "INTEREST".equals(r.type()))
+                        .orElse(false);
+                if (!isInterestRoom && !isStaff(author) && !isRoomLeader(authorId, sourceId)) {
+                    throw new ForbiddenException("Only teachers, admins or room leaders can create room posts");
+                }
             }
-        }
-        if (sourceType == SourceType.SECTION) {
-            // Section posts: staff or the section's Elternbeirat (mirrors calendar SECTION rule).
-            boolean isElternbeirat = author.specialRoles() != null && (author.specialRoles().contains("ELTERNBEIRAT")
-                    || (sourceId != null && author.specialRoles().contains("ELTERNBEIRAT:" + sourceId)));
-            if (!isStaff(author) && !isElternbeirat) {
-                throw new ForbiddenException("Only staff or Elternbeirat can create section posts");
+            case SCHOOL -> {
+                // US-087: school-wide posts are restricted to admins (SUPERADMIN/SECTION_ADMIN).
+                // Elternbeirat keeps its dedicated school-wide posting capability.
+                boolean isElternbeirat = author.specialRoles() != null && author.specialRoles().contains("ELTERNBEIRAT");
+                if (!hasAdminRole(author) && !isElternbeirat) {
+                    throw new ForbiddenException("Only admins or Elternbeirat can create school-wide posts");
+                }
             }
+            case BOARD -> {
+                // BOARD posts are also school-wide (delivered to every user by the personal
+                // feed query); gate them exactly like SCHOOL so a PARENT/STUDENT cannot
+                // broadcast school-wide via sourceType=BOARD.
+                boolean isElternbeirat = author.specialRoles() != null && author.specialRoles().contains("ELTERNBEIRAT");
+                if (!hasAdminRole(author) && !isElternbeirat) {
+                    throw new ForbiddenException("Only admins or Elternbeirat can create board posts");
+                }
+            }
+            case SECTION -> {
+                // Section posts: staff or the section's Elternbeirat (mirrors calendar SECTION rule).
+                boolean isElternbeirat = author.specialRoles() != null && (author.specialRoles().contains("ELTERNBEIRAT")
+                        || (sourceId != null && author.specialRoles().contains("ELTERNBEIRAT:" + sourceId)));
+                if (!isStaff(author) && !isElternbeirat) {
+                    throw new ForbiddenException("Only staff or Elternbeirat can create section posts");
+                }
+            }
+            case SYSTEM ->
+                    // SYSTEM posts/banners must be authored by the system itself via
+                    // createSystemPost/createTargetedSystemPost/createSystemBanner (system author
+                    // UUID), never by an end user through this endpoint.
+                    throw new ForbiddenException("SYSTEM posts cannot be created by users");
+            default ->
+                    // Default-deny: any future/unhandled source type is rejected.
+                    throw new ForbiddenException("Posts to this source type are not allowed");
         }
 
         var post = new FeedPost();
@@ -406,10 +508,11 @@ public class FeedService implements FeedModuleApi {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
 
-        // Only author or admin can close
-        var user = userModuleApi.findById(userId)
+        // Only author or admin can close. For room posts a SECTION_ADMIN only counts when
+        // the room is in their section; for non-room posts only SUPERADMIN qualifies.
+        userModuleApi.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-        if (!post.getAuthorId().equals(userId) && !hasAdminRole(user)) {
+        if (!post.getAuthorId().equals(userId) && !hasAdminRoleForPost(post, userId)) {
             throw new ForbiddenException("Only the author or admin can close this poll");
         }
 
@@ -439,10 +542,11 @@ public class FeedService implements FeedModuleApi {
     public void deletePost(UUID postId, UUID userId) {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
-        var user = userModuleApi.findById(userId)
+        userModuleApi.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
 
-        if (!post.getAuthorId().equals(userId) && !hasAdminRole(user)) {
+        // SECTION_ADMIN may only delete room posts in their own section; SUPERADMIN is global.
+        if (!post.getAuthorId().equals(userId) && !hasAdminRoleForPost(post, userId)) {
             throw new ForbiddenException("Only the author or admin can delete this post");
         }
         // Clean up attachment files from storage
@@ -459,9 +563,9 @@ public class FeedService implements FeedModuleApi {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
         if (!post.getAuthorId().equals(userId)) {
-            var user = userModuleApi.findById(userId)
+            userModuleApi.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-            if (!hasAdminRole(user)) {
+            if (!hasAdminRoleForPost(post, userId)) {
                 throw new ForbiddenException("Only the author or admin can add attachments");
             }
         }
@@ -525,9 +629,8 @@ public class FeedService implements FeedModuleApi {
                 }
             }
             if (!isTarget) {
-                // Allow author and admins
-                var user = userModuleApi.findById(userId).orElse(null);
-                if (!post.getAuthorId().equals(userId) && !hasAdminRole(user)) {
+                // Allow author and admins (SECTION_ADMIN only for posts in their own section)
+                if (!post.getAuthorId().equals(userId) && !hasAdminRoleForPost(post, userId)) {
                     throw new ForbiddenException("You do not have access to this attachment");
                 }
             }
@@ -544,9 +647,8 @@ public class FeedService implements FeedModuleApi {
         // Check room membership if post is room-scoped
         if (post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
             if (!roomModuleApi.isUserInRoom(userId, post.getSourceId())) {
-                // Allow admins
-                var user = userModuleApi.findById(userId).orElse(null);
-                if (!hasAdminRole(user)) {
+                // Allow admins (SECTION_ADMIN only for the room's own section)
+                if (!hasAdminRoleForRoom(userId, post.getSourceId())) {
                     throw new ForbiddenException("You do not have access to this attachment");
                 }
             }
@@ -563,9 +665,9 @@ public class FeedService implements FeedModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPostAttachment", attachmentId));
         var post = attachment.getPost();
         if (!post.getAuthorId().equals(userId)) {
-            var user = userModuleApi.findById(userId)
+            userModuleApi.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User", userId));
-            if (!hasAdminRole(user)) {
+            if (!hasAdminRoleForPost(post, userId)) {
                 throw new ForbiddenException("Only the author or admin can delete attachments");
             }
         }
@@ -579,8 +681,9 @@ public class FeedService implements FeedModuleApi {
         var post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("FeedPost", postId));
 
-        // Only room leaders or admins can pin
-        boolean allowed = hasAdminRole(userId);
+        // Only room leaders or admins can pin. SECTION_ADMIN only counts for posts whose
+        // room is in their section; SUPERADMIN is global.
+        boolean allowed = hasAdminRoleForPost(post, userId);
         if (!allowed && post.getSourceType() == com.monteweb.feed.SourceType.ROOM && post.getSourceId() != null) {
             allowed = roomModuleApi.getUserRoleInRoom(userId, post.getSourceId())
                     .map(role -> role == com.monteweb.room.RoomRole.LEADER)
@@ -764,6 +867,7 @@ public class FeedService implements FeedModuleApi {
                 sourceName,
                 post.isPinned(),
                 post.isParentOnly(),
+                post.getTargetUserIds() != null && post.getTargetUserIds().length > 0,
                 post.getComments().size(),
                 attachments,
                 List.of(),

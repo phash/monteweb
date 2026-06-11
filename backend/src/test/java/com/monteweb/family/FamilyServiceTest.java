@@ -90,7 +90,7 @@ class FamilyServiceTest {
         @DisplayName("PARENT user creates family successfully")
         void create_parentSuccess() {
             stubUserLookup(USER_ID, UserRole.PARENT);
-            when(familyRepository.findByMemberUserId(USER_ID)).thenReturn(List.of());
+            when(familyRepository.findByParentUserId(USER_ID)).thenReturn(List.of());
             stubFamilySave();
 
             var result = service.create("Familie Mueller", USER_ID);
@@ -115,7 +115,7 @@ class FamilyServiceTest {
         void create_alreadyInFamily() {
             stubUserLookup(USER_ID, UserRole.PARENT);
             var existingFamily = makeFamily(FAMILY_ID, "Existing Family");
-            when(familyRepository.findByMemberUserId(USER_ID)).thenReturn(List.of(existingFamily));
+            when(familyRepository.findByParentUserId(USER_ID)).thenReturn(List.of(existingFamily));
 
             assertThatThrownBy(() -> service.create("Zweite Familie", USER_ID))
                     .isInstanceOf(BusinessException.class)
@@ -258,7 +258,7 @@ class FamilyServiceTest {
             stubUserLookup(USER_ID, UserRole.PARENT);
             when(familyRepository.findByInviteCode("VALID")).thenReturn(Optional.of(targetFamily));
             when(familyRepository.isMember(USER_ID, FAMILY_ID)).thenReturn(false);
-            when(familyRepository.findByMemberUserId(USER_ID)).thenReturn(List.of(existingFamily));
+            when(familyRepository.findByParentUserId(USER_ID)).thenReturn(List.of(existingFamily));
 
             assertThatThrownBy(() -> service.joinByInviteCode("VALID", USER_ID))
                     .isInstanceOf(BusinessException.class)
@@ -266,6 +266,28 @@ class FamilyServiceTest {
 
             assertThat(targetFamily.getMembers()).isEmpty();
             verify(familyRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("US-333: CHILD member of another family may still join a new one as PARENT")
+        void joinByInviteCode_childInAnotherFamily_allowed() {
+            var targetFamily = makeFamily(FAMILY_ID, "Target Family");
+            targetFamily.setInviteCode("VALID");
+            targetFamily.setInviteExpires(Instant.now().plus(1, ChronoUnit.DAYS));
+
+            stubUserLookup(USER_ID, UserRole.PARENT);
+            when(familyRepository.findByInviteCode("VALID")).thenReturn(Optional.of(targetFamily));
+            when(familyRepository.isMember(USER_ID, FAMILY_ID)).thenReturn(false);
+            // The user is only a CHILD elsewhere, so findByParentUserId returns nothing.
+            when(familyRepository.findByParentUserId(USER_ID)).thenReturn(List.of());
+            stubFamilySave();
+
+            var result = service.joinByInviteCode("VALID", USER_ID);
+
+            assertThat(result).isNotNull();
+            assertThat(targetFamily.getMembers()).hasSize(1);
+            assertThat(targetFamily.getMembers().get(0).getRole()).isEqualTo(FamilyMemberRole.PARENT);
+            verify(familyRepository).save(targetFamily);
         }
     }
 
@@ -342,7 +364,7 @@ class FamilyServiceTest {
 
             stubUserLookup(USER_ID, UserRole.PARENT);
             when(invitationRepository.findById(invitationId)).thenReturn(Optional.of(invitation));
-            when(familyRepository.findByMemberUserId(USER_ID)).thenReturn(List.of(existingFamily));
+            when(familyRepository.findByParentUserId(USER_ID)).thenReturn(List.of(existingFamily));
 
             assertThatThrownBy(() -> service.acceptInvitation(invitationId, USER_ID))
                     .isInstanceOf(BusinessException.class)

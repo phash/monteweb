@@ -78,9 +78,11 @@ public class FamilyService implements FamilyModuleApi {
                 throw new BusinessException("Only parents and administrators can create families");
             }
         }
-        // Check if parent already has a family
-        List<Family> existingFamilies = familyRepository.findByMemberUserId(creatorUserId);
-        if (!existingFamilies.isEmpty()) {
+        // US-333: a PARENT may belong to only one Familienverbund. Only existing
+        // PARENT memberships count — a CHILD member of another family (e.g. a STUDENT
+        // promoted to PARENT) must not be wrongly blocked from creating their own.
+        List<Family> existingParentFamilies = familyRepository.findByParentUserId(creatorUserId);
+        if (!existingParentFamilies.isEmpty()) {
             throw new BusinessException("User already belongs to a family");
         }
 
@@ -402,9 +404,12 @@ public class FamilyService implements FamilyModuleApi {
      * this family" check remains the authority for re-joins.
      */
     private void assertParentNotAlreadyInAnotherFamily(UUID userId, UUID targetFamilyId) {
-        boolean inOtherFamily = familyRepository.findByMemberUserId(userId).stream()
+        // Only count families where the user is already a PARENT. A CHILD membership
+        // in another family must not block the user from joining/creating one as a
+        // PARENT — the documented rule is "a PARENT may belong to only one family".
+        boolean parentInOtherFamily = familyRepository.findByParentUserId(userId).stream()
                 .anyMatch(f -> !f.getId().equals(targetFamilyId));
-        if (inOtherFamily) {
+        if (parentInOtherFamily) {
             throw new BusinessException("A parent can only belong to one family");
         }
     }

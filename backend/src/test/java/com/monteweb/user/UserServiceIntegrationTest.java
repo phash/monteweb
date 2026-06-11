@@ -1,13 +1,19 @@
 package com.monteweb.user;
 
 import com.monteweb.TestContainerConfig;
+import com.monteweb.user.internal.repository.UserRepository;
+import com.monteweb.user.internal.service.UserService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.UUID;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Import(TestContainerConfig.class)
@@ -15,6 +21,32 @@ class UserServiceIntegrationTest {
 
     @Autowired
     private UserModuleApi userModuleApi;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    /**
+     * The SUPERADMIN-availability tests (makeLastActiveSuperadmin) drive the global active
+     * count down by deactivating every active SUPERADMIN directly via the repository —
+     * including the seed {@code admin@monteweb.local}. The backend integration suite shares
+     * ONE database (a single Postgres service container in CI), so that committed
+     * deactivation would otherwise leak into every later test class and break
+     * {@code admin@monteweb.local} login (e.g. TestHelper.loginAsAdmin → promoteToTeacher),
+     * causing whole controller-test classes to error. Restore all SUPERADMINs to active
+     * after each test so the seed admin stays usable for subsequent classes.
+     */
+    @AfterEach
+    void reactivateAllSuperadmins() {
+        userRepository.findAll().stream()
+                .filter(u -> u.getRole() == UserRole.SUPERADMIN && !u.isActive())
+                .forEach(u -> {
+                    u.setActive(true);
+                    userRepository.save(u);
+                });
+    }
 
     @Test
     void createUser_shouldPersistAndReturn() {
@@ -132,5 +164,63 @@ class UserServiceIntegrationTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(
                         () -> userModuleApi.updateProfile(user.id(), "First", null, null))
                 .isInstanceOf(com.monteweb.shared.exception.BadRequestException.class);
+    }
+
+    // --- US-341/342: SUPERADMIN availability safeguards ---
+
+    /**
+     * Drives the SUPERADMIN active-count down to exactly one (the freshly created test
+     * SUPERADMIN) by deactivating every other active SUPERADMIN directly via the
+     * repository (bypassing the service-level guard). Returns the id of the last
+     * remaining active SUPERADMIN.
+     */
+    private UUID makeLastActiveSuperadmin(String email) {
+        // Deactivate all currently-active SUPERADMINs (e.g. the seeded admin) directly.
+        userRepository.findAll().stream()
+                .filter(u -> u.getRole() == UserRole.SUPERADMIN && u.isActive())
+                .forEach(u -> {
+                    u.setActive(false);
+                    userRepository.save(u);
+                });
+        var created = userModuleApi.createUser(email, "hash", "Last", "Admin", null, UserRole.SUPERADMIN);
+        // createUser persists as PARENT-less SUPERADMIN with active=true by default.
+        assertThat(userRepository.countByRoleAndActive(UserRole.SUPERADMIN, true)).isEqualTo(1);
+        return created.id();
+    }
+
+    @Test
+    void updateRole_demotingLastActiveSuperadmin_shouldThrow() {
+        UUID lastAdmin = makeLastActiveSuperadmin("last-superadmin-demote@example.com");
+
+        assertThatThrownBy(() -> userService.updateRole(lastAdmin, UserRole.PARENT))
+                .isInstanceOf(com.monteweb.shared.exception.BusinessException.class)
+                .hasMessageContaining("last active SUPERADMIN");
+
+        // Role unchanged.
+        assertThat(userRepository.findById(lastAdmin).orElseThrow().getRole())
+                .isEqualTo(UserRole.SUPERADMIN);
+    }
+
+    @Test
+    void updateRole_demotingSuperadminWhenAnotherActiveExists_shouldSucceed() {
+        // Ensure two active SUPERADMINs exist, then demoting one must be allowed.
+        makeLastActiveSuperadmin("two-admins-base@example.com");
+        var second = userModuleApi.createUser(
+                "two-admins-second@example.com", "hash", "Second", "Admin", null, UserRole.SUPERADMIN);
+        assertThat(userRepository.countByRoleAndActive(UserRole.SUPERADMIN, true)).isEqualTo(2);
+
+        var updated = userService.updateRole(second.id(), UserRole.PARENT);
+        assertThat(updated.role()).isEqualTo(UserRole.PARENT);
+    }
+
+    @Test
+    void setActive_deactivatingLastActiveSuperadmin_shouldThrow() {
+        UUID lastAdmin = makeLastActiveSuperadmin("last-superadmin-deactivate@example.com");
+
+        assertThatThrownBy(() -> userService.setActive(lastAdmin, false))
+                .isInstanceOf(com.monteweb.shared.exception.BusinessException.class)
+                .hasMessageContaining("last active SUPERADMIN");
+
+        assertThat(userRepository.findById(lastAdmin).orElseThrow().isActive()).isTrue();
     }
 }

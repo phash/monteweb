@@ -106,33 +106,55 @@ public class BookmarkService implements BookmarkModuleApi {
                 bookmark.getUserId(),
                 bookmark.getContentType(),
                 bookmark.getContentId(),
-                resolveTitle(bookmark.getContentType(), bookmark.getContentId()),
+                // Resolve the title ONLY for the bookmark's owner and ONLY through
+                // access-checked lookups, so a restricted source item never leaks
+                // its title to a user who may not see it (broken object-level
+                // authorization, see resolveTitle).
+                resolveTitle(bookmark.getContentType(), bookmark.getContentId(), bookmark.getUserId()),
                 bookmark.getCreatedAt()
         );
     }
 
     /**
-     * Best-effort resolution of a display title from the source module.
+     * Best-effort, access-checked resolution of a display title from the source module.
      *
-     * <p>Currently supports POST (feed) and EVENT (calendar), whose public
-     * facades expose a single-item lookup with a title. JOB and WIKI_PAGE
-     * return {@code null} because {@code JobboardModuleApi}/{@code WikiModuleApi}
-     * do not yet expose a by-id title lookup (cross-module API gap — see flags).
-     * Returns {@code null} on any failure so listing a bookmark never breaks
-     * because a source item is missing or its module is disabled.
+     * <p>Security: the denormalized {@link BookmarkInfo#title()} is a convenience
+     * label, but it must never reveal the title of content the bookmark owner is
+     * not allowed to see. A bookmark can hold ANY caller-supplied {@code contentId}
+     * (see {@link #toggle}, which only validates the content <em>type</em>, never
+     * read access), so an authenticated PARENT/STUDENT could otherwise bookmark a
+     * post in a private room they are not a member of and then read its title back
+     * here. To prevent that, titles are resolved exclusively through the source
+     * module's <em>access-checked</em> facade, passing {@code ownerId}; if the owner
+     * lacks access the source returns {@link Optional#empty()} (or throws
+     * {@link com.monteweb.shared.exception.ForbiddenException}, caught below) and we
+     * fall back to a {@code null} title.
+     *
+     * <p>The raw, unfiltered {@code FeedModuleApi.findPostById} /
+     * {@code CalendarModuleApi.findById} lookups are deliberately NOT used here —
+     * they perform no authorization and leaked restricted titles previously
+     * (broken object-level authorization). Until the feed and calendar modules
+     * expose <em>access-checked</em> by-id facades
+     * ({@code FeedModuleApi.findPostByIdForUser(postId, userId)} delegating to
+     * {@code FeedService.verifyPostReadAccess}, and
+     * {@code CalendarModuleApi.findByIdForUser(eventId, userId)} delegating to
+     * {@code CalendarService.getEvent}), POST and EVENT titles are intentionally
+     * left {@code null} rather than risk leaking a restricted title. This is a
+     * cross-module API gap that is out of this module's scope to add — see flags.
+     *
+     * <p>JOB and WIKI_PAGE likewise return {@code null} because their modules do
+     * not yet expose a by-id title lookup. {@code title} is documented as a
+     * best-effort, nullable label on {@link BookmarkInfo}, so a {@code null} here
+     * never breaks listing a bookmark.
+     *
+     * @param ownerId the user who owns the bookmark; access must be evaluated for
+     *                them once the access-checked facades exist
      */
-    private String resolveTitle(String contentType, UUID contentId) {
-        try {
-            return switch (contentType) {
-                case "POST" -> feedModuleApi == null ? null
-                        : feedModuleApi.findPostById(contentId).map(p -> p.title()).orElse(null);
-                case "EVENT" -> calendarModuleApi == null ? null
-                        : calendarModuleApi.findById(contentId).map(e -> e.title()).orElse(null);
-                default -> null; // JOB, WIKI_PAGE: no by-id title facade yet
-            };
-        } catch (RuntimeException ex) {
-            log.debug("Could not resolve title for {} {}: {}", contentType, contentId, ex.getMessage());
-            return null;
-        }
+    private String resolveTitle(String contentType, UUID contentId, UUID ownerId) {
+        // SECURITY: do not resolve POST/EVENT titles through the unfiltered
+        // by-id facades (feedModuleApi.findPostById / calendarModuleApi.findById)
+        // — doing so leaks titles of content the owner may not see. Restore
+        // per-type resolution only via access-checked facades (see Javadoc).
+        return null;
     }
 }

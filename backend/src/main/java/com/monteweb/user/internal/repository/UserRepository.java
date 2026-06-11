@@ -23,6 +23,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     Page<User> findByActiveTrue(Pageable pageable);
 
+    /**
+     * Counts users that currently have the given role and active flag.
+     * Used to enforce the "last active SUPERADMIN cannot be demoted" safeguard (US-341).
+     */
+    long countByRoleAndActive(UserRole role, boolean active);
+
     @Query("""
         SELECT u FROM User u
         WHERE u.active = true

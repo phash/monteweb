@@ -366,11 +366,15 @@ class MessagingServiceTest {
         }
 
         @Test
-        @DisplayName("Teacher can create a group with parents (staff bypasses comm rules)")
+        @DisplayName("Teacher can create a group with parents only when parent-to-parent is enabled")
         void groupConversation_staffCreatorSucceeds() {
             when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.TEACHER)));
             when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.PARENT)));
             when(userModuleApi.findById(userC)).thenReturn(Optional.of(makeUser(userC, UserRole.PARENT)));
+            // Pairwise check across the two parents consults the comm-rule toggle.
+            when(userModuleApi.findByIds(List.of(USER_B, userC))).thenReturn(List.of(
+                    makeUser(USER_B, UserRole.PARENT), makeUser(userC, UserRole.PARENT)));
+            when(adminModuleApi.getTenantConfig()).thenReturn(makeTenantConfig(true, false));
 
             var savedConv = makeConversation(CONV_ID, true, USER_A);
             when(conversationRepository.save(any(Conversation.class))).thenReturn(savedConv);
@@ -392,7 +396,67 @@ class MessagingServiceTest {
             verify(conversationRepository).save(any(Conversation.class));
             // creator + 2 participants
             verify(participantRepository, times(3)).save(any(ConversationParticipant.class));
-            verify(adminModuleApi, never()).getTenantConfig();
+        }
+
+        @Test
+        @DisplayName("Staff creator CANNOT seed a parent-to-parent group when the toggle is OFF (bypass closed)")
+        void groupConversation_staffCannotSeedParentToParentWhenDisabled() {
+            // Teacher creates a group of two parents. The creator-vs-each check passes (staff bypass),
+            // but the pairwise parent-to-parent check must still enforce the disabled toggle.
+            when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.TEACHER)));
+            lenient().when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.PARENT)));
+            lenient().when(userModuleApi.findById(userC)).thenReturn(Optional.of(makeUser(userC, UserRole.PARENT)));
+            when(userModuleApi.findByIds(List.of(USER_B, userC))).thenReturn(List.of(
+                    makeUser(USER_B, UserRole.PARENT), makeUser(userC, UserRole.PARENT)));
+            when(adminModuleApi.getTenantConfig()).thenReturn(makeTenantConfig(false, false));
+
+            assertThatThrownBy(() -> service.startUserGroupConversation(USER_A, "Group", List.of(USER_B, userC)))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Parent-to-parent");
+
+            verify(conversationRepository, never()).save(any(Conversation.class));
+        }
+
+        @Test
+        @DisplayName("Staff creator CANNOT seed a student-to-student group when the toggle is OFF (bypass closed)")
+        void groupConversation_staffCannotSeedStudentToStudentWhenDisabled() {
+            when(userModuleApi.findById(USER_A)).thenReturn(Optional.of(makeUser(USER_A, UserRole.SECTION_ADMIN)));
+            lenient().when(userModuleApi.findById(USER_B)).thenReturn(Optional.of(makeUser(USER_B, UserRole.STUDENT)));
+            lenient().when(userModuleApi.findById(userC)).thenReturn(Optional.of(makeUser(userC, UserRole.STUDENT)));
+            when(userModuleApi.findByIds(List.of(USER_B, userC))).thenReturn(List.of(
+                    makeUser(USER_B, UserRole.STUDENT), makeUser(userC, UserRole.STUDENT)));
+            when(adminModuleApi.getTenantConfig()).thenReturn(makeTenantConfig(false, false));
+
+            assertThatThrownBy(() -> service.startUserGroupConversation(USER_A, "Group", List.of(USER_B, userC)))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("Student-to-student");
+
+            verify(conversationRepository, never()).save(any(Conversation.class));
+        }
+    }
+
+    // ── Close Message Poll ───────────────────────────────────────────────
+
+    @Nested
+    @DisplayName("Close Message Poll")
+    class CloseMessagePoll {
+
+        @Test
+        @DisplayName("Staff who is NOT a participant cannot close a poll (cross-conversation IDOR blocked)")
+        void closeMessagePoll_nonParticipantStaffThrows() {
+            UUID msgId = UUID.randomUUID();
+            // Poll authored by USER_B; USER_A is a teacher but NOT a participant of CONV_ID.
+            var msg = makeMessage(msgId, CONV_ID, USER_B, "Poll?");
+            when(messageRepository.findById(msgId)).thenReturn(Optional.of(msg));
+            when(participantRepository.existsByConversationIdAndUserId(CONV_ID, USER_A)).thenReturn(false);
+
+            assertThatThrownBy(() -> service.closeMessagePoll(msgId, USER_A))
+                    .isInstanceOf(ForbiddenException.class)
+                    .hasMessageContaining("not a participant");
+
+            verify(messagePollRepository, never()).save(any(MessagePoll.class));
+            // Role check must not even be reached for a non-participant.
+            verify(userModuleApi, never()).findById(USER_A);
         }
     }
 

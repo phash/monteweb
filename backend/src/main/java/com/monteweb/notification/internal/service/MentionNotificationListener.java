@@ -4,12 +4,15 @@ import com.monteweb.feed.FeedCommentCreatedEvent;
 import com.monteweb.feed.FeedModuleApi;
 import com.monteweb.feed.FeedPostCreatedEvent;
 import com.monteweb.feed.FeedPostInfo;
+import com.monteweb.feed.SourceType;
 import com.monteweb.messaging.MessageSentEvent;
 import com.monteweb.notification.NotificationType;
+import com.monteweb.room.RoomModuleApi;
 import com.monteweb.shared.util.MentionParser;
 import org.springframework.modulith.events.ApplicationModuleListener;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
@@ -26,11 +29,14 @@ public class MentionNotificationListener {
 
     private final NotificationService notificationService;
     private final FeedModuleApi feedModuleApi;
+    private final RoomModuleApi roomModuleApi;
 
     public MentionNotificationListener(NotificationService notificationService,
-                                       FeedModuleApi feedModuleApi) {
+                                       FeedModuleApi feedModuleApi,
+                                       RoomModuleApi roomModuleApi) {
         this.notificationService = notificationService;
         this.feedModuleApi = feedModuleApi;
+        this.roomModuleApi = roomModuleApi;
     }
 
     @ApplicationModuleListener
@@ -38,10 +44,18 @@ public class MentionNotificationListener {
         Set<UUID> mentionedIds = MentionParser.extractMentionedUserIds(event.content());
         if (mentionedIds.isEmpty()) return;
 
+        // Security: for ROOM-scoped posts, only members can see the post, so MENTION
+        // notifications (which carry the post title/preview) must not be delivered to
+        // non-members. Otherwise a member could embed @[arbitraryUserId:...] to leak a
+        // private room post to an outsider and spam them. Broader scopes (SECTION/SCHOOL/
+        // BOARD/SYSTEM) are visible to the relevant audience, so mentions stay allowed.
+        boolean roomScoped = event.sourceType() == SourceType.ROOM && event.sourceId() != null;
+
         String link = event.sourceId() != null ? "/rooms/" + event.sourceId() : "/feed";
 
         for (UUID mentionedUserId : mentionedIds) {
             if (mentionedUserId.equals(event.authorId())) continue;
+            if (roomScoped && !roomModuleApi.isUserInRoom(mentionedUserId, event.sourceId())) continue;
 
             notificationService.sendNotification(
                     mentionedUserId,
@@ -101,10 +115,21 @@ public class MentionNotificationListener {
         Set<UUID> mentionedIds = MentionParser.extractMentionedUserIds(event.fullContent());
         if (mentionedIds.isEmpty()) return;
 
+        // Security: only deliver MENTION notifications (which carry a preview of the private
+        // message body) to actual participants of the conversation. Otherwise a participant
+        // could embed @[arbitraryUserId:...] to leak private message content to outsiders and
+        // spam unsolicited notifications to any user by UUID.
+        Set<UUID> participants = new HashSet<>();
+        if (event.recipientIds() != null) {
+            participants.addAll(event.recipientIds());
+        }
+        participants.add(event.senderId());
+
         String link = "/messages/" + event.conversationId();
 
         for (UUID mentionedUserId : mentionedIds) {
             if (mentionedUserId.equals(event.senderId())) continue;
+            if (!participants.contains(mentionedUserId)) continue;
 
             notificationService.sendNotification(
                     mentionedUserId,

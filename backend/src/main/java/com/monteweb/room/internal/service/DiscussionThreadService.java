@@ -198,8 +198,11 @@ public class DiscussionThreadService {
         var userRole = userModuleApi.findById(userId).map(u -> u.role()).orElse(null);
         var roomRole = roomModuleApi.getUserRoleInRoom(userId, roomId).orElse(null);
 
-        boolean canSeeAll = userRole == UserRole.TEACHER || userRole == UserRole.SUPERADMIN
-                || userRole == UserRole.SECTION_ADMIN || roomRole == RoomRole.LEADER;
+        // SUPERADMIN is handled (global) inside hasAdminRoleForRoom, which also section-scopes
+        // SECTION_ADMIN to the room's section. A bare SECTION_ADMIN of another section must NOT
+        // be treated as "see all audiences" in a foreign-section room they merely belong to.
+        boolean canSeeAll = userRole == UserRole.TEACHER
+                || hasAdminRoleForRoom(userId, roomId) || roomRole == RoomRole.LEADER;
         if (canSeeAll) {
             return null;
         }

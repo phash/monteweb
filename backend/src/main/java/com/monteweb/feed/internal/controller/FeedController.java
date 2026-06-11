@@ -235,7 +235,7 @@ public class FeedController {
         return new FeedPostInfo(
                 post.id(), post.authorId(), post.authorName(), post.title(), post.content(),
                 post.sourceType(), post.sourceId(), post.sourceName(), post.pinned(),
-                post.parentOnly(), post.commentCount(), post.attachments(),
+                post.parentOnly(), post.targeted(), post.commentCount(), post.attachments(),
                 reactions, post.poll(), post.publishedAt(), post.createdAt()
         );
     }

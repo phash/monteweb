@@ -140,6 +140,14 @@ class FormsServiceTest {
     @DisplayName("Submit Response")
     class SubmitResponse {
 
+        @BeforeEach
+        void stubActiveResponder() {
+            // checkResponderAccess (US-163) resolves the caller first; a SCHOOL
+            // scoped form admits any active user.
+            lenient().when(userModule.findById(USER_ID))
+                    .thenReturn(Optional.of(makeUser(USER_ID, UserRole.PARENT)));
+        }
+
         @Test
         @DisplayName("should throw when form is not published (DRAFT)")
         void submitResponse_notPublishedThrows() {
@@ -160,6 +168,24 @@ class FormsServiceTest {
             assertThatThrownBy(() -> service.submitResponse(FORM_ID, makeSubmitRequest(QUESTION_ID_1, "answer"), USER_ID))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("deadline has passed");
+        }
+
+        @Test
+        @DisplayName("should throw 403 when responder is not in the form's target group")
+        void submitResponse_notInTargetGroupForbidden() {
+            var roomId = UUID.randomUUID();
+            var form = makeForm(FormStatus.PUBLISHED, false, null);
+            form.setScope(FormScope.ROOM);
+            form.setScopeId(roomId);
+            // The form has a different creator so the caller is a plain responder.
+            form.setCreatedBy(UUID.randomUUID());
+            when(formRepository.findById(FORM_ID)).thenReturn(Optional.of(form));
+            // Caller is not a member of the targeted room.
+            when(roomModule.getUserRoleInRoom(USER_ID, roomId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.submitResponse(FORM_ID, makeSubmitRequest(QUESTION_ID_1, "answer"), USER_ID))
+                    .isInstanceOf(com.monteweb.shared.exception.ForbiddenException.class)
+                    .hasMessageContaining("target group");
         }
 
         @Test

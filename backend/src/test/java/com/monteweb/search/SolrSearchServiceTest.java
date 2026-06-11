@@ -178,12 +178,14 @@ class SolrSearchServiceTest {
         try {
             var constructor = SolrSearchService.class.getDeclaredConstructor(
                     org.apache.solr.client.solrj.SolrClient.class,
-                    com.monteweb.room.RoomModuleApi.class
+                    com.monteweb.room.RoomModuleApi.class,
+                    com.monteweb.user.UserModuleApi.class
             );
             constructor.setAccessible(true);
             return constructor.newInstance(
                     (org.apache.solr.client.solrj.SolrClient) null,
-                    (com.monteweb.room.RoomModuleApi) null
+                    (com.monteweb.room.RoomModuleApi) null,
+                    (com.monteweb.user.UserModuleApi) null
             );
         } catch (Exception e) {
             throw new RuntimeException("Failed to create SolrSearchService instance for testing", e);

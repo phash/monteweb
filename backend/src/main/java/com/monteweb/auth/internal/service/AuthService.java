@@ -10,6 +10,7 @@ import com.monteweb.shared.exception.BusinessException;
 import com.monteweb.shared.exception.ForbiddenException;
 import com.monteweb.shared.exception.ResourceNotFoundException;
 import com.monteweb.shared.util.AesEncryptionService;
+import com.monteweb.shared.util.SecurityUtils;
 import com.monteweb.user.UserInfo;
 import com.monteweb.user.UserModuleApi;
 import com.monteweb.user.UserRole;
@@ -447,9 +448,18 @@ public class AuthService implements AuthModuleApi {
                 targetUserId, target.email(), target.role().name(), adminUserId);
         String refreshToken = refreshTokenService.createRefreshToken(adminUserId);
 
-        // 6. Audit log
+        // 6. Audit log — persistent, queryable record (US-348). Impersonation is the
+        // highest-trust action in the system, so it MUST land in audit_log (exposed via
+        // GET /admin/audit-log), not only in the transient application log.
         log.info("IMPERSONATION_START: Admin {} impersonating user {} ({})",
                 adminUserId, target.email(), targetUserId);
+        adminModuleApi.recordAuditEvent(
+                adminUserId,
+                "IMPERSONATION_START",
+                "USER",
+                targetUserId,
+                java.util.Map.<String, Object>of("targetEmail", target.email()),
+                SecurityUtils.getClientIpAddress());
 
         return new LoginResponse(accessToken, refreshToken, target.id(), target.email(), target.role().name());
     }
@@ -460,6 +470,13 @@ public class AuthService implements AuthModuleApi {
                 .orElseThrow(() -> new ResourceNotFoundException("Admin user not found"));
 
         log.info("IMPERSONATION_STOP: Admin {} returning to own session", adminUserId);
+        adminModuleApi.recordAuditEvent(
+                adminUserId,
+                "IMPERSONATION_STOP",
+                "USER",
+                adminUserId,
+                java.util.Map.<String, Object>of("adminEmail", admin.email()),
+                SecurityUtils.getClientIpAddress());
 
         return new LoginResponse(
                 jwtService.generateAccessToken(adminUserId, admin.email(), admin.role().name()),
@@ -486,6 +503,15 @@ public class AuthService implements AuthModuleApi {
     }
 
     private LoginResponse generateTokenResponse(UserInfo user) {
+        // Centralised active-account gate: every session-minting path funnels through here
+        // (login, register, refresh, verify2fa, confirm2faWithTempToken), so re-checking the
+        // freshly-loaded account here closes the window where a deactivated/suspended user
+        // could still complete a second login leg (2FA / temp-token enrollment) or refresh
+        // within the temp/refresh token lifetime and obtain a full session. Uses the same
+        // generic "Invalid credentials" message as login() to avoid leaking account state.
+        if (!user.active()) {
+            throw new BusinessException("Invalid credentials");
+        }
         String accessToken = jwtService.generateAccessToken(user.id(), user.email(), user.role().name());
         String refreshToken = refreshTokenService.createRefreshToken(user.id());
 

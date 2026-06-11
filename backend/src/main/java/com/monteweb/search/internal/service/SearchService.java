@@ -78,17 +78,19 @@ public class SearchService {
         if ("ALL".equals(type) || "ROOM".equals(type)) {
             results.addAll(searchRooms(q, limit));
         }
+        // Resolve the user's accessible rooms once: needed for POST/EVENT scoping as well as the
+        // room-scoped types (FILE/WIKI/TASK).
+        Set<UUID> accessibleRoomIds = resolveAccessibleRoomIds(userId);
         if ("ALL".equals(type) || "POST".equals(type)) {
-            results.addAll(searchPosts(q, limit, userId));
+            results.addAll(searchPosts(q, limit, userId, accessibleRoomIds));
         }
         if ("ALL".equals(type) || "EVENT".equals(type)) {
-            results.addAll(searchEvents(q, limit));
+            results.addAll(searchEvents(q, limit, userId, accessibleRoomIds));
         }
-        // Room-scoped types: only resolve the user's accessible rooms when needed.
+        // Room-scoped types: reuse the accessible rooms resolved above.
         if (isRoomScopedRequested(type)) {
-            Set<UUID> accessibleRoomIds = resolveAccessibleRoomIds(userId);
             if ("ALL".equals(type) || "FILE".equals(type)) {
-                results.addAll(searchFiles(q, limit, accessibleRoomIds));
+                results.addAll(searchFiles(q, limit, accessibleRoomIds, userId));
             }
             if ("ALL".equals(type) || "WIKI".equals(type)) {
                 results.addAll(searchWiki(q, limit, accessibleRoomIds));
@@ -134,10 +136,18 @@ public class SearchService {
         }
     }
 
-    private List<SearchResult> searchPosts(String query, int limit, UUID userId) {
+    /**
+     * Feed's {@code searchPosts} already filters per-user targeted posts (target_user_ids), but
+     * NOT room membership or parentOnly. We re-apply those here so the DB fallback mirrors the
+     * Solr access filter: ROOM-scoped posts require membership, and parentOnly posts are hidden
+     * from students.
+     */
+    private List<SearchResult> searchPosts(String query, int limit, UUID userId, Set<UUID> accessibleRoomIds) {
         if (feedModuleApi == null) return List.of();
+        boolean isStudent = isStudent(userId);
         try {
             return feedModuleApi.searchPosts(query, limit, userId).stream()
+                    .filter(p -> canSeePost(p, accessibleRoomIds, isStudent))
                     .map(this::toPostResult)
                     .toList();
         } catch (Exception e) {
@@ -145,15 +155,47 @@ public class SearchService {
         }
     }
 
-    private List<SearchResult> searchEvents(String query, int limit) {
+    private boolean canSeePost(FeedPostInfo post, Set<UUID> accessibleRoomIds, boolean isStudent) {
+        // ROOM-scoped posts are only visible to room members.
+        if (post.sourceType() == com.monteweb.feed.SourceType.ROOM) {
+            if (post.sourceId() == null || !accessibleRoomIds.contains(post.sourceId())) {
+                return false;
+            }
+        }
+        // parentOnly posts must never be shown to students.
+        if (post.parentOnly() && isStudent) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Calendar's {@code searchEvents} returns events of every scope. We restrict ROOM-scoped
+     * events to the user's rooms and SECTION-scoped events to the user's sections; SCHOOL events
+     * remain visible to all. Mirrors the Solr EVENT access filter.
+     */
+    private List<SearchResult> searchEvents(String query, int limit, UUID userId, Set<UUID> accessibleRoomIds) {
         if (calendarModuleApi == null) return List.of();
+        Set<UUID> accessibleSectionIds = resolveAccessibleSectionIds(userId);
         try {
             return calendarModuleApi.searchEvents(query, limit).stream()
+                    .filter(e -> canSeeEvent(e, accessibleRoomIds, accessibleSectionIds))
                     .map(this::toEventResult)
                     .toList();
         } catch (Exception e) {
             return List.of();
         }
+    }
+
+    private boolean canSeeEvent(EventInfo event, Set<UUID> accessibleRoomIds, Set<UUID> accessibleSectionIds) {
+        if (event.scope() == null) {
+            return false; // unknown scope: fail closed
+        }
+        return switch (event.scope()) {
+            case SCHOOL -> true;
+            case ROOM -> event.scopeId() != null && accessibleRoomIds.contains(event.scopeId());
+            case SECTION -> event.scopeId() != null && accessibleSectionIds.contains(event.scopeId());
+        };
     }
 
     private boolean isRoomScopedRequested(String type) {
@@ -177,14 +219,65 @@ public class SearchService {
         }
     }
 
-    private List<SearchResult> searchFiles(String query, int limit, Set<UUID> accessibleRoomIds) {
+    /** Sections the user belongs to, derived from the sections of the rooms they are a member of. */
+    private Set<UUID> resolveAccessibleSectionIds(UUID userId) {
+        if (userId == null) return Set.of();
+        try {
+            return roomModuleApi.findByUserId(userId).stream()
+                    .map(RoomInfo::sectionId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toCollection(HashSet::new));
+        } catch (Exception e) {
+            return Set.of();
+        }
+    }
+
+    private boolean isStudent(UUID userId) {
+        if (userId == null) return false;
+        try {
+            return userModuleApi.findById(userId)
+                    .map(UserInfo::role)
+                    .map(r -> r == com.monteweb.user.UserRole.STUDENT)
+                    .orElse(false);
+        } catch (Exception e) {
+            return true; // fail closed: hide parentOnly content
+        }
+    }
+
+    /**
+     * File audiences the user may see, mirroring {@code FileService.getAllowedAudiences} via the
+     * global role (per-room LEADER/PARENT_MEMBER room roles are not resolved here — see FLAG).
+     */
+    private Set<String> allowedAudiencesForUser(UUID userId) {
+        if (userId == null) return Set.of("ALL");
+        var role = userModuleApi.findById(userId).map(UserInfo::role).orElse(null);
+        if (role == com.monteweb.user.UserRole.TEACHER
+                || role == com.monteweb.user.UserRole.SUPERADMIN
+                || role == com.monteweb.user.UserRole.SECTION_ADMIN) {
+            return Set.of("ALL", "PARENTS_ONLY", "STUDENTS_ONLY");
+        }
+        if (role == com.monteweb.user.UserRole.PARENT) {
+            return Set.of("ALL", "PARENTS_ONLY");
+        }
+        if (role == com.monteweb.user.UserRole.STUDENT) {
+            return Set.of("ALL", "STUDENTS_ONLY");
+        }
+        return Set.of("ALL");
+    }
+
+    private List<SearchResult> searchFiles(String query, int limit, Set<UUID> accessibleRoomIds, UUID userId) {
         if (filesModuleApi == null || accessibleRoomIds.isEmpty()) return List.of();
         String lowerQ = query.toLowerCase();
+        Set<String> allowedAudiences = allowedAudiencesForUser(userId);
         try {
             return filesModuleApi.findAllFiles().stream()
                     .filter(f -> f.roomId() != null && accessibleRoomIds.contains(f.roomId()))
                     .filter(f -> f.originalName() != null
                             && f.originalName().toLowerCase().contains(lowerQ))
+                    // Mirror FileService.listFiles audience gating. We use the file's own audience
+                    // (folder-inherited audience is not exposed cross-module — see FLAG).
+                    .filter(f -> allowedAudiences.contains(
+                            f.audience() == null || f.audience().isBlank() ? "ALL" : f.audience()))
                     .limit(limit)
                     .map(this::toFileResult)
                     .toList();
