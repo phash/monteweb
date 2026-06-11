@@ -147,8 +147,8 @@ describe('AdminTheme', () => {
     const wrapper = mountComponent()
     await flushPromises()
     const inputs = wrapper.findAll('.input-stub')
-    // 8 color fields + 4 school info fields (fullName, principal, techContactName, techContactEmail)
-    expect(inputs.length).toBe(12)
+    // 21 color fields + 4 school info fields (fullName, principal, techContactName, techContactEmail)
+    expect(inputs.length).toBe(25)
   })
 
   it('should render FileUpload for logo', () => {
@@ -168,7 +168,10 @@ describe('AdminTheme', () => {
     await flushPromises()
 
     const buttons = wrapper.findAll('.button-stub')
-    const saveBtn = buttons[buttons.length - 1]
+    // The theme save button is the last "Speichern" (after the school-info save);
+    // the very last button is now "Reset to defaults".
+    const saveButtons = buttons.filter(b => b.text().includes('Speichern'))
+    const saveBtn = saveButtons[saveButtons.length - 1]
     await saveBtn.trigger('click')
     await flushPromises()
 

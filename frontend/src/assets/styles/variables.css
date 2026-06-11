@@ -8,8 +8,8 @@
   --mw-primary-light: #FBBF24;
   --mw-primary-dark: #B88600;       /* 3.26:1 on white — borders, large text, rings */
   --mw-primary-hover: #DBA300;      /* hover fill */
-  --mw-primary-active: #B88600;     /* pressed fill */
-  --mw-primary-border: #B88600;     /* perceivable boundary for yellow fills (1.4.11) */
+  --mw-primary-active: var(--mw-primary-dark);  /* pressed fill (follows -dark) */
+  --mw-primary-border: var(--mw-primary-dark);  /* boundary for yellow fills (1.4.11) */
   --mw-primary-contrast: #111111;   /* BLACK text on yellow (10.3:1) — never white */
 
   /* Link / inline accent — raw yellow is invisible on white (1.84:1),
@@ -58,6 +58,7 @@
   --mw-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --mw-font-size-xs: 0.75rem;
   --mw-font-size-sm: 0.875rem;
+  --mw-font-size-base: 1rem;
   --mw-font-size-md: 1rem;
   --mw-font-size-lg: 1.125rem;
   --mw-font-size-xl: 1.25rem;

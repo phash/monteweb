@@ -12,20 +12,37 @@ export function useTheme() {
     if (!theme) return
     const root = document.documentElement
 
-    // Map theme keys to CSS custom properties
+    // Map theme keys to CSS custom properties. These --mw-* variables are the
+    // single source of truth for the whole UI — PrimeVue components are bridged
+    // to them in main.ts — so editing any of these recolours every element type
+    // (custom + PrimeVue). --mw-primary-active/-border follow --mw-primary-dark.
     const mapping: Record<string, string> = {
+      // Primary / accent
       primaryColor: '--mw-primary',
       primaryHover: '--mw-primary-hover',
+      primaryDark: '--mw-primary-dark',
+      primaryContrast: '--mw-primary-contrast',
+      secondaryColor: '--mw-secondary',
+      linkColor: '--mw-link',
+      focusRing: '--mw-focus-ring',
+      // Backgrounds
       bgMain: '--mw-bg',
       bgCard: '--mw-bg-card',
       bgSidebar: '--mw-bg-sidebar',
+      bgActive: '--mw-bg-active',
+      bgHighlight: '--mw-bg-highlight',
+      // Text
       textColor: '--mw-text',
       textSecondary: '--mw-text-secondary',
       textMuted: '--mw-text-muted',
+      // Borders
+      borderColor: '--mw-border',
       borderLight: '--mw-border-light',
+      // Status
       successColor: '--mw-success',
       warningColor: '--mw-warning',
       dangerColor: '--mw-danger',
+      infoColor: '--mw-info',
     }
 
     for (const [key, cssVar] of Object.entries(mapping)) {
