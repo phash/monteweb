@@ -134,9 +134,16 @@ function isActive(item: { to: string; name: string }) {
 }
 
 .nav-item.active {
-  color: var(--mw-primary);
-  background-color: color-mix(in srgb, var(--mw-primary) 8%, transparent);
-  border-right: 3px solid var(--mw-primary);
+  /* Yellow as the ACTIVE BACKGROUND with black text (10:1) — yellow text on
+     white would be invisible (1.84:1). */
+  color: var(--mw-primary-contrast);
+  font-weight: 600;
+  background-color: var(--mw-primary);
+  border-right: 3px solid var(--mw-primary-dark);
+}
+
+.nav-item.active i {
+  color: var(--mw-primary-contrast);
 }
 
 .nav-item i {

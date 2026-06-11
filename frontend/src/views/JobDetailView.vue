@@ -304,6 +304,7 @@ function formatDate(date: string | null) {
                 text
                 size="small"
                 severity="danger"
+                :aria-label="t('common.delete')"
                 @click="deleteAttachment(att.id)"
               />
             </div>

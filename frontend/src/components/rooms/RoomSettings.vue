@@ -66,26 +66,26 @@ async function saveSettings() {
 
       <div class="setting-row">
         <div class="setting-info">
-          <span class="setting-label">{{ t('chat.title') }}</span>
+          <label class="setting-label" for="setting-chat-enabled">{{ t('chat.title') }}</label>
           <span class="setting-hint">{{ t('rooms.settings.chatHint') }}</span>
         </div>
-        <ToggleSwitch v-model="settings.chatEnabled" />
+        <ToggleSwitch v-model="settings.chatEnabled" inputId="setting-chat-enabled" />
       </div>
 
       <div class="setting-row">
         <div class="setting-info">
-          <span class="setting-label">{{ t('files.title') }}</span>
+          <label class="setting-label" for="setting-files-enabled">{{ t('files.title') }}</label>
           <span class="setting-hint">{{ t('rooms.settings.filesHint') }}</span>
         </div>
-        <ToggleSwitch v-model="settings.filesEnabled" />
+        <ToggleSwitch v-model="settings.filesEnabled" inputId="setting-files-enabled" />
       </div>
 
       <div class="setting-row">
         <div class="setting-info">
-          <span class="setting-label">{{ t('rooms.settings.parentSpace') }}</span>
+          <label class="setting-label" for="setting-parent-space">{{ t('rooms.settings.parentSpace') }}</label>
           <span class="setting-hint">{{ t('rooms.settings.parentSpaceHint') }}</span>
         </div>
-        <ToggleSwitch v-model="settings.parentSpaceEnabled" />
+        <ToggleSwitch v-model="settings.parentSpaceEnabled" inputId="setting-parent-space" />
       </div>
     </div>
 
@@ -124,18 +124,18 @@ async function saveSettings() {
 
       <div class="setting-row">
         <div class="setting-info">
-          <span class="setting-label">{{ t('rooms.settings.allowThreadCreation') }}</span>
+          <label class="setting-label" for="setting-allow-thread-creation">{{ t('rooms.settings.allowThreadCreation') }}</label>
           <span class="setting-hint">{{ t('rooms.settings.allowThreadCreationHint') }}</span>
         </div>
-        <ToggleSwitch v-model="settings.allowMemberThreadCreation" />
+        <ToggleSwitch v-model="settings.allowMemberThreadCreation" inputId="setting-allow-thread-creation" />
       </div>
 
       <div class="setting-row">
         <div class="setting-info">
-          <span class="setting-label">{{ t('rooms.settings.childDiscussion') }}</span>
+          <label class="setting-label" for="setting-child-discussion">{{ t('rooms.settings.childDiscussion') }}</label>
           <span class="setting-hint">{{ t('rooms.settings.childDiscussionHint') }}</span>
         </div>
-        <ToggleSwitch v-model="settings.childDiscussionEnabled" />
+        <ToggleSwitch v-model="settings.childDiscussionEnabled" inputId="setting-child-discussion" />
       </div>
     </div>
 

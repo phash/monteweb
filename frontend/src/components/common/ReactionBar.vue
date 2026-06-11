@@ -9,6 +9,18 @@ export interface ReactionData {
 
 const EMOJIS = ['👍', '👎', '❤️', '😂', '😢']
 
+const EMOJI_LABELS: Record<string, string> = {
+  '👍': 'Daumen hoch',
+  '👎': 'Daumen runter',
+  '❤️': 'Herz',
+  '😂': 'Lachen',
+  '😢': 'Traurig',
+}
+
+function emojiLabel(emoji: string): string {
+  return EMOJI_LABELS[emoji] ?? emoji
+}
+
 const props = defineProps<{
   reactions: ReactionData[]
   compact?: boolean
@@ -48,12 +60,20 @@ function toggleReaction(emoji: string) {
       <button class="reaction-add" @click="showPicker = !showPicker" title="Reaktion hinzufügen">
         <i class="pi pi-face-smile" />
       </button>
-      <div v-if="showPicker" class="reaction-picker" @mouseleave="showPicker = false">
+      <div
+        v-if="showPicker"
+        class="reaction-picker"
+        role="menu"
+        :aria-label="'Reaktion auswählen'"
+        @mouseleave="showPicker = false"
+        @keydown.escape="showPicker = false"
+      >
         <button
           v-for="emoji in EMOJIS"
           :key="emoji"
           class="picker-emoji"
           :class="{ active: getReaction(emoji)?.userReacted }"
+          :aria-label="emojiLabel(emoji)"
           @click="toggleReaction(emoji)"
         >
           {{ emoji }}
@@ -86,13 +106,13 @@ function toggleReaction(emoji: string) {
 }
 
 .reaction-chip:hover {
-  border-color: var(--mw-primary, #4caf50);
+  border-color: var(--mw-primary);
   background: var(--mw-bg-highlight, #f5f5f5);
 }
 
 .reaction-chip.active {
-  border-color: var(--mw-primary, #4caf50);
-  background: var(--mw-primary-light, #e8f5e9);
+  border-color: var(--mw-primary);
+  background: var(--mw-primary-light);
 }
 
 .reaction-emoji {
@@ -107,7 +127,7 @@ function toggleReaction(emoji: string) {
 }
 
 .reaction-chip.active .reaction-count {
-  color: var(--mw-primary, #4caf50);
+  color: var(--mw-primary);
 }
 
 .reaction-add-wrapper {
@@ -120,6 +140,8 @@ function toggleReaction(emoji: string) {
   justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
+  min-width: 44px;
+  min-height: 44px;
   border: 1px dashed var(--mw-border-light, #e0e0e0);
   border-radius: 50%;
   background: transparent;
@@ -130,8 +152,8 @@ function toggleReaction(emoji: string) {
 }
 
 .reaction-add:hover {
-  border-color: var(--mw-primary, #4caf50);
-  color: var(--mw-primary, #4caf50);
+  border-color: var(--mw-primary);
+  color: var(--mw-primary);
   background: var(--mw-bg-highlight, #f5f5f5);
 }
 
@@ -171,7 +193,7 @@ function toggleReaction(emoji: string) {
 }
 
 .picker-emoji.active {
-  background: var(--mw-primary-light, #e8f5e9);
+  background: var(--mw-primary-light);
 }
 
 .compact .reaction-chip {
@@ -186,6 +208,8 @@ function toggleReaction(emoji: string) {
 .compact .reaction-add {
   width: 1.5rem;
   height: 1.5rem;
+  min-width: 44px;
+  min-height: 44px;
   font-size: 0.7rem;
 }
 </style>

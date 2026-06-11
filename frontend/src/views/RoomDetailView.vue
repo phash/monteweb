@@ -557,6 +557,7 @@ async function toggleMute() {
             icon="pi pi-pencil"
             text
             size="small"
+            :aria-label="t('common.edit')"
             @click="startEditPublicDesc"
           />
         </div>
@@ -685,6 +686,7 @@ async function toggleMute() {
                           text rounded
                           severity="danger"
                           size="small"
+                          aria-label="Mitglied entfernen"
                           @click="removeMemberFromRoom(member.userId)"
                         />
                       </div>
@@ -708,6 +710,7 @@ async function toggleMute() {
                           text rounded
                           severity="danger"
                           size="small"
+                          aria-label="Mitglied entfernen"
                           @click="removeMemberFromRoom(member.userId)"
                         />
                       </div>
@@ -742,6 +745,7 @@ async function toggleMute() {
                           text rounded
                           severity="danger"
                           size="small"
+                          aria-label="Mitglied entfernen"
                           @click="removeMemberFromRoom(member.userId)"
                         />
                       </div>
@@ -779,6 +783,7 @@ async function toggleMute() {
                             text rounded
                             severity="danger"
                             size="small"
+                            aria-label="Mitglied entfernen"
                             @click="removeMemberFromRoom(member.userId)"
                           />
                         </div>
@@ -812,6 +817,7 @@ async function toggleMute() {
                           text rounded
                           severity="danger"
                           size="small"
+                          aria-label="Mitglied entfernen"
                           @click="removeMemberFromRoom(member.userId)"
                         />
                       </div>

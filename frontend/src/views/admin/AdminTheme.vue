@@ -14,14 +14,14 @@ const adminStore = useAdminStore()
 const toast = useToast()
 
 const theme = ref<Record<string, string>>({
-  primaryColor: '#3B82F6',
-  primaryHover: '#2563EB',
-  bgMain: '#F9FAFB',
+  primaryColor: '#F5B400',
+  primaryHover: '#DBA300',
+  bgMain: '#FFFFFF',
   bgCard: '#FFFFFF',
-  bgSidebar: '#FFFFFF',
-  textColor: '#111827',
-  textSecondary: '#6B7280',
-  borderLight: '#E5E7EB',
+  bgSidebar: '#FFFBEA',
+  textColor: '#111111',
+  textSecondary: '#333333',
+  borderLight: '#EFE9D6',
 })
 
 const schoolName = ref('')

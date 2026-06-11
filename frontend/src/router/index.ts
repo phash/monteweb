@@ -385,4 +385,11 @@ router.beforeEach(async (to) => {
   }
 })
 
+// Move focus to the main landmark (skip-link target) after SPA navigation
+// so keyboard/screen-reader users land in the new page content.
+router.afterEach(() => {
+  const m = document.getElementById('main-content')
+  if (m) m.focus()
+})
+
 export default router

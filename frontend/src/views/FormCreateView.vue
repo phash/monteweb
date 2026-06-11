@@ -261,7 +261,7 @@ async function handleSubmit(publish: boolean) {
       <div class="form-grid">
         <div class="field">
           <label for="form-title" class="required">{{ t('forms.formTitle') }}</label>
-          <InputText id="form-title" v-model="title" :placeholder="t('forms.titlePlaceholder')" class="w-full" />
+          <InputText id="form-title" v-model="title" :placeholder="t('forms.titlePlaceholder')" :aria-required="true" class="w-full" />
         </div>
 
         <div class="field">
@@ -278,6 +278,7 @@ async function handleSubmit(publish: boolean) {
               :options="typeOptions.map(o => ({ label: o.label(), value: o.value }))"
               optionLabel="label"
               optionValue="value"
+              :aria-required="true"
               class="w-full"
             />
           </div>
@@ -289,6 +290,7 @@ async function handleSubmit(publish: boolean) {
               :options="scopeOptions"
               optionLabel="label"
               optionValue="value"
+              :aria-required="true"
               class="w-full"
             />
           </div>
@@ -376,7 +378,7 @@ async function handleSubmit(publish: boolean) {
 
             <div class="field">
               <label :for="`q-label-${idx}`" class="required">{{ t('forms.questionLabel') }}</label>
-              <InputText :id="`q-label-${idx}`" v-model="q.label" class="w-full" />
+              <InputText :id="`q-label-${idx}`" v-model="q.label" :aria-required="true" class="w-full" />
             </div>
 
             <div class="field">

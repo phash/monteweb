@@ -594,6 +594,7 @@ async function deleteColumn(columnId: string) {
                 severity="danger"
                 size="small"
                 class="checklist-item-delete"
+                :aria-label="t('common.delete')"
                 @click="deleteChecklistItem(item.id)"
               />
             </div>
@@ -620,6 +621,7 @@ async function deleteColumn(columnId: string) {
               size="small"
               :loading="addingChecklistItem"
               :disabled="!newChecklistItemTitle.trim()"
+              :aria-label="t('common.add')"
               @click="addChecklistItem"
             />
           </div>
@@ -672,6 +674,7 @@ async function deleteColumn(columnId: string) {
               rounded
               severity="danger"
               size="small"
+              :aria-label="t('common.delete')"
               @click="deleteColumn(col.id)"
             />
           </div>

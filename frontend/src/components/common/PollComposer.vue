@@ -66,6 +66,7 @@ function submit() {
     <InputText
       v-model="question"
       :placeholder="t('poll.questionPlaceholder')"
+      :aria-label="t('poll.questionPlaceholder')"
       class="poll-question-input"
     />
 
@@ -74,6 +75,7 @@ function submit() {
         <InputText
           v-model="options[index]"
           :placeholder="t('poll.optionPlaceholder', { n: index + 1 })"
+          :aria-label="t('poll.optionPlaceholder', { n: index + 1 })"
           class="poll-option-input"
         />
         <Button

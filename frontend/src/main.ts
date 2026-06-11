@@ -4,6 +4,7 @@ import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
 import Tooltip from 'primevue/tooltip'
 import Aura from '@primevue/themes/aura'
+import { definePreset } from '@primevue/themes'
 import router from './router'
 import i18n from './i18n'
 import App from './App.vue'
@@ -12,6 +13,43 @@ import { reportError } from './composables/useErrorReporting'
 import 'primeicons/primeicons.css'
 import './assets/styles/global.css'
 
+// MonteWeb golden-yellow theme. Yellow is light, so the primary contrast colour
+// is BLACK (#111) in both light and dark mode — white text on yellow is
+// unreadable (~2:1). The focus ring uses a dark amber so it stays visible
+// against both yellow controls and white surfaces (≥3:1, WCAG 2.4.7 / 1.4.11).
+const MontePreset = definePreset(Aura, {
+  semantic: {
+    primary: {
+      50: '#fffbeb', 100: '#fef3c7', 200: '#fde68a', 300: '#fcd34d', 400: '#fbbf24',
+      500: '#f5b400', 600: '#dba300', 700: '#b88600', 800: '#946a00', 900: '#7a5800', 950: '#463300',
+    },
+    focusRing: {
+      width: '2px',
+      style: 'solid',
+      color: '{primary.700}',
+      offset: '2px',
+    },
+    colorScheme: {
+      light: {
+        primary: {
+          color: '{primary.500}',
+          contrastColor: '#111111',
+          hoverColor: '{primary.600}',
+          activeColor: '{primary.700}',
+        },
+      },
+      dark: {
+        primary: {
+          color: '{primary.400}',
+          contrastColor: '#111111',
+          hoverColor: '{primary.300}',
+          activeColor: '{primary.200}',
+        },
+      },
+    },
+  },
+})
+
 const app = createApp(App)
 
 app.use(createPinia())
@@ -19,7 +57,7 @@ app.use(router)
 app.use(i18n)
 app.use(PrimeVue, {
   theme: {
-    preset: Aura,
+    preset: MontePreset,
     options: {
       prefix: 'p',
       darkModeSelector: '.dark',

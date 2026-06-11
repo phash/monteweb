@@ -578,7 +578,7 @@ async function handleDeleteAttachment(att: ParentLetterAttachmentInfo) {
 }
 
 .att-icon {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
   flex-shrink: 0;
 }
 

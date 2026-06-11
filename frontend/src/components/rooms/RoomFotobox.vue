@@ -168,7 +168,7 @@ function audienceLabel(audience: string): string {
       <template v-else>
         <!-- Photo consent required banner -->
         <div v-if="consentLoaded && !photoConsentGranted" class="consent-required-banner">
-          <i class="pi pi-info-circle" style="color: var(--p-yellow-400)" />
+          <i class="pi pi-info-circle" style="color: var(--mw-warning-text)" />
           <span>{{ t('fotobox.photoConsentRequired') }}</span>
           <router-link to="/privacy">{{ t('fotobox.privacySettings') }}</router-link>
         </div>

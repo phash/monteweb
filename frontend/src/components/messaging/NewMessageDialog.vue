@@ -106,16 +106,17 @@ function onHide() {
   >
     <div class="new-message-form">
       <div class="group-toggle">
-        <label class="toggle-label">
-          <ToggleSwitch v-model="isGroup" />
+        <label class="toggle-label" for="new-msg-group-toggle">
+          <ToggleSwitch v-model="isGroup" inputId="new-msg-group-toggle" />
           <span>{{ t('messages.groupConversation') }}</span>
         </label>
       </div>
 
       <!-- Group name -->
       <div v-if="isGroup" class="form-field">
-        <label>{{ t('messages.groupName') }}</label>
+        <label for="new-msg-group-name">{{ t('messages.groupName') }}</label>
         <InputText
+          id="new-msg-group-name"
           v-model="groupName"
           :placeholder="t('messages.groupNamePlaceholder')"
           class="w-full"
@@ -124,9 +125,10 @@ function onHide() {
 
       <!-- User search -->
       <div class="form-field">
-        <label>{{ t('messages.searchUser') }}</label>
+        <label for="new-msg-search-user">{{ t('messages.searchUser') }}</label>
         <AutoComplete
           v-model="selectedUser"
+          inputId="new-msg-search-user"
           :suggestions="suggestions"
           optionLabel="displayName"
           :placeholder="t('messages.searchUserPlaceholder')"

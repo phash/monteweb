@@ -67,8 +67,8 @@ async function save() {
   >
     <div class="settings-form">
       <div class="field">
-        <label>{{ t('fotobox.enabled') }}</label>
-        <ToggleSwitch v-model="enabled" />
+        <label for="fotobox-enabled">{{ t('fotobox.enabled') }}</label>
+        <ToggleSwitch v-model="enabled" inputId="fotobox-enabled" />
       </div>
       <div class="field">
         <label>{{ t('fotobox.permission') }}</label>

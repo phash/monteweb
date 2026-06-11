@@ -22,6 +22,7 @@ async function toggleBookmark() {
   <Button
     :icon="bookmarked ? 'pi pi-bookmark-fill' : 'pi pi-bookmark'"
     :class="['bookmark-btn', { 'bookmark-active': bookmarked }]"
+    :aria-label="bookmarked ? 'Lesezeichen entfernen' : 'Lesezeichen hinzufügen'"
     text
     rounded
     size="small"

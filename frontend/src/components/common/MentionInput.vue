@@ -230,6 +230,10 @@ function getInitials(name: string) {
       :placeholder="placeholder"
       :autoResize="autoResize"
       :rows="rows"
+      role="combobox"
+      :aria-expanded="showDropdown"
+      aria-autocomplete="list"
+      :aria-activedescendant="showDropdown && searchResults.length > 0 ? `mention-opt-${selectedIndex}` : undefined"
       @input="onInput"
       @keydown="onKeydown"
     />
@@ -237,6 +241,7 @@ function getInitials(name: string) {
       <div
         v-if="showDropdown"
         class="mention-dropdown"
+        role="listbox"
         :style="{ top: dropdownPosition.top + 'px', left: dropdownPosition.left + 'px' }"
       >
         <div v-if="searchResults.length === 0" class="mention-no-results">
@@ -244,9 +249,12 @@ function getInitials(name: string) {
         </div>
         <div
           v-for="(user, index) in searchResults"
+          :id="`mention-opt-${index}`"
           :key="user.id"
           class="mention-item"
           :class="{ 'mention-item--selected': index === selectedIndex }"
+          role="option"
+          :aria-selected="index === selectedIndex"
           @mousedown.prevent="selectUser(user)"
           @mouseenter="selectedIndex = index"
         >
@@ -311,7 +319,7 @@ function getInitials(name: string) {
   width: 1.75rem;
   height: 1.75rem;
   border-radius: 50%;
-  background: var(--mw-primary, #3b82f6);
+  background: var(--mw-primary);
   color: white;
   font-size: 0.625rem;
   font-weight: 700;

@@ -414,9 +414,9 @@ async function testLdapConnection() {
           <div class="settings-subsection">
             <h3 class="subsection-title">{{ t('admin.settings.registration') }}</h3>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="requireUserApproval" />
+              <ToggleSwitch v-model="requireUserApproval" inputId="sw-requireUserApproval" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.requireUserApproval') }}</label>
+                <label for="sw-requireUserApproval" class="block text-sm font-medium">{{ t('admin.settings.requireUserApproval') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.requireUserApprovalHint') }}</small>
               </div>
             </div>
@@ -483,9 +483,9 @@ async function testLdapConnection() {
           <div class="settings-subsection">
             <h3 class="subsection-title">{{ t('admin.settings.directory') }}</h3>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="directoryAdminOnly" />
+              <ToggleSwitch v-model="directoryAdminOnly" inputId="sw-directoryAdminOnly" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.directoryAdminOnly') }}</label>
+                <label for="sw-directoryAdminOnly" class="block text-sm font-medium">{{ t('admin.settings.directoryAdminOnly') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.directoryAdminOnlyHint') }}</small>
               </div>
             </div>
@@ -495,16 +495,16 @@ async function testLdapConnection() {
           <div v-if="adminStore.isModuleEnabled('messaging')" class="settings-subsection">
             <h3 class="subsection-title">{{ t('admin.settings.communication') }}</h3>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="parentToParentMessaging" />
+              <ToggleSwitch v-model="parentToParentMessaging" inputId="sw-parentToParentMessaging" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.parentToParentMessaging') }}</label>
+                <label for="sw-parentToParentMessaging" class="block text-sm font-medium">{{ t('admin.settings.parentToParentMessaging') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.parentToParentMessagingHint') }}</small>
               </div>
             </div>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="studentToStudentMessaging" />
+              <ToggleSwitch v-model="studentToStudentMessaging" inputId="sw-studentToStudentMessaging" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.studentToStudentMessaging') }}</label>
+                <label for="sw-studentToStudentMessaging" class="block text-sm font-medium">{{ t('admin.settings.studentToStudentMessaging') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.studentToStudentMessagingHint') }}</small>
               </div>
             </div>
@@ -514,9 +514,9 @@ async function testLdapConnection() {
           <div class="settings-subsection">
             <h3 class="subsection-title">{{ t('admin.settings.jobboard') }}</h3>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="requireAssignmentConfirmation" />
+              <ToggleSwitch v-model="requireAssignmentConfirmation" inputId="sw-requireAssignmentConfirmation" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
+                <label for="sw-requireAssignmentConfirmation" class="block text-sm font-medium">{{ t('admin.requireConfirmation') }}</label>
                 <small class="text-gray-500">{{ t('admin.requireConfirmationHint') }}</small>
               </div>
             </div>
@@ -526,16 +526,16 @@ async function testLdapConnection() {
           <div class="settings-subsection">
             <h3 class="subsection-title">{{ t('admin.settings.family') }}</h3>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="soleCustodyEnabled" />
+              <ToggleSwitch v-model="soleCustodyEnabled" inputId="sw-soleCustodyEnabled" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.soleCustodyEnabled') }}</label>
+                <label for="sw-soleCustodyEnabled" class="block text-sm font-medium">{{ t('admin.settings.soleCustodyEnabled') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.soleCustodyEnabledHint') }}</small>
               </div>
             </div>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="requireFamilySwitchApproval" />
+              <ToggleSwitch v-model="requireFamilySwitchApproval" inputId="sw-requireFamilySwitchApproval" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.requireFamilySwitchApproval') }}</label>
+                <label for="sw-requireFamilySwitchApproval" class="block text-sm font-medium">{{ t('admin.settings.requireFamilySwitchApproval') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.requireFamilySwitchApprovalHint') }}</small>
               </div>
             </div>
@@ -598,12 +598,12 @@ async function testLdapConnection() {
           <div class="settings-subsection">
             <div class="flex items-center gap-2 mb-3">
               <h3 class="subsection-title mb-0">{{ t('admin.settings.ldap.title') }}</h3>
-              <span v-if="ldapEnabled" class="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">{{ t('common.active') }}</span>
+              <span v-if="ldapEnabled" class="text-xs px-2 py-0.5 rounded-full" style="background: var(--mw-bg-active); color: var(--mw-success);">{{ t('common.active') }}</span>
             </div>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="ldapEnabled" />
+              <ToggleSwitch v-model="ldapEnabled" inputId="sw-ldapEnabled" />
               <div>
-                <label class="block text-sm font-medium">{{ t('admin.settings.ldap.enabled') }}</label>
+                <label for="sw-ldapEnabled" class="block text-sm font-medium">{{ t('admin.settings.ldap.enabled') }}</label>
                 <small class="text-gray-500">{{ t('admin.settings.ldap.enabledHint') }}</small>
               </div>
             </div>
@@ -639,9 +639,9 @@ async function testLdapConnection() {
                   <small class="text-gray-500">{{ t('admin.settings.ldap.userSearchFilterHint') }}</small>
                 </div>
                 <div class="flex items-center gap-3 pt-5">
-                  <ToggleSwitch v-model="ldapUseSsl" />
+                  <ToggleSwitch v-model="ldapUseSsl" inputId="sw-ldapUseSsl" />
                   <div>
-                    <label class="block text-sm font-medium">{{ t('admin.settings.ldap.useSsl') }}</label>
+                    <label for="sw-ldapUseSsl" class="block text-sm font-medium">{{ t('admin.settings.ldap.useSsl') }}</label>
                     <small class="text-gray-500">{{ t('admin.settings.ldap.useSslHint') }}</small>
                   </div>
                 </div>
@@ -688,8 +688,8 @@ async function testLdapConnection() {
           <div class="settings-subsection">
             <h3 class="subsection-title">{{ t('admin.maintenance.title') }}</h3>
             <div class="mb-4 flex items-center gap-3">
-              <ToggleSwitch v-model="maintenanceEnabled" />
-              <label>{{ t('admin.maintenance.enabled') }}</label>
+              <ToggleSwitch v-model="maintenanceEnabled" inputId="sw-maintenanceEnabled" />
+              <label for="sw-maintenanceEnabled">{{ t('admin.maintenance.enabled') }}</label>
             </div>
             <Message v-if="maintenanceEnabled" severity="warn" :closable="false">{{ t('admin.maintenance.warning') }}</Message>
             <div v-if="maintenanceEnabled" class="mb-4">
@@ -723,9 +723,10 @@ async function testLdapConnection() {
             <div class="toggle-row">
               <ToggleSwitch
                 v-model="impersonationEnabled"
+                inputId="sw-impersonationEnabled"
                 @update:modelValue="saveImpersonationToggle"
               />
-              <span>{{ t('auth.impersonation.toggleDescription') }}</span>
+              <label for="sw-impersonationEnabled">{{ t('auth.impersonation.toggleDescription') }}</label>
             </div>
           </div>
 

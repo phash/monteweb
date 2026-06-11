@@ -477,6 +477,7 @@ function formatTime(date: string | null) {
               text
               severity="secondary"
               size="small"
+              aria-label="Anhang entfernen"
               @click="clearImage"
             />
           </div>
@@ -491,6 +492,7 @@ function formatTime(date: string | null) {
               text
               severity="secondary"
               size="small"
+              aria-label="Anhang entfernen"
               @click="clearAttachment"
             />
           </div>
@@ -504,6 +506,7 @@ function formatTime(date: string | null) {
               text
               severity="secondary"
               size="small"
+              aria-label="Anhang entfernen"
               @click="clearFileLink"
             />
           </div>
@@ -727,7 +730,7 @@ function formatTime(date: string | null) {
 }
 
 .conversation-item.active {
-  background: var(--mw-bg-highlight, rgba(59, 130, 246, 0.08));
+  background: var(--mw-bg-highlight);
 }
 
 .conversation-item.unread .conv-info strong {

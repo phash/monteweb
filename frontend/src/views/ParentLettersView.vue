@@ -172,7 +172,14 @@ async function handleDelete(id: string) {
               :key="letter.id"
               class="letter-item card"
             >
-              <div class="letter-main" @click="router.push({ name: 'parent-letter-detail', params: { id: letter.id } })">
+              <div
+                class="letter-main"
+                role="button"
+                tabindex="0"
+                @click="router.push({ name: 'parent-letter-detail', params: { id: letter.id } })"
+                @keydown.enter="router.push({ name: 'parent-letter-detail', params: { id: letter.id } })"
+                @keydown.space.prevent="router.push({ name: 'parent-letter-detail', params: { id: letter.id } })"
+              >
                 <div class="letter-title-row">
                   <strong>{{ letter.title }}</strong>
                   <Tag
@@ -430,7 +437,7 @@ async function handleDelete(id: string) {
 .stat-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
 }
 
 .stat-value.rate-good {

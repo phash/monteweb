@@ -402,7 +402,7 @@ async function createInterestRoom() {
 }
 
 .section-heading i {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
 }
 
 .section-count {
@@ -492,7 +492,7 @@ async function createInterestRoom() {
 }
 
 .room-name:hover {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
 }
 
 .type-tag {

@@ -120,7 +120,7 @@ function onFileSelected(e: Event) {
 }
 
 .editable .avatar-circle:focus-visible {
-  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline: 2px solid var(--mw-focus-ring);
   outline-offset: 2px;
 }
 

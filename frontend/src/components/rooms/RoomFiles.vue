@@ -179,6 +179,7 @@ function openInEditor(file: FileInfo) {
         optionLabel="label"
         optionValue="value"
         :placeholder="t('files.audience')"
+        :aria-label="t('files.audience')"
         class="audience-select"
         size="small"
       />
@@ -242,7 +243,7 @@ function openInEditor(file: FileInfo) {
     <!-- New Folder Dialog -->
     <Dialog v-model:visible="showNewFolder" :header="t('files.newFolder')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="create-form">
-        <InputText v-model="newFolderName" :placeholder="t('files.folderName')" class="folder-input" />
+        <InputText v-model="newFolderName" :placeholder="t('files.folderName')" :aria-label="t('files.folderName')" class="folder-input" />
         <Select
           v-if="isLeader"
           v-model="folderAudience"
@@ -250,6 +251,7 @@ function openInEditor(file: FileInfo) {
           optionLabel="label"
           optionValue="value"
           :placeholder="t('files.audience')"
+          :aria-label="t('files.audience')"
           class="folder-input"
         />
       </div>
@@ -312,7 +314,7 @@ function openInEditor(file: FileInfo) {
 }
 
 .file-item:focus-visible {
-  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline: 2px solid var(--mw-focus-ring);
   outline-offset: -2px;
   background: var(--mw-bg-hover);
 }

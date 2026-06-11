@@ -140,7 +140,7 @@ function loginWithSso() {
       <template v-if="show2faInput">
         <p class="login-subtitle">{{ t('twoFactor.codeRequired') }}</p>
 
-        <Message v-if="error" severity="error" :closable="false" class="login-error">
+        <Message v-if="error" id="twofa-error" severity="error" :closable="false" class="login-error">
           {{ error }}
         </Message>
 
@@ -155,6 +155,8 @@ function loginWithSso() {
               maxlength="8"
               autocomplete="one-time-code"
               placeholder="123456"
+              :aria-invalid="!!error"
+              :aria-describedby="error ? 'twofa-error' : undefined"
             />
             <small class="form-hint">{{ t('twoFactor.recoveryCodesInfo') }}</small>
           </div>
@@ -219,7 +221,7 @@ function loginWithSso() {
           {{ t('auth.pendingApprovalSuccess') }}
         </Message>
 
-        <Message v-if="error" severity="error" :closable="false" class="login-error">
+        <Message v-if="error" id="login-error" severity="error" :closable="false" class="login-error">
           {{ error }}
         </Message>
 
@@ -237,7 +239,7 @@ function loginWithSso() {
 
           <div class="form-field">
             <label for="email" class="required">{{ t('auth.email') }}</label>
-            <InputText id="email" v-model="form.email" type="email" required class="w-full" />
+            <InputText id="email" v-model="form.email" type="email" required class="w-full" :aria-invalid="!!error" :aria-describedby="error ? 'login-error' : undefined" />
           </div>
 
           <div class="form-field">
@@ -250,6 +252,8 @@ function loginWithSso() {
               required
               class="w-full"
               inputClass="w-full"
+              :aria-invalid="!!error"
+              :aria-describedby="error ? 'login-error' : undefined"
             />
           </div>
 

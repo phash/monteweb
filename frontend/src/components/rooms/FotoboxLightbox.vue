@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fotoboxApi } from '@/api/fotobox.api'
 import type { FotoboxImageInfo } from '@/types/fotobox'
@@ -18,6 +18,24 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const currentImage = computed(() => props.images[props.currentIndex] ?? null)
+
+// Focus management for the modal dialog
+const closeBtn = ref<{ $el: HTMLElement } | null>(null)
+let previouslyFocused: HTMLElement | null = null
+
+watch(
+  () => props.visible,
+  async (isVisible) => {
+    if (isVisible) {
+      previouslyFocused = document.activeElement as HTMLElement | null
+      await nextTick()
+      closeBtn.value?.$el?.focus?.()
+    } else if (previouslyFocused) {
+      previouslyFocused.focus?.()
+      previouslyFocused = null
+    }
+  },
+)
 
 function next() {
   if (props.currentIndex < props.images.length - 1) {
@@ -48,9 +66,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <Teleport to="body">
-    <div v-if="visible && currentImage" class="lightbox-overlay" @click.self="close">
+    <div
+      v-if="visible && currentImage"
+      class="lightbox-overlay"
+      role="dialog"
+      aria-modal="true"
+      :aria-label="t('fotobox.title')"
+      @click.self="close"
+    >
       <div class="lightbox-content">
         <Button
+          ref="closeBtn"
           icon="pi pi-times"
           severity="secondary"
           text
@@ -73,7 +99,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
         <img
           :src="fotoboxApi.imageUrl(currentImage.id)"
-          :alt="currentImage.caption || currentImage.originalFilename"
+          :alt="currentImage.caption || ''"
           class="lightbox-image"
         />
 
