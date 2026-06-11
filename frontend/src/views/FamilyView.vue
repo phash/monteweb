@@ -301,6 +301,7 @@ function formatEventDate(event: CalendarEvent): string {
             severity="secondary"
             text
             size="small"
+            aria-label="Code kopieren"
             @click="copyCode"
           />
         </div>
@@ -427,7 +428,7 @@ function formatEventDate(event: CalendarEvent): string {
     <Dialog v-model:visible="showCreateDialog" :header="t('family.create')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="form-field">
         <label for="family-name" class="required">{{ t('family.name') }}</label>
-        <InputText id="family-name" v-model="familyName" class="w-full" />
+        <InputText id="family-name" v-model="familyName" class="w-full" :aria-required="true" />
       </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" @click="showCreateDialog = false" />
@@ -439,7 +440,7 @@ function formatEventDate(event: CalendarEvent): string {
     <Dialog v-model:visible="showJoinDialog" :header="t('family.join')" modal :style="{ width: '400px', maxWidth: '90vw' }">
       <div class="form-field">
         <label for="invite-code" class="required">{{ t('family.inviteCode') }}</label>
-        <InputText id="invite-code" v-model="inviteCode" class="w-full" />
+        <InputText id="invite-code" v-model="inviteCode" class="w-full" :aria-required="true" />
       </div>
       <template #footer>
         <Button :label="t('common.cancel')" severity="secondary" @click="showJoinDialog = false" />
@@ -508,7 +509,7 @@ function formatEventDate(event: CalendarEvent): string {
 
 .invitations-card {
   margin-bottom: 1.5rem;
-  border: 2px solid var(--mw-primary, #3b82f6);
+  border: 2px solid var(--mw-primary);
 }
 
 .invitations-card h3 {
@@ -537,7 +538,7 @@ function formatEventDate(event: CalendarEvent): string {
 }
 
 .invitation-info i {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
 }
 
 .invitation-actions {
@@ -668,7 +669,7 @@ h3 {
 }
 
 .event-date-badge {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
   font-size: 1.1rem;
   flex-shrink: 0;
 }

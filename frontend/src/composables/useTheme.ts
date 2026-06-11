@@ -16,7 +16,7 @@ export function useTheme() {
     const mapping: Record<string, string> = {
       primaryColor: '--mw-primary',
       primaryHover: '--mw-primary-hover',
-      bgMain: '--mw-bg-main',
+      bgMain: '--mw-bg',
       bgCard: '--mw-bg-card',
       bgSidebar: '--mw-bg-sidebar',
       textColor: '--mw-text',

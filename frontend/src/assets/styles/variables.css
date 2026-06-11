@@ -1,30 +1,48 @@
 :root {
-  /* Primary colors - Montessori green */
-  --mw-primary: #2E7D32;
-  --mw-primary-light: #388E3C;
-  --mw-primary-dark: #1B5E20;
-  --mw-primary-contrast: #ffffff;
+  /* Primary colors - Montessori golden yellow.
+     Yellow is a LIGHT colour: text on it must be near-black (10:1), and yellow
+     used as text / focus ring / thin fill on white fails WCAG. Use the dark
+     shades below for borders, focus rings and links so the look stays golden
+     while staying legible. */
+  --mw-primary: #F5B400;            /* golden-yellow fill (buttons, active bg) */
+  --mw-primary-light: #FBBF24;
+  --mw-primary-dark: #B88600;       /* 3.26:1 on white — borders, large text, rings */
+  --mw-primary-hover: #DBA300;      /* hover fill */
+  --mw-primary-active: #B88600;     /* pressed fill */
+  --mw-primary-border: #B88600;     /* perceivable boundary for yellow fills (1.4.11) */
+  --mw-primary-contrast: #111111;   /* BLACK text on yellow (10.3:1) — never white */
+
+  /* Link / inline accent — raw yellow is invisible on white (1.84:1),
+     so links use a dark amber that reaches 4.9:1 at normal text size. */
+  --mw-link: #946A00;
 
   /* Secondary colors - warm amber */
   --mw-secondary: #FF8F00;
   --mw-secondary-light: #FFA726;
   --mw-secondary-dark: #E65100;
-  --mw-secondary-contrast: #ffffff;
+  --mw-secondary-contrast: #111111; /* BLACK on amber (8.3:1), not white (2.3:1) */
 
   /* Neutral colors */
-  --mw-bg: #f8f9fa;
+  --mw-bg: #ffffff;
   --mw-bg-card: #ffffff;
-  --mw-bg-sidebar: #ffffff;
-  --mw-bg-hover: rgba(0, 0, 0, 0.04);
-  --mw-text: #1a1a2e;
-  --mw-text-secondary: #6a737c;
-  --mw-text-muted: #6b7280;
+  --mw-bg-sidebar: #FFFBEA;          /* soft cream */
+  --mw-bg-hover: rgba(0, 0, 0, 0.05);
+  --mw-bg-active: #FEF3C7;           /* active nav / selected tint (black text = 17.8:1) */
+  --mw-bg-highlight: #FEF6D6;        /* selected row / highlight (was undefined → blue) */
+  --mw-text: #111111;
+  --mw-text-secondary: #333333;
+  --mw-text-muted: #595959;          /* 7.0:1 on white */
   --mw-border: #dee2e6;
-  --mw-border-light: #e9ecef;
+  --mw-border-light: #EFE9D6;
+
+  /* Focus ring — must contrast with BOTH yellow controls and white bg,
+     so it is dark, not yellow. */
+  --mw-focus-ring: #1a1a1a;
 
   /* Status colors */
   --mw-success: #2E7D32;
   --mw-warning: #FF8F00;
+  --mw-warning-text: #B25E00;        /* darker amber for warning TEXT on white (4.6:1) */
   --mw-danger: #C62828;
   --mw-info: #1565C0;
 
@@ -56,17 +74,24 @@
   /* Mobile: max-width 767px | Desktop: min-width 768px | lg: 1024px | xl: 1280px */
 }
 
-/* Dark mode overrides */
+/* Dark mode overrides — on dark backgrounds yellow has high contrast, so the
+   accent stays golden; only links/focus shift to a lighter shade for contrast. */
 :root.dark {
   --mw-bg: #0f172a;
   --mw-bg-card: #1e293b;
   --mw-bg-sidebar: #1e293b;
   --mw-bg-hover: rgba(255, 255, 255, 0.06);
+  --mw-bg-active: rgba(245, 180, 0, 0.16);
+  --mw-bg-highlight: rgba(245, 180, 0, 0.16);
   --mw-text: #f1f5f9;
-  --mw-text-secondary: #94a3b8;
-  --mw-text-muted: #64748b;
+  --mw-text-secondary: #cbd5e1;
+  --mw-text-muted: #94a3b8;
   --mw-border: #334155;
-  --mw-border-light: #1e293b;
+  --mw-border-light: #334155;
+
+  --mw-link: #FCD34D;               /* light amber — high contrast on dark */
+  --mw-warning-text: #FBBF24;
+  --mw-focus-ring: #FDE68A;         /* light ring on dark surfaces */
 
   --mw-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --mw-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);

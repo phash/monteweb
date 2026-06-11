@@ -359,12 +359,12 @@ onMounted(() => {
                 <InputText v-model="editName" class="w-full" />
               </div>
               <div class="form-field toggle-field">
-                <label>{{ t('admin.hoursExempt') }}</label>
-                <ToggleSwitch v-model="editExempt" />
+                <label for="fam-hoursExempt">{{ t('admin.hoursExempt') }}</label>
+                <ToggleSwitch v-model="editExempt" inputId="fam-hoursExempt" />
               </div>
               <div class="form-field toggle-field">
-                <label>{{ t('admin.familyActive') }}</label>
-                <ToggleSwitch v-model="editActive" />
+                <label for="fam-active">{{ t('admin.familyActive') }}</label>
+                <ToggleSwitch v-model="editActive" inputId="fam-active" />
               </div>
               <div class="form-actions">
                 <Button :label="t('common.save')" type="submit" :loading="editLoading" />

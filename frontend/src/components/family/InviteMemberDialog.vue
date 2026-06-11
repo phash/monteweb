@@ -74,9 +74,10 @@ function onHide() {
     @update:visible="onHide"
   >
     <div class="invite-form">
-      <label>{{ t('family.searchMember') }}</label>
+      <label for="invite-search-member">{{ t('family.searchMember') }}</label>
       <AutoComplete
         v-model="selectedUser"
+        inputId="invite-search-member"
         :suggestions="suggestions"
         optionLabel="displayName"
         :placeholder="t('messages.searchUserPlaceholder')"
@@ -94,9 +95,10 @@ function onHide() {
         </template>
       </AutoComplete>
 
-      <label>{{ t('family.roles.PARENT') }} / {{ t('family.roles.CHILD') }}</label>
+      <label for="invite-role">{{ t('family.roles.PARENT') }} / {{ t('family.roles.CHILD') }}</label>
       <Select
         v-model="selectedRole"
+        inputId="invite-role"
         :options="roleOptions"
         optionLabel="label"
         optionValue="value"

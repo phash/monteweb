@@ -447,6 +447,7 @@ async function cancelAccountDeletion() {
             v-if="field.fieldType === 'TEXT'"
             :id="'pf-' + field.id"
             v-model="profileFieldValues[field.id]"
+            :aria-required="field.required"
             class="w-full"
           />
 
@@ -455,6 +456,7 @@ async function cancelAccountDeletion() {
             :id="'pf-' + field.id"
             :modelValue="getProfileFieldDateValue(field.id)"
             @update:modelValue="setProfileFieldDateValue(field.id, $event as Date | null)"
+            :aria-required="field.required"
             class="w-full"
             dateFormat="dd.mm.yy"
             showIcon
@@ -466,6 +468,7 @@ async function cancelAccountDeletion() {
             :modelValue="profileFieldValues[field.id]"
             @update:modelValue="profileFieldValues[field.id] = $event as string"
             :options="field.options ?? []"
+            :aria-required="field.required"
             class="w-full"
             :placeholder="getFieldLabel(field)"
             showClear
@@ -573,15 +576,18 @@ async function cancelAccountDeletion() {
         </div>
 
         <p class="twofa-step">2. {{ t('twoFactor.enterCode') }}</p>
-        <Message v-if="setupError" severity="error" :closable="false" class="mb-2">
+        <Message v-if="setupError" id="setup-2fa-error" severity="error" :closable="false" class="mb-2">
           {{ setupError }}
         </Message>
         <InputText
           v-model="setupCode"
+          inputId="setup-2fa-code"
           class="w-full twofa-code-input"
           maxlength="6"
           placeholder="123456"
           autocomplete="one-time-code"
+          :aria-invalid="!!setupError"
+          :aria-describedby="setupError ? 'setup-2fa-error' : undefined"
           @keyup.enter="confirmSetup2fa"
         />
       </div>
@@ -607,16 +613,19 @@ async function cancelAccountDeletion() {
     <!-- Disable 2FA Dialog -->
     <Dialog v-model:visible="showDisableDialog" :header="t('twoFactor.disable')" modal :style="{ width: '400px' }">
       <p class="mb-3">{{ t('twoFactor.disableConfirm') }}</p>
-      <Message v-if="disableError" severity="error" :closable="false" class="mb-2">
+      <Message v-if="disableError" id="disable-2fa-error" severity="error" :closable="false" class="mb-2">
         {{ disableError }}
       </Message>
       <Password
         v-model="disablePassword"
+        inputId="disable-2fa-password"
         :feedback="false"
         toggleMask
         class="w-full"
         inputClass="w-full"
         :placeholder="t('twoFactor.enterPassword')"
+        :aria-invalid="!!disableError"
+        :aria-describedby="disableError ? 'disable-2fa-error' : undefined"
         @keyup.enter="confirmDisable2fa"
       />
       <template #footer>

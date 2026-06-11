@@ -285,7 +285,7 @@ async function executeMigration() {
 }
 
 .action-option.active {
-  border-color: var(--mw-primary, #3b82f6);
+  border-color: var(--mw-primary);
 }
 
 .action-option input[type="radio"] {

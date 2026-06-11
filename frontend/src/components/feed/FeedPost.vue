@@ -207,6 +207,7 @@ function downloadAttachment(attachment: FeedAttachment) {
         <Button
           icon="pi pi-send"
           :disabled="!commentText.trim()"
+          :aria-label="t('feed.comment')"
           @click="submitComment"
           size="small"
         />
@@ -301,11 +302,11 @@ function downloadAttachment(attachment: FeedAttachment) {
 }
 
 .attachment-item:hover {
-  background: var(--mw-bg-highlight, #e9ecef);
+  background: var(--mw-bg-highlight);
 }
 
 .attachment-item > i:first-child {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
   flex-shrink: 0;
 }
 

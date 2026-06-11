@@ -23,12 +23,29 @@ body {
 }
 
 a {
-  color: var(--mw-primary);
+  /* Raw yellow primary is invisible on white (1.84:1); use the dark-amber link
+     token (4.9:1). */
+  color: var(--mw-link);
   text-decoration: none;
 }
 
 a:hover {
   text-decoration: underline;
+}
+
+/* Accessibility: a single, always-visible keyboard focus indicator.
+   The ring is dark (light in dark mode) so it contrasts with BOTH yellow
+   controls and white surfaces — a yellow ring would be invisible. (WCAG 2.4.7) */
+:focus-visible {
+  outline: 2px solid var(--mw-focus-ring);
+  outline-offset: 2px;
+}
+
+/* Non-text contrast for yellow primary buttons (WCAG 1.4.11): a same-yellow
+   border on white is only 1.84:1, so the boundary uses the darker amber (3.26:1)
+   while the fill stays golden. Severity / outlined / text buttons keep theirs. */
+.p-button:not(.p-button-secondary):not(.p-button-success):not(.p-button-info):not(.p-button-warn):not(.p-button-help):not(.p-button-danger):not(.p-button-contrast):not(.p-button-outlined):not(.p-button-text):not(.p-button-link) {
+  border-color: var(--mw-primary-border);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -179,10 +196,10 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Required field indicator */
+/* Required field indicator (3.76:1 → use the danger token at 5.6:1) */
 label.required::after {
   content: ' *';
-  color: var(--p-red-500, #ef4444);
+  color: var(--mw-danger);
 }
 
 /* Screen-reader only utility */

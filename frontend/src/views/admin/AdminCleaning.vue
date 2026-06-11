@@ -445,8 +445,8 @@ function assignmentStatusSeverity(status: string) {
         </Column>
         <Column :header="t('jobboard.confirmed')">
           <template #body="{ data }">
-            <i v-if="data.confirmed" class="pi pi-check" style="color: var(--p-green-500)" />
-            <i v-else class="pi pi-times" style="color: var(--p-gray-400)" />
+            <i v-if="data.confirmed" class="pi pi-check" style="color: var(--mw-success)" />
+            <i v-else class="pi pi-times" style="color: var(--mw-text-muted)" />
           </template>
         </Column>
       </DataTable>
@@ -506,6 +506,7 @@ function assignmentStatusSeverity(status: string) {
                 text
                 rounded
                 size="small"
+                aria-label="Entfernen"
                 @click="removePutzOrga(data)"
               />
             </template>
@@ -585,7 +586,7 @@ function assignmentStatusSeverity(status: string) {
 }
 
 :deep(.mw-holiday) {
-  color: #dc2626;
+  color: var(--mw-danger);
   font-weight: 700;
   position: relative;
 }
@@ -598,10 +599,10 @@ function assignmentStatusSeverity(status: string) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #dc2626;
+  background: var(--mw-danger);
 }
 :deep(.mw-vacation) {
-  color: #ea580c;
+  color: var(--mw-warning-text);
   font-weight: 600;
   position: relative;
 }
@@ -614,6 +615,6 @@ function assignmentStatusSeverity(status: string) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #ea580c;
+  background: var(--mw-warning-text);
 }
 </style>

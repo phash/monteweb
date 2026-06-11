@@ -106,6 +106,11 @@ defineExpose({ insertAtCursor, textareaRef })
   color: var(--mw-text);
 }
 
+.editor-textarea:focus-visible {
+  outline: 2px solid var(--mw-focus-ring);
+  outline-offset: 2px;
+}
+
 .preview-pane {
   padding: 1rem;
   overflow-y: auto;

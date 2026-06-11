@@ -112,7 +112,7 @@ onMounted(() => {
         </div>
         <div class="bookmark-actions">
           <router-link :to="typeRoute(bm.contentType, bm.contentId)">
-            <Button icon="pi pi-external-link" text rounded size="small" />
+            <Button icon="pi pi-external-link" text rounded size="small" :aria-label="t('common.view')" />
           </router-link>
           <Button
             icon="pi pi-trash"
@@ -120,6 +120,7 @@ onMounted(() => {
             rounded
             size="small"
             severity="danger"
+            :aria-label="t('common.delete')"
             @click="removeBookmark(bm.contentType, bm.contentId)"
           />
         </div>

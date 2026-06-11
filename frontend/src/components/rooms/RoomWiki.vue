@@ -317,6 +317,7 @@ function goToTree() {
             <InputText
               v-model="searchQuery"
               :placeholder="t('wiki.search')"
+              :aria-label="t('wiki.search')"
               size="small"
               class="wiki-search-input"
               @input="onSearch"
@@ -345,7 +346,14 @@ function goToTree() {
           <div v-if="pageTree.length" class="wiki-tree">
             <template v-for="page in rootPages" :key="page.id">
               <div class="wiki-tree-item">
-                <div class="wiki-tree-row" @click="loadPage(page.slug)">
+                <div
+                  class="wiki-tree-row"
+                  role="button"
+                  tabindex="0"
+                  @click="loadPage(page.slug)"
+                  @keydown.enter="loadPage(page.slug)"
+                  @keydown.space.prevent="loadPage(page.slug)"
+                >
                   <Button
                     v-if="page.hasChildren || childMap.has(page.id)"
                     :icon="expandedIds.has(page.id) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
@@ -353,6 +361,7 @@ function goToTree() {
                     rounded
                     size="small"
                     class="tree-toggle"
+                    aria-label="Unterseiten ein-/ausklappen"
                     @click.stop="toggleExpand(page.id)"
                   />
                   <span v-else class="tree-toggle-spacer" />
@@ -364,7 +373,11 @@ function goToTree() {
                     v-for="child in childMap.get(page.id)"
                     :key="child.id"
                     class="wiki-tree-row child-row"
+                    role="button"
+                    tabindex="0"
                     @click="loadPage(child.slug)"
+                    @keydown.enter="loadPage(child.slug)"
+                    @keydown.space.prevent="loadPage(child.slug)"
                   >
                     <span class="tree-toggle-spacer" />
                     <i class="pi pi-file" />
@@ -416,6 +429,7 @@ function goToTree() {
                 severity="danger"
                 text
                 size="small"
+                :aria-label="t('common.delete')"
                 @click="showDeleteDialog = true"
               />
             </div>

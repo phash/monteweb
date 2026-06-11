@@ -692,6 +692,7 @@ onUnmounted(() => {
             severity="danger"
             text
             size="small"
+            :aria-label="t('auth.impersonation.loginAs')"
             @click="handleImpersonate(data)"
             v-tooltip.top="t('auth.impersonation.loginAs')"
           />
@@ -736,8 +737,8 @@ onUnmounted(() => {
                 <InputText v-model="profileForm.phone" class="w-full" />
               </div>
               <div class="form-field toggle-field">
-                <label>{{ t('common.active') }}</label>
-                <ToggleSwitch v-model="editActive" />
+                <label for="user-active">{{ t('common.active') }}</label>
+                <ToggleSwitch v-model="editActive" inputId="user-active" />
               </div>
               <div v-if="!isFixedRoleUser" class="form-field">
                 <label>{{ t('admin.assignedRoles') }}</label>

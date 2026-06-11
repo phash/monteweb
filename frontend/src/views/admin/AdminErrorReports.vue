@@ -291,6 +291,7 @@ function truncate(str: string | null, maxLen: number): string {
               severity="secondary"
               size="small"
               v-tooltip="t('errorReports.createGithubIssue')"
+              :aria-label="t('errorReports.createGithubIssue')"
               @click="onCreateGithubIssue(data.id)"
             />
             <Select
@@ -306,6 +307,7 @@ function truncate(str: string | null, maxLen: number): string {
               severity="danger"
               size="small"
               text
+              :aria-label="t('common.delete')"
               @click="confirmDelete(data.id)"
             />
           </div>

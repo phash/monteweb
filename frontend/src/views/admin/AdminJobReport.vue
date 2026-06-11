@@ -186,8 +186,8 @@ function progressPercent(completed: number, target: number) {
   margin-top: 0.25rem;
 }
 
-.traffic-green .summary-value { color: #16a34a; }
-.traffic-yellow .summary-value { color: #ca8a04; }
+.traffic-green .summary-value { color: #15803d; }
+.traffic-yellow .summary-value { color: #854d0e; }
 .traffic-red .summary-value { color: #dc2626; }
 
 .progress-bar-container {

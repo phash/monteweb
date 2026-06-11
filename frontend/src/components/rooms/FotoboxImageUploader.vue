@@ -149,6 +149,7 @@ async function upload() {
       <InputText
         v-model="caption"
         :placeholder="t('fotobox.caption')"
+        :aria-label="t('fotobox.caption')"
         class="caption-input"
       />
       <Button

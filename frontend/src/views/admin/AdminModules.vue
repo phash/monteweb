@@ -43,10 +43,10 @@ async function save() {
     <div class="modules-list card">
       <div v-for="(_, name) in modules" :key="name" class="module-item">
         <div class="module-info">
-          <h3>{{ name }}</h3>
+          <h3 :id="'mod-label-' + name">{{ name }}</h3>
           <p>{{ moduleDescription(name as string) }}</p>
         </div>
-        <ToggleSwitch v-model="modules[name as string]" />
+        <ToggleSwitch v-model="modules[name as string]" :inputId="'mod-' + name" :aria-labelledby="'mod-label-' + name" />
       </div>
     </div>
 

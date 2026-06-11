@@ -318,7 +318,15 @@ async function handleDeleteAttachment(att: ParentLetterAttachmentInfo) {
             :key="att.id"
             class="attachment-item"
           >
-            <div class="attachment-info" @click="downloadAttachment(att)">
+            <div
+              class="attachment-info"
+              role="button"
+              tabindex="0"
+              :aria-label="t('parentLetters.attachments.title') + ': ' + att.originalFilename"
+              @click="downloadAttachment(att)"
+              @keydown.enter="downloadAttachment(att)"
+              @keydown.space.prevent="downloadAttachment(att)"
+            >
               <i :class="getAttachmentIcon(att.contentType)" />
               <span class="attachment-name">{{ att.originalFilename }}</span>
               <span class="attachment-size">{{ formatFileSize(att.fileSize) }}</span>
@@ -602,11 +610,11 @@ async function handleDeleteAttachment(att: ParentLetterAttachmentInfo) {
 }
 
 .attachment-info:hover {
-  background: var(--mw-bg-highlight, #e9ecef);
+  background: var(--mw-bg-highlight);
 }
 
 .attachment-info > i:first-child {
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
   flex-shrink: 0;
 }
 

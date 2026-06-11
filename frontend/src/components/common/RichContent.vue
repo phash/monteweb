@@ -321,7 +321,7 @@ onMounted(() => {
 
 .mention-tag {
   display: inline;
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-primary);
   font-weight: 600;
   cursor: default;
 }

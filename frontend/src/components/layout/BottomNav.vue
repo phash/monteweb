@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n'
 import { useAdminStore } from '@/stores/admin'
 import { useAuthStore } from '@/stores/auth'
 import { useRoute, useRouter } from 'vue-router'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, nextTick, onBeforeUnmount } from 'vue'
 
 const { t } = useI18n()
 const admin = useAdminStore()
@@ -12,6 +12,64 @@ const route = useRoute()
 const router = useRouter()
 
 const showMore = ref(false)
+const moreMenuRef = ref<HTMLElement | null>(null)
+const moreTriggerRef = ref<HTMLButtonElement | null>(null)
+
+function closeMore() {
+  showMore.value = false
+}
+
+function openMore() {
+  showMore.value = true
+}
+
+function toggleMore() {
+  if (showMore.value) closeMore()
+  else openMore()
+}
+
+function onWindowKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeMore()
+  }
+}
+
+function focusMenuItemAt(index: number) {
+  const items = moreMenuRef.value?.querySelectorAll<HTMLButtonElement>('.more-menu-item')
+  if (!items || items.length === 0) return
+  const clamped = (index + items.length) % items.length
+  items[clamped]?.focus()
+}
+
+function onMenuKeydown(event: KeyboardEvent) {
+  const items = moreMenuRef.value?.querySelectorAll<HTMLButtonElement>('.more-menu-item')
+  if (!items || items.length === 0) return
+  const current = Array.from(items).indexOf(document.activeElement as HTMLButtonElement)
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    focusMenuItemAt(current < 0 ? 0 : current + 1)
+  } else if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    focusMenuItemAt(current < 0 ? items.length - 1 : current - 1)
+  }
+}
+
+// Manage focus + global Escape listener when the more menu opens/closes
+watch(showMore, async (open) => {
+  if (open) {
+    window.addEventListener('keydown', onWindowKeydown)
+    await nextTick()
+    focusMenuItemAt(0)
+  } else {
+    window.removeEventListener('keydown', onWindowKeydown)
+    moreTriggerRef.value?.focus()
+  }
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onWindowKeydown)
+})
 
 const primaryItems = computed(() => [
   { to: '/', icon: 'pi pi-home', label: t('nav.dashboard'), name: 'dashboard' },
@@ -78,7 +136,7 @@ function isActive(item: { to: string }) {
 }
 
 function navigateTo(to: string) {
-  showMore.value = false
+  closeMore()
   router.push(to)
 }
 
@@ -92,12 +150,12 @@ watch(() => route.path, () => {
   <div>
     <!-- More menu overlay -->
     <Transition name="fade">
-      <div v-if="showMore" class="more-overlay" @click="showMore = false" @keydown.escape="showMore = false" />
+      <div v-if="showMore" class="more-overlay" @click="closeMore" />
     </Transition>
 
     <!-- More menu panel -->
     <Transition name="slide-up">
-      <div v-if="showMore" class="more-menu" role="menu">
+      <div v-if="showMore" ref="moreMenuRef" class="more-menu" role="menu" @keydown="onMenuKeydown">
         <button
           v-for="item in moreItems"
           :key="item.name"
@@ -128,11 +186,13 @@ watch(() => route.path, () => {
       </router-link>
 
       <button
+        ref="moreTriggerRef"
         class="bottom-nav-item"
         :class="{ active: isMoreActive }"
         :aria-expanded="showMore"
+        :aria-haspopup="true"
         :aria-label="t('nav.more')"
-        @click="showMore = !showMore"
+        @click="toggleMore"
       >
         <i class="pi pi-ellipsis-h" />
         <span>{{ t('nav.more') }}</span>
@@ -180,7 +240,15 @@ watch(() => route.path, () => {
 }
 
 .bottom-nav-item.active {
-  color: var(--mw-primary);
+  /* Dark text + yellow-tinted highlight; a dark-amber icon keeps the accent
+     visible (yellow text/icon on white is only 1.84:1). */
+  color: var(--mw-text);
+  font-weight: 600;
+  background-color: var(--mw-bg-active);
+}
+
+.bottom-nav-item.active i {
+  color: var(--mw-primary-dark);
 }
 
 .bottom-nav-item i {
@@ -233,7 +301,13 @@ watch(() => route.path, () => {
 }
 
 .more-menu-item.active {
-  color: var(--mw-primary);
+  color: var(--mw-text);
+  font-weight: 600;
+  background-color: var(--mw-bg-active);
+}
+
+.more-menu-item.active i {
+  color: var(--mw-primary-dark);
 }
 
 .more-menu-item i {

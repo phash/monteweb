@@ -163,8 +163,8 @@ async function deleteField(field: ProfileFieldDefinition) {
           </span>
         </div>
         <div class="field-actions">
-          <Button icon="pi pi-pencil" text size="small" severity="secondary" @click="openEdit(field)" />
-          <Button icon="pi pi-trash" text size="small" severity="danger" @click="deleteField(field)" />
+          <Button icon="pi pi-pencil" text size="small" severity="secondary" :aria-label="t('common.edit')" @click="openEdit(field)" />
+          <Button icon="pi pi-trash" text size="small" severity="danger" :aria-label="t('common.delete')" @click="deleteField(field)" />
         </div>
       </div>
     </div>
@@ -205,14 +205,14 @@ async function deleteField(field: ProfileFieldDefinition) {
             <InputNumber v-model="form.position" class="w-full" :min="0" />
           </div>
           <div class="form-field toggle-field">
-            <label>{{ t('profileFields.admin.required') }}</label>
-            <ToggleSwitch v-model="form.required" />
+            <label for="pf-required">{{ t('profileFields.admin.required') }}</label>
+            <ToggleSwitch v-model="form.required" inputId="pf-required" />
           </div>
         </div>
 
         <div v-if="editingField" class="form-field toggle-field">
-          <label>{{ t('profileFields.admin.active') }}</label>
-          <ToggleSwitch v-model="form.active" />
+          <label for="pf-active">{{ t('profileFields.admin.active') }}</label>
+          <ToggleSwitch v-model="form.active" inputId="pf-active" />
         </div>
       </div>
 

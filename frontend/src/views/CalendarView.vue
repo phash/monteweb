@@ -195,7 +195,7 @@ const jobsAsCalendarEvents = computed((): CalendarEvent[] => {
       declinedCount: 0,
       currentUserRsvp: null,
       eventType: 'JOB',
-      color: '#f59e0b',
+      color: 'var(--mw-secondary)',
       jitsiRoomName: null,
       linkedJobCount: 0,
       createdAt: job.createdAt,
@@ -963,7 +963,7 @@ function formatSelectedDay(date: string): string {
 }
 
 .event-item.job-event {
-  border-left: 3px solid #f59e0b;
+  border-left: 3px solid var(--mw-secondary);
 }
 
 .month-nav {
@@ -1232,6 +1232,8 @@ function formatSelectedDay(date: string): string {
   font-size: 0.7rem;
 }
 
+/* TODO a11y: enlarge hit area — mini day cells are below the 44px coarse-pointer target,
+   but they sit in fixed 7-col aspect-ratio grids; enlarging risks breaking the calendar layout. */
 .day-cell.mini.today .day-number {
   width: 20px;
   height: 20px;
@@ -1420,6 +1422,8 @@ function formatSelectedDay(date: string): string {
     min-width: 100px;
   }
 
+  /* TODO a11y: enlarge hit area — the .day-cell wrapper is the actual tap target here;
+     the day-number badge stays decorative. Cell sizing is grid-driven, so avoid hardcoding. */
   .day-cell.today .day-number {
     width: 24px;
     height: 24px;

@@ -23,7 +23,8 @@ describe('useTheme', () => {
     const { applyTheme } = useTheme()
     applyTheme({ primaryColor: '#3b82f6', bgMain: '#ffffff' })
     expect(document.documentElement.style.getPropertyValue('--mw-primary')).toBe('#3b82f6')
-    expect(document.documentElement.style.getPropertyValue('--mw-bg-main')).toBe('#ffffff')
+    // bgMain maps to the real --mw-bg token (previously the dead --mw-bg-main)
+    expect(document.documentElement.style.getPropertyValue('--mw-bg')).toBe('#ffffff')
   })
 
   it('should not crash when theme is null', () => {

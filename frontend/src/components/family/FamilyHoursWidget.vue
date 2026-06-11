@@ -71,7 +71,7 @@ function formatDate(dateStr: string | null) {
 
 <template>
   <!-- Compact variant for JobBoard -->
-  <div v-if="compact && jobboardEnabled && jobboard.familyHours" class="hours-compact" @click="openJobsList">
+  <div v-if="compact && jobboardEnabled && jobboard.familyHours" class="hours-compact" tabindex="0" role="link" @click="openJobsList" @keydown.enter="openJobsList">
     <div class="compact-row">
       <span class="compact-title">{{ t('family.hours') }}</span>
       <Tag
@@ -282,7 +282,7 @@ function formatDate(dateStr: string | null) {
 }
 
 .hours-widget:focus-visible {
-  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline: 2px solid var(--mw-focus-ring);
   outline-offset: 2px;
 }
 
@@ -331,9 +331,9 @@ function formatDate(dateStr: string | null) {
   transition: width 0.3s;
 }
 
-.progress-fill.green { background: #16a34a; }
-.progress-fill.yellow { background: #ca8a04; }
-.progress-fill.red { background: #dc2626; }
+.progress-fill.green { background: var(--mw-success); }
+.progress-fill.yellow { background: var(--mw-warning); }
+.progress-fill.red { background: var(--mw-danger); }
 
 .progress-label {
   font-size: var(--mw-font-size-xs);
@@ -427,7 +427,7 @@ function formatDate(dateStr: string | null) {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  color: var(--mw-primary, #3b82f6);
+  color: var(--mw-link);
   cursor: pointer;
   font-weight: 500;
 }

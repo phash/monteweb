@@ -230,6 +230,7 @@ onMounted(loadData)
                   icon="pi pi-plus"
                   text
                   size="small"
+                  :aria-label="t('common.add')"
                   @click="addingAdminForSection = section.id"
                 />
               </div>
@@ -253,6 +254,7 @@ onMounted(loadData)
                     text
                     size="small"
                     severity="danger"
+                    aria-label="Entfernen"
                     @click="removeSectionAdmin(section.id, admin.id)"
                   />
                 </div>

@@ -308,12 +308,14 @@ function translateRole(role: string): string {
             icon="pi pi-file-pdf"
             severity="secondary"
             size="small"
+            :aria-label="t('admin.pdfExport')"
             @click="billing.exportPdf(period.id)"
           />
           <Button
             icon="pi pi-download"
             severity="secondary"
             size="small"
+            :aria-label="t('admin.csvExport')"
             @click="billing.exportCsv(period.id)"
           />
         </div>
@@ -413,8 +415,8 @@ function translateRole(role: string): string {
   margin-top: 0.25rem;
 }
 
-.traffic-green .summary-value { color: #16a34a; }
-.traffic-yellow .summary-value { color: #ca8a04; }
+.traffic-green .summary-value { color: #15803d; }
+.traffic-yellow .summary-value { color: #854d0e; }
 .traffic-red .summary-value { color: #dc2626; }
 
 .progress-bar-container {

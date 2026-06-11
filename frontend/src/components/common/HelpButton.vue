@@ -112,7 +112,7 @@ function goToHandbook() {
 }
 
 .help-fab:focus-visible {
-  outline: 2px solid var(--mw-primary, #4f46e5);
+  outline: 2px solid var(--mw-focus-ring);
   outline-offset: 2px;
 }
 
@@ -147,7 +147,7 @@ function goToHandbook() {
 }
 
 .help-section-title .pi-lightbulb {
-  color: #f59e0b;
+  color: var(--mw-warning-text);
 }
 
 .help-list {
@@ -179,7 +179,7 @@ function goToHandbook() {
 }
 
 .help-list--tips li::before {
-  background: #f59e0b;
+  background: var(--mw-warning-text);
 }
 
 .help-empty {
