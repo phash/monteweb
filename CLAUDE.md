@@ -7,9 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MonteWeb: modulares, selbst-gehostetes Schul-Intranet fuer Montessori-Schulkomplexe (Krippe bis Oberstufe).
 Raeume, Feed, Direktnachrichten, Jobboerse (Elternstunden), Putz-Organisation (QR-Check-in), Kalender, Formulare, Fotobox.
 
-**Tech:** Java 21 + Spring Boot 3.4 + Spring Modulith 1.3 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
+**Tech:** Java 21 + Spring Boot 4.0.6 + Spring Modulith 2.0.6 | Vue 3.5 + TS 5.9 + PrimeVue 4 Aura | PostgreSQL 16, Redis 7, MinIO, Solr 9.8 | Docker Compose + Caddy (SSL) + nginx
 
-**20 backend modules**, 114 Flyway migrations (V001–V115), ~1990 frontend tests (56% coverage), ~490 backend tests, 550 Playwright E2E tests (22 test files)
+**20 backend modules**, 116 Flyway migrations (V001–V117), ~1965 frontend tests (56% coverage), ~693 backend tests (53 classes), Playwright E2E (~23 test files)
 
 ## Commands
 
@@ -31,11 +31,15 @@ npm test               # vitest run (~1990 tests, ~183 files)
 npm run test:watch     # vitest watch mode
 npm run test:coverage
 
-# Backend tests (requires Docker for Testcontainers)
-cd backend
-./mvnw test                                            # all tests (47 test classes, ~490 tests)
-./mvnw test -Dtest=AuthControllerIntegrationTest       # single test class
-./mvnw test -Dtest="AuthControllerIntegrationTest#register_*"  # single method
+# Backend tests — Java 21 is NOT local, run inside Docker (~693 tests, 53 classes).
+# CI runs against shared service-container Postgres+Redis (testcontainers OFF);
+# locally, Testcontainers spins them up per Spring context. Reproduce CI exactly:
+#   docker run --rm -v $PWD/backend:/work -v ~/.m2:/root/.m2 -w /work \
+#     -e SPRING_DATASOURCE_URL=jdbc:postgresql://<pg-host>:5432/monteweb_test \
+#     -e SPRING_DATASOURCE_USERNAME=monteweb -e SPRING_DATASOURCE_PASSWORD=testpassword \
+#     -e SPRING_DATA_REDIS_HOST=<redis-host> \
+#     maven:3.9-eclipse-temurin-21 mvn test -Dtestcontainers.enabled=false
+# Single class/method: add -Dtest=AuthControllerIntegrationTest[#register_*]
 
 # Backup (optional)
 docker compose --profile backup up -d                  # automated daily backups
@@ -54,7 +58,7 @@ docker compose --profile monitoring up -d              # Grafana :3000, Promethe
 ./scripts/deploy.sh --status         # show service status + tunnel URL
 ```
 
-**Test Accounts:** `admin@monteweb.local` / `admin123` (SUPERADMIN, V032), `lehrer@monteweb.local` / `test1234` (TEACHER), `eltern@monteweb.local` / `test1234` (PARENT), `schueler@monteweb.local` / `test1234` (STUDENT), `sectionadmin@monteweb.local` / `test1234` (SECTION_ADMIN). Plus ~220 seed users from V040 (all `test1234`). **Note:** On fresh prod deployments, named test accounts may need manual creation (see `docs/DEPLOYMENT.md`).
+**Test Accounts:** `admin@monteweb.local` / `test1234` (SUPERADMIN; V032 seeds `admin123` but V111 resets it to `test1234`), `lehrer@monteweb.local` / `test1234` (TEACHER), `eltern@monteweb.local` / `test1234` (PARENT), `schueler@monteweb.local` / `test1234` (STUDENT), `sectionadmin@monteweb.local` / `test1234` (SECTION_ADMIN). Plus ~220 seed users from V040 (all `test1234`). **Note:** On fresh prod deployments, named test accounts may need manual creation (see `docs/DEPLOYMENT.md`).
 
 ## Architecture
 
@@ -101,13 +105,13 @@ frontend/src/
 
 **PrimeVue:** `ToastService` registered globally in `main.ts`, `<Toast />` in `App.vue`, views use `useToast()`. Components imported individually.
 
-**Theming:** CSS custom properties `--mw-*`, theme loaded from backend tenant config.
+**Theming:** CSS custom properties `--mw-*` (defined in `assets/styles/variables.css`). PrimeVue is bridged to these tokens via `definePreset` (`MontePreset` in `main.ts`) in BOTH colour schemes, so the admin tenant theme (`useTheme.ts` ← `tenant_config.theme`) recolours custom + PrimeVue components alike. Yellow is light → primary contrast is BLACK; focus ring is dark.
 
 **PWA:** Installable via `vite-plugin-pwa` + Workbox. Service worker with runtime caching (NetworkFirst for API calls). Icons in `public/icons/`. `usePwaInstall` composable handles install prompt with 7-day dismiss delay.
 
 ### Database
 
-- **Flyway** V001–V115 (114 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
+- **Flyway** V001–V117 (116 migrations). Never modify existing migrations — always create new `VXXX__description.sql`. Hibernate `ddl-auto: validate`
 - UUID PKs, `TIMESTAMP WITH TIME ZONE`, PostgreSQL arrays, JSONB
 - **Key gotchas:** `room_members` has composite PK (no `id`), `rooms.is_archived` (NOT `archived`), `messages.content` is nullable
 - **See:** [`docs/DATABASE-SCHEMA.md`](docs/DATABASE-SCHEMA.md) for full schema reference
@@ -117,7 +121,8 @@ frontend/src/
 - **Docker Compose:** 6 core services (postgres, redis, minio, solr, backend, frontend). Two isolated networks. Memory limits on all services. Optional profiles: `ssl` (Caddy), `monitoring` (Prometheus+Grafana), `office` (OnlyOffice), `backup`, `clamav`
 - **CI/CD:** GitHub Actions, Docker Buildx with GHA cache, Trivy image scanning, Dependabot
 - **Deployment:** `scripts/deploy.sh` with `--new-tunnel` for Cloudflare Quick Tunnel
-- **Prod:** SSH `manuel@192.168.178.131`, Verzeichnis `~/claude/monteweb`
+- **Prod (Heim):** SSH `manuel@192.168.178.131`, Verzeichnis `~/claude/monteweb`
+- **Live-Test-Instanz:** https://monteweb.mr-development.de — SSH `musikersuche@musikersuche.org`, Verzeichnis `/opt/monteweb` (git clone, branch main), zentrales Caddy in `/opt/caddyserver` (Container `caddy-proxy`, geteiltes Netz `caddy-proxy`). Deploy: `git pull` (lokale Edits `docker-compose.yml`/`frontend/nginx.conf` per stash erhalten) → `docker compose build frontend|backend` → `up -d`. `frontend/nginx.conf` proxyt auf `monteweb-backend:8080`. Solr-Schema-Aenderung braucht Core-Neuanlage (`docker volume rm monteweb_solr_data`) + Reindex `POST /api/v1/admin/search/reindex`
 - **See:** [`DEPLOYMENT.md`](DEPLOYMENT.md), [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md), [`LOCAL-DEV-GUIDE.md`](LOCAL-DEV-GUIDE.md), [`BACKUP.md`](BACKUP.md), [`docs/REVIEW-REMAINING-ITEMS.md`](docs/REVIEW-REMAINING-ITEMS.md)
 
 ### Testing
@@ -198,8 +203,11 @@ Key rules to know:
 - **`@Transactional(readOnly = true)`** auf Service-Klassen-Ebene: Alle mutierenden Methoden brauchen explizites `@Transactional` (ohne readOnly)
 - **Java 21 nicht lokal verfuegbar:** Backend-Kompilierung nur via Docker (`docker compose build backend`)
 - **FRONTEND_URL muss zur aktuellen URL passen:** Bei Cloudflare Tunnel `.env` anpassen, sonst CORS 403
-- **Admin-Passwort ist `admin123`** (V032), nicht `test1234` wie andere Test-Accounts (V033/V040)
+- **Admin-Passwort ist `test1234`** auf jeder migrierten DB (V111 ueberschreibt V032's `admin123`). Frische Prod-Deploys ohne V111-Daten ggf. anders
 - **Modularity-Test `@Disabled`:** user↔family Zyklus (AdminUserController nutzt FamilyModuleApi). TODO: AdminUserController in admin-Modul verschieben
+- **Backend-CI teilt EINE Postgres** (Service-Container, ganze Suite, keine Per-Klassen-Isolation). Ein Test, der Seed-Daten mutiert (z.B. den Seed-SUPERADMIN deaktiviert) ohne Cleanup, verschmutzt JEDE spaetere Klasse → CI-only-Fehler, die lokal gruen sind (Testcontainers gibt `@AutoConfigureMockMvc`-Klassen eine separate DB). Geteilte Mutationen per `@AfterEach` zuruecksetzen
+- **`npm run test:coverage` (CI) ist strenger als `npm test`** — unbehandelte async-Fehler lassen Tests fehlschlagen. Ein fire-and-forget Store-Call (`store.fetchX()` on mount) mit unvollstaendigem `vi.mock` faellt NUR unter `--coverage`
+- **CI-Split: `E2E` + `Docker Build` laufen NUR bei Push auf `main`** (in PR-Runs `SKIPPED`). Der `Docker Build`-Job bricht per **Trivy-Gate** (`exit-code 1`) bei HIGH/CRITICAL-CVEs im Backend-Image ab — ein grüner PR (Backend+Frontend gruen) kann `main` also trotzdem rot lassen. Branch-Protection auf `main`: 1 Review noetig, keine Pflicht-Checks, `enforce_admins` aus → Merge via `gh pr merge <n> --admin --squash`. Dependabot-Frontend-PRs teilen sich `package-lock.json` → nur sequenziell mergebar (`@dependabot rebase` konsolidiert sie ggf. in Group-PRs)
 
 ## API & Integrations
 
@@ -208,22 +216,15 @@ Key rules to know:
 - **See:** [`docs/INTEGRATIONS.md`](docs/INTEGRATIONS.md) for Caddy, Cloudflare Tunnel, E-Mail, OIDC, LDAP, Jitsi, WOPI, ClamAV, Monitoring, Solr
 ## PindeX – Codebase Navigation
 
-Dieses Projekt ist mit PindeX indexiert.
+Dieses Projekt ist (sofern der PindeX-MCP-Server verbunden ist) mit PindeX indexiert. **Die `mcp__pindex__*`-Tools sind nicht in jeder Session verfuegbar** — wenn sie fehlen, direkt `Read`/`Grep`/`Glob` nutzen (kein Workflow-Verstoss).
 
-**PFLICHT-WORKFLOW** – bei jeder Codebase-Aufgabe:
-1. **Unbekannte Datei?** → `mcp__pindex__get_file_summary` ZUERST, dann ggf. `get_context`
-2. **Symbol suchen?** → `mcp__pindex__search_symbols` oder `find_symbol`
-3. **Abhängigkeiten?** → `mcp__pindex__get_dependencies`
-4. **Wo wird etwas verwendet?** → `mcp__pindex__find_usages`
-5. **Projekt-Überblick?** → `mcp__pindex__get_project_overview`
+**Wenn PindeX verfuegbar ist, bevorzugt nutzen:**
+1. **Unbekannte Datei?** → `mcp__pindex__get_file_summary`, dann ggf. `get_context`
+2. **Symbol suchen?** → `mcp__pindex__search_symbols` / `find_symbol`
+3. **Abhaengigkeiten?** → `mcp__pindex__get_dependencies`
+4. **Verwendungen?** → `mcp__pindex__find_usages`
+5. **Ueberblick?** → `mcp__pindex__get_project_overview`
+6. **Kontext:** wichtige Muster → `save_context`; Sessionbeginn → `search_docs`
 
-**VERBOTEN** (solange PindeX verfügbar):
-- `Read` auf Quellcode-Dateien ohne vorherigen `get_file_summary`-Aufruf
-- `Glob`/`Grep` zur Symbol-Suche statt `search_symbols`
-
-**Kontext auslagern:**
-- Wichtige Entscheidungen / Muster → `mcp__pindex__save_context` speichern
-- Zu Sessionbeginn → `mcp__pindex__search_docs` für gespeicherten Kontext
-
-**Fallback:** Falls ein Tool `null` zurückgibt → `Read`/`Grep` als Fallback.
+**Fallback (immer ok):** PindeX nicht verfuegbar oder ein Tool gibt `null` → `Read`/`Grep`/`Glob`.
 <!-- pindex -->
