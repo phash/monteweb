@@ -791,6 +791,7 @@ export default {
     fileTooLarge: 'Datei zu groß. Maximal 10 MB.',
     schoolYear: 'Schuljahr',
     currentSchoolYear: 'Aktuelles Schuljahr',
+    reportAllTimeHint: 'Diese Übersicht zeigt die Gesamtsumme. Schuljahr-Abrechnungen findest du unter Jahresabrechnung.',
   },
   feed: {
     title: 'Feed',

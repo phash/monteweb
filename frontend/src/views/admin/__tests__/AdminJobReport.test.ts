@@ -98,6 +98,7 @@ const stubs = {
   },
   Column: { template: '<div class="column-stub"><slot /></div>', props: ['field', 'header', 'sortable', 'sortField'] },
   Tag: { template: '<span class="tag-stub">{{ value }}</span>', props: ['value', 'severity'] },
+  Message: { template: '<div class="message-stub"><slot /></div>', props: ['severity', 'closable'] },
 }
 
 function mountComponent() {
