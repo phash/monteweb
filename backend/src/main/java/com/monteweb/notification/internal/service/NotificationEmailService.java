@@ -87,6 +87,7 @@ public class NotificationEmailService {
             case MENTION -> "Sie wurden in einem Beitrag erwaehnt.";
             case PARENT_LETTER -> title;
             case PARENT_LETTER_REMINDER -> title;
+            case JOB_OVERDUE -> title;
         };
     }
 }

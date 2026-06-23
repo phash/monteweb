@@ -369,6 +369,13 @@ public class UserService implements UserModuleApi {
                 .toList();
     }
 
+    @Override
+    public List<UserInfo> findByRole(UserRole role) {
+        return userRepository.findByRoleAndActiveTrue(role).stream()
+                .map(this::toUserInfo)
+                .toList();
+    }
+
     @Transactional
     public UserInfo updateRole(UUID userId, UserRole role) {
         var user = findEntityById(userId);

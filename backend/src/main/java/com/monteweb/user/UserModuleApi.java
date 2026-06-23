@@ -75,6 +75,9 @@ public interface UserModuleApi {
      */
     List<UserInfo> findByIds(List<UUID> ids);
 
+    /** Finds all active users with the given base role. */
+    List<UserInfo> findByRole(UserRole role);
+
     /**
      * Switches the active role for a user. The new role must be in the user's assignedRoles.
      * SUPERADMIN and STUDENT cannot switch roles.
