@@ -70,6 +70,17 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
     List<JobAssignment> findConfirmedByFamilyId(UUID familyId);
 
     @Query("""
+            SELECT a FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED'
+            AND a.confirmed = true
+            AND a.confirmedAt >= :fromInstant
+            AND a.confirmedAt < :toInstant
+            ORDER BY a.completedAt DESC
+            """)
+    List<JobAssignment> findConfirmedByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
+
+    @Query("""
             SELECT COALESCE(SUM(a.actualHours), 0)
             FROM JobAssignment a
             WHERE a.familyId = :familyId
