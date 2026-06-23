@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [vue()],
+  cacheDir: '/home/manuel/.cache/vite-monteweb',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

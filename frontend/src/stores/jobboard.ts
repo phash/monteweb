@@ -8,6 +8,7 @@ import type {
   FamilyHoursInfo,
   ReportSummary,
   CreateJobRequest,
+  SchoolYearInfo,
 } from '@/types/jobboard'
 
 export const useJobboardStore = defineStore('jobboard', () => {
@@ -19,6 +20,8 @@ export const useJobboardStore = defineStore('jobboard', () => {
   const categories = ref<string[]>([])
   const familyHours = ref<FamilyHoursInfo | null>(null)
   const report = ref<FamilyHoursInfo[]>([])
+  const schoolYears = ref<SchoolYearInfo[]>([])
+  const selectedPeriodId = ref<string | null>(null)
   const reportSummary = ref<ReportSummary | null>(null)
   const loading = ref(false)
   const loadingJob = ref(false)
@@ -176,9 +179,22 @@ export const useJobboardStore = defineStore('jobboard', () => {
     }
   }
 
-  async function fetchFamilyHours(familyId: string) {
+  async function fetchSchoolYears() {
     try {
-      const res = await jobboardApi.getFamilyHours(familyId)
+      const res = await jobboardApi.getSchoolYears()
+      schoolYears.value = res.data.data
+      if (!selectedPeriodId.value) {
+        const active = schoolYears.value.find((y) => y.active)
+        selectedPeriodId.value = active?.id ?? schoolYears.value[0]?.id ?? null
+      }
+    } catch (e) {
+      console.error('Failed to fetch school years:', e)
+    }
+  }
+
+  async function fetchFamilyHours(familyId: string, periodId?: string) {
+    try {
+      const res = await jobboardApi.getFamilyHours(familyId, periodId)
       familyHours.value = res.data.data
     } catch {
       familyHours.value = null
@@ -288,6 +304,9 @@ export const useJobboardStore = defineStore('jobboard', () => {
     confirmAssignment,
     rejectAssignment,
     fetchPendingConfirmations,
+    schoolYears,
+    selectedPeriodId,
+    fetchSchoolYears,
     fetchFamilyHours,
     fetchReport,
     draftJobs,
