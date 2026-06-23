@@ -789,6 +789,8 @@ export default {
     attachmentUploaded: 'Datei hochgeladen',
     maxAttachments: 'Max. 5 Dateien, je max. 10 MB',
     fileTooLarge: 'Datei zu groß. Maximal 10 MB.',
+    schoolYear: 'Schuljahr',
+    currentSchoolYear: 'Aktuelles Schuljahr',
   },
   feed: {
     title: 'Feed',
