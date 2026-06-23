@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useJobboardStore } from '@/stores/jobboard'
@@ -7,6 +7,7 @@ import { useAdminStore } from '@/stores/admin'
 import { jobboardApi } from '@/api/jobboard.api'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
+import SchoolYearSelect from '@/components/common/SchoolYearSelect.vue'
 import type { JobAssignmentInfo } from '@/types/jobboard'
 
 const { t } = useI18n()
@@ -21,11 +22,21 @@ const showJobs = ref(false)
 const familyAssignments = ref<JobAssignmentInfo[]>([])
 const loadingJobs = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   if (jobboardEnabled) {
-    jobboard.fetchFamilyHours(props.familyId)
+    await jobboard.fetchSchoolYears()
+    await jobboard.fetchFamilyHours(props.familyId, jobboard.selectedPeriodId ?? undefined)
   }
 })
+
+watch(
+  () => jobboard.selectedPeriodId,
+  (periodId) => {
+    if (jobboardEnabled) {
+      jobboard.fetchFamilyHours(props.familyId, periodId ?? undefined)
+    }
+  },
+)
 
 function trafficLightSeverity(light: string) {
   switch (light) {
@@ -114,6 +125,13 @@ function formatDate(dateStr: string | null) {
         :severity="trafficLightSeverity(jobboard.familyHours.trafficLight)"
       />
     </div>
+
+    <SchoolYearSelect
+      v-if="jobboard.schoolYears.length > 1"
+      v-model="jobboard.selectedPeriodId"
+      :options="jobboard.schoolYears"
+      class="mb-3"
+    />
 
     <div class="hours-bars">
       <!-- Total hours -->

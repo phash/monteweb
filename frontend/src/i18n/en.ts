@@ -789,6 +789,9 @@ export default {
     attachmentUploaded: 'File uploaded',
     maxAttachments: 'Max. 5 files, 10 MB each',
     fileTooLarge: 'File too large. Maximum 10 MB.',
+    schoolYear: 'School year',
+    currentSchoolYear: 'Current school year',
+    reportAllTimeHint: 'This overview shows all-time totals. For per-school-year billing see Annual Billing.',
   },
   feed: {
     title: 'Feed',

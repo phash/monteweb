@@ -8,6 +8,7 @@ import type {
   ReportSummary,
   CreateJobRequest,
   JobStatus,
+  SchoolYearInfo,
 } from '@/types/jobboard'
 
 export const jobboardApi = {
@@ -102,13 +103,21 @@ export const jobboardApi = {
     return client.get<ApiResponse<JobAssignmentInfo[]>>('/jobs/my-assignments')
   },
 
-  getFamilyAssignments(familyId: string) {
-    return client.get<ApiResponse<JobAssignmentInfo[]>>(`/jobs/family/${familyId}/assignments`)
+  getSchoolYears() {
+    return client.get<ApiResponse<SchoolYearInfo[]>>('/jobs/school-years')
+  },
+
+  getFamilyAssignments(familyId: string, periodId?: string) {
+    return client.get<ApiResponse<JobAssignmentInfo[]>>(`/jobs/family/${familyId}/assignments`, {
+      params: { periodId },
+    })
   },
 
   // Hours / Reports
-  getFamilyHours(familyId: string) {
-    return client.get<ApiResponse<FamilyHoursInfo>>(`/jobs/family/${familyId}/hours`)
+  getFamilyHours(familyId: string, periodId?: string) {
+    return client.get<ApiResponse<FamilyHoursInfo>>(`/jobs/family/${familyId}/hours`, {
+      params: { periodId },
+    })
   },
 
   getReport() {

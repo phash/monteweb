@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -68,6 +69,17 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             ORDER BY a.completedAt DESC
             """)
     List<JobAssignment> findConfirmedByFamilyId(UUID familyId);
+
+    @Query("""
+            SELECT a FROM JobAssignment a
+            WHERE a.familyId = :familyId
+            AND a.status = 'COMPLETED'
+            AND a.confirmed = true
+            AND a.confirmedAt >= :fromInstant
+            AND a.confirmedAt < :toInstant
+            ORDER BY a.completedAt DESC
+            """)
+    List<JobAssignment> findConfirmedByFamilyIdAndDateRange(UUID familyId, Instant fromInstant, Instant toInstant);
 
     @Query("""
             SELECT COALESCE(SUM(a.actualHours), 0)
@@ -142,4 +154,27 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
     List<JobAssignment> findPendingConfirmation();
 
     void deleteByUserId(UUID userId);
+
+    @Query("""
+            SELECT a FROM JobAssignment a, Job j
+            WHERE a.jobId = j.id
+            AND j.scheduledDate IS NOT NULL
+            AND j.scheduledDate <= :cutoff
+            AND j.visibility <> 'DRAFT'
+            AND a.overdueReminderSentAt IS NULL
+            AND (a.status IN ('ASSIGNED', 'IN_PROGRESS')
+                 OR (a.status = 'COMPLETED' AND a.confirmed = false))
+            """)
+    List<JobAssignment> findOverdueAssignments(LocalDate cutoff);
+
+    @Query("""
+            SELECT a FROM JobAssignment a, Job j
+            WHERE a.jobId = j.id
+            AND j.scheduledDate IS NOT NULL
+            AND j.scheduledDate >= :fromDate AND j.scheduledDate <= :toDate
+            AND j.visibility <> 'DRAFT'
+            AND (a.status IN ('ASSIGNED', 'IN_PROGRESS')
+                 OR (a.status = 'COMPLETED' AND a.confirmed = false))
+            """)
+    List<JobAssignment> findOutstandingAssignmentsInRange(LocalDate fromDate, LocalDate toDate);
 }

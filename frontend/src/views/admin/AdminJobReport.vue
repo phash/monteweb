@@ -8,6 +8,7 @@ import Button from 'primevue/button'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
 import Tag from 'primevue/tag'
+import Message from 'primevue/message'
 
 const { t } = useI18n()
 const jobboard = useJobboardStore()
@@ -62,6 +63,8 @@ function progressPercent(completed: number, target: number) {
         />
       </div>
     </div>
+
+    <Message severity="info" :closable="false">{{ t('jobboard.reportAllTimeHint') }}</Message>
 
     <!-- Summary Cards -->
     <div v-if="jobboard.reportSummary" class="summary-cards">

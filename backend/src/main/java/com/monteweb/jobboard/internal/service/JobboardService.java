@@ -7,10 +7,12 @@ import com.monteweb.cleaning.PutzaktionCreatedEvent;
 import com.monteweb.family.FamilyInfo;
 import com.monteweb.family.FamilyModuleApi;
 import com.monteweb.jobboard.*;
+import com.monteweb.jobboard.internal.model.BillingPeriod;
 import com.monteweb.jobboard.internal.model.Job;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import com.monteweb.jobboard.internal.model.JobAssignment;
+import com.monteweb.jobboard.internal.repository.BillingPeriodRepository;
 import com.monteweb.jobboard.internal.repository.JobAssignmentRepository;
 import com.monteweb.jobboard.internal.repository.JobRepository;
 import com.monteweb.shared.exception.BusinessException;
@@ -39,6 +41,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 @Service
@@ -48,6 +51,7 @@ public class JobboardService implements JobboardModuleApi {
 
     private final JobRepository jobRepository;
     private final JobAssignmentRepository assignmentRepository;
+    private final BillingPeriodRepository billingPeriodRepository;
     private final JobAttachmentRepository attachmentRepository;
     private final UserModuleApi userModuleApi;
     private final FamilyModuleApi familyModuleApi;
@@ -60,6 +64,7 @@ public class JobboardService implements JobboardModuleApi {
 
     public JobboardService(JobRepository jobRepository,
                            JobAssignmentRepository assignmentRepository,
+                           BillingPeriodRepository billingPeriodRepository,
                            JobAttachmentRepository attachmentRepository,
                            UserModuleApi userModuleApi,
                            FamilyModuleApi familyModuleApi,
@@ -71,6 +76,7 @@ public class JobboardService implements JobboardModuleApi {
                            JobStorageService storageService) {
         this.jobRepository = jobRepository;
         this.assignmentRepository = assignmentRepository;
+        this.billingPeriodRepository = billingPeriodRepository;
         this.attachmentRepository = attachmentRepository;
         this.userModuleApi = userModuleApi;
         this.familyModuleApi = familyModuleApi;
@@ -89,6 +95,42 @@ public class JobboardService implements JobboardModuleApi {
     public Optional<FamilyHoursInfo> getFamilyHours(UUID familyId) {
         return familyModuleApi.findById(familyId)
                 .map(this::buildFamilyHoursInfo);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SchoolYearInfo> listSchoolYears() {
+        return billingPeriodRepository.findAllByOrderByStartDateDesc().stream()
+                .map(p -> new SchoolYearInfo(p.getId(), p.getName(), p.getStartDate(), p.getEndDate(),
+                        "ACTIVE".equals(p.getStatus())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<FamilyHoursInfo> getFamilyHours(UUID familyId, UUID periodId) {
+        return familyModuleApi.findById(familyId).map(family -> {
+            BillingPeriod period = resolvePeriod(periodId);
+            return period != null ? buildFamilyHoursInfo(family, period) : buildFamilyHoursInfo(family);
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public List<JobAssignmentInfo> getAssignmentsForFamily(UUID familyId, UUID periodId) {
+        BillingPeriod period = resolvePeriod(periodId);
+        if (period == null) {
+            return getAssignmentsForFamily(familyId);
+        }
+        Instant from = period.getStartDate().atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant to = period.getEndDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        return assignmentRepository.findConfirmedByFamilyIdAndDateRange(familyId, from, to).stream()
+                .map(this::toAssignmentInfo)
+                .toList();
+    }
+
+    private BillingPeriod resolvePeriod(UUID periodId) {
+        if (periodId != null) {
+            return billingPeriodRepository.findById(periodId).orElse(null);
+        }
+        return billingPeriodRepository.findByStatus("ACTIVE").orElse(null);
     }
 
     @Override
@@ -639,59 +681,54 @@ public class JobboardService implements JobboardModuleApi {
         }
     }
 
-    private FamilyHoursInfo buildFamilyHoursInfo(FamilyInfo family) {
-        // If family is exempt from hours, return zero-state with exempt flag
-        if (family.hoursExempt()) {
-            return new FamilyHoursInfo(
-                    family.id(), family.name(),
-                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                    BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
-                    "GREEN", BigDecimal.ZERO, BigDecimal.ZERO, "GREEN", true
-            );
-        }
+    private FamilyHoursInfo exemptInfo(FamilyInfo family) {
+        return new FamilyHoursInfo(
+                family.id(), family.name(),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                "GREEN", BigDecimal.ZERO, BigDecimal.ZERO, "GREEN", true);
+    }
 
+    private FamilyHoursInfo buildFamilyHoursInfo(FamilyInfo family) {
+        if (family.hoursExempt()) return exemptInfo(family);
+        BigDecimal confirmed = assignmentRepository.sumConfirmedNormalHoursByFamilyId(family.id());
+        BigDecimal pending = assignmentRepository.sumPendingHoursByFamilyId(family.id());
+        BigDecimal jobCleaning = assignmentRepository.sumConfirmedCleaningJobHoursByFamilyId(family.id());
+        BigDecimal qrCleaning = cleaningModuleApi != null
+                ? cleaningModuleApi.getCleaningHoursForFamily(family.id()) : BigDecimal.ZERO;
+        return assembleHoursInfo(family, confirmed, pending, jobCleaning.add(qrCleaning));
+    }
+
+    private FamilyHoursInfo buildFamilyHoursInfo(FamilyInfo family, BillingPeriod period) {
+        if (family.hoursExempt()) return exemptInfo(family);
+        Instant from = period.getStartDate().atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant to = period.getEndDate().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        BigDecimal confirmed = assignmentRepository.sumConfirmedNormalHoursByFamilyIdAndDateRange(family.id(), from, to);
+        BigDecimal pending = assignmentRepository.sumPendingHoursByFamilyIdAndDateRange(family.id(), from, to);
+        BigDecimal jobCleaning = assignmentRepository.sumConfirmedCleaningJobHoursByFamilyIdAndDateRange(family.id(), from, to);
+        BigDecimal qrCleaning = cleaningModuleApi != null
+                ? cleaningModuleApi.getCleaningHoursForFamilyInRange(family.id(), period.getStartDate(), period.getEndDate())
+                : BigDecimal.ZERO;
+        return assembleHoursInfo(family, confirmed, pending, jobCleaning.add(qrCleaning));
+    }
+
+    private FamilyHoursInfo assembleHoursInfo(FamilyInfo family, BigDecimal confirmed,
+                                              BigDecimal pending, BigDecimal cleaningHrs) {
         var tenantConfig = adminModuleApi.getTenantConfig();
         BigDecimal targetHours = tenantConfig.targetHoursPerFamily();
         if (targetHours == null) targetHours = BigDecimal.ZERO;
         BigDecimal targetCleaningHrs = tenantConfig.targetCleaningHours();
         if (targetCleaningHrs == null) targetCleaningHrs = BigDecimal.ZERO;
 
-        // Normal job hours (all categories except Reinigung)
-        BigDecimal confirmed = assignmentRepository.sumConfirmedNormalHoursByFamilyId(family.id());
-        BigDecimal pending = assignmentRepository.sumPendingHoursByFamilyId(family.id());
-
-        // Cleaning hours from Reinigung-category jobs
-        BigDecimal jobCleaningHrs = assignmentRepository.sumConfirmedCleaningJobHoursByFamilyId(family.id());
-
-        // Legacy QR cleaning hours
-        BigDecimal qrCleaningHrs = BigDecimal.ZERO;
-        if (cleaningModuleApi != null) {
-            qrCleaningHrs = cleaningModuleApi.getCleaningHoursForFamily(family.id());
-        }
-
-        BigDecimal cleaningHrs = jobCleaningHrs.add(qrCleaningHrs);
         BigDecimal totalHours = confirmed.add(cleaningHrs);
         BigDecimal remaining = targetHours.subtract(totalHours).max(BigDecimal.ZERO);
         BigDecimal remainingCleaningHrs = targetCleaningHrs.subtract(cleaningHrs).max(BigDecimal.ZERO);
 
-        String trafficLight = calculateTrafficLight(totalHours, targetHours);
-        String cleaningTrafficLight = calculateTrafficLight(cleaningHrs, targetCleaningHrs);
-
         return new FamilyHoursInfo(
-                family.id(),
-                family.name(),
-                targetHours,
-                confirmed,
-                pending,
-                cleaningHrs,
-                totalHours,
-                remaining,
-                trafficLight,
-                targetCleaningHrs,
-                remainingCleaningHrs,
-                cleaningTrafficLight,
-                false
-        );
+                family.id(), family.name(), targetHours, confirmed, pending, cleaningHrs,
+                totalHours, remaining, calculateTrafficLight(totalHours, targetHours),
+                targetCleaningHrs, remainingCleaningHrs, calculateTrafficLight(cleaningHrs, targetCleaningHrs),
+                false);
     }
 
     private String calculateTrafficLight(BigDecimal completed, BigDecimal target) {

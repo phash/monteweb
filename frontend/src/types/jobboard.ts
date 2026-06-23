@@ -97,3 +97,11 @@ export interface CreateJobRequest {
   eventId?: string
   visibility?: JobVisibility
 }
+
+export interface SchoolYearInfo {
+  id: string
+  name: string
+  startDate: string
+  endDate: string
+  active: boolean
+}

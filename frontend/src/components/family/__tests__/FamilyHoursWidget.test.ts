@@ -25,6 +25,7 @@ vi.mock('@/api/jobboard.api', () => ({
         },
       },
     }),
+    getSchoolYears: vi.fn().mockResolvedValue({ data: { data: [] } }),
     getFamilyAssignments: vi.fn().mockResolvedValue({ data: { data: [] } }),
     listJobs: vi.fn().mockResolvedValue({ data: { data: { content: [], last: true } } }),
     getCategories: vi.fn().mockResolvedValue({ data: { data: [] } }),
@@ -82,6 +83,11 @@ const stubs = {
   Dialog: {
     template: '<div class="dialog-stub"><slot /></div>',
     props: ['visible', 'header', 'modal', 'style'],
+  },
+  SchoolYearSelect: {
+    template: '<div class="school-year-select-stub" />',
+    props: ['modelValue', 'options'],
+    emits: ['update:modelValue'],
   },
 }
 

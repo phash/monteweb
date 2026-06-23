@@ -44,6 +44,9 @@ public class BillingPeriod {
 
     private Instant updatedAt;
 
+    @Column(name = "year_end_reminder_sent_at")
+    private Instant yearEndReminderSentAt;
+
     @PrePersist
     void prePersist() {
         createdAt = Instant.now();
