@@ -62,7 +62,7 @@ class JobboardServiceTest {
     @BeforeEach
     void setUp() {
         service = new JobboardService(
-                jobRepository, assignmentRepository, attachmentRepository,
+                jobRepository, assignmentRepository, null, attachmentRepository,
                 userModuleApi, familyModuleApi, adminModuleApi,
                 eventPublisher, cleaningModuleApi, calendarModuleApi,
                 roomModuleApi, storageService

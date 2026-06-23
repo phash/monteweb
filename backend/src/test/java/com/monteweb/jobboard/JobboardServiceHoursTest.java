@@ -59,7 +59,7 @@ class JobboardServiceHoursTest {
     @BeforeEach
     void setUp() {
         service = new JobboardService(
-                jobRepository, assignmentRepository, attachmentRepository,
+                jobRepository, assignmentRepository, null, attachmentRepository,
                 userModuleApi, familyModuleApi, adminModuleApi,
                 eventPublisher, cleaningModuleApi, calendarModuleApi,
                 roomModuleApi, storageService
@@ -435,7 +435,7 @@ class JobboardServiceHoursTest {
         void withoutCleaningModule_onlyJobHours() {
             // Service ohne CleaningModuleApi
             var serviceNoClean = new JobboardService(
-                    jobRepository, assignmentRepository, attachmentRepository,
+                    jobRepository, assignmentRepository, null, attachmentRepository,
                     userModuleApi, familyModuleApi, adminModuleApi,
                     eventPublisher, null, calendarModuleApi,
                     roomModuleApi, null
