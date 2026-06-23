@@ -74,4 +74,23 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     long countByStatus(JobStatus status);
 
     List<Job> findByCreatedBy(UUID createdBy);
+
+    @Query("""
+            SELECT j FROM Job j
+            WHERE j.scheduledDate IS NOT NULL
+            AND j.scheduledDate <= :cutoff
+            AND j.status NOT IN ('COMPLETED', 'CANCELLED')
+            AND j.overdueReminderSentAt IS NULL
+            AND NOT EXISTS (SELECT a FROM JobAssignment a WHERE a.jobId = j.id AND a.status <> 'CANCELLED')
+            """)
+    List<Job> findOrphanedOverdueJobs(LocalDate cutoff);
+
+    @Query("""
+            SELECT j FROM Job j
+            WHERE j.scheduledDate IS NOT NULL
+            AND j.scheduledDate >= :fromDate AND j.scheduledDate <= :toDate
+            AND j.status NOT IN ('COMPLETED', 'CANCELLED')
+            AND NOT EXISTS (SELECT a FROM JobAssignment a WHERE a.jobId = j.id AND a.status <> 'CANCELLED')
+            """)
+    List<Job> findOrphanedJobsInRange(LocalDate fromDate, LocalDate toDate);
 }

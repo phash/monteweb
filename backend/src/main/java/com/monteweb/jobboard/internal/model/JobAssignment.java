@@ -58,6 +58,9 @@ public class JobAssignment {
     @Column(name = "completed_at")
     private Instant completedAt;
 
+    @Column(name = "overdue_reminder_sent_at")
+    private Instant overdueReminderSentAt;
+
     @PrePersist
     protected void onCreate() {
         assignedAt = Instant.now();

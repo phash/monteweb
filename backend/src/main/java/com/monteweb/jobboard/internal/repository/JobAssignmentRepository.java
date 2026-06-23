@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -153,4 +154,25 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
     List<JobAssignment> findPendingConfirmation();
 
     void deleteByUserId(UUID userId);
+
+    @Query("""
+            SELECT a FROM JobAssignment a, Job j
+            WHERE a.jobId = j.id
+            AND j.scheduledDate IS NOT NULL
+            AND j.scheduledDate <= :cutoff
+            AND a.overdueReminderSentAt IS NULL
+            AND (a.status IN ('ASSIGNED', 'IN_PROGRESS')
+                 OR (a.status = 'COMPLETED' AND a.confirmed = false))
+            """)
+    List<JobAssignment> findOverdueAssignments(LocalDate cutoff);
+
+    @Query("""
+            SELECT a FROM JobAssignment a, Job j
+            WHERE a.jobId = j.id
+            AND j.scheduledDate IS NOT NULL
+            AND j.scheduledDate >= :fromDate AND j.scheduledDate <= :toDate
+            AND (a.status IN ('ASSIGNED', 'IN_PROGRESS')
+                 OR (a.status = 'COMPLETED' AND a.confirmed = false))
+            """)
+    List<JobAssignment> findOutstandingAssignmentsInRange(LocalDate fromDate, LocalDate toDate);
 }
