@@ -160,6 +160,7 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             WHERE a.jobId = j.id
             AND j.scheduledDate IS NOT NULL
             AND j.scheduledDate <= :cutoff
+            AND j.visibility <> 'DRAFT'
             AND a.overdueReminderSentAt IS NULL
             AND (a.status IN ('ASSIGNED', 'IN_PROGRESS')
                  OR (a.status = 'COMPLETED' AND a.confirmed = false))
@@ -171,6 +172,7 @@ public interface JobAssignmentRepository extends JpaRepository<JobAssignment, UU
             WHERE a.jobId = j.id
             AND j.scheduledDate IS NOT NULL
             AND j.scheduledDate >= :fromDate AND j.scheduledDate <= :toDate
+            AND j.visibility <> 'DRAFT'
             AND (a.status IN ('ASSIGNED', 'IN_PROGRESS')
                  OR (a.status = 'COMPLETED' AND a.confirmed = false))
             """)

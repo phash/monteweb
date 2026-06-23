@@ -53,6 +53,25 @@ class JobReminderQueriesTest {
     }
 
     @Test
+    void findOrphanedOverdueJobs_excludesDraftJobs() {
+        LocalDate today = LocalDate.now();
+        em.createNativeQuery("SET LOCAL session_replication_role = 'replica'").executeUpdate();
+        Job draft = new Job();
+        draft.setTitle("Draft job");
+        draft.setCategory("Allgemein");
+        draft.setEstimatedHours(new BigDecimal("1.00"));
+        draft.setMaxAssignees(1);
+        draft.setStatus(JobStatus.OPEN);
+        draft.setScheduledDate(today.minusDays(30));
+        draft.setVisibility(JobVisibility.DRAFT);
+        UUID draftId = jobRepository.save(draft).getId();
+
+        List<Job> result = jobRepository.findOrphanedOverdueJobs(today.minusDays(28));
+
+        assertThat(result).extracting(Job::getId).doesNotContain(draftId);
+    }
+
+    @Test
     void findOverdueAssignments_returnsUnfinishedAssignmentsForOverdueJobs() {
         LocalDate today = LocalDate.now();
         Job j = job(today.minusDays(40), JobStatus.ASSIGNED);
