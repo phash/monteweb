@@ -3,11 +3,12 @@ package com.monteweb.jobboard;
 import com.monteweb.TestContainerConfig;
 import com.monteweb.jobboard.internal.model.JobAssignment;
 import com.monteweb.jobboard.internal.repository.JobAssignmentRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -19,12 +20,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @Import(TestContainerConfig.class)
-@Sql(statements = "SET session_replication_role = 'replica'",
-        executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+@Transactional
 class JobAssignmentRepositoryRangeTest {
 
     @Autowired
     JobAssignmentRepository repository;
+
+    @Autowired
+    EntityManager em;
 
     private JobAssignment assignment(UUID familyId, Instant confirmedAt, BigDecimal hours) {
         JobAssignment a = new JobAssignment();
@@ -41,6 +44,7 @@ class JobAssignmentRepositoryRangeTest {
 
     @Test
     void findConfirmedByFamilyIdAndDateRange_returnsOnlyAssignmentsConfirmedInRange() {
+        em.createNativeQuery("SET LOCAL session_replication_role = 'replica'").executeUpdate();
         UUID familyId = UUID.randomUUID();
         Instant now = Instant.now();
         Instant inRange = now.minus(5, ChronoUnit.DAYS);
