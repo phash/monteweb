@@ -236,20 +236,30 @@ public class JobboardController {
 
     // ---- Hours / Reports ----
 
+    @GetMapping("/school-years")
+    public ResponseEntity<ApiResponse<List<SchoolYearInfo>>> listSchoolYears() {
+        SecurityUtils.requireCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.ok(jobboardService.listSchoolYears()));
+    }
+
     @GetMapping("/family/{familyId}/hours")
-    public ResponseEntity<ApiResponse<FamilyHoursInfo>> getFamilyHours(@PathVariable UUID familyId) {
+    public ResponseEntity<ApiResponse<FamilyHoursInfo>> getFamilyHours(
+            @PathVariable UUID familyId,
+            @RequestParam(required = false) UUID periodId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         requireFamilyMemberOrAdmin(userId, familyId);
-        var hours = jobboardService.getFamilyHours(familyId)
+        var hours = jobboardService.getFamilyHours(familyId, periodId)
                 .orElseThrow(() -> new ResourceNotFoundException("Family", familyId));
         return ResponseEntity.ok(ApiResponse.ok(hours));
     }
 
     @GetMapping("/family/{familyId}/assignments")
-    public ResponseEntity<ApiResponse<List<JobAssignmentInfo>>> getFamilyAssignments(@PathVariable UUID familyId) {
+    public ResponseEntity<ApiResponse<List<JobAssignmentInfo>>> getFamilyAssignments(
+            @PathVariable UUID familyId,
+            @RequestParam(required = false) UUID periodId) {
         UUID userId = SecurityUtils.requireCurrentUserId();
         requireFamilyMemberOrAdmin(userId, familyId);
-        return ResponseEntity.ok(ApiResponse.ok(jobboardService.getAssignmentsForFamily(familyId)));
+        return ResponseEntity.ok(ApiResponse.ok(jobboardService.getAssignmentsForFamily(familyId, periodId)));
     }
 
     @GetMapping("/report")
