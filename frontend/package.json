@@ -16,14 +16,14 @@
     "@stomp/stompjs": "^7.3.0",
     "@types/dompurify": "^3.2.0",
     "@types/qrcode": "^1.5.6",
-    "axios": "^1.18.0",
+    "axios": "^1.18.1",
     "dompurify": "^3.4.11",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
     "qrcode": "^1.5.4",
-    "vue": "^3.5.38",
-    "vue-i18n": "^11.2.8",
+    "vue": "^3.5.39",
+    "vue-i18n": "^11.4.6",
     "vue-router": "^5.0.3"
   },
   "overrides": {
