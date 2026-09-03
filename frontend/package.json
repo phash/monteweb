@@ -17,7 +17,7 @@
     "@types/dompurify": "^3.2.0",
     "@types/qrcode": "^1.5.6",
     "axios": "^1.18.0",
-    "dompurify": "^3.4.11",
+    "dompurify": "^3.4.14",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.4",
