@@ -7,7 +7,7 @@ COPY src ./src
 RUN mvn package -DskipTests -B --no-transfer-progress
 
 # Runtime stage
-FROM eclipse-temurin:25-jre-alpine AS runtime
+FROM eclipse-temurin:26-jre-alpine AS runtime
 
 LABEL org.opencontainers.image.title="MonteWeb Backend" \
       org.opencontainers.image.description="MonteWeb School Intranet — Spring Boot API" \
